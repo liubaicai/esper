@@ -6,6 +6,7 @@ import com.espertech.esper.common.client.json.minimaljson.JsonArray;
 import com.espertech.esper.common.client.json.minimaljson.JsonObject;
 import com.espertech.esper.common.client.json.minimaljson.JsonValue;
 import com.espertech.esper.common.internal.support.SupportBean;
+import com.espertech.esper.common.internal.support.SupportBean_A;
 import com.espertech.esper.common.internal.support.SupportBean_S0;
 import com.espertech.esper.common.internal.support.SupportBean_S1;
 import com.espertech.esper.compiler.client.CompilerArguments;
@@ -52,6 +53,8 @@ public class EPOtherDistinctScenarioOracle {
             String caseName = caseVal.asObject().getString("case", "");
             if (caseName.startsWith("distinct-mwarray-")) {
                 runMultikeyCase(allSteps, caseName, records);
+            } else if (caseName.equals("distinct-ondemand-onselect")) {
+                runOnDemandCase(allSteps, caseName, records);
             } else {
                 runScalarCase(allSteps, caseName, records);
             }
@@ -77,6 +80,9 @@ public class EPOtherDistinctScenarioOracle {
     private static void runScalarCase(JsonArray allSteps, String caseName, List<JsonObject> records) throws Exception {
         Configuration config = new Configuration();
         config.getCommon().addEventType(SupportBean.class);
+        if (caseName.equals("distinct-snapshot-column-join") || caseName.equals("distinct-subquery")) {
+            config.getCommon().addEventType(SupportBean_A.class);
+        }
         config.getRuntime().getThreading().setInternalTimerEnabled(false);
         EPRuntime runtime = EPRuntimeProvider.getRuntime("EPOtherDistinct-" + caseName, config);
         try {
@@ -85,11 +91,14 @@ public class EPOtherDistinctScenarioOracle {
             EPDeployment deployment = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
 
             EPStatement stmt = findStatement(deployment, "s0");
+            java.util.Set<String> projected = caseName.equals("distinct-subquery")
+                ? new java.util.HashSet<>(java.util.Arrays.asList("theString", "intPrimitive"))
+                : null;
             int[] seq = {0};
             stmt.addListener((newData, oldData, statement, rt) -> {
                 if (newData != null && newData.length > 0) {
                     seq[0]++;
-                    records.add(listenerRecord(caseName, statement.getName(), seq[0], rt.getEventService().getCurrentTime(), newData));
+                    records.add(listenerRecordProjected(caseName, statement.getName(), seq[0], rt.getEventService().getCurrentTime(), newData, projected));
                 }
             });
 
@@ -184,6 +193,88 @@ public class EPOtherDistinctScenarioOracle {
         }
     }
 
+    /**
+     * Named-window on-demand surface over SupportBean: create window +
+     * insert-into modules, an on-select trigger statement, and a FAF query
+     * executed through the deployment path.
+     */
+    private static void runOnDemandCase(JsonArray allSteps, String caseName, List<JsonObject> records) throws Exception {
+        Configuration config = new Configuration();
+        config.getCommon().addEventType(SupportBean.class);
+        config.getCommon().addEventType(SupportBean_A.class);
+        config.getRuntime().getThreading().setInternalTimerEnabled(false);
+        EPRuntime runtime = EPRuntimeProvider.getRuntime("EPOtherDistinct-" + caseName, config);
+        try {
+            runtime.getEventService().advanceTime(0);
+            StringBuilder module = new StringBuilder();
+            for (String source : new String[]{
+                "@public create window MyWindow#keepall as select * from SupportBean",
+                "insert into MyWindow select * from SupportBean",
+                "@name('s0') on SupportBean_A select distinct theString, intPrimitive from MyWindow order by theString, intPrimitive asc"}) {
+                if (module.length() > 0) {
+                    module.append(";\n");
+                }
+                module.append(source);
+            }
+            List<EPCompiled> compiledUnits = new ArrayList<>();
+            EPCompiled windowCompiled = EPCompilerProvider.getCompiler().compile(module.toString(), new CompilerArguments(config));
+            compiledUnits.add(windowCompiled);
+            EPDeployment lastDeployment = runtime.getDeploymentService().deploy(windowCompiled, new DeploymentOptions());
+
+            Map<String, Integer> listenerSeq = new LinkedHashMap<>();
+            for (EPStatement statement : lastDeployment.getStatements()) {
+                if (!"s0".equals(statement.getName())) {
+                    continue;
+                }
+                statement.addListener((newData, oldData, st, rt) -> {
+                    if (newData != null && newData.length > 0) {
+                        int next = listenerSeq.merge(st.getName(), 1, Integer::sum);
+                        records.add(listenerRecord(caseName, st.getName(), next, rt.getEventService().getCurrentTime(), newData));
+                    }
+                });
+            }
+
+            CompilerArguments fafArgs = new CompilerArguments(config);
+            fafArgs.getPath().getCompileds().addAll(compiledUnits);
+
+            boolean inCase = false;
+            for (JsonValue stepVal : allSteps) {
+                JsonObject step = stepVal.asObject();
+                String op = step.getString("op", "");
+                if ("case".equals(op)) {
+                    inCase = caseName.equals(step.getString("case", ""));
+                    continue;
+                }
+                if (!inCase) {
+                    continue;
+                }
+                if ("send".equals(op)) {
+                    String type = step.getString("eventType", "");
+                    JsonObject payload = step.get("payload").asObject();
+                    if ("SupportBean".equals(type)) {
+                        SupportBean bean = new SupportBean();
+                        bean.setTheString(payload.getString("theString", ""));
+                        bean.setIntPrimitive(payload.getInt("intPrimitive", 0));
+                        runtime.getEventService().sendEventBean(bean, type);
+                    } else if ("SupportBean_A".equals(type)) {
+                        runtime.getEventService().sendEventBean(new SupportBean_A(payload.getString("id", "")), type);
+                    }
+                } else if ("snapshot".equals(op)) {
+                    EPCompiled fafCompiled = EPCompilerProvider.getCompiler().compileQuery(
+                        "select distinct theString, intPrimitive from MyWindow order by theString, intPrimitive", fafArgs);
+                    com.espertech.esper.common.client.fireandforget.EPFireAndForgetQueryResult result =
+                        runtime.getFireAndForgetService().executeQuery(fafCompiled);
+                    records.add(rowsRecord(caseName, "snapshot", step.getString("statement", "faf"), 0,
+                        runtime.getEventService().getCurrentTime(), result.getArray()));
+                }
+            }
+
+            runtime.getDeploymentService().undeployAll();
+        } finally {
+            runtime.destroy();
+        }
+    }
+
     private interface SnapshotHandler {
         void snapshot(String statementKey) throws Exception;
     }
@@ -235,6 +326,10 @@ public class EPOtherDistinctScenarioOracle {
                 runtime.getEventService().sendEventMap(event, type);
                 break;
             }
+            case "SupportBean_A": {
+                runtime.getEventService().sendEventBean(new SupportBean_A(payload.getString("id", "")), type);
+                break;
+            }
             case "SupportBean_S0": {
                 runtime.getEventService().sendEventBean(new SupportBean_S0(payload.getInt("id", 0)), type);
                 break;
@@ -255,6 +350,28 @@ public class EPOtherDistinctScenarioOracle {
             values[i] = array.get(i).asInt();
         }
         return values;
+    }
+
+    /** listenerRecord restricted to the execution's asserted field surface. */
+    private static JsonObject listenerRecordProjected(String caseName, String statement, int sequence, long currentTime, EventBean[] newData, java.util.Set<String> projected) {
+        JsonObject record = listenerRecord(caseName, statement, sequence, currentTime, newData);
+        if (projected == null) {
+            return record;
+        }
+        JsonArray filtered = new JsonArray();
+        for (JsonValue rowVal : record.get("new").asArray()) {
+            JsonObject row = rowVal.asObject();
+            JsonObject fields = new JsonObject();
+            for (String name : projected) {
+                fields.set(name, row.get("fields").asObject().get(name));
+            }
+            JsonObject copy = new JsonObject();
+            copy.add("kind", "row");
+            copy.add("fields", fields);
+            filtered.add(copy);
+        }
+        record.set("new", filtered);
+        return record;
     }
 
     private static JsonObject listenerRecord(String caseName, String statement, int sequence, long currentTime, EventBean[] newData) {
@@ -288,7 +405,9 @@ public class EPOtherDistinctScenarioOracle {
             for (String prop : event.getEventType().getPropertyNames()) {
                 Object value = event.get(prop);
                 if (value == null) {
-                    fields.add(prop, (String) null);
+                    JsonObject nullState = new JsonObject();
+                    nullState.add("state", "null");
+                    fields.add(prop, nullState);
                 } else if (value instanceof int[]) {
                     JsonArray array = new JsonArray();
                     for (int element : (int[]) value) {
@@ -340,6 +459,12 @@ public class EPOtherDistinctScenarioOracle {
                 "@name('s0') @IterableUnbound select distinct theString,intPrimitive from SupportBean#keepall output every 3 events";
             case "distinct-batch-window" ->
                 "@name('s0') select distinct theString,intPrimitive from SupportBean#length_batch(3)";
+            case "distinct-snapshot-column" ->
+                "@name('s0') select distinct theString, intPrimitive from SupportBean#keepall output snapshot every 3 events order by theString asc";
+            case "distinct-snapshot-column-join" ->
+                "@name('s0') select distinct theString, intPrimitive from SupportBean#keepall a, SupportBean_A#keepall b where a.theString = b.id output snapshot every 3 events order by theString asc";
+            case "distinct-subquery" ->
+                "@name('s0') select * from SupportBean where theString in (select distinct id from SupportBean_A#keepall)";
             default -> throw new IllegalStateException("unknown scalar case: " + caseName);
         };
     }

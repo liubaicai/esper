@@ -1977,11 +1977,14 @@
    ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-0318c1bce4d5e806aa11",
+    "java-runtime-17e049a70e6c5ca2a376",
     "java-runtime-2e0f0a1356ea1b8e3299",
     "java-runtime-4b62c52a89cf86a3843a",
     "java-runtime-4fab4842341b8021b1a2",
+    "java-runtime-526d4b64636e45cc051d",
     "java-runtime-9066a6d1932dae5ff6aa",
     "java-runtime-c752f36ef07cc6280306",
+    "java-runtime-d9d561caf48755690e5d",
     "java-runtime-f9a1dafb621a6605ef47",
     "java-runtime-fe86653eacb81851d04f"
    ]
@@ -16526,7 +16529,7 @@
    ],
    "status": "differential-verified",
    "evidence": [
-    "Differential scenario testdata/parity/epl-other-distinct.json replays EPLOtherDistinct scalar part-1 sequences (25 SupportBean sends, 13 listener records) plus the MultikeyWArray family (OutputLimit single/two-array via advance-time flush at t=1s, FireAndForget over named window, Iterate keepall snapshots, OnSelect S0/S1 triggers) with int[] deep-content keys; Java/Go 21 records each, 0 differences",
+    "Differential scenario testdata/parity/epl-other-distinct.json replays EPLOtherDistinct scalar part-1 sequences (25 SupportBean sends, 13 listener records) plus the MultikeyWArray family (OutputLimit single/two-array via advance-time flush at t=1s, FireAndForget over named window, Iterate keepall snapshots, OnSelect S0/S1 triggers) with int[] deep-content keys; plus the OnDemandAndOnSelect (FAF + on-select over named window with order by), OutputRateSnapshotColumn (snapshot every 3 events order by asc, plain and join variants) and Subquery (IN with distinct source, assertion-surface projection) executions; Java/Go 31 records each, 0 differences",
     "tools/java-oracle/EPOtherDistinctScenarioOracle.java + run-epl-other-distinct.sh generate the fixed-commit Java trace; internal/app/parity/epl_other_distinct.go is the Go runner",
     "5 Go parity tests assert bundle-level distinct semantics incl. output-every dedup and batch flush order"
    ],
@@ -16542,11 +16545,14 @@
    ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-0318c1bce4d5e806aa11",
+    "java-runtime-17e049a70e6c5ca2a376",
     "java-runtime-2e0f0a1356ea1b8e3299",
     "java-runtime-4b62c52a89cf86a3843a",
     "java-runtime-4fab4842341b8021b1a2",
+    "java-runtime-526d4b64636e45cc051d",
     "java-runtime-9066a6d1932dae5ff6aa",
     "java-runtime-c752f36ef07cc6280306",
+    "java-runtime-d9d561caf48755690e5d",
     "java-runtime-f9a1dafb621a6605ef47",
     "java-runtime-fe86653eacb81851d04f"
    ]
@@ -35408,7 +35414,7 @@
   "inventoriedCases": 534,
   "implementedCases": 532,
   "differentialVerifiedCases": 149,
-  "differentialVerifiedRuntimeIds": 477,
+  "differentialVerifiedRuntimeIds": 480,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,

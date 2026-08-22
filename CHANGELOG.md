@@ -1,3 +1,17 @@
+> 最新补充：Draft 4.232（2026-08-22），扩展 `epl.other.distinct` 的
+> `epl-other-distinct` differential-verified 场景（第三切片）：新增
+> `EPLOtherOnDemandAndOnSelect`（`java-runtime-d9d561caf48755690e5d`）、
+> `EPLOtherOutputRateSnapshotColumn`
+>（`java-runtime-17e049a70e6c5ca2a376`，含 join 变体）与
+> `EPLOtherSubquery`（`java-runtime-526d4b64636e45cc051d`）。场景扩至 12
+> 个 case，Java/Go 各 31 条 records、0 differences；覆盖 named window 上
+> FAF distinct+order by 双列升序、on-select 触发向量、output snapshot
+> every 3 events 的阈值/全量快照/order by 语义（plain 与 join 变体）、
+> IN 子查询 distinct 成员过滤。oracle null 渲染统一为 sibling 约定
+> {"state":"null"}；subquery 记录断言面投影（theString,intPrimitive）。
+> manifest 更新为 149 个 differential-verified case、480 个 differential
+> runtime IDs、3105 条 associations，capability 达到 11/20 DV runtime。
+>
 > 最新补充：Draft 4.231（2026-08-22），扩展 `epl.other.distinct` 的
 > `epl-other-distinct` differential-verified 场景（MultikeyWArray 切片）：
 > 新增 `EPLOtherDistinctOutputLimitMultikeyWArraySingleArray`

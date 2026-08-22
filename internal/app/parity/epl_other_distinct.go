@@ -29,6 +29,10 @@ type eplOtherDistinctS1 struct {
 	ID int `esper:"id"`
 }
 
+type eplOtherDistinctA struct {
+	ID string `esper:"id"`
+}
+
 var eplOtherDistinctJavaSources = []string{
 	"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherDistinct.java",
 }
@@ -43,6 +47,9 @@ var (
 		"java-runtime-c752f36ef07cc6280306",
 		"java-runtime-4fab4842341b8021b1a2",
 		"java-runtime-9066a6d1932dae5ff6aa",
+		"java-runtime-d9d561caf48755690e5d",
+		"java-runtime-17e049a70e6c5ca2a376",
+		"java-runtime-526d4b64636e45cc051d",
 	}
 	eplOtherDistinctJavaExecutions = []string{
 		"EPLOtherOutputSimpleColumn",
@@ -53,6 +60,9 @@ var (
 		"EPLOtherDistinctFireAndForgetMultikeyWArray",
 		"EPLOtherDistinctIterateMultikeyWArray",
 		"EPLOtherDistinctOnSelectMultikeyWArray",
+		"EPLOtherOnDemandAndOnSelect",
+		"EPLOtherOutputRateSnapshotColumn",
+		"EPLOtherSubquery",
 	}
 )
 
@@ -72,6 +82,10 @@ func runEplOtherDistinctScenario(ctx context.Context, scenario compat.Scenario) 
 		"distinct-mwarray-faf",
 		"distinct-mwarray-iterate",
 		"distinct-mwarray-on-select",
+		"distinct-ondemand-onselect",
+		"distinct-snapshot-column",
+		"distinct-snapshot-column-join",
+		"distinct-subquery",
 	}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("epl-other-distinct scenario %q has no supported cases", scenario.ID)
@@ -134,6 +148,10 @@ func runEplOtherDistinctCase(ctx context.Context, scenario compat.Scenario, case
 			esper.StatementName("s0"),
 			esper.WithDistinct(),
 		)
+	case "distinct-snapshot-column", "distinct-snapshot-column-join", "distinct-subquery":
+		return runEplOtherDistinctSlice2Case(ctx, scenario, caseName)
+	case "distinct-ondemand-onselect":
+		return runEplOtherDistinctOnDemandCase(ctx, scenario, caseName)
 	default:
 		if len(caseName) > 16 && caseName[:16] == "distinct-mwarray" {
 			return runEplOtherDistinctMultikeyCase(ctx, scenario, caseName)
@@ -169,6 +187,12 @@ func decodeEplOtherDistinctPayload(step compat.Step) (any, error) {
 		var event eplOtherDistinctManyArray
 		if err := json.Unmarshal(step.Payload, &event); err != nil {
 			return nil, fmt.Errorf("epl-other-distinct SupportEventWithManyArray: %w", err)
+		}
+		return event, nil
+	case "SupportBean_A":
+		var event eplOtherDistinctA
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("epl-other-distinct SupportBean_A: %w", err)
 		}
 		return event, nil
 	case "SupportBean_S0":
@@ -463,6 +487,227 @@ func runEplOtherDistinctMultikeyWindowCase(ctx context.Context, env *esper.Envir
 			})
 		default:
 			return trace, fmt.Errorf("unsupported epl-other-distinct step op %q", step.Op)
+		}
+	}
+	cleanup = false
+	return trace, nil
+}
+
+// runEplOtherDistinctSlice2Case covers the snapshot-column pair (plain and
+// join variants) and the IN-subquery execution, all single-statement
+// deployments over SupportBean with SupportBean_A support events.
+func runEplOtherDistinctSlice2Case(ctx context.Context, scenario compat.Scenario, caseName string) (compat.Trace, error) {
+	caseScenario, err := scenarioForCase(scenario, caseName)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	env := esper.NewEnvironment()
+	if _, err := esper.RegisterStruct[eplOtherDistinctEvent](env, "SupportBean"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[eplOtherDistinctA](env, "SupportBean_A"); err != nil {
+		return compat.Trace{}, err
+	}
+
+	var query esper.Query
+	switch caseName {
+	case "distinct-snapshot-column":
+		str := esper.Field[eplOtherDistinctEvent, string]("theString")
+		num := esper.Field[eplOtherDistinctEvent, int32]("intPrimitive")
+		ws := esper.From[eplOtherDistinctEvent](env, "SupportBean").Window(esper.KeepAll())
+		query = esper.Select(ws,
+			esper.Alias("theString", str),
+			esper.Alias("intPrimitive", num),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithDistinct(),
+			esper.WithOutput(esper.OutputSnapshotEveryEvents(3)),
+			esper.OrderBy(esper.Ascending(str)),
+		)
+	case "distinct-snapshot-column-join":
+		str := esper.Field[eplOtherDistinctEvent, string]("theString")
+		aID := esper.Field[eplOtherDistinctA, string]("id")
+		left := esper.From[eplOtherDistinctEvent](env, "SupportBean").Window(esper.KeepAll())
+		right := esper.From[eplOtherDistinctA](env, "SupportBean_A").Window(esper.KeepAll())
+		query = esper.Join(left, right,
+			esper.OnSourcesEqual(0, str, 1, aID),
+		).Select(
+			esper.SelectFrom(0, "theString", esper.JoinField[string](0, "theString")),
+			esper.SelectFrom(0, "intPrimitive", esper.JoinField[int32](0, "intPrimitive")),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithDistinct(),
+			esper.WithOutput(esper.OutputSnapshotEveryEvents(3)),
+			esper.OrderBy(esper.Ascending(esper.ResultField[string]("theString"))),
+		)
+	case "distinct-subquery":
+		// The Java execution selects * but asserts only theString and
+		// intPrimitive; the oracle records that assertion surface and the Go
+		// projection matches it.
+		str := esper.Field[eplOtherDistinctEvent, string]("theString")
+		num := esper.Field[eplOtherDistinctEvent, int32]("intPrimitive")
+		ws := esper.From[eplOtherDistinctEvent](env, "SupportBean").Filter(
+			esper.SubqueryIn[string](
+				str,
+				esper.From[eplOtherDistinctA](env, "SupportBean_A").Window(esper.KeepAll()).AsRecord(),
+				esper.Field[eplOtherDistinctA, string]("id"),
+			),
+		)
+		query = esper.Select(ws,
+			esper.Alias("theString", str),
+			esper.Alias("intPrimitive", num),
+		).Query(
+			esper.StatementName("s0"),
+		)
+	default:
+		return compat.Trace{}, fmt.Errorf("unsupported epl-other-distinct slice-2 case %q", caseName)
+	}
+	plan, err := env.Build(query)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	engine, statement, err := deployParityStatement(ctx, env, plan)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	return compat.ReplayWithStatements(ctx, engine, statement, caseScenario, decodeEplOtherDistinctPayload, resolveEplOtherDistinctSingle(statement))
+}
+
+// runEplOtherDistinctOnDemandCase replays the named-window on-demand surface:
+// window + insert modules, an on-select trigger with distinct and order by,
+// and a FAF distinct query executed after the window is populated.
+func runEplOtherDistinctOnDemandCase(ctx context.Context, scenario compat.Scenario, caseName string) (compat.Trace, error) {
+	caseScenario, err := scenarioForCase(scenario, caseName)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	env := esper.NewEnvironment()
+	if _, err := esper.RegisterStruct[eplOtherDistinctEvent](env, "SupportBean"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[eplOtherDistinctA](env, "SupportBean_A"); err != nil {
+		return compat.Trace{}, err
+	}
+	schema, err := esper.StructSchema[eplOtherDistinctEvent]("SupportBean")
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.CreateNamedWindow(env, "MyWindow", schema, esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+		return compat.Trace{}, err
+	}
+	strField := esper.Field[eplOtherDistinctEvent, string]("theString")
+	numField := esper.Field[eplOtherDistinctEvent, int32]("intPrimitive")
+
+	insertPlan, err := env.Build(esper.OnEvent(esper.From[eplOtherDistinctEvent](env, "SupportBean")).InsertIntoNamedWindow(
+		"MyWindow",
+		esper.SetColumn("theString", strField),
+		esper.SetColumn("intPrimitive", numField),
+	).Query(esper.StatementName("insert")))
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	fafPlan, err := env.Build(esper.FromNamedWindow(env, "MyWindow").Select(
+		esper.Alias("theString", esper.Field[any, string]("theString")),
+		esper.Alias("intPrimitive", esper.Field[any, int32]("intPrimitive")),
+	).Query(
+		esper.WithDistinct(),
+		esper.OrderBy(
+			esper.Ascending(esper.ResultField[string]("theString")),
+			esper.Ascending(esper.ResultField[int32]("intPrimitive")),
+		),
+	))
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	onSelectPlan, err := env.Build(esper.OnEvent(esper.From[eplOtherDistinctA](env, "SupportBean_A")).SelectFromNamedWindow(
+		"MyWindow",
+		nil,
+		esper.Alias("theString", esper.NamedWindowField[string]("theString")),
+		esper.Alias("intPrimitive", esper.NamedWindowField[int32]("intPrimitive")),
+	).Query(
+		esper.StatementName("s0"),
+		esper.WithDistinct(),
+		esper.OrderBy(
+			esper.Ascending(esper.ResultField[string]("theString")),
+			esper.Ascending(esper.ResultField[int32]("intPrimitive")),
+		),
+	))
+	if err != nil {
+		return compat.Trace{}, err
+	}
+
+	engine := esper.NewEngine(env)
+	cleanup := true
+	defer func() {
+		if cleanup {
+			_ = engine.Close(context.Background())
+		}
+	}()
+	for _, plan := range []esper.Plan{insertPlan, onSelectPlan} {
+		if _, err := engine.Deploy(ctx, plan); err != nil {
+			return compat.Trace{}, err
+		}
+	}
+	trace := compat.Trace{Version: caseScenario.Version, ID: caseScenario.ID}
+	deployed, err := engine.Statements(ctx)
+	if err != nil {
+		return trace, err
+	}
+	var onSelect *esper.Statement
+	for _, candidate := range deployed {
+		if candidate.Name() == "s0" {
+			onSelect = candidate
+			break
+		}
+	}
+	if onSelect == nil {
+		return compat.Trace{}, fmt.Errorf("epl-other-distinct: on-select statement s0 not found")
+	}
+
+	seq := uint64(0)
+	if _, err := onSelect.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+		seq++
+		trace.Records = append(trace.Records, compat.TraceRecord{
+			Case:      caseName,
+			Operation: "listener",
+			Statement: onSelect.Name(),
+			Sequence:  seq,
+			Time:      currentTimeString(engine),
+			New:       compat.NormalizeResults(batch.New),
+			Old:       compat.NormalizeResults(batch.Old),
+		})
+		return nil
+	}); err != nil {
+		return trace, err
+	}
+
+	for _, step := range caseScenario.Steps {
+		switch step.Op {
+		case "case":
+			continue
+		case "send":
+			payload, err := decodeEplOtherDistinctPayload(step)
+			if err != nil {
+				return trace, err
+			}
+			if err := engine.Send(ctx, step.EventType, payload); err != nil {
+				return trace, err
+			}
+		case "snapshot":
+			result, err := engine.ExecuteFireAndForget(ctx, fafPlan)
+			if err != nil {
+				return trace, err
+			}
+			trace.Records = append(trace.Records, compat.TraceRecord{
+				Case:      caseName,
+				Operation: "snapshot",
+				Statement: step.Statement,
+				Time:      currentTimeString(engine),
+				New:       compat.NormalizeResults(result.Batch.New),
+			})
+		default:
+			return trace, fmt.Errorf("unsupported epl-other-distinct on-demand step op %q", step.Op)
 		}
 	}
 	cleanup = false
