@@ -1,3 +1,23 @@
+> 最新补充：Draft 4.231（2026-08-22），扩展 `epl.other.distinct` 的
+> `epl-other-distinct` differential-verified 场景（MultikeyWArray 切片）：
+> 新增 `EPLOtherDistinctOutputLimitMultikeyWArraySingleArray`
+>（`java-runtime-fe86653eacb81851d04f`）、
+> `EPLOtherDistinctOutputLimitMultikeyWArrayTwoArray`
+>（`java-runtime-f9a1dafb621a6605ef47`）、
+> `EPLOtherDistinctFireAndForgetMultikeyWArray`
+>（`java-runtime-c752f36ef07cc6280306`）、
+> `EPLOtherDistinctIterateMultikeyWArray`
+>（`java-runtime-4fab4842341b8021b1a2`）与
+> `EPLOtherDistinctOnSelectMultikeyWArray`
+>（`java-runtime-9066a6d1932dae5ff6aa`）。场景扩至 8 个 case，Java/Go 各
+> 21 条 records、0 differences；覆盖 int[] 深内容键去重（[1,2]≠[2,1]）、
+> advance-time t=1s 批量去重保序、named window FAF 去重快照、keepall
+> 迭代器快照与 on-select 触发向量。Go 侧复用 `OutputEveryTime`/
+> `NamedWindowField`/`SelectFromNamedWindow`/FAF plan，无引擎改动。
+> manifest 更新为 534 cases、149 个 differential-verified case、477 个
+> differential runtime IDs、3105 条 associations，capability 达到 8/20
+> DV runtime。
+
 > 最新补充：Draft 4.230（2026-08-22），新增 `epl.other.distinct` 的
 > `epl-other-distinct` differential-verified 场景：固定 Java
 > `EPLOtherDistinct.java` 的 `EPLOtherOutputSimpleColumn`

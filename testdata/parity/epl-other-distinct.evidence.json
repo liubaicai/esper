@@ -4,7 +4,12 @@
   "javaRuntimeIds": [
     "java-runtime-4b62c52a89cf86a3843a",
     "java-runtime-2e0f0a1356ea1b8e3299",
-    "java-runtime-0318c1bce4d5e806aa11"
+    "java-runtime-0318c1bce4d5e806aa11",
+    "java-runtime-fe86653eacb81851d04f",
+    "java-runtime-f9a1dafb621a6605ef47",
+    "java-runtime-c752f36ef07cc6280306",
+    "java-runtime-4fab4842341b8021b1a2",
+    "java-runtime-9066a6d1932dae5ff6aa"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherDistinct.java"
@@ -12,7 +17,12 @@
   "javaExecutions": [
     "EPLOtherOutputSimpleColumn",
     "EPLOtherOutputLimitEveryColumn",
-    "EPLOtherBatchWindow"
+    "EPLOtherBatchWindow",
+    "EPLOtherDistinctOutputLimitMultikeyWArraySingleArray",
+    "EPLOtherDistinctOutputLimitMultikeyWArrayTwoArray",
+    "EPLOtherDistinctFireAndForgetMultikeyWArray",
+    "EPLOtherDistinctIterateMultikeyWArray",
+    "EPLOtherDistinctOnSelectMultikeyWArray"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -228,6 +238,419 @@
         "payload": {
           "theString": "E2",
           "intPrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "distinct-mwarray-output-limit-single"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            2,
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "case",
+        "case": "distinct-mwarray-output-limit-two"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            5
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "case",
+        "case": "distinct-mwarray-faf"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            5
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "faf-single"
+      },
+      {
+        "op": "snapshot",
+        "statement": "faf-two"
+      },
+      {
+        "op": "case",
+        "case": "distinct-mwarray-iterate"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            5
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s1"
+      },
+      {
+        "op": "case",
+        "case": "distinct-mwarray-on-select"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            5
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            3,
+            4
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
         }
       }
     ]
@@ -471,6 +894,315 @@
             }
           }
         ]
+      },
+      {
+        "case": "distinct-mwarray-output-limit-single",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                2,
+                1
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                2,
+                3
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-output-limit-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-faf",
+        "operation": "snapshot",
+        "statement": "faf-single",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-faf",
+        "operation": "snapshot",
+        "statement": "faf-two",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-iterate",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-iterate",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-on-select",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
       }
     ]
   },
@@ -710,6 +1442,315 @@
             "fields": {
               "intPrimitive": 3,
               "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-output-limit-single",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                2,
+                1
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                2,
+                3
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-output-limit-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-faf",
+        "operation": "snapshot",
+        "statement": "faf-single",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-faf",
+        "operation": "snapshot",
+        "statement": "faf-two",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-iterate",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-iterate",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "distinct-mwarray-on-select",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                4
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                3,
+                4
+              ],
+              "intTwo": [
+                1,
+                2
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intOne": [
+                1,
+                2
+              ],
+              "intTwo": [
+                3,
+                5
+              ]
             }
           }
         ]
