@@ -1,37 +1,170 @@
 {
-  "id": "variables-use",
-  "description": "EPLVariablesUse variable-in-filter scenarios: VariableInFilter, VariableInFilterBoolean, SimpleSameModule",
-  "javaRuntimes": [
-    "EPLVariableUseVariableInFilter",
-    "EPLVariableUseVariableInFilterBoolean",
-    "EPLVariableUseSimpleSameModule"
-  ],
-  "cases": [
-    {"case": "variable-in-filter"},
-    {"case": "variable-in-filter-boolean"},
-    {"case": "simple-same-module"}
-  ],
-  "steps": [
-    {"op": "case", "case": "variable-in-filter"},
-    {"op": "send", "type": "SupportBean", "theString": "", "intPrimitive": 1},
-    {"op": "send", "type": "SupportBean_S0", "id": 100, "p00": "a", "p01": "b"},
-    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
-    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 3},
-    {"op": "send", "type": "SupportBean_S0", "id": 100, "p00": "e", "p01": "c"},
-    {"op": "send", "type": "SupportBean", "theString": "e", "intPrimitive": 6},
-    {"op": "send", "type": "SupportBean", "theString": "c", "intPrimitive": 5},
-
-    {"op": "case", "case": "variable-in-filter-boolean"},
-    {"op": "send", "type": "SupportBean", "theString": "x", "intPrimitive": 1},
-    {"op": "send", "type": "SupportBean_S0", "id": 100, "p00": "a", "p01": "b"},
-    {"op": "send", "type": "SupportBean", "theString": "a", "intPrimitive": 2},
-    {"op": "send", "type": "SupportBean", "theString": "b", "intPrimitive": 3},
-    {"op": "send", "type": "SupportBean", "theString": "c", "intPrimitive": 4},
-    {"op": "send", "type": "SupportBean_S0", "id": 100, "p00": "e", "p01": "c"},
-    {"op": "send", "type": "SupportBean", "theString": "c", "intPrimitive": 5},
-    {"op": "send", "type": "SupportBean", "theString": "e", "intPrimitive": 6},
-
-    {"op": "case", "case": "simple-same-module"},
-    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0}
-  ]
+ "id": "variables-use",
+ "description": "Variable-use scenarios: variables referenced in equality/or filters driven by on-set assignments over SupportBean and SupportBean_S0",
+ "javaRuntimes": [
+  "java-runtime-5a38cfa84dadd7dd6f61",
+  "java-runtime-849ebec4996c28823d57",
+  "java-runtime-5a91cdbc149502c6fb7a"
+ ],
+ "cases": [
+  {
+   "case": "variable-in-filter",
+   "runtimeId": "java-runtime-5a38cfa84dadd7dd6f61"
+  },
+  {
+   "case": "variable-in-filter-boolean",
+   "runtimeId": "java-runtime-849ebec4996c28823d57"
+  },
+  {
+   "case": "simple-same-module",
+   "runtimeId": "java-runtime-5a91cdbc149502c6fb7a"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "variable-in-filter"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 100,
+    "p00": "a",
+    "p01": "b"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "a",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "b",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 100,
+    "p00": "e",
+    "p01": "c"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "e",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "c",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "case",
+   "case": "variable-in-filter-boolean"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "x",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 100,
+    "p00": "a",
+    "p01": "b"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "a",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "b",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "c",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 100,
+    "p00": "e",
+    "p01": "c"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "c",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "e",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "case",
+   "case": "simple-same-module"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  }
+ ],
+ "version": "esper-parity/v1"
 }

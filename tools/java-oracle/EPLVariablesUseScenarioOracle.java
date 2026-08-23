@@ -74,7 +74,9 @@ public class EPLVariablesUseScenarioOracle {
                 config.getCommon().addVariable("var_simple_module_const", Boolean.class, true);
                 break;
         }
-        EPRuntime runtime = EPRuntimeProvider.getRuntime("EPLVariablesUseScenarioOracle", config);
+        config.getRuntime().getThreading().setInternalTimerEnabled(false);
+        EPRuntime runtime = EPRuntimeProvider.getRuntime("EPLVariablesUseScenarioOracle-" + caseName, config);
+        runtime.getEventService().advanceTime(0);
         try {
             String[] epls = buildEPLs(caseName);
             List<EPStatement> allStmts = new ArrayList<>();
@@ -105,9 +107,13 @@ public class EPLVariablesUseScenarioOracle {
                         seq[0]++;
                         JsonObject record = new JsonObject();
                         record.add("case", caseName);
+                        record.add("operation", "listener");
+                        record.add("statement", statement.getName());
+                        record.add("time", java.time.Instant.ofEpochMilli(rt.getEventService().getCurrentTime()).toString());
                         record.add("sequence", seq[0]);
                         JsonArray newArr = new JsonArray();
                         JsonObject newItem = new JsonObject();
+                        newItem.add("kind", "row");
                         JsonObject fields = new JsonObject();
                         for (String prop : event.getEventType().getPropertyNames()) {
                             Object value = event.get(prop);
@@ -133,21 +139,22 @@ public class EPLVariablesUseScenarioOracle {
                     continue;
                 }
                 if ("send".equals(op)) {
-                    String type = step.getString("type", "");
+                    String type = step.getString("eventType", "");
+                    JsonObject payload = step.get("payload").asObject();
                     switch (type) {
                         case "SupportBean": {
                             SupportBean bean = new SupportBean();
-                            String ts = step.getString("theString", null);
+                            String ts = payload.getString("theString", null);
                             bean.setTheString(ts);
-                            bean.setIntPrimitive(step.getInt("intPrimitive", 0));
+                            bean.setIntPrimitive(payload.getInt("intPrimitive", 0));
                             runtime.getEventService().sendEventBean(bean, type);
                             break;
                         }
                         case "SupportBean_S0": {
                             SupportBean_S0 s0 = new SupportBean_S0(
-                                step.getInt("id", 0),
-                                step.getString("p00", ""),
-                                step.getString("p01", "")
+                                payload.getInt("id", 0),
+                                payload.getString("p00", ""),
+                                payload.getString("p01", "")
                             );
                             runtime.getEventService().sendEventBean(s0, type);
                             break;

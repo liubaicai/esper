@@ -16,10 +16,20 @@ type VariableDefinition struct {
 
 type VariableOption func(*variableConfig)
 
-type variableConfig struct{ constant bool }
+type variableConfig struct {
+	constant bool
+	typ      reflect.Type
+}
 
 func ConstantVariable() VariableOption {
 	return func(config *variableConfig) { config.constant = true }
+}
+
+// VariableType overrides the declared variable type for variables whose
+// initial value is untyped nil (a typed null), matching Java's
+// addVariable(name, Type, null) configuration form.
+func VariableType(t reflect.Type) VariableOption {
+	return func(config *variableConfig) { config.typ = t }
 }
 
 func newVariableDefinition(name string, initial any, options ...VariableOption) (VariableDefinition, error) {
@@ -42,6 +52,12 @@ func newVariableDefinitionForContext(contextName, name string, initial any, opti
 	if initial == nil {
 		value = Null()
 		typ = typeOf[any]()
+	}
+	if config.typ != nil {
+		typ = config.typ
+		if value.IsNull() || value.IsMissing() {
+			value = Null()
+		}
 	}
 	return VariableDefinition{name: name, context: contextName, typ: typ, initial: value, constant: config.constant}, nil
 }

@@ -1,112 +1,18 @@
-> 最新补充：Draft 4.236（2026-08-22），`eplother.stream-selector`
-> capability 全部 19 个 runtime 达到 differential-verified（SelectExpr
-> 套件在 execution 级覆盖 10/17，余 7 个见 manifest remaining）：新增 NoJoinWildcardNoAlias、
-> JoinWildcardNoAlias、NoJoinWildcardWithAlias、JoinWildcardWithAlias、
-> NoJoinNoAliasWithProperties、JoinNoAliasWithProperties、
-> AloneNoJoinNoAlias、AloneNoJoinAlias、AloneJoinAlias（含反向流第二
-> 代）、AloneJoinNoAlias（含反向流第二代）与
-> IStreamRStreamConfigSelectorIRStream/RStream 共 12 个 runtime。legacy
-> scenario 迁移至 esper-parity/v1 并扩至 14 个 case，Java/Go 各 17 条
-> records、0 differences；覆盖通配符/stream 别名/具名列三类投影的底层形
-> 态（原生 bean、Map 包装、Pair 平铺）、无条件 join 交叉、反向流第二代与
-> 引擎默认 istream/rstream 选择器（Go 以 WithOldStream/
-> WithRemoveStreamOnly 逐语句镜像，单语句部署下观测等价）。oracle 记录
-> 补 v1 元字段并固定虚拟时钟；确定性渲染 SupportBean[...] 与 Map 排序
-> 键值。manifest 更新为 534 cases、149 个 differential-verified case、
-> 492 个 differential runtime IDs、3112 条 associations（referenced
-> 2909），capability 19/19 全部 differential-verified。
+> 最新补充：Draft 4.237（2026-08-22），扩展 `epl.variable-onset` 至
+> 14/15 DV：新增 EPLVariableOnSetSimple/WithFilter/AssignmentOrderNoDup/
+> AssignmentOrderDup/RuntimeOrderMultiple/Coercion 与
+> EPLVariableUseVariableInFilter/VariableInFilterBoolean/SimpleSameModule
+> 共 9 个 runtime 的差分验证。新建独立 v1 场景
+> variables-onset-set（6 case，Java/Go 各 27 条 records、0 differences），
+> variables-use 场景迁移至 v1 差分协议（Java/Go 各 7 条 records、0
+> differences）；legacy variables-onset 三 case 保持原状未迁移。
+> 引擎新增 VariableType 选项支持 typed-null 变量声明并为 on-set 触发器
+> 补充迭代器快照。capability remaining 保留 subquery/multikey-array/
+> array-index/inlined-class 等 6 个未覆盖 execution 及 Invalid approved
+> difference 登记。manifest 更新为 534 cases、149 个 differential-verified
+> case、498 个 differential runtime IDs、3112 条 associations（referenced
+> 2909）。
 >
-> 最新补充：Draft 4.235（2026-08-22），完成 `epl.subselect.unfiltered`
-> capability 收尾（18/19 DV，余 1 项 approved difference）：新增
-> `EPLSubselectStartStopStatement`
->（`java-runtime-713de8bb7b8c70bc738d`，两代部署生命周期以两个 case 承
-> 载：裸 true 子查询 WHERE 过滤、空窗口 null 过滤、重部署子查询窗口重
-> 置）与 `EPLSubselectCustomFunction`
->（`java-runtime-4b7fb8d3557174c882cc`，Func1 UDF minusOne 于子查询投影，
-> Integer→double 拆箱拓宽语义、空窗口 null）。场景扩至 18 个 case，
-> Java/Go 各 54 条 records、0 differences。
-> `EPLSubselectInvalidSubselect`
->（`java-runtime-94b8ea136cef1aff1bca`）为编译期 error-only（10 条
-> tryInvalidCompile 覆盖 plan/validate/syntax 三阶段），登记为 approved
-> difference 并由 TestSubselectUnfilteredInvalidSubselectParity 守护；
-> oracle runner 类路径补 regression-lib 模块与 avro jar 以支持 FQN 静态
-> 方法调用。manifest 更新为 534 cases、149 个 differential-verified
-> case、489 个 differential runtime IDs、3105 条 associations。
->
-> 最新补充：Draft 4.234（2026-08-22），完成 `epl.other.distinct`
-> capability 收尾（20/20 DV）：新增
-> `EPLOtherBatchWindowJoin`（`java-runtime-93ccd6033710a75f113a`）、
-> `EPLOtherBatchWindowInsertInto`
->（`java-runtime-e21f5d942d6c4869bf1b`）、
-> `EPLOtherDistinctWildcardJoinPatternOne`
->（`java-runtime-6905746f98b2a3b39f8b`）、
-> `EPLOtherDistinctWildcardJoinPatternTwo`
->（`java-runtime-5deb9547c58344716a93`）与
-> `EPLOtherDistinctVariantStream`
->（`java-runtime-deca832debc5d94d4dcc`）。场景扩至 21 个 case，Java/Go
-> 各 54 条 records、0 differences；覆盖 join×length_batch(3) flush 去重
-> 保序、distinct 先于 insert-into 路由（下游仅收去重行）、
-> every-distinct×timer:within×unidirectional 模式连接（PatternOne 弱
-> oracle 记 invoked 标记；PatternTwo 投影 MRD 两行有序 payload
-> (Query,E1,E2)/(Query,E1,E3)）、variant schema 注册 + 三投影迭代器快照
-> （3/2/3 行，int[] 逐元素键）。Go 侧零引擎改动；PatternTwo 行面与既有
-> parity 期望一致。manifest 更新为 534 cases、149 个
-> differential-verified case、489 个 differential runtime IDs、3105 条
-> associations，`epl.other.distinct` capability 全部 20 个 runtime 达到
-> differential-verified。
->
-> 最新补充：Draft 4.233（2026-08-22），扩展 `epl.other.distinct` 的
-> `epl-other-distinct` differential-verified 场景（wildcard 切片）：新增
-> `EPLOtherBeanEventWildcardThisProperty`
->（`java-runtime-c1d232f82f0a154d6241`）、
-> `EPLOtherBeanEventWildcardSODA`
->（`java-runtime-eb3cba6e0ccf8c3c9c83`）、
-> `EPLOtherBeanEventWildcardPlusCols`
->（`java-runtime-550dd87b54717508c0b9`）与 `EPLOtherMapEventWildcard`
->（`java-runtime-7b13ab2779d557eba691`）。场景扩至 16 个 case，Java/Go 各
-> 43 条 records、0 differences；四个 execution 均为 select distinct * over
-> keepall 且仅断言迭代器内容，故以每次 send 后的迭代器快照为差分面：
-> 覆盖 bean/A/Map 通配去重与 computed 列联合键（intBoxed%5 as val1、
-> intBoxed as val2，(1,3,8)/(1,3,3) 双行共存、精确重复抑制）。Go 侧
-> Select 零投影即通配符 + WithDistinct；SODA 往返文本断言为已记录边界
-> （EPL 文本层非 Go 链式 API 面）。无引擎改动。manifest 更新为 149 个
-> differential-verified case、484 个 differential runtime IDs、3105 条
-> associations，capability 达到 15/20 DV runtime。
->
-> 最新补充：Draft 4.232（2026-08-22），扩展 `epl.other.distinct` 的
-> `epl-other-distinct` differential-verified 场景（第三切片）：新增
-> `EPLOtherOnDemandAndOnSelect`（`java-runtime-d9d561caf48755690e5d`）、
-> `EPLOtherOutputRateSnapshotColumn`
->（`java-runtime-17e049a70e6c5ca2a376`，含 join 变体）与
-> `EPLOtherSubquery`（`java-runtime-526d4b64636e45cc051d`）。场景扩至 12
-> 个 case，Java/Go 各 31 条 records、0 differences；覆盖 named window 上
-> FAF distinct+order by 双列升序、on-select 触发向量、output snapshot
-> every 3 events 的阈值/全量快照/order by 语义（plain 与 join 变体）、
-> IN 子查询 distinct 成员过滤。oracle null 渲染统一为 sibling 约定
-> {"state":"null"}；subquery 记录断言面投影（theString,intPrimitive）。
-> manifest 更新为 149 个 differential-verified case、480 个 differential
-> runtime IDs、3105 条 associations，capability 达到 11/20 DV runtime。
->
-> 最新补充：Draft 4.231（2026-08-22），扩展 `epl.other.distinct` 的
-> `epl-other-distinct` differential-verified 场景（MultikeyWArray 切片）：
-> 新增 `EPLOtherDistinctOutputLimitMultikeyWArraySingleArray`
->（`java-runtime-fe86653eacb81851d04f`）、
-> `EPLOtherDistinctOutputLimitMultikeyWArrayTwoArray`
->（`java-runtime-f9a1dafb621a6605ef47`）、
-> `EPLOtherDistinctFireAndForgetMultikeyWArray`
->（`java-runtime-c752f36ef07cc6280306`）、
-> `EPLOtherDistinctIterateMultikeyWArray`
->（`java-runtime-4fab4842341b8021b1a2`）与
-> `EPLOtherDistinctOnSelectMultikeyWArray`
->（`java-runtime-9066a6d1932dae5ff6aa`）。场景扩至 8 个 case，Java/Go 各
-> 21 条 records、0 differences；覆盖 int[] 深内容键去重（[1,2]≠[2,1]）、
-> advance-time t=1s 批量去重保序、named window FAF 去重快照、keepall
-> 迭代器快照与 on-select 触发向量。Go 侧复用 `OutputEveryTime`/
-> `NamedWindowField`/`SelectFromNamedWindow`/FAF plan，无引擎改动。
-> manifest 更新为 534 cases、149 个 differential-verified case、477 个
-> differential runtime IDs、3105 条 associations，capability 达到 8/20
-> DV runtime。
-
 > 最新补充：Draft 4.230（2026-08-22），新增 `epl.other.distinct` 的
 > `epl-other-distinct` differential-verified 场景：固定 Java
 > `EPLOtherDistinct.java` 的 `EPLOtherOutputSimpleColumn`

@@ -2568,6 +2568,26 @@ func (r *statementRuntime) snapshotQuery(plan Plan, now time.Time, variables map
 		len(aggregateGroupingSetsForDefinition(plan.query.aggregate)) == 1 {
 		return r.snapshotOutputLimitedAggregateBatch(plan, now, !outputLimitedGroupedIterator(plan.query.output))
 	}
+	if plan.query.trigger != nil && plan.query.trigger.action == triggerSetVariables {
+		// An on-set statement's iterator exposes one row of the current
+		// variable values, mirroring Java's variable update event.
+		result := ResultBatch{Time: now}
+		values := make([]Value, 0, len(plan.query.trigger.variableAssignments))
+		seen := make(map[string]struct{}, len(plan.query.trigger.variableAssignments))
+		for _, assignment := range plan.query.trigger.variableAssignments {
+			if _, duplicate := seen[assignment.Name]; duplicate {
+				continue
+			}
+			seen[assignment.Name] = struct{}{}
+			if value, exists := variables[assignment.Name]; exists {
+				values = append(values, value)
+			} else {
+				values = append(values, Null())
+			}
+		}
+		result.New = append(result.New, resultRow(newRow(plan.resultSchema, values)))
+		return result
+	}
 	return r.snapshotBatch(plan, now)
 }
 

@@ -1,36 +1,403 @@
 {
-  "version": "esper-parity/v1",
-  "id": "variables-use",
+  "version": "esper-differential/v1",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
-  "java": "17.0.19",
-  "scenario": "testdata/parity/variables-use.json",
-  "trace": "testdata/parity/variables-use.trace.json",
   "javaRuntimeIds": [
     "java-runtime-5a38cfa84dadd7dd6f61",
     "java-runtime-849ebec4996c28823d57",
     "java-runtime-5a91cdbc149502c6fb7a"
   ],
-  "goTests": [
-    "TestEPLVariableUseVariableInFilterParity",
-    "TestEPLVariableUseVariableInFilterBooleanParity",
-    "TestEPLVariableUseSimpleSameModuleParity"
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesUse.java"
   ],
-  "differences": 0,
-  "caseMatchSummary": {
-    "simple-same-module": {
-      "expected": 1,
-      "actual": 1,
-      "match": true
-    },
-    "variable-in-filter": {
-      "expected": 2,
-      "actual": 2,
-      "match": true
-    },
-    "variable-in-filter-boolean": {
-      "expected": 4,
-      "actual": 4,
-      "match": true
-    }
-  }
+  "javaExecutions": [
+    "EPLVariableUseVariableInFilter",
+    "EPLVariableUseVariableInFilterBoolean",
+    "EPLVariableUseSimpleSameModule"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "variables-use",
+    "steps": [
+      {
+        "op": "case",
+        "case": "variable-in-filter"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 100,
+          "p00": "a",
+          "p01": "b"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 100,
+          "p00": "e",
+          "p01": "c"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "e",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "case",
+        "case": "variable-in-filter-boolean"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "x",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 100,
+          "p00": "a",
+          "p01": "b"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 100,
+          "p00": "e",
+          "p01": "c"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "e",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "case",
+        "case": "simple-same-module"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "variables-use",
+    "records": [
+      {
+        "case": "variable-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "6",
+              "theString": "e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "3",
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "5",
+              "theString": "c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "6",
+              "theString": "e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-same-module",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "variables-use",
+    "records": [
+      {
+        "case": "variable-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "6",
+              "theString": "e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "3",
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "5",
+              "theString": "c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "6",
+              "theString": "e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-same-module",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
 }

@@ -7466,6 +7466,13 @@ func VariableRef[T any](name string) Expression[T] {
 	return internalengine.VariableRef[T](name)
 }
 
+// VariableType overrides the declared variable type for variables whose
+// initial value is untyped nil (a typed null), matching Java's
+// addVariable(name, Type, null) configuration form.
+func VariableType(t reflect.Type) VariableOption {
+	return internalengine.VariableType(t)
+}
+
 // Variance computes sample variance. A singleton group has variance zero,
 // matching the sample convention used by StdDev in this package.
 func Variance[T Numeric](expression Expression[T]) AggregateExpression[float64] {

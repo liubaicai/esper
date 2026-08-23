@@ -1822,6 +1822,38 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "variables-onset" || *mode == "variables-onset-diff" {
+		trace, err := runVariablesOnsetScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "variables-onset-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, variablesOnsetJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, variablesOnsetJavaSources),
+				splitMetadata(*javaExecutions, variablesOnsetJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "variables-use" || *mode == "variables-use-diff" {
+		trace, err := runVariablesUseScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "variables-use-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, variablesUseJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, variablesUseJavaSources),
+				splitMetadata(*javaExecutions, variablesUseJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "stream-selector" || *mode == "stream-selector-diff" {
 		trace, err := runStreamSelectorScenario(context.Background(), scenario)
 		if err != nil {

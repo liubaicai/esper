@@ -1,0 +1,1172 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-4d17a2ee72e2f62f484f",
+    "java-runtime-52902bb58deb8ee9f48b",
+    "java-runtime-a1c711b411766252f401",
+    "java-runtime-e7b63e853b22431a1ef3",
+    "java-runtime-275279390f721078251a",
+    "java-runtime-ce691b2f1d8368144c89"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOnSet.java"
+  ],
+  "javaExecutions": [
+    "EPLVariableOnSetSimple",
+    "EPLVariableOnSetWithFilter",
+    "EPLVariableOnSetAssignmentOrderNoDup",
+    "EPLVariableOnSetAssignmentOrderDup",
+    "EPLVariableOnSetRuntimeOrderMultiple",
+    "EPLVariableOnSetCoercion"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "variables-onset-set",
+    "steps": [
+      {
+        "op": "case",
+        "case": "onset-simple"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "onset-with-filter"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "case",
+        "case": "onset-order-no-dup"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 90
+        }
+      },
+      {
+        "op": "case",
+        "case": "onset-order-dup"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": -1,
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "intPrimitive": -2,
+          "intBoxed": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "intPrimitive": -3,
+          "intBoxed": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S4",
+          "intPrimitive": -4,
+          "intBoxed": 40
+        }
+      },
+      {
+        "op": "case",
+        "case": "onset-runtime-order-multiple"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 11,
+          "intBoxed": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "case",
+        "case": "onset-coercion"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 1,
+          "intBoxed": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 10,
+          "intBoxed": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A3"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "variables-onset-set",
+    "records": [
+      {
+        "case": "onset-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-simple",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var_simple_set": "false"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "false"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-with-filter",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "papi_1": "begin",
+              "papi_2": "true",
+              "papi_3": "value"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-with-filter",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "papi_1": "end",
+              "papi_2": "false",
+              "papi_3": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-with-filter",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "papi_1": "end",
+              "papi_2": "false",
+              "papi_3": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-no-dup",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OND": 12,
+              "var2OND": 2,
+              "var3OND": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-no-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OND": "3",
+              "var2OND": "4",
+              "var3OND": "7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-no-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OND": "-1",
+              "var2OND": "0",
+              "var3OND": "-1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-no-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OND": "90",
+              "var2OND": "91",
+              "var3OND": "181"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": 0,
+              "var2OD": 1,
+              "var3OD": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": "10",
+              "var2OD": "1",
+              "var3OD": "3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": "20",
+              "var2OD": "1",
+              "var3OD": "4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": "30",
+              "var2OD": "1",
+              "var3OD": "5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": "40",
+              "var2OD": "1",
+              "var3OD": "6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1ROM": null,
+              "var2ROM": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1ROM": "3",
+              "var2ROM": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1ROM": "-1",
+              "var2ROM": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1",
+              "var1ROM": "-1",
+              "var2ROM": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1ROM": "11",
+              "var2ROM": "12"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2",
+              "var1ROM": "11",
+              "var2ROM": "12"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1COE": null,
+              "var2COE": null,
+              "var3COE": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A1",
+              "var1COE": null,
+              "var2COE": null,
+              "var3COE": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1COE": "1.0",
+              "var2COE": "1.0",
+              "var3COE": "2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A2",
+              "var1COE": "1.0",
+              "var2COE": "1.0",
+              "var3COE": "2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1COE": "10.0",
+              "var2COE": "10.0",
+              "var3COE": "20"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A3",
+              "var1COE": "10.0",
+              "var2COE": "10.0",
+              "var3COE": "20"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A1",
+              "var1COE": "10.0",
+              "var2COE": "10.0",
+              "var3COE": "20"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "variables-onset-set",
+    "records": [
+      {
+        "case": "onset-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-simple",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var_simple_set": "false"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "false"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-with-filter",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "papi_1": "begin",
+              "papi_2": "true",
+              "papi_3": "value"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-with-filter",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "papi_1": "end",
+              "papi_2": "false",
+              "papi_3": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-with-filter",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "papi_1": "end",
+              "papi_2": "false",
+              "papi_3": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-no-dup",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OND": 12,
+              "var2OND": 2,
+              "var3OND": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-no-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OND": "3",
+              "var2OND": "4",
+              "var3OND": "7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-no-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OND": "-1",
+              "var2OND": "0",
+              "var3OND": "-1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-no-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OND": "90",
+              "var2OND": "91",
+              "var3OND": "181"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": 0,
+              "var2OD": 1,
+              "var3OD": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": "10",
+              "var2OD": "1",
+              "var3OD": "3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": "20",
+              "var2OD": "1",
+              "var3OD": "4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": "30",
+              "var2OD": "1",
+              "var3OD": "5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-order-dup",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OD": "40",
+              "var2OD": "1",
+              "var3OD": "6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1ROM": null,
+              "var2ROM": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1ROM": "3",
+              "var2ROM": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1ROM": "-1",
+              "var2ROM": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1",
+              "var1ROM": "-1",
+              "var2ROM": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1ROM": "11",
+              "var2ROM": "12"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-runtime-order-multiple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2",
+              "var1ROM": "11",
+              "var2ROM": "12"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "snapshot",
+        "statement": "set",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1COE": null,
+              "var2COE": null,
+              "var3COE": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A1",
+              "var1COE": null,
+              "var2COE": null,
+              "var3COE": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1COE": "1.0",
+              "var2COE": "1.0",
+              "var3COE": "2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A2",
+              "var1COE": "1.0",
+              "var2COE": "1.0",
+              "var3COE": "2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1COE": "10.0",
+              "var2COE": "10.0",
+              "var3COE": "20"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-coercion",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A3",
+              "var1COE": "10.0",
+              "var2COE": "10.0",
+              "var3COE": "20"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A1",
+              "var1COE": "10.0",
+              "var2COE": "10.0",
+              "var3COE": "20"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

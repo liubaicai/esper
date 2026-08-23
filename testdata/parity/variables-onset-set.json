@@ -1,0 +1,244 @@
+{
+ "version": "esper-parity/v1",
+ "id": "variables-onset-set",
+ "description": "On-trigger variable assignment scenarios: ordered assignments with chained references, duplicate targets with last-write-wins, numeric coercion, filtered triggers, and dependent variable selects",
+ "javaRuntimes": [
+  "java-runtime-275279390f721078251a",
+  "java-runtime-4d17a2ee72e2f62f484f",
+  "java-runtime-52902bb58deb8ee9f48b",
+  "java-runtime-a1c711b411766252f401",
+  "java-runtime-ce691b2f1d8368144c89",
+  "java-runtime-e7b63e853b22431a1ef3"
+ ],
+ "cases": [
+  {
+   "case": "onset-simple",
+   "runtimeId": "java-runtime-4d17a2ee72e2f62f484f"
+  },
+  {
+   "case": "onset-with-filter",
+   "runtimeId": "java-runtime-52902bb58deb8ee9f48b"
+  },
+  {
+   "case": "onset-order-no-dup",
+   "runtimeId": "java-runtime-a1c711b411766252f401"
+  },
+  {
+   "case": "onset-order-dup",
+   "runtimeId": "java-runtime-e7b63e853b22431a1ef3"
+  },
+  {
+   "case": "onset-runtime-order-multiple",
+   "runtimeId": "java-runtime-275279390f721078251a"
+  },
+  {
+   "case": "onset-coercion",
+   "runtimeId": "java-runtime-ce691b2f1d8368144c89"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "onset-simple"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "onset-with-filter"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S2",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "case",
+   "case": "onset-order-no-dup"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": 90
+   }
+  },
+  {
+   "op": "case",
+   "case": "onset-order-dup"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": -1,
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S2",
+    "intPrimitive": -2,
+    "intBoxed": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S3",
+    "intPrimitive": -3,
+    "intBoxed": 30
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S4",
+    "intPrimitive": -4,
+    "intBoxed": 40
+   }
+  },
+  {
+   "op": "case",
+   "case": "onset-runtime-order-multiple"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": 11,
+    "intBoxed": 12
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "case",
+   "case": "onset-coercion"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": 1,
+    "intBoxed": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "S1",
+    "intPrimitive": 10,
+    "intBoxed": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "A3"
+   }
+  }
+ ]
+}

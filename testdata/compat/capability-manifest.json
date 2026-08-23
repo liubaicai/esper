@@ -4352,10 +4352,13 @@
    "phase": 1,
    "status": "implemented",
    "remaining": [
-    "subquery and multikey-array on-set assignments",
-    "array element index assignment (dbls[intPrimitive] = v)",
-    "expression/inlined-class variable mutation",
-    "nullable *int field dereference in trigger assignment expressions"
+    "EPLVariableOnSetSubqueryMultikeyWArray: subquery and multikey-array on-set assignments",
+    "EPLVariableOnSetArrayAtIndex (dbls[intPrimitive] = v): array element index assignment",
+    "EPLVariableOnSetArrayAtIndexBoxed variant: boxed array element assignment",
+    "EPLVariableOnSetArrayBoxed: array-typed variable on-set",
+    "EPLVariableOnSetArrayInvalid: compile-error-only array assignment diagnostics (approved difference)",
+    "EPLVariableOnSetExpression: expression / inlined-class variable mutation",
+    "EPLVariableOnSetInvalid (java-runtime-c2b1d3116ed43d68d679): compile-time error-only, 5 asserted diagnostics plus 3 skip-only compiles (approved difference)"
    ],
    "verification": [
     "inventoried",
@@ -4366,9 +4369,18 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-1588aa4d361615645c7e",
     "java-runtime-2735f44aed732350be1b",
+    "java-runtime-275279390f721078251a",
+    "java-runtime-4d17a2ee72e2f62f484f",
+    "java-runtime-52902bb58deb8ee9f48b",
+    "java-runtime-5a38cfa84dadd7dd6f61",
+    "java-runtime-5a91cdbc149502c6fb7a",
     "java-runtime-60c4c5dc59ffbf4277b3",
     "java-runtime-78f23a1b470f6bd625c4",
-    "java-runtime-91f1de1b06fddf87b2b1"
+    "java-runtime-849ebec4996c28823d57",
+    "java-runtime-91f1de1b06fddf87b2b1",
+    "java-runtime-a1c711b411766252f401",
+    "java-runtime-ce691b2f1d8368144c89",
+    "java-runtime-e7b63e853b22431a1ef3"
    ],
    "representativeScenarioIds": [
     "variable-deploy",
@@ -23647,7 +23659,7 @@
     "differential-evidence",
     "mutation"
    ],
-   "difference": "nullable Integer boxed column uses a plain Go int (Go value model; the nullable *int trigger-expression dereference is tracked separately); SODA object-model, subquery, array-index and inlined-class executions remain open",
+   "difference": "SODA object-model, subquery/multikey-array, array-index, inlined-class executions remain open (see capability remaining); EPLVariableOnSetInvalid is compile-time error-only (approved difference)",
    "verification": [
     "inventoried",
     "implemented",
@@ -23655,7 +23667,13 @@
     "representative-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-78f23a1b470f6bd625c4"
+    "java-runtime-275279390f721078251a",
+    "java-runtime-4d17a2ee72e2f62f484f",
+    "java-runtime-52902bb58deb8ee9f48b",
+    "java-runtime-78f23a1b470f6bd625c4",
+    "java-runtime-a1c711b411766252f401",
+    "java-runtime-ce691b2f1d8368144c89",
+    "java-runtime-e7b63e853b22431a1ef3"
    ],
    "representativeScenarioIds": [
     "variable-deploy"
@@ -31487,8 +31505,8 @@
    ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-5a38cfa84dadd7dd6f61",
-    "java-runtime-849ebec4996c28823d57",
-    "java-runtime-5a91cdbc149502c6fb7a"
+    "java-runtime-5a91cdbc149502c6fb7a",
+    "java-runtime-849ebec4996c28823d57"
    ]
   },
   {
@@ -35466,7 +35484,7 @@
   "inventoriedCases": 534,
   "implementedCases": 532,
   "differentialVerifiedCases": 149,
-  "differentialVerifiedRuntimeIds": 492,
+  "differentialVerifiedRuntimeIds": 498,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
