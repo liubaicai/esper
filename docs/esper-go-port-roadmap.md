@@ -4,6 +4,16 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.243（2026-08-23），新增 `epl.other.select-wildcard-additional`
+> differential-verified 场景，对照固定 Java EPLOtherSelectWildcardWAdditional.java
+> 的 Single 和 WildcardMapEvent 共两个 runtime。场景 Java/Go 各 3 条 records、
+> 0 differences；覆盖 wildcard select + additional concat 投影与 Map event 类型。
+> InvalidRepeatedProperties 登记 intentionally-different（compile-only duplicate
+> column rejection）。SingleOM/JoinInsertInto/JoinNoCommon/JoinCommon/
+> CombinedProperties 暂登记 remaining。manifest 更新为 542 cases、154 个
+> differential-verified case、21 个 intentionally-different case、537 个
+> differential runtime IDs、3160 条 associations（referenced 2956）。
+>
 > 最新补充：Draft 4.242（2026-08-23），新增 `view.basic-windows` 的
 > `view-length-batch` differential-verified 场景，对照固定 Java ViewLengthBatch.java
 > 的 8 个 execution（SceneOne、Size2、Size1、Size3、Delete, Normal{NAMEDWINDOW/GROUPWIN}
@@ -642,13 +652,13 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 540 |
-| Case differential-verified | 153 |
-| Differential-verified runtime | 535 / 4,136 |
-| Runtime 已关联 | 2,953 / 4,136（71.4%） |
-| Runtime 未关联 | 1,183 |
+| Case | 542 |
+| Case differential-verified | 154 |
+| Differential-verified runtime | 537 / 4,136 |
+| Runtime 已关联 | 2,956 / 4,136（71.5%） |
+| Runtime 未关联 | 1,180 |
 | Representative scenario | 94 / 94 通过 |
-| Intentionally-different case | 20 |
+| Intentionally-different case | 21 |
 | NFR-verified case | 0 |
 | 质量摘要 | Docker passed；stress passed；race passed；performance pending |
 

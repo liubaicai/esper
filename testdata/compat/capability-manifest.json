@@ -4457,6 +4457,36 @@
     "java-runtime-9668909b2b2f00769dab",
     "java-runtime-92e69b0657b10a656fdc"
    ]
+  },
+  {
+   "id": "epl.other.select-wildcard-additional",
+   "domain": "epl",
+   "level": "G",
+   "summary": "Wildcard select with additional computed columns across single-stream, join, map-event and invalid forms",
+   "javaRefs": [
+    "EPLOtherSelectWildcardWAdditional"
+   ],
+   "goRefs": [
+    "internal/app/parity/epl_other_wildcard_additional.go"
+   ],
+   "phase": 1,
+   "status": "implemented",
+   "remaining": [
+    "SingleOM SODA object-model variant (no Go counterpart by design)",
+    "JoinInsertInto/JoinNoCommon/JoinCommon join-aggregate wildcard+additional emission semantics",
+    "CombinedProperties nested indexed/mapped property access"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "intentionally-different"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0d7fa958a52fab1f4f47",
+    "java-runtime-e9aa163116193bbd7106"
+   ],
+   "difference": "InvalidRepeatedProperties compile-only: message text differs. SingleOM SODA has no Go counterpart."
   }
  ],
  "cases": [
@@ -33364,6 +33394,59 @@
     "implemented",
     "intentionally-different"
    ]
+  },
+  {
+   "id": "case.epl-other-wildcard-additional",
+   "javaRuntimeIds": [
+    "java-runtime-0d7fa958a52fab1f4f47",
+    "java-runtime-e9aa163116193bbd7106",
+    "java-runtime-33e95a630f502ba99b94"
+   ],
+   "javaNames": [
+    "EPLOtherSingle",
+    "EPLOtherWildcardMapEvent",
+    "EPLOtherInvalidRepeatedProperties"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplOtherWildcardAdditionalDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "epl",
+    "wildcard-select",
+    "additional-columns",
+    "map-event",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-wildcard-additional.json",
+    "testdata/parity/epl-other-wildcard-additional.trace.json",
+    "testdata/parity/epl-other-wildcard-additional.evidence.json"
+   ],
+   "notes": "Draft 4.243: 3 cases; Java/Go each 3 records, 0 differences. Covers wildcard+additional concat projection, map event type, and compile-only duplicate column rejection.",
+   "difference": "InvalidRepeatedProperties is approved difference: message text unasserted ('skip' sentinel). SingleOM deferred (SODA OM has no Go counterpart). JoinInsertInto/JoinNoCommon/JoinCommon/CombinedProperties deferred: join-aggregate wildcard+additional emission semantics diverge.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0d7fa958a52fab1f4f47",
+    "java-runtime-e9aa163116193bbd7106"
+   ]
+  },
+  {
+   "id": "case.epl-other-wildcard-additional-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-33e95a630f502ba99b94"
+   ],
+   "status": "intentionally-different",
+   "difference": "Compile-only: Go rejects duplicate column at Build with its own diagnostic; Java uses 'skip' sentinel.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ]
   }
  ],
  "mappings": [
@@ -35858,29 +35941,37 @@
   {
    "capabilityId": "view.basic-windows",
    "caseId": "case.view-length-batch-invalid"
+  },
+  {
+   "capabilityId": "epl.other.select-wildcard-additional",
+   "caseId": "case.epl-other-wildcard-additional"
+  },
+  {
+   "capabilityId": "epl.other.select-wildcard-additional",
+   "caseId": "case.epl-other-wildcard-additional-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 540,
-  "implementedCases": 538,
-  "differentialVerifiedCases": 153,
-  "differentialVerifiedRuntimeIds": 535,
-  "intentionallyDifferentCases": 20,
+  "inventoriedCases": 542,
+  "implementedCases": 540,
+  "differentialVerifiedCases": 154,
+  "differentialVerifiedRuntimeIds": 537,
+  "intentionallyDifferentCases": 21,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 110,
-  "implementedCapabilities": 109,
-  "differentialVerifiedCapabilities": 20,
-  "intentionallyDifferentCapabilities": 7,
+  "inventoriedCapabilities": 111,
+  "implementedCapabilities": 110,
+  "differentialVerifiedCapabilities": 21,
+  "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3156,
-  "referencedJavaRuntimeIds": 2953,
+  "runtimeAssociationCount": 3160,
+  "referencedJavaRuntimeIds": 2956,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1183,
+  "unreferencedJavaRuntimeIds": 1180,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 540,
-  "totalCapabilities": 110
+  "totalCases": 542,
+  "totalCapabilities": 111
  }
 }

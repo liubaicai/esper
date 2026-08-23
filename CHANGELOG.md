@@ -1,3 +1,8 @@
+> 最新补充：Draft 4.243（2026-08-23），新增 `epl.other.select-wildcard-additional`
+> differential-verified 场景，覆盖 Single 和 WildcardMapEvent。Java/Go 各 3 条
+> records、0 differences。manifest 更新为 542 cases、154 个 differential-verified
+> case、537 个 differential runtime IDs。
+>
 > 最新补充：Draft 4.242（2026-08-23），新增 `view.basic-windows` 的
 > `view-length-batch` differential-verified 场景，覆盖 length_batch(1/2/3) 刷新、
 > wildcard irstream、迭代器快照、named-window 安静删除与 groupwin 嵌套共 8 个

@@ -1,0 +1,58 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-other-wildcard-additional",
+ "description": "Select-wildcard-with-additional scenarios replaying EPLOtherSelectWildcardWAdditional executions: SODA object-model twin and EPL text form over SupportBeanSimple, insert-into replay of wildcard-plus-concat over single and joined streams, A/B equijoin concat with and without where, nested indexed-mapped combined props, map event type concat and the compile-only duplicate-column rejection",
+ "javaRuntimes": [
+  "java-runtime-0d7fa958a52fab1f4f47",
+  "java-runtime-e9aa163116193bbd7106",
+  "java-runtime-33e95a630f502ba99b94"
+ ],
+ "cases": [
+  {
+   "case": "single",
+   "runtimeId": "java-runtime-0d7fa958a52fab1f4f47"
+  },
+  {
+   "case": "wildcard-map",
+   "runtimeId": "java-runtime-e9aa163116193bbd7106"
+  },
+  {
+   "case": "invalid-repeated",
+   "runtimeId": "java-runtime-33e95a630f502ba99b94"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "single"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanSimple",
+   "payload": {
+    "myString": "string",
+    "myInt": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "wildcard-map"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMapEventIntString",
+   "payload": {
+    "int": 1,
+    "theString": "xx"
+   }
+  },
+  {
+   "op": "case",
+   "case": "invalid-repeated"
+  },
+  {
+   "op": "deployed",
+   "statement": "invalid"
+  }
+ ]
+}
