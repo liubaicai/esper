@@ -42,20 +42,24 @@ var (
 		"java-runtime-964e6db2f54f1b508387", // Size2
 		"java-runtime-edd63c54bc9fe03a8380", // Size1
 		"java-runtime-5a98579c3673cc0224ce", // Size3
+		"java-runtime-5c9d89c9732aedb6a5da", // Invalid
 		"java-runtime-d22e3122427d1dd8ceb0", // Normal{VIEW}
-		"java-runtime-03b48f31fe26fedf4d4b", // Prev
 		"java-runtime-a3dc40576e7c9def33fb", // Normal{NAMEDWINDOW}
 		"java-runtime-b6eb26431d8d05188516", // Normal{GROUPWIN}
+		"java-runtime-03b48f31fe26fedf4d4b", // Prev (deferred)
+		"java-runtime-8bc763b2e677e747ee4c", // Delete
 	}
 	viewLengthBatchJavaExecutions = []string{
 		"ViewLengthBatchSceneOne",
 		"ViewLengthBatchSize2",
 		"ViewLengthBatchSize1",
 		"ViewLengthBatchSize3",
+		"ViewLengthBatchInvalid",
 		"ViewLengthBatchNormal{runType=VIEW}",
-		"ViewLengthBatchPrev",
+		"ViewLengthBatchPrev (deferred)",
 		"ViewLengthBatchNormal{runType=NAMEDWINDOW}",
 		"ViewLengthBatchNormal{runType=GROUPWIN}",
+		"ViewLengthBatchDelete",
 	}
 )
 

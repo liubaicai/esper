@@ -3994,7 +3994,7 @@
     "java-runtime-964e6db2f54f1b508387",
     "java-runtime-edd63c54bc9fe03a8380",
     "java-runtime-5a98579c3673cc0224ce",
-    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-8bc763b2e677e747ee4c",
     "java-runtime-a3dc40576e7c9def33fb",
     "java-runtime-b6eb26431d8d05188516"
    ]
@@ -33301,7 +33301,7 @@
     "java-runtime-964e6db2f54f1b508387",
     "java-runtime-edd63c54bc9fe03a8380",
     "java-runtime-5a98579c3673cc0224ce",
-    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-8bc763b2e677e747ee4c",
     "java-runtime-a3dc40576e7c9def33fb",
     "java-runtime-b6eb26431d8d05188516"
    ],
@@ -33310,7 +33310,7 @@
     "ViewLengthBatchSize2",
     "ViewLengthBatchSize1",
     "ViewLengthBatchSize3",
-    "ViewLengthBatchNormal{runType=VIEW}",
+    "ViewLengthBatchDelete",
     "ViewLengthBatchNormal{runType=NAMEDWINDOW}",
     "ViewLengthBatchNormal{runType=GROUPWIN}"
    ],
@@ -33347,7 +33347,7 @@
     "java-runtime-964e6db2f54f1b508387",
     "java-runtime-edd63c54bc9fe03a8380",
     "java-runtime-5a98579c3673cc0224ce",
-    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-8bc763b2e677e747ee4c",
     "java-runtime-a3dc40576e7c9def33fb",
     "java-runtime-b6eb26431d8d05188516"
    ]

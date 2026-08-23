@@ -13596,6 +13596,35 @@ func TestRunInfraNwTableFafJoinDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunViewLengthBatchDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-length-batch.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "view-length-batch.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-length-batch.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "view-length-batch-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
 func TestRunRollupDimensionalityDiffRejectsTraceMutations(t *testing.T) {
 	tests := []struct {
 		name   string

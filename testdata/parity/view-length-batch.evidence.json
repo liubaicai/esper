@@ -6,10 +6,12 @@
     "java-runtime-964e6db2f54f1b508387",
     "java-runtime-edd63c54bc9fe03a8380",
     "java-runtime-5a98579c3673cc0224ce",
+    "java-runtime-5c9d89c9732aedb6a5da",
     "java-runtime-d22e3122427d1dd8ceb0",
-    "java-runtime-03b48f31fe26fedf4d4b",
     "java-runtime-a3dc40576e7c9def33fb",
-    "java-runtime-b6eb26431d8d05188516"
+    "java-runtime-b6eb26431d8d05188516",
+    "java-runtime-03b48f31fe26fedf4d4b",
+    "java-runtime-8bc763b2e677e747ee4c"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLengthBatch.java"
@@ -19,10 +21,12 @@
     "ViewLengthBatchSize2",
     "ViewLengthBatchSize1",
     "ViewLengthBatchSize3",
+    "ViewLengthBatchInvalid",
     "ViewLengthBatchNormal{runType=VIEW}",
-    "ViewLengthBatchPrev",
+    "ViewLengthBatchPrev (deferred)",
     "ViewLengthBatchNormal{runType=NAMEDWINDOW}",
-    "ViewLengthBatchNormal{runType=GROUPWIN}"
+    "ViewLengthBatchNormal{runType=GROUPWIN}",
+    "ViewLengthBatchDelete"
   ],
   "scenario": {
     "version": "esper-parity/v1",
