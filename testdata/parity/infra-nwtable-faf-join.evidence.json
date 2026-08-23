@@ -1,0 +1,2119 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-d1ad3031ef878ae3b9c3",
+    "java-runtime-3d9fd0b9f7448d2ab7eb",
+    "java-runtime-e884a4dfcb1160430000",
+    "java-runtime-a3fa439ad02f345f954f",
+    "java-runtime-e706579958dbaeb9550a",
+    "java-runtime-707436cb235b08f67d64",
+    "java-runtime-fe3c9605d34ad30b7cd9",
+    "java-runtime-71b37328d592aa52faaa",
+    "java-runtime-117b2202ead4651d4267",
+    "java-runtime-d5783637873ef63c8c8c",
+    "java-runtime-411b91f5c4bdf53bfcde",
+    "java-runtime-99aeb672638674bd9b02"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableFAF.java"
+  ],
+  "javaExecutions": [
+    "Infra3StreamInnerJoin{rep=objectarray,namedWindow=true}",
+    "Infra3StreamInnerJoin{rep=objectarray,namedWindow=false}",
+    "Infra3StreamInnerJoin{rep=map,namedWindow=true}",
+    "Infra3StreamInnerJoin{rep=map,namedWindow=false}",
+    "Infra3StreamInnerJoin{rep=avro,namedWindow=true}",
+    "Infra3StreamInnerJoin{rep=avro,namedWindow=false}",
+    "Infra3StreamInnerJoin{rep=json,namedWindow=true}",
+    "Infra3StreamInnerJoin{rep=json,namedWindow=false}",
+    "Infra3StreamInnerJoin{rep=jsonprovided,namedWindow=true}",
+    "Infra3StreamInnerJoin{rep=jsonprovided,namedWindow=false}",
+    "Infra3StreamInnerJoin{rep=default,namedWindow=true}",
+    "Infra3StreamInnerJoin{rep=default,namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-faf-join",
+    "steps": [
+      {
+        "op": "case",
+        "case": "objectarray-namedwindow"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "objectarray-table"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "map-namedwindow"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "map-table"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "avro-namedwindow"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "avro-table"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "json-namedwindow"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "json-table"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "jsonclassprovided-namedwindow"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "jsonclassprovided-table"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "default-namedwindow"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      },
+      {
+        "op": "case",
+        "case": "default-table"
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product1",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product2",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Product",
+        "payload": {
+          "productId": "Product3",
+          "categoryId": "Category1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "Category",
+        "payload": {
+          "categoryId": "Category1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ProductOwnerDetails",
+        "payload": {
+          "productId": "Product1",
+          "owner": "Petar"
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "q1"
+      },
+      {
+        "op": "faf",
+        "statement": "q2"
+      },
+      {
+        "op": "faf",
+        "statement": "q3"
+      },
+      {
+        "op": "faf",
+        "statement": "q4"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-faf-join",
+    "records": [
+      {
+        "case": "objectarray-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-faf-join",
+    "records": [
+      {
+        "case": "objectarray-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "objectarray-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "avro-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "jsonclassprovided-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-namedwindow",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-namedwindow",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-namedwindow",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-namedwindow",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-table",
+        "operation": "faf",
+        "statement": "q1",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-table",
+        "operation": "faf",
+        "statement": "q2",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-table",
+        "operation": "faf",
+        "statement": "q3",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "default-table",
+        "operation": "faf",
+        "statement": "q4",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "WinProduct.productId": "Product1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

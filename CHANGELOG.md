@@ -1,3 +1,15 @@
+> 最新补充：Draft 4.240（2026-08-23），新增 `query.fire-and-forget` 的
+> `infra-nwtable-faf-join-matrix` differential-verified 场景，对照固定 Java
+> InfraNWTableFAF.java 的 12 个 Infra3StreamInnerJoin execution（representation ×
+> namedWindow 全矩阵）。场景 Java/Go 各 48 条 faf records、0 differences；覆盖 keep-all
+> 窗口与主键表两种 infra 填充方式、四种 fire-and-forget 三流内连接查询。引擎新增
+> JoinQuery.Having（FAF join 行过滤）并在 fire-and-forget 边界拒绝 Previous/Prior
+> （InvalidRule）；InfraInvalid 与 InfraInvalidInsert 六个 compile-only execution 登记
+> 为 intentionally-different（Java 断言 EPL 消息前缀 vs Go ErrorCode 分类的批准差异）。
+> manifest 更新为 538 cases、152 个 differential-verified case、19 个
+> intentionally-different case、528 个 differential runtime IDs、3148 条 associations
+>（referenced 2945）。
+>
 > 最新补充：Draft 4.239（2026-08-23），完成 `resultset.aggregate-dimensional` 的
 > ResultSetQueryTypeRollupDimensionality 12 个新增 execution（累计 20/24 差分验证；
 > BoundCube3Dim、ContextPartitionAlsoRollup、Invalid 与

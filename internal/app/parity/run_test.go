@@ -13505,6 +13505,97 @@ func TestRunRollupDimensionalityDiffWritesPassingEvidence(t *testing.T) {
 	}
 }
 
+func TestRunInfraNwTableFafJoinDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-faf-join.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "infra-nwtable-faf-join.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-faf-join.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "infra-nwtable-faf-join-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunInfraNwTableFafJoinDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "join-result-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New = trace.Records[0].New[:0]
+			},
+		},
+		{
+			name: "join-product-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["WinProduct.productId"] = "Product2"
+			},
+		},
+		{
+			name: "map-representation-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[0].Fields["WinProduct.productId"] = "WRONG"
+			},
+		},
+		{
+			name: "avro-representation-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[16].New = nil
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-faf-join.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "infra-nwtable-faf-join.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-nwtable-faf-join.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "infra-nwtable-faf-join-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunRollupDimensionalityDiffRejectsTraceMutations(t *testing.T) {
 	tests := []struct {
 		name   string

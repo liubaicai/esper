@@ -388,6 +388,9 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 	if err := e.env.validateFireAndForgetSubqueries(plan.query); err != nil {
 		return QueryResult{}, WrapError(ErrorInvalidRule, "fire-and-forget subquery", err)
 	}
+	if err := validateFireAndForgetNoPrevious(plan.query); err != nil {
+		return QueryResult{}, WrapError(ErrorInvalidRule, "fire-and-forget", err)
+	}
 	if plan.query.onDemand != nil {
 		return e.executeFireAndForgetMutation(ctx, plan, selector, parameters)
 	}

@@ -4,6 +4,20 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.240（2026-08-23），新增 `query.fire-and-forget` 的
+> `infra-nwtable-faf-join-matrix` differential-verified 场景，对照固定 Java
+> InfraNWTableFAF.java 的 12 个 Infra3StreamInnerJoin execution（representation ×
+> namedWindow 全矩阵：OBJECTARRAY/MAP/AVRO/JSON/JSONCLASSPROVIDED/DEFAULT ×
+> window/table）。场景 Java/Go 各 48 条 faf records、0 differences；覆盖三流内连接
+> （keep-all 窗口与主键表两种 infra、insert 流与 on-merge 两种填充）、显式 ON 连接、
+> owner 关联 where、逗号式过滤交叉连接与无 group-by 的 having 四种 fire-and-forget 查询。
+> 引擎新增 JoinQuery.Having（FAF join 投影后行过滤）与 fire-and-forget Previous 拒绝
+> （InvalidRule 分类）；InfraInvalid/InfraInvalidInsert 六个 compile-only execution 登记
+> 为 intentionally-different approved difference（Go 以 ErrorCode 分类同诊断面）。
+> manifest 更新为 538 cases、152 个 differential-verified case、19 个
+> intentionally-different case、528 个 differential runtime IDs、3148 条 associations
+>（referenced 2945）。
+>
 > 最新补充：Draft 4.239（2026-08-23），完成 `resultset.aggregate-dimensional` 的
 > ResultSetQueryTypeRollupDimensionality 12 个新增 execution（累计 20/24 差分验证，
 > BoundCube3Dim、ContextPartitionAlsoRollup、Invalid、UnboundGroupingSet2LevelUnenclosed
@@ -605,13 +619,13 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 536 |
-| Case differential-verified | 151 |
-| Differential-verified runtime | 516 / 4,136 |
-| Runtime 已关联 | 2,927 / 4,136（70.8%） |
-| Runtime 未关联 | 1,209 |
+| Case | 538 |
+| Case differential-verified | 152 |
+| Differential-verified runtime | 528 / 4,136 |
+| Runtime 已关联 | 2,945 / 4,136（71.2%） |
+| Runtime 未关联 | 1,191 |
 | Representative scenario | 94 / 94 通过 |
-| Intentionally-different case | 18 |
+| Intentionally-different case | 19 |
 | NFR-verified case | 0 |
 | 质量摘要 | Docker passed；stress passed；race passed；performance pending |
 

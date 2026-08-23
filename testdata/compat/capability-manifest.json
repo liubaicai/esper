@@ -454,7 +454,22 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-117b2202ead4651d4267",
+    "java-runtime-3d9fd0b9f7448d2ab7eb",
+    "java-runtime-411b91f5c4bdf53bfcde",
+    "java-runtime-707436cb235b08f67d64",
+    "java-runtime-71b37328d592aa52faaa",
+    "java-runtime-99aeb672638674bd9b02",
+    "java-runtime-a3fa439ad02f345f954f",
+    "java-runtime-d1ad3031ef878ae3b9c3",
+    "java-runtime-d5783637873ef63c8c8c",
+    "java-runtime-e706579958dbaeb9550a",
+    "java-runtime-e884a4dfcb1160430000",
+    "java-runtime-fe3c9605d34ad30b7cd9"
    ]
   },
   {
@@ -24424,6 +24439,110 @@
    ]
   },
   {
+   "id": "case.infra-nwtable-faf-join-matrix",
+   "javaRuntimeIds": [
+    "java-runtime-d1ad3031ef878ae3b9c3",
+    "java-runtime-3d9fd0b9f7448d2ab7eb",
+    "java-runtime-e884a4dfcb1160430000",
+    "java-runtime-a3fa439ad02f345f954f",
+    "java-runtime-e706579958dbaeb9550a",
+    "java-runtime-707436cb235b08f67d64",
+    "java-runtime-fe3c9605d34ad30b7cd9",
+    "java-runtime-71b37328d592aa52faaa",
+    "java-runtime-117b2202ead4651d4267",
+    "java-runtime-d5783637873ef63c8c8c",
+    "java-runtime-411b91f5c4bdf53bfcde",
+    "java-runtime-99aeb672638674bd9b02"
+   ],
+   "javaNames": [
+    "Infra3StreamInnerJoin{rep=OBJECTARRAY,namedWindow=True}",
+    "Infra3StreamInnerJoin{rep=OBJECTARRAY,namedWindow=False}",
+    "Infra3StreamInnerJoin{rep=MAP,namedWindow=True}",
+    "Infra3StreamInnerJoin{rep=MAP,namedWindow=False}",
+    "Infra3StreamInnerJoin{rep=AVRO,namedWindow=True}",
+    "Infra3StreamInnerJoin{rep=AVRO,namedWindow=False}",
+    "Infra3StreamInnerJoin{rep=JSON,namedWindow=True}",
+    "Infra3StreamInnerJoin{rep=JSON,namedWindow=False}",
+    "Infra3StreamInnerJoin{rep=JSONCLASSPROVIDED,namedWindow=True}",
+    "Infra3StreamInnerJoin{rep=JSONCLASSPROVIDED,namedWindow=False}",
+    "Infra3StreamInnerJoin{rep=DEFAULT,namedWindow=True}",
+    "Infra3StreamInnerJoin{rep=DEFAULT,namedWindow=False}"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNwTableFafJoinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNwTableFafJoinDiffRejectsTraceMutations",
+    "internal/esper/faf_invalid_classification_parity_test.go (approved-difference classification)"
+   ],
+   "tags": [
+    "infra",
+    "faf",
+    "named-window",
+    "table",
+    "three-stream-join",
+    "representation-matrix",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/infra-nwtable-faf-join.json",
+    "testdata/parity/infra-nwtable-faf-join.trace.json",
+    "testdata/parity/infra-nwtable-faf-join.evidence.json",
+    "tools/java-oracle/InfraNWTableFAFJoinScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-faf-join.sh"
+   ],
+   "notes": "Draft 4.240: 12-case representation x infra-kind matrix; Java/Go each 48 faf records, 0 differences. Three-stream inner joins over keep-all named windows or primary-key tables populated via insert streams / on-merge, executed as four fire-and-forget queries per case (explicit joins, owner correlation where, comma-style filtered cross join, having without group-by). Representation matrix spans object-array/map/avro/json/json-provided/default schema kinds with per-rep event sends.",
+   "difference": "Q5 SODA model round-trip has no Go counterpart by design (no EPL text entry); q4 covers the identical observable query. InfraInvalid and InfraInvalidInsert are compile-only approved differences: Go classifies the same diagnostic surface through ErrorCode (unknown target/source UnknownName, type mismatch and prev-in-faf InvalidRule) instead of EPL message prefixes.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d1ad3031ef878ae3b9c3",
+    "java-runtime-3d9fd0b9f7448d2ab7eb",
+    "java-runtime-e884a4dfcb1160430000",
+    "java-runtime-a3fa439ad02f345f954f",
+    "java-runtime-e706579958dbaeb9550a",
+    "java-runtime-707436cb235b08f67d64",
+    "java-runtime-fe3c9605d34ad30b7cd9",
+    "java-runtime-71b37328d592aa52faaa",
+    "java-runtime-117b2202ead4651d4267",
+    "java-runtime-d5783637873ef63c8c8c",
+    "java-runtime-411b91f5c4bdf53bfcde",
+    "java-runtime-99aeb672638674bd9b02"
+   ]
+  },
+  {
+   "id": "case.infra-nwtable-faf-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-50a4977e9c5601d896f0",
+    "java-runtime-e29e04207cdfe0581b26",
+    "java-runtime-d10131674fb93ea8eeb9",
+    "java-runtime-500ab24684518806c0c5",
+    "java-runtime-9ff722f92a51f9fb27ba",
+    "java-runtime-a952f2395a5031300969"
+   ],
+   "javaNames": [
+    "InfraInvalid{namedWindow=true}",
+    "InfraInvalid{namedWindow=false}",
+    "InfraInvalidInsert{representation=MAP}",
+    "InfraInvalidInsert{representation=OBJECTARRAY}",
+    "InfraInvalidInsert{representation=JSON}",
+    "InfraInvalidInsert{representation=AVRO}"
+   ],
+   "status": "intentionally-different",
+   "difference": "Compile-only executions: Java asserts EPCompileException message prefixes tied to EPL text; Go rejects the same diagnostic surface at Build or FAF-execution boundaries classified through ErrorCode. No observable successful-query behavior exists to compare.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ]
+  },
+  {
    "id": "case.infra-table-access-dot-method",
    "javaRuntimeIds": [
     "java-runtime-424cdec4be1343dbbbce",
@@ -35642,29 +35761,37 @@
   {
    "capabilityId": "resultset.aggregate-dimensional",
    "caseId": "case.rollup-dimensionality-completion"
+  },
+  {
+   "capabilityId": "query.fire-and-forget",
+   "caseId": "case.infra-nwtable-faf-join-matrix"
+  },
+  {
+   "capabilityId": "query.fire-and-forget",
+   "caseId": "case.infra-nwtable-faf-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 536,
-  "implementedCases": 534,
-  "differentialVerifiedCases": 151,
-  "differentialVerifiedRuntimeIds": 516,
-  "intentionallyDifferentCases": 18,
+  "inventoriedCases": 538,
+  "implementedCases": 536,
+  "differentialVerifiedCases": 152,
+  "differentialVerifiedRuntimeIds": 528,
+  "intentionallyDifferentCases": 19,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 110,
   "implementedCapabilities": 109,
-  "differentialVerifiedCapabilities": 18,
+  "differentialVerifiedCapabilities": 19,
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3130,
-  "referencedJavaRuntimeIds": 2927,
+  "runtimeAssociationCount": 3148,
+  "referencedJavaRuntimeIds": 2945,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1209,
+  "unreferencedJavaRuntimeIds": 1191,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 536,
+  "totalCases": 538,
   "totalCapabilities": 110
  }
 }

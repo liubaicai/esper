@@ -617,6 +617,9 @@ type JoinQuery struct {
 	definition *joinDefinition
 	selections []JoinSelection
 	where      Expr
+	// having applies a post-join filter over projected rows, the fluent
+	// counterpart of a HAVING clause without group-by.
+	having Expr
 }
 
 type joinDefinition struct {
@@ -740,6 +743,7 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		join:                       j.definition,
 		joinSelections:             append([]JoinSelection(nil), j.selections...),
 		joinWhere:                  j.where,
+		joinHaving:                 j.having,
 		routeTarget:                spec.routeTarget,
 		name:                       spec.name,
 		statementUserObject:        spec.statementUserObject,
@@ -768,6 +772,16 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 // this keeps outer-join null-side behavior analyzable in the fluent API.
 func (j JoinQuery) Where(predicate Expression[bool]) JoinQuery {
 	j.where = predicate
+	return j
+}
+
+// Having applies a post-join row filter after ON matching and projection,
+// mirroring Esper's HAVING clause for queries without group-by. Use
+// JoinField/JoinEventValue for explicit source scope.
+func (j JoinQuery) Having(predicate Expression[bool]) JoinQuery {
+	if predicate != nil {
+		j.having = predicate
+	}
 	return j
 }
 
@@ -3073,6 +3087,7 @@ type Query struct {
 	selections                 []Selection
 	joinSelections             []JoinSelection
 	joinWhere                  Expr
+	joinHaving                 Expr
 	patternSelections          []Selection
 	patternWhere               Expr
 	routeTarget                string

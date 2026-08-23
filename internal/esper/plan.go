@@ -622,6 +622,15 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 				return Plan{}, WrapError(ErrorInvalidRule, "join where", err)
 			}
 		}
+
+		if query.joinHaving != nil {
+			if query.joinHaving.Type() != typeOf[bool]() {
+				return Plan{}, WrapError(ErrorInvalidRule, "join having", NewError(ErrorTypeMismatch, "join where expression must return bool"))
+			}
+			if err := e.validateJoinScopedExpression(query.join, query.joinHaving, "join having"); err != nil {
+				return Plan{}, WrapError(ErrorInvalidRule, "join having", err)
+			}
+		}
 	} else if err := e.validateNode(query.input); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "stream", err)
 	}
@@ -3270,6 +3279,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 		if err := visit(query.joinWhere); err != nil {
 			return err
 		}
+		if err := visit(query.joinHaving); err != nil {
+			return err
+		}
 	}
 	if query.pattern != nil {
 		if err := visitStreamNodeExpressions(query.pattern.input, visit); err != nil {
@@ -4591,6 +4603,34 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 
 func (e *Environment) validateJoinAggregateFields(definition *joinDefinition, expression Expr) error {
 	return e.validateJoinScopedExpression(definition, expression, "join aggregate")
+}
+
+// validateFireAndForgetNoPrevious rejects Previous/Prior access in
+// fire-and-forget queries: they require a retained data window that on-demand
+// execution does not provide, mirroring Java's compile rejection.
+func validateFireAndForgetNoPrevious(query Query) error {
+	for _, selection := range query.selections {
+		if expressionContainsPrevious(selection.Expr) {
+			return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+		}
+	}
+	for _, selection := range query.joinSelections {
+		if expressionContainsPrevious(selection.Expr) {
+			return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+		}
+	}
+	for _, key := range query.orderBy {
+		if expressionContainsPrevious(key.Expr) {
+			return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+		}
+	}
+	if query.joinWhere != nil && expressionContainsPrevious(query.joinWhere) {
+		return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+	}
+	if query.joinHaving != nil && expressionContainsPrevious(query.joinHaving) {
+		return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+	}
+	return nil
 }
 
 func (e *Environment) validateJoinScopedExpression(definition *joinDefinition, expression Expr, scope string) error {
