@@ -717,10 +717,12 @@
    "phase": 3,
    "status": "implemented",
    "remaining": [
-    "combined fixed keys and nested grouping specifications",
-    "full Join/Context/Named Window/FAF/output matrix",
-    "access aggregation and planner/index parity",
-    "complete Java trace parity"
+    "ResultSetQueryTypeBoundCube3Dim (java-runtime-994120aef6b9ff1c0e75): bound cube 3-dim differential trace",
+    "ResultSetQueryTypeContextPartitionAlsoRollup (java-runtime-71fb38d67af471287089): context-partition rollup differential trace",
+    "ResultSetQueryTypeInvalid (java-runtime-ecabb70fc72a216efb7b): compile-error-only diagnostics (approved-difference candidate)",
+    "ResultSetQueryTypeUnboundGroupingSet2LevelUnenclosed (java-runtime-20c08346e2644a7201e5): unbound 2-level grouping-set differential trace",
+    "combined fixed keys and nested grouping specifications beyond verified forms",
+    "full Context-partition rollup matrix beyond SegmentedByString verification"
    ],
    "verification": [
     "inventoried",
@@ -735,7 +737,19 @@
     "java-runtime-b06640d26b3b63075791",
     "java-runtime-14c4aecdca8b446299f1",
     "java-runtime-3b6467afa76b0966c475",
-    "java-runtime-274b66386ba625a8b24c"
+    "java-runtime-274b66386ba625a8b24c",
+    "java-runtime-c3795d43550db4779a8c",
+    "java-runtime-19844b30add2415c2bcc",
+    "java-runtime-effa54ebac66e75bdcb6",
+    "java-runtime-3f406a35c51cd03ab734",
+    "java-runtime-e17c22ce9356d4acfad9",
+    "java-runtime-58abe8e5ebfa57510a04",
+    "java-runtime-8178e315c9b40968a218",
+    "java-runtime-153edf6a4d78354167f1",
+    "java-runtime-23faa930e8e9cbc671c2",
+    "java-runtime-a4a78ec3230ca521cf03",
+    "java-runtime-0a3b5f198b8a6467078a",
+    "java-runtime-3f45c2d30f96ffe3c19f"
    ]
   },
   {
@@ -33068,6 +33082,88 @@
     "java-runtime-3b6467afa76b0966c475",
     "java-runtime-274b66386ba625a8b24c"
    ]
+  },
+  {
+   "id": "case.rollup-dimensionality-completion",
+   "javaRuntimeIds": [
+    "java-runtime-c3795d43550db4779a8c",
+    "java-runtime-19844b30add2415c2bcc",
+    "java-runtime-effa54ebac66e75bdcb6",
+    "java-runtime-3f406a35c51cd03ab734",
+    "java-runtime-e17c22ce9356d4acfad9",
+    "java-runtime-58abe8e5ebfa57510a04",
+    "java-runtime-8178e315c9b40968a218",
+    "java-runtime-153edf6a4d78354167f1",
+    "java-runtime-23faa930e8e9cbc671c2",
+    "java-runtime-a4a78ec3230ca521cf03",
+    "java-runtime-0a3b5f198b8a6467078a",
+    "java-runtime-3f45c2d30f96ffe3c19f"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeRollupMultikeyWArray{join=false, unbound=true}",
+    "ResultSetQueryTypeRollupMultikeyWArray{join=false, unbound=false}",
+    "ResultSetQueryTypeRollupMultikeyWArray{join=true, unbound=false}",
+    "ResultSetQueryTypeRollupMultikeyWArrayGroupingSet",
+    "ResultSetQueryTypeNamedWindowCube2Dim",
+    "ResultSetQueryTypeOnSelect",
+    "ResultSetQueryTypeOutputWhenTerminated",
+    "ResultSetQueryTypeBoundGroupingSet2LevelNoTopNoDetail",
+    "ResultSetQueryTypeBoundGroupingSet2LevelTopAndDetail",
+    "ResultSetQueryTypeMixedAccessAggregation",
+    "ResultSetQueryTypeNonBoxedTypeWithRollup",
+    "ResultSetQueryTypeGroupByWithComputation"
+   ],
+   "goTests": [
+    "internal/esper/select_named_window_rollup_parity_test.go:TestSelectFromNamedWindowRollupParity",
+    "internal/app/parity/run_test.go:TestRunRollupDimensionalityDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRollupDimensionalityDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "rollup",
+    "multikey-warray",
+    "named-window",
+    "on-select",
+    "output-when-terminated",
+    "grouping-sets",
+    "access-aggregation",
+    "non-boxed-types",
+    "computed-group-key",
+    "syntax-equivalence",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/rollup-dimensionality.json",
+    "testdata/parity/rollup-dimensionality.trace.json",
+    "testdata/parity/rollup-dimensionality.evidence.json",
+    "tools/java-oracle/EPLResultSetQueryTypeRollupDimensionalityScenarioOracle.java",
+    "tools/java-oracle/run-rollup-dimensionality.sh"
+   ],
+   "notes": "Completes ResultSetQueryTypeRollupDimensionality (Draft 4.239): scenario grows from 16 to 33 cases; Java/Go each 141 records, 0 differences. int[]/long[]/double[] content-equal rollup and grouping-set dimensions across unbound/bound/join shapes; named-window cube 2-dim with IR delete-all pairs and grouping-sets spelling byte-equivalence; on-select grouped rollup via new SelectFromNamedWindowRollup trigger API; output last/all/snapshot when terminated with context restart isolation; bound 2-level grouping sets incl. expiry-driven group updates; mixed access window(*) per-group rendering over a full-fidelity SupportBean mirror; deploy-only output-type preservation for non-boxed short sums across four grouping spellings; computed case-when group keys.",
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c3795d43550db4779a8c",
+    "java-runtime-19844b30add2415c2bcc",
+    "java-runtime-effa54ebac66e75bdcb6",
+    "java-runtime-3f406a35c51cd03ab734",
+    "java-runtime-e17c22ce9356d4acfad9",
+    "java-runtime-58abe8e5ebfa57510a04",
+    "java-runtime-8178e315c9b40968a218",
+    "java-runtime-153edf6a4d78354167f1",
+    "java-runtime-23faa930e8e9cbc671c2",
+    "java-runtime-a4a78ec3230ca521cf03",
+    "java-runtime-0a3b5f198b8a6467078a",
+    "java-runtime-3f45c2d30f96ffe3c19f"
+   ]
   }
  ],
  "mappings": [
@@ -35542,13 +35638,17 @@
   {
    "capabilityId": "epl.variable-onset",
    "caseId": "case.epl-variable-onset-array-expression"
+  },
+  {
+   "capabilityId": "resultset.aggregate-dimensional",
+   "caseId": "case.rollup-dimensionality-completion"
   }
  ],
  "summary": {
-  "inventoriedCases": 535,
-  "implementedCases": 533,
-  "differentialVerifiedCases": 150,
-  "differentialVerifiedRuntimeIds": 504,
+  "inventoriedCases": 536,
+  "implementedCases": 534,
+  "differentialVerifiedCases": 151,
+  "differentialVerifiedRuntimeIds": 516,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -35558,13 +35658,13 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3118,
-  "referencedJavaRuntimeIds": 2915,
+  "runtimeAssociationCount": 3130,
+  "referencedJavaRuntimeIds": 2927,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1221,
+  "unreferencedJavaRuntimeIds": 1209,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 535,
+  "totalCases": 536,
   "totalCapabilities": 110
  }
 }

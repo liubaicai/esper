@@ -315,6 +315,11 @@ type triggerDefinition struct {
 	// partition predicate that a context-bound Table has in Esper.
 	contextDefinition   *ContextDefinition
 	contextPartitionKey string
+	// groupByKeys/groupByRollup carry the grouped on-select form: the
+	// trigger evaluates the named-window snapshot once per rollup level and
+	// emits one row per first-seen group (SelectFromNamedWindowRollup).
+	groupByKeys   []Expr
+	groupByRollup bool
 }
 
 type tableMutationResult struct {
@@ -535,6 +540,19 @@ func (s TriggerStream[T]) DeleteAllFromNamedWindow(window string) TriggerQuery {
 // may combine NamedWindowField with trigger Field expressions.
 func (s TriggerStream[T]) SelectFromNamedWindow(window string, predicate Expression[bool], selections ...Selection) TriggerQuery {
 	return s.namedWindowTrigger(window, triggerSelectTable, predicate, nil, selections)
+}
+
+// SelectFromNamedWindowRollup reads matching named-window events once per
+// trigger and emits one row per rollup level per group: the full-key detail
+// level first, then progressively coarser levels, the overall level last —
+// mirroring Esper's "on <trigger> select ... from <window> group by
+// rollup(...)" form. Groups follow first-seen order within a level; a
+// selection that is exactly one of the level's absent keys projects null.
+func (s TriggerStream[T]) SelectFromNamedWindowRollup(window string, predicate Expression[bool], keys []Expr, selections ...Selection) TriggerQuery {
+	query := s.namedWindowTrigger(window, triggerSelectTable, predicate, nil, selections)
+	query.definition.groupByKeys = append([]Expr(nil), keys...)
+	query.definition.groupByRollup = true
+	return query
 }
 
 // InsertIntoNamedWindowFrom inserts one projected row per retained source
@@ -1368,7 +1386,41 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 			if expressionContainsPrevious(selection.Expr) {
 				return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
 			}
-			if err := e.validateTriggerTargetExpression(definition.input, targetSchema, selection.Expr, "named-window-field"); err != nil {
+			if len(definition.groupByKeys) == 0 {
+				// Grouped on-select validates projections against the window
+				// schema in the dedicated group-key block below.
+				if err := e.validateTriggerTargetExpression(definition.input, targetSchema, selection.Expr, "named-window-field"); err != nil {
+					return fmt.Errorf("named-window select projection %q: %w", selection.Name, err)
+				}
+			}
+		}
+	}
+	if definition.action == triggerSelectTable && len(definition.groupByKeys) > 0 {
+		// Grouped on-select binds plain field expressions to the named
+		// window schema (the queried side), while target-scoped expressions
+		// keep resolving against the trigger input.
+		windowInput := &streamNode{kind: streamNamedWindow, moduleName: definition.moduleName, sourceName: definition.table}
+		bindable := func(expression Expr) error {
+			inputErr := e.validateExprFields(definition.input, expression)
+			if inputErr == nil {
+				return nil
+			}
+			windowErr := e.validateExprFields(windowInput, expression)
+			if windowErr == nil {
+				return nil
+			}
+			return windowErr
+		}
+		for _, key := range definition.groupByKeys {
+			if err := bindable(key); err != nil {
+				return fmt.Errorf("named-window select group key: %w", err)
+			}
+		}
+		for _, selection := range definition.selections {
+			if selection.Expr == nil {
+				continue
+			}
+			if err := bindable(selection.Expr); err != nil {
 				return fmt.Errorf("named-window select projection %q: %w", selection.Name, err)
 			}
 		}
@@ -1897,6 +1949,7 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 	}
 	events := snapshotNamedWindowState(target.state)
 	result := ResultBatch{Time: now}
+	matched := make([]Event, 0, len(events))
 	for _, candidate := range events {
 		if err := contextErr(ctx); err != nil {
 			return ResultBatch{}, err
@@ -1908,17 +1961,123 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 				continue
 			}
 		}
+		matched = append(matched, candidate)
+	}
+	if len(definition.groupByKeys) > 0 {
+		return groupedSelectNamedWindowResult(definition, event, now, variables, matched, resultSchema, result), nil
+	}
+	for _, candidate := range matched {
 		if len(definition.selections) == 0 {
 			result.New = append(result.New, resultEvent(candidate))
 			continue
 		}
 		values := make([]Value, 0, len(definition.selections))
+		evaluation := EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
 		for _, selection := range definition.selections {
 			values = append(values, selection.Expr.eval(evaluation))
 		}
 		result.New = append(result.New, resultRow(newRow(resultSchema, values)))
 	}
 	return result, nil
+}
+
+// groupedSelectNamedWindowResult evaluates the grouped on-select form over
+// the matched named-window snapshot: one row per first-seen group per rollup
+// level, detail level first and the overall level last. Group keys resolve
+// through the groupingValues overrides, so plain Field projections read the
+// group's key value at present levels and null at coarser levels — the same
+// contract the live aggregate pipeline implements via aggregateGroupContext.
+func groupedSelectNamedWindowResult(definition *triggerDefinition, trigger Event, now time.Time, variables map[string]Value, matched []Event, resultSchema Schema, result ResultBatch) ResultBatch {
+	keys := definition.groupByKeys
+	levels := rollupKeyLevels(len(keys))
+	for _, level := range levels {
+		presentKeys := make(map[string]struct{}, len(level))
+		for _, keyIndex := range level {
+			presentKeys[groupingExpressionKey(keys[keyIndex])] = struct{}{}
+		}
+		present := make(map[int]struct{}, len(level))
+		for _, keyIndex := range level {
+			present[keyIndex] = struct{}{}
+		}
+		type group struct {
+			key    string
+			events []Event
+		}
+		var order []*group
+		index := make(map[string]*group)
+		for _, candidate := range matched {
+			evaluation := EvalContext{Event: candidate, Group: []Event{candidate}, Now: now, Variables: variables}
+			keyValues := make([]any, 0, len(level))
+			for _, keyIndex := range level {
+				keyValues = append(keyValues, keys[keyIndex].eval(evaluation).Any())
+			}
+			composite := encodeKey(keyValues)
+			existing, ok := index[composite]
+			if !ok {
+				existing = &group{key: composite}
+				index[composite] = existing
+				order = append(order, existing)
+			}
+			existing.events = append(existing.events, candidate)
+		}
+		for _, grp := range order {
+			// The representative row scope serves both expression families:
+			// plain fields read the group key through groupingValues and any
+			// other field from the representative row; aggregate inputs
+			// iterate every group row through groupEventContext.
+			evaluation := EvalContext{Event: grp.events[0], Group: grp.events, Now: now, Variables: variables, aggregateEvaluation: true}
+			evaluation.groupingValues = make(map[string]Value, len(keys))
+			evaluation.groupingPresent = make(map[string]bool, len(keys))
+			for keyIndex, keyExpr := range keys {
+				key := groupingExpressionKey(keyExpr)
+				if _, ok := present[keyIndex]; ok {
+					evaluation.groupingValues[key] = keyExpr.eval(EvalContext{Event: grp.events[0], Now: now, Variables: variables})
+					evaluation.groupingPresent[key] = true
+				} else {
+					evaluation.groupingValues[key] = Null()
+					evaluation.groupingPresent[key] = false
+				}
+			}
+			values := make([]Value, 0, len(definition.selections))
+			for _, selection := range definition.selections {
+				value := evaluateAggregateExpression(selection.Expr, evaluation)
+				selKey := groupingExpressionKey(selection.Expr)
+				_, isPresentKey := presentKeys[selKey]
+				if len(level) < len(keys) && isPlainFieldSelection(selection) && !isPresentKey {
+					// At coarser rollup levels a non-aggregated plain field that
+					// is not a present key has no source row: Esper frame is null
+					// there. Present keys were already resolved through grouping
+					// overrides above.
+					value = Null()
+				}
+				values = append(values, value)
+			}
+			result.New = append(result.New, resultRow(newRow(resultSchema, values)))
+		}
+	}
+	return result
+}
+
+// isPlainFieldSelection reports whether the projection is a bare property
+// read rather than an aggregate or computed expression.
+func isPlainFieldSelection(selection Selection) bool {
+	return selection.Expr != nil &&
+		selection.Expr.node() != nil &&
+		selection.Expr.node().kind == "field" &&
+		!isAggregateExpression(selection.Expr)
+}
+
+// rollupKeyLevels enumerates rollup levels detail-first: {0..n-1}, ... , {}.
+func rollupKeyLevels(count int) [][]int {
+	levels := make([][]int, 0, count+1)
+	for size := count; size >= 0; size-- {
+		level := make([]int, 0, size)
+		for index := 0; index < size; index++ {
+			level = append(level, index)
+		}
+		levels = append(levels, level)
+	}
+	return levels
 }
 
 // evaluateTableMergeActions evaluates a matched action chain against a

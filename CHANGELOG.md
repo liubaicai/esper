@@ -1,3 +1,28 @@
+> 最新补充：Draft 4.239（2026-08-23），完成 `resultset.aggregate-dimensional` 的
+> ResultSetQueryTypeRollupDimensionality 12 个新增 execution（累计 20/24 差分验证；
+> BoundCube3Dim、ContextPartitionAlsoRollup、Invalid 与
+> UnboundGroupingSet2LevelUnenclosed 保持未验证登记）：新增 RollupMultikeyWArray
+> 三形态（unbound/bound/join：`java-runtime-c3795d43550db4779a8c`、
+> `java-runtime-19844b30add2415c2bcc`、`java-runtime-effa54ebac66e75bdcb6`）、
+> RollupMultikeyWArrayGroupingSet（`java-runtime-3f406a35c51cd03ab734`）、
+> NamedWindowCube2Dim（`java-runtime-e17c22ce9356d4acfad9`）、OnSelect
+>（`java-runtime-58abe8e5ebfa57510a04`）、OutputWhenTerminated last×hint 三变体 + all +
+> snapshot（`java-runtime-8178e315c9b40968a218`）、BoundGroupingSet2LevelNoTopNoDetail/
+> TopAndDetail（`java-runtime-153edf6a4d78354167f1`、`java-runtime-23faa930e8e9cbc671c2`）、
+> MixedAccessAggregation（`java-runtime-a4a78ec3230ca521cf03`）、NonBoxedTypeWithRollup
+>（`java-runtime-0a3b5f198b8a6467078a`）与 GroupByWithComputation
+>（`java-runtime-3f45c2d30f96ffe3c19f`）。rollup-dimensionality 场景扩展至 33 case、
+> Java/Go 各 141 条 records、0 differences；覆盖 int[]/long[]/double[] 内容等值 rollup
+> 维度三流形、named-window cube IR delete-all 对与 grouping-sets 拼写逐字等价、on-select
+> 分组 rollup 触发器、output when terminated 上下文重启隔离、length(4) 过期驱动的组更新、
+> window(*) 组内事件递归渲染、四种 grouping 拼写的 short-sum 输出类型保持与 case-when 计算
+> 分组键。引擎新增 `SelectFromNamedWindowRollup`（on-select 快照分组聚合，detail→overall
+> 首见组序，粗化层非键 plain 字段投影 null）并在共享聚合管道补齐同规则。协议新增 types
+> 步骤（仅别名列 c0/c1/c2 的 Java 装箱类名 token）与数组/EventBean 规范化渲染；oracle 增
+> 设 SupportEventWithIntArray/SupportThreeArrayEvent 本地镜像类。manifest 更新为 536
+> cases、151 个 differential-verified case、516 个 differential runtime IDs、3130 条
+> associations（referenced 2927）。
+>
 > 最新补充：Draft 4.238（2026-08-23），完成 `epl.variable-onset` 全部 17 个
 > execution：新增 EPLVariableOnSetSubqueryMultikeyWArray
 >（`java-runtime-d23e6717c5568c62cf50`）、EPLVariableOnSetArrayAtIndex

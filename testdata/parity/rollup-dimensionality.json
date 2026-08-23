@@ -10,7 +10,19 @@
   "java-runtime-b06640d26b3b63075791",
   "java-runtime-14c4aecdca8b446299f1",
   "java-runtime-3b6467afa76b0966c475",
-  "java-runtime-274b66386ba625a8b24c"
+  "java-runtime-274b66386ba625a8b24c",
+  "java-runtime-c3795d43550db4779a8c",
+  "java-runtime-19844b30add2415c2bcc",
+  "java-runtime-effa54ebac66e75bdcb6",
+  "java-runtime-3f406a35c51cd03ab734",
+  "java-runtime-e17c22ce9356d4acfad9",
+  "java-runtime-58abe8e5ebfa57510a04",
+  "java-runtime-8178e315c9b40968a218",
+  "java-runtime-153edf6a4d78354167f1",
+  "java-runtime-23faa930e8e9cbc671c2",
+  "java-runtime-a4a78ec3230ca521cf03",
+  "java-runtime-0a3b5f198b8a6467078a",
+  "java-runtime-3f45c2d30f96ffe3c19f"
  ],
  "cases": [
   {
@@ -76,6 +88,74 @@
   {
    "case": "unbound-rollup-2dim-batch",
    "runtimeId": "java-runtime-274b66386ba625a8b24c"
+  },
+  {
+   "case": "warray-unbound",
+   "runtimeId": "java-runtime-c3795d43550db4779a8c"
+  },
+  {
+   "case": "warray-bound",
+   "runtimeId": "java-runtime-19844b30add2415c2bcc"
+  },
+  {
+   "case": "warray-join",
+   "runtimeId": "java-runtime-effa54ebac66e75bdcb6"
+  },
+  {
+   "case": "warray-gs",
+   "runtimeId": "java-runtime-3f406a35c51cd03ab734"
+  },
+  {
+   "case": "nw-cube",
+   "runtimeId": "java-runtime-e17c22ce9356d4acfad9"
+  },
+  {
+   "case": "nw-cube-gs",
+   "runtimeId": "java-runtime-e17c22ce9356d4acfad9"
+  },
+  {
+   "case": "onselect-rollup",
+   "runtimeId": "java-runtime-58abe8e5ebfa57510a04"
+  },
+  {
+   "case": "out-when-term-last",
+   "runtimeId": "java-runtime-8178e315c9b40968a218"
+  },
+  {
+   "case": "out-when-term-last-opt",
+   "runtimeId": "java-runtime-8178e315c9b40968a218"
+  },
+  {
+   "case": "out-when-term-last-optdis",
+   "runtimeId": "java-runtime-8178e315c9b40968a218"
+  },
+  {
+   "case": "out-when-term-all",
+   "runtimeId": "java-runtime-8178e315c9b40968a218"
+  },
+  {
+   "case": "out-when-term-snapshot",
+   "runtimeId": "java-runtime-8178e315c9b40968a218"
+  },
+  {
+   "case": "bound-gs-no-top",
+   "runtimeId": "java-runtime-153edf6a4d78354167f1"
+  },
+  {
+   "case": "bound-gs-top-detail",
+   "runtimeId": "java-runtime-23faa930e8e9cbc671c2"
+  },
+  {
+   "case": "mixed-access",
+   "runtimeId": "java-runtime-a4a78ec3230ca521cf03"
+  },
+  {
+   "case": "non-boxed-types",
+   "runtimeId": "java-runtime-0a3b5f198b8a6467078a"
+  },
+  {
+   "case": "groupby-computation",
+   "runtimeId": "java-runtime-3f45c2d30f96ffe3c19f"
   }
  ],
  "steps": [
@@ -943,6 +1023,1124 @@
     "theString": "E2",
     "intPrimitive": 20,
     "longPrimitive": 800
+   }
+  },
+  {
+   "op": "case",
+   "case": "warray-unbound"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E1",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E2",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E3",
+    "array": [4, 5],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E4",
+    "array": [1, 2],
+    "value": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E5",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E6",
+    "array": [4, 5],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E7",
+    "array": [1, 2],
+    "value": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E8",
+    "array": [1],
+    "value": 5
+   }
+  },
+  {
+   "op": "case",
+   "case": "warray-bound"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E1",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E2",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E3",
+    "array": [4, 5],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E4",
+    "array": [1, 2],
+    "value": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E5",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E6",
+    "array": [4, 5],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E7",
+    "array": [1, 2],
+    "value": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E8",
+    "array": [1],
+    "value": 5
+   }
+  },
+  {
+   "op": "case",
+   "case": "warray-join"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E1",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E2",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E3",
+    "array": [4, 5],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E4",
+    "array": [1, 2],
+    "value": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E5",
+    "array": [1, 2],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E6",
+    "array": [4, 5],
+    "value": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E7",
+    "array": [1, 2],
+    "value": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E8",
+    "array": [1],
+    "value": 5
+   }
+  },
+  {
+   "op": "case",
+   "case": "warray-gs"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportThreeArrayEvent",
+   "payload": {
+    "id": "E1",
+    "value": 1,
+    "intArray": [1, 2],
+    "longArray": [10, 20],
+    "doubleArray": [300, 400]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportThreeArrayEvent",
+   "payload": {
+    "id": "E2",
+    "value": 2,
+    "intArray": [1, 2],
+    "longArray": [10, 20],
+    "doubleArray": [300, 400]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportThreeArrayEvent",
+   "payload": {
+    "id": "E3",
+    "value": 3,
+    "intArray": [1, 2],
+    "longArray": [11, 21],
+    "doubleArray": [300, 400]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportThreeArrayEvent",
+   "payload": {
+    "id": "E4",
+    "value": 4,
+    "intArray": [1, 3],
+    "longArray": [10],
+    "doubleArray": [300, 400]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportThreeArrayEvent",
+   "payload": {
+    "id": "E5",
+    "value": 5,
+    "intArray": [1, 2],
+    "longArray": [10, 21],
+    "doubleArray": [301, 400]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportThreeArrayEvent",
+   "payload": {
+    "id": "E6",
+    "value": 6,
+    "intArray": [1, 2],
+    "longArray": [10, 20],
+    "doubleArray": [300, 400]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportThreeArrayEvent",
+   "payload": {
+    "id": "E7",
+    "value": 7,
+    "intArray": [1, 3],
+    "longArray": [11, 21],
+    "doubleArray": [300, 400]
+   }
+  },
+  {
+   "op": "case",
+   "case": "nw-cube"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 0,
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 0,
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 0,
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 300
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 0,
+    "theString": "E2",
+    "intPrimitive": 11,
+    "longPrimitive": 400
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 3,
+    "intPrimitive": -1,
+    "longPrimitive": -1
+   }
+  },
+  {
+   "op": "case",
+   "case": "nw-cube-gs"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 0,
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 0,
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 0,
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 300
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 0,
+    "theString": "E2",
+    "intPrimitive": 11,
+    "longPrimitive": 400
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 3,
+    "intPrimitive": -1,
+    "longPrimitive": -1
+   }
+  },
+  {
+   "op": "case",
+   "case": "onselect-rollup"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E0",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E0",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E0",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 7
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 8
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E0",
+    "intPrimitive": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "case",
+   "case": "out-when-term-last"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "out-when-term-last-opt"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "out-when-term-last-optdis"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "out-when-term-all"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "out-when-term-snapshot"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "bound-gs-no-top"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20,
+    "longPrimitive": 300
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10,
+    "longPrimitive": 400
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 500
+   }
+  },
+  {
+   "op": "case",
+   "case": "bound-gs-top-detail"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 300
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 400
+   }
+  },
+  {
+   "op": "case",
+   "case": "mixed-access"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "case",
+   "case": "non-boxed-types"
+  },
+  {
+   "op": "types",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "groupby-computation"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "longPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 5,
+    "longPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 6,
+    "longPrimitive": -11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 3,
+    "longPrimitive": 12
    }
   }
  ]

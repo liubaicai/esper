@@ -4,6 +4,21 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.239（2026-08-23），完成 `resultset.aggregate-dimensional` 的
+> ResultSetQueryTypeRollupDimensionality 12 个新增 execution（累计 20/24 差分验证，
+> BoundCube3Dim、ContextPartitionAlsoRollup、Invalid、UnboundGroupingSet2LevelUnenclosed
+> 保持未验证登记）：新增 RollupMultikeyWArray 三形态（unbound/bound/join，`java-runtime-c3795d43…/19844b30…/effa54eb…`）、
+> RollupMultikeyWArrayGroupingSet（`3f406a35…`）、NamedWindowCube2Dim（`e17c22ce…`）、
+> OnSelect（`58abe8e5…`）、OutputWhenTerminated 五变体（`8178e315…`）、BoundGroupingSet2Level
+> 两形态（`153edf6a…/23faa930…`）、MixedAccessAggregation（`a4a78ec3…`）、
+> NonBoxedTypeWithRollup（`0a3b5f19…`）与 GroupByWithComputation（`3f45c2d3…`）共 12 个
+> runtime 的差分验证。场景扩展至 33 case、Java/Go 各 141 条 records、0 differences。
+> 引擎新增：`SelectFromNamedWindowRollup` on-select 分组聚合触发器（快照分组、首见组序、
+> detail→overall 层级、粗化层非键字段投影 null）；聚合管道补齐「非本层 grouping set 的
+> plain 字段投影 null」共享语义。协议新增 types 步骤与数组/EventBean 规范化渲染。
+> manifest 更新为 536 cases、151 个 differential-verified case、516 个 differential
+> runtime IDs、3130 条 associations（referenced 2927）。
+>
 > 最新补充：Draft 4.238（2026-08-23），完成 `epl.variable-onset` 全部 17
 > 个 execution：新增 EPLVariableOnSetSubqueryMultikeyWArray
 >（`java-runtime-d23e6717c5568c62cf50`）、EPLVariableOnSetArrayAtIndex
@@ -590,11 +605,11 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 535 |
-| Case differential-verified | 150 |
-| Differential-verified runtime | 504 / 4,136 |
-| Runtime 已关联 | 2,915 / 4,136（70.5%） |
-| Runtime 未关联 | 1,221 |
+| Case | 536 |
+| Case differential-verified | 151 |
+| Differential-verified runtime | 516 / 4,136 |
+| Runtime 已关联 | 2,927 / 4,136（70.8%） |
+| Runtime 未关联 | 1,209 |
 | Representative scenario | 94 / 94 通过 |
 | Intentionally-different case | 18 |
 | NFR-verified case | 0 |

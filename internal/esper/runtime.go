@@ -18311,8 +18311,25 @@ func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Ev
 	}
 	ctx := aggregateGroupContext(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates, multiPluginStates)
 	values := make([]Value, 0, len(definition.selections))
+	presentKeys := make(map[string]struct{}, len(groupingSet))
+	for _, index := range groupingSet {
+		if index < len(definition.groupBy) && definition.groupBy[index] != nil {
+			presentKeys[groupingExpressionKey(definition.groupBy[index])] = struct{}{}
+		}
+	}
 	for _, selection := range definition.selections {
-		values = append(values, evaluateAggregateExpression(selection.Expr, ctx))
+		value := evaluateAggregateExpression(selection.Expr, ctx)
+		if selection.Expr != nil && selection.Expr.node() != nil &&
+			selection.Expr.node().kind == "field" && !isAggregateExpression(selection.Expr) &&
+			len(groupingSet) < len(definition.groupBy) {
+			// A plain property outside this level's grouping set has no
+			// source frame: Esper projects it as null.
+			selKey := groupingExpressionKey(selection.Expr)
+			if _, ok := presentKeys[selKey]; !ok {
+				value = Null()
+			}
+		}
+		values = append(values, value)
 	}
 	if definition.having != nil {
 		value := evaluateAggregateExpression(definition.having, ctx)

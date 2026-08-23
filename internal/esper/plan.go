@@ -3339,6 +3339,11 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 				return err
 			}
 		}
+		for _, expression := range query.trigger.groupByKeys {
+			if err := visit(expression); err != nil {
+				return err
+			}
+		}
 		for _, assignment := range query.trigger.variableAssignments {
 			if err := visit(assignment.Expr); err != nil {
 				return err

@@ -104,6 +104,10 @@ func (s Scenario) Validate() error {
 			if len(step.Payload) == 0 {
 				return fmt.Errorf("compat: step %d send-error has no payload", i)
 			}
+		case "types":
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d types has no statement", i)
+			}
 		case "snapshot", "snapshot-selector":
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
@@ -359,7 +363,7 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
-		case "faf", "deploy", "read-variable", "set-variable":
+		case "faf", "deploy", "read-variable", "set-variable", "types":
 			handler := handlers[step.Op]
 			if handler == nil {
 				return trace, fmt.Errorf("compat: no %s handler for step %q", step.Op, step.Statement)

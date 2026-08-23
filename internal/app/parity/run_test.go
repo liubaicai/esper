@@ -13511,6 +13511,56 @@ func TestRunRollupDimensionalityDiffRejectsTraceMutations(t *testing.T) {
 		mutate func(*compat.Trace)
 	}{
 		{
+			// int[] rollup dimensions compare by content: [4,5] is its own
+			// group with cnt 1.
+			name: "warray-content-key-collapsed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[68].New[0].Fields["array"] = []any{int64(1), int64(2)}
+			},
+		},
+		{
+			// Named-window cube delete-all must null the sums in new data.
+			name: "nw-cube-delete-sums-retained",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[101].New[3].Fields["c2"] = int64(1000)
+			},
+		},
+		{
+			// Grouped on-select emits row-per-group plus the overall level.
+			name: "onselect-overall-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[107].New = trace.Records[107].New[:3]
+			},
+		},
+		{
+			// Output-when-terminated flushes exactly the partition groups.
+			name: "out-when-term-flip",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[109].New[0].Fields["c1"] = int64(5)
+			},
+		},
+		{
+			// window(*) renders each group's own events.
+			name: "mixed-access-window-leak",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[130].New[0].Fields["c0"] = int64(6)
+			},
+		},
+		{
+			// Non-boxed short sums preserve Integer/Double/Long output types.
+			name: "non-boxed-type-widened",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[132].Value.(map[string]any)["c2"] = "Double"
+			},
+		},
+		{
+			// Computed case-when keys null plain fields at the overall level.
+			name: "groupby-computation-frame-null-dropped",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[136].New[1].Fields["c0"] = int64(10)
+			},
+		},
+		{
 			name: "rollup-2dim-subtotal",
 			mutate: func(trace *compat.Trace) {
 				trace.Records[1].New[0].Fields["c2"] = int64(999)
