@@ -6,7 +6,7 @@
 
 > 最新补充：Draft 4.242（2026-08-23），新增 `view.basic-windows` 的
 > `view-length-batch` differential-verified 场景，对照固定 Java ViewLengthBatch.java
-> 的 8 个 execution（SceneOne、Size2、Size1、Size3、Normal{VIEW/NAMEDWINDOW/GROUPWIN}
+> 的 8 个 execution（SceneOne、Size2、Size1、Size3、Delete, Normal{NAMEDWINDOW/GROUPWIN}
 > 及 Invalid compile-only approved difference）。场景 Java/Go 各 48 条 records、
 > 0 differences；覆盖 length_batch(1/2/3) 批次刷新 old/new 对、wildcard irstream 选择、
 > 迭代器部分窗口快照、named-window 消费者与安静删除排除已删行、groupwin(null key)
