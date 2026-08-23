@@ -108,6 +108,10 @@ func (s Scenario) Validate() error {
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d types has no statement", i)
 			}
+		case "deployed":
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d deployed has no statement", i)
+			}
 		case "snapshot", "snapshot-selector":
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)

@@ -17407,11 +17407,28 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		// aggregates, grouped joins, named-window consumers and grouped
 		// row-per-group result sets post the previous row as old whenever the
 		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) && !aggregateGroupedRowPerEvent && !aggregateDefinitionIsRowForEvent(definition) {
-			oldEntries = append(oldEntries, aggregateResultEntry{
-				result: resultRow(newRow(plan.resultSchema, group.previous)),
-				group:  group,
-				key:    key,
-			})
+			if definition.having != nil && len(delta.oldEvents) > 0 {
+				// Java ResultSetProcessorRowForAllImpl with HAVING: the old
+				// row binds plain columns to the leaving event and aggregates
+				// to the post-update state; it is suppressed when the having
+				// predicate fails under that binding.
+				for _, leaving := range delta.oldEvents {
+					_, leaveVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+					if leaveVisible {
+						oldEntries = append(oldEntries, aggregateResultEntry{
+							result: resultRow(newRow(plan.resultSchema, group.previous)),
+							group:  group,
+							key:    key,
+						})
+					}
+				}
+			} else {
+				oldEntries = append(oldEntries, aggregateResultEntry{
+					result: resultRow(newRow(plan.resultSchema, group.previous)),
+					group:  group,
+					key:    key,
+				})
+			}
 		}
 		if aggregateDefinitionIsRowForEvent(definition) && len(delta.newEvents) == 0 && len(delta.oldEvents) > 0 {
 			// Named-window deletes (no incoming events): one old row per
@@ -17426,7 +17443,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 					}
 					oldValues[index] = selection.Expr.eval(EvalContext{Event: leaving, Now: now, Variables: r.variables})
 				}
-				if postVisible || len(oldValues) > 0 {
+				if postVisible || (definition.having == nil && len(oldValues) > 0) {
 					oldEntries = append(oldEntries, aggregateResultEntry{
 						result: resultRow(newRow(plan.resultSchema, oldValues)),
 						group:  group,
@@ -17467,7 +17484,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 						}
 						oldValues[index] = selection.Expr.eval(EvalContext{Event: leaving, Now: now, Variables: r.variables})
 					}
-					if postVisible || len(oldValues) > 0 {
+					if postVisible || (definition.having == nil && len(oldValues) > 0) {
 						oldEntries = append(oldEntries, aggregateResultEntry{
 							result: resultRow(newRow(plan.resultSchema, oldValues)),
 							group:  group,

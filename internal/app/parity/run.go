@@ -1838,6 +1838,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-query-type-having" || *mode == "resultset-query-type-having-diff" {
+		trace, err := runResultSetQueryTypeHavingScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-query-type-having-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetQueryTypeHavingJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeHavingJavaSources),
+				splitMetadata(*javaExecutions, resultsetQueryTypeHavingJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "variables-onset" || *mode == "variables-onset-diff" {
 		trace, err := runVariablesOnsetScenario(context.Background(), scenario)
 		if err != nil {

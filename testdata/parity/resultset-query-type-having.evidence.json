@@ -1,0 +1,391 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-8a05b3435dcc1ad1f414",
+    "java-runtime-c33f49e879157f89fb62",
+    "java-runtime-c5e8204a0ec635e5ded3",
+    "java-runtime-2aa18c37135a5c99514b"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeHaving.java"
+  ],
+  "javaExecutions": [
+    "ResultSetQueryTypeStatementOM",
+    "ResultSetQueryTypeStatement",
+    "ResultSetQueryTypeStatementJoin",
+    "ResultSetQueryTypeSumHavingNoAggregatedProp"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-query-type-having",
+    "steps": [
+      {
+        "op": "case",
+        "case": "having-statement"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 8
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 12
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-sum-noagg-prop"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-query-type-having",
+    "records": [
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 7.5,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 9.5,
+              "price": 8,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 8.8,
+              "price": 6,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 10.2,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 7.5,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 9.5,
+              "price": 8,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 8.8,
+              "price": 6,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 10.2,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-sum-noagg-prop",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-query-type-having",
+    "records": [
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 7.5,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 9.5,
+              "price": 8,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 8.8,
+              "price": 6,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 10.2,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 7.5,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 9.5,
+              "price": 8,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 8.8,
+              "price": 6,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 10.2,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-sum-noagg-prop",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

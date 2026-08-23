@@ -1,0 +1,94 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-query-type-having",
+ "description": "avg-HAVING family of ResultSetQueryTypeHaving: non-grouped HAVING price < avg(price) over a length(5) market window with irstream old-stream re-evaluation (text and object-model runtime twins replaying one semantic scenario), the two-stream join twin seeded with a SupportBeanString, and the compile-only volume < avg(price) mixed aggregated/non-aggregated HAVING",
+ "javaRuntimes": [
+  "java-runtime-8a05b3435dcc1ad1f414",
+  "java-runtime-c33f49e879157f89fb62",
+  "java-runtime-2aa18c37135a5c99514b"
+ ],
+ "cases": [
+  {
+   "case": "having-statement",
+   "runtimeId": "java-runtime-8a05b3435dcc1ad1f414"
+  },
+  {
+   "case": "having-statement",
+   "runtimeId": "java-runtime-c33f49e879157f89fb62"
+  },
+  {
+   "case": "having-sum-noagg-prop",
+   "runtimeId": "java-runtime-2aa18c37135a5c99514b"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "having-statement"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 15
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 8
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 6
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 12
+   }
+  },
+  {
+   "op": "case",
+   "case": "having-sum-noagg-prop"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  }
+ ]
+}

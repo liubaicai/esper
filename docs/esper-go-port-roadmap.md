@@ -4,6 +4,19 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.241（2026-08-23），新增 `resultset.aggregate-having` 的
+> `resultset-query-type-having` differential-verified 场景，对照固定 Java
+> ResultSetQueryTypeHaving.java 的 Statement（text+OM 双 runtime）与
+> SumHavingNoAggregatedProp 共三个 runtime。场景 Java/Go 各 9 条 listener records、
+> 0 differences；覆盖非分组聚合 having price<avg(price) 的 new-only 投递、离开事件
+> having 重评估（失败抑制/通过时以 leaving 绑定投影 old 行）、无 group-by having 中
+> 聚合与非聚合属性混用的编译接受。引擎修复：非分组 irstream 聚合 having 查询的
+> old 行现在按 leaving 事件重评估 having 后才投递（原先无条件投递 previous 行）；
+> rowForEvent 老行投递增加同源 having 门控。StatementJoin 执行因 join-aggregate
+> 窗口滑动下 old/new 分类分歧暂登记 remaining。manifest 更新为 538 cases、152 个
+> differential-verified case、19 个 intentionally-different case、528 个 differential
+> runtime IDs、3148 条 associations（referenced 2945）。
+>
 > 最新补充：Draft 4.240（2026-08-23），新增 `query.fire-and-forget` 的
 > `infra-nwtable-faf-join-matrix` differential-verified 场景，对照固定 Java
 > InfraNWTableFAF.java 的 12 个 Infra3StreamInnerJoin execution（representation ×
