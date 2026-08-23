@@ -46,7 +46,6 @@ func TestFafInvalidInsertClassificationParity(t *testing.T) {
 		t.Fatalf("unknown faf target = %v, want UnknownName", err)
 	}
 
-	// A FAF select against an unregistered stream classifies as UnknownName.
 	// Go resolves unknown FAF sources as InvalidRule naming the schema.
 	err = buildFaf(FromAny(env, "NoSuchWindow").Query(StatementName("s0")))
 	if !errors.Is(err, ErrorInvalidRule) {
@@ -100,4 +99,92 @@ func TestFafInsertTypeMismatchParity(t *testing.T) {
 
 type fafInsertTarget struct {
 	ID int `esper:"id"`
+}
+
+// TestFafJoinHavingFiltersRows makes the HAVING semantics falsifiable: a
+// predicate that eliminates one of two joined tuples must drop exactly that
+// row from the fire-and-forget result.
+func TestFafJoinHavingFiltersRows(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[onsetArrayBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := env.Schema("SupportBean")
+	if !ok {
+		t.Fatal("schema missing")
+	}
+	if _, err := CreateNamedWindow(env, "LeftW", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "RightW", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	insertPlan, err := env.Build(OnEvent(From[onsetArrayBean](env, "SupportBean")).
+		InsertIntoNamedWindow("LeftW", CopyMatchingFields()).
+		Query(StatementName("insert-left")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	insertPlan2, err := env.Build(OnEvent(From[onsetArrayBean](env, "SupportBean")).
+		InsertIntoNamedWindow("RightW", CopyMatchingFields()).
+		Query(StatementName("insert-right")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	for _, plan := range []Plan{insertPlan, insertPlan2} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	type row struct {
+		s string
+		v int32
+	}
+	for _, r := range []row{{"A", 1}, {"B", 2}} {
+		if err := engine.SendEvent(context.Background(), onsetArrayBean{TheString: r.s, IntPrimitive: r.v}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	leftStr := JoinField[string](0, "theString")
+	rightStr := JoinField[string](1, "theString")
+	rightInt := JoinField[int32](1, "intPrimitive")
+
+	buildAndRun := func(having Expression[bool]) []string {
+		t.Helper()
+		joinQuery := JoinMany(
+			JoinRecordSource(FromNamedWindow(env, "LeftW")),
+			JoinRecordSource(FromNamedWindow(env, "RightW")),
+		).On(OnSourcesEqual(0, leftStr, 1, rightStr)).
+			Select(SelectFrom(0, "c0", leftStr))
+		if having != nil {
+			joinQuery = joinQuery.Having(having)
+		}
+		plan, err := env.Build(joinQuery.Query(StatementName("q")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		result, execErr := engine.ExecuteFireAndForget(context.Background(), plan)
+		if execErr != nil {
+			t.Fatal(execErr)
+		}
+		var got []string
+		for _, item := range result.Batch.New {
+			if row, ok := item.Row(); ok {
+				got = append(got, row.Get("c0").Any().(string))
+			}
+		}
+		return got
+	}
+
+	noFilter := buildAndRun(nil)
+	filtered := buildAndRun(Equal[int32](rightInt, Literal[int32](2)))
+	if len(noFilter) != 2 {
+		t.Fatalf("unfiltered join rows = %v, want A and B", noFilter)
+	}
+	if len(filtered) != 1 || filtered[0] != "B" {
+		t.Fatalf("having-filtered join rows = %v, want [B]", filtered)
+	}
 }

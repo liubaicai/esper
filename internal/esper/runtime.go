@@ -18677,15 +18677,21 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 			oldTuples = append(oldTuples, []Event{pair.left, pair.right})
 		}
 	}
+	newFiltered := newTuples
+	oldFiltered := oldTuples
+	if plan.query.joinHaving != nil {
+		newFiltered = filterTuplesByHaving(newTuples, plan.query.joinHaving, now, r.variables)
+		oldFiltered = filterTuplesByHaving(oldFiltered, plan.query.joinHaving, now, r.variables)
+	}
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
-		filtered := filterJoinTuples(newTuples, plan.query, now, r.variables)
+		filtered := filterJoinTuples(newFiltered, plan.query, now, r.variables)
 		batch.New = orderJoinResults(
 			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, false, r.evaluationContext()),
 			filtered, plan.query.orderBy, now, r.variables, false,
 		)
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
-		filtered := filterJoinTuples(oldTuples, plan.query, now, r.variables)
+		filtered := filterJoinTuples(oldFiltered, plan.query, now, r.variables)
 		batch.Old = orderJoinResults(
 			projectJoinTuples(filtered, plan.query, plan.resultSchema, now, r.variables, true, r.evaluationContext()),
 			filtered, plan.query.orderBy, now, r.variables, true,
@@ -18715,6 +18721,34 @@ func filterJoinTuples(tuples [][]Event, query Query, now time.Time, variables ma
 			event = tuple[0]
 		}
 		value := query.joinWhere.eval(EvalContext{
+			Event:      event,
+			JoinEvents: tuple,
+			OuterEvent: event,
+			Now:        now,
+			Variables:  variables,
+		})
+		matched, ok := boolValue(value)
+		if ok && matched {
+			filtered = append(filtered, tuple)
+		}
+	}
+	return filtered
+}
+
+// filterTuplesByHaving keeps only tuples whose projected row satisfies the
+// HAVING predicate. The predicate evaluates against the full tuple scope so
+// any source's fields remain readable.
+func filterTuplesByHaving(tuples [][]Event, having Expr, now time.Time, variables map[string]Value) [][]Event {
+	if having == nil || len(tuples) == 0 {
+		return tuples
+	}
+	filtered := make([][]Event, 0, len(tuples))
+	for _, tuple := range tuples {
+		var event Event
+		if len(tuple) > 0 {
+			event = tuple[0]
+		}
+		value := having.eval(EvalContext{
 			Event:      event,
 			JoinEvents: tuple,
 			OuterEvent: event,

@@ -625,7 +625,7 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 
 		if query.joinHaving != nil {
 			if query.joinHaving.Type() != typeOf[bool]() {
-				return Plan{}, WrapError(ErrorInvalidRule, "join having", NewError(ErrorTypeMismatch, "join where expression must return bool"))
+				return Plan{}, WrapError(ErrorInvalidRule, "join having", NewError(ErrorTypeMismatch, "join having expression must return bool"))
 			}
 			if err := e.validateJoinScopedExpression(query.join, query.joinHaving, "join having"); err != nil {
 				return Plan{}, WrapError(ErrorInvalidRule, "join having", err)
@@ -4629,6 +4629,36 @@ func validateFireAndForgetNoPrevious(query Query) error {
 	}
 	if query.joinHaving != nil && expressionContainsPrevious(query.joinHaving) {
 		return NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+	}
+	// Stream-node expressions (filters, windows, pattern steps) and aggregate
+	// clauses are FAF-reachable surfaces too.
+	prevErr := NewError(ErrorInvalidRule, "Previous function cannot be used in this context")
+	visit := func(expr Expr) error {
+		if expressionContainsPrevious(expr) {
+			return prevErr
+		}
+		return nil
+	}
+	if err := visitStreamNodeExpressions(query.input, visit); err != nil {
+		return err
+	}
+	if query.aggregate != nil {
+		for _, selection := range query.aggregate.selections {
+			if expressionContainsPrevious(selection.Expr) {
+				return prevErr
+			}
+		}
+		if query.aggregate.where != nil && expressionContainsPrevious(query.aggregate.where) {
+			return prevErr
+		}
+		if query.aggregate.having != nil && expressionContainsPrevious(query.aggregate.having) {
+			return prevErr
+		}
+		for _, key := range query.aggregate.groupBy {
+			if expressionContainsPrevious(key) {
+				return prevErr
+			}
+		}
 	}
 	return nil
 }
