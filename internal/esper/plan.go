@@ -3343,6 +3343,11 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 			if err := visit(assignment.Expr); err != nil {
 				return err
 			}
+			if assignment.Index != nil {
+				if err := visit(assignment.Index); err != nil {
+					return err
+				}
+			}
 		}
 		if err := visit(query.trigger.eventExpression); err != nil {
 			return err
@@ -3810,6 +3815,12 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		fields := make([]FieldSpec, 0, len(query.trigger.variableAssignments))
 		seen := make(map[string]struct{}, len(query.trigger.variableAssignments))
 		for _, assignment := range query.trigger.variableAssignments {
+			if assignment.Index != nil || assignment.Apply != nil {
+				// Java's array-element and call-form writes contribute no
+				// output columns; the written value stays observable through
+				// variable reads.
+				continue
+			}
 			if _, exists := seen[assignment.Name]; exists {
 				continue
 			}

@@ -14977,6 +14977,42 @@ func TestRunVariablesOnsetSetDiffRejectsTraceMutations(t *testing.T) {
 				trace.Records[26].Old = nil
 			},
 		},
+		{
+			// Grouped scalar subquery: a second array group must collapse the
+			// assignment to null.
+			name: "multikey-warray-second-group-summed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[33].Value = int64(46)
+			},
+		},
+		{
+			// Array-element writes mutate shared backing storage: [0,1,0].
+			name: "array-at-index-element-write-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[37].Value = []any{int64(0), int64(0), int64(0)}
+			},
+		},
+		{
+			// Boxed arrays keep per-element nulls and box the written literal.
+			name: "array-boxed-null-elements-collapsed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[45].New[0].Fields["c0"] = []any{int64(1), int64(1), int64(1)}
+			},
+		},
+		{
+			// Out-of-range index failures carry Java's exact root message.
+			name: "array-invalid-overflow-message-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[46].Value = "Array length 3 less than index 11 for variable 'doublearray'"
+			},
+		},
+		{
+			// Call-form assignments mutate the variable value in place.
+			name: "expression-swap-not-applied",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[53].Value = map[string]any{"a": int64(1), "b": int64(10)}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

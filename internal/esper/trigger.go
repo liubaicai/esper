@@ -89,13 +89,50 @@ func CopyMatchingFields() TableAssignment {
 
 // VariableAssignmentExpr maps an incoming event expression to one registered
 // runtime variable. It is the fluent equivalent of an on-set assignment.
+// Index is non-nil for an array-element assignment such as
+// thearray[indexExpr] = valueExpr; the whole-array value remains the written
+// variable value, mirroring Java's VariableTriggerWriteArrayElement.
 type VariableAssignmentExpr struct {
-	Name string
-	Expr Expr
+	Name  string
+	Index Expr
+	Expr  Expr
+	// Apply carries a call-form assignment such as Java's
+	// `set Helper.swap(VAR)`: the transform receives the current value and
+	// its result becomes the written value. Call-form assignments contribute
+	// no output column, mirroring Java's VariableTriggerWriteCurly.
+	Apply func(old Value) Value
 }
 
 func SetVariableExpr(name string, expression Expr) VariableAssignmentExpr {
 	return VariableAssignmentExpr{Name: strings.TrimSpace(name), Expr: expression}
+}
+
+// SetVariableIndexExpr assigns one element of an array-typed runtime
+// variable when the trigger fires, the Go-native counterpart of Java's
+// `set thearray[index] = value` on-set assignment.
+func SetVariableIndexExpr(name string, index, expression Expr) VariableAssignmentExpr {
+	return VariableAssignmentExpr{Name: strings.TrimSpace(name), Index: index, Expr: expression}
+}
+
+// SetVariableApply assigns a runtime variable through a single-variable call
+// when the trigger fires, the Go-native counterpart of Java's
+// `set Helper.mutate(thevar)` on-set assignment. The transform receives the
+// current value and stores its result; like Java's call-form write the
+// statement itself exposes no output column for it.
+func SetVariableApply[T any](name string, transform func(T) T) VariableAssignmentExpr {
+	return VariableAssignmentExpr{
+		Name: strings.TrimSpace(name),
+		Apply: func(old Value) Value {
+			if !old.IsPresent() {
+				return Null()
+			}
+			current, err := As[T](old)
+			if err != nil {
+				return Null()
+			}
+			return Present(transform(current))
+		},
+	}
 }
 
 // TableMergeAction is one ordered action in a merge branch. Matched update and
@@ -525,6 +562,13 @@ func (s TriggerStream[T]) InsertIntoNamedWindowFrom(target, source string, assig
 // SetVariable updates one registered variable when the trigger event arrives.
 func (s TriggerStream[T]) SetVariable(name string, expression Expr) TriggerQuery {
 	return s.SetVariables(SetVariableExpr(name, expression))
+}
+
+// SetVariableIndex assigns one element of an array-typed registered variable
+// when the trigger event arrives, mirroring Java's
+// `on SupportBean set thearray[idx] = value` on-set assignment.
+func (s TriggerStream[T]) SetVariableIndex(name string, index, expression Expr) TriggerQuery {
+	return s.SetVariables(SetVariableIndexExpr(name, index, expression))
 }
 
 // SetVariables updates a batch of registered variables as one trigger action.
@@ -1403,7 +1447,7 @@ func (e *Environment) validateVariableTriggerAssignments(definition *triggerDefi
 		return NewError(ErrorInvalidRule, "variable trigger requires at least one assignment")
 	}
 	for index, assignment := range definition.variableAssignments {
-		if assignment.Name == "" || assignment.Expr == nil {
+		if assignment.Name == "" || (assignment.Expr == nil && assignment.Apply == nil) || (assignment.Expr != nil && assignment.Apply != nil) {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("variable trigger assignment %d is invalid", index))
 		}
 		variableDefinition, ok := e.Variable(assignment.Name)
@@ -1413,8 +1457,23 @@ func (e *Environment) validateVariableTriggerAssignments(definition *triggerDefi
 		if variableDefinition.constant {
 			return NewError(ErrorState, fmt.Sprintf("variable trigger cannot assign constant variable %q", assignment.Name))
 		}
-		if err := e.validateExprFields(definition.input, assignment.Expr); err != nil {
-			return fmt.Errorf("variable assignment %q: %w", assignment.Name, err)
+		if assignment.Apply == nil {
+			if err := e.validateExprFields(definition.input, assignment.Expr); err != nil {
+				return fmt.Errorf("variable assignment %q: %w", assignment.Name, err)
+			}
+		}
+		if assignment.Index != nil {
+			if err := e.validateExprFields(definition.input, assignment.Index); err != nil {
+				return fmt.Errorf("variable assignment %q index: %w", assignment.Name, err)
+			}
+			if err := validateVariableIndexAssignment(variableDefinition, assignment); err != nil {
+				return err
+			}
+			continue
+		}
+		if assignment.Apply != nil {
+			// Call-form assignments type through their transform signature.
+			continue
 		}
 		if expressionType := assignment.Expr.Type(); variableDefinition.typ != nil && variableDefinition.typ != typeOf[any]() && expressionType != nil && expressionType != typeOf[any]() {
 			if !fieldExpressionTypesCompatible(variableDefinition.typ, expressionType) {
@@ -1423,6 +1482,52 @@ func (e *Environment) validateVariableTriggerAssignments(definition *triggerDefi
 		}
 	}
 	return nil
+}
+
+// validateVariableIndexAssignment mirrors Java's compile-time checks for
+// `set thearray[indexExpr] = valueExpr`: the target must be an array-typed
+// variable, the index expression must return an integer value, and the value
+// expression must be compatible with the array's element type.
+func validateVariableIndexAssignment(variableDefinition VariableDefinition, assignment VariableAssignmentExpr) error {
+	if err := validateIndexExpressionIsInteger(assignment.Index); err != nil {
+		return err
+	}
+	typ := variableDefinition.typ
+	if typ != nil && typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	if typ == nil || (typ.Kind() != reflect.Slice && typ.Kind() != reflect.Array) {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("variable %q is not an array", variableDefinition.Name()))
+	}
+	elementType := typ.Elem()
+	valueType := assignment.Expr.Type()
+	if valueType != nil && valueType != typeOf[any]() {
+		// A nullable boxed expression type (Java Integer/Double) is
+		// compatible with the primitive element it unboxes to.
+		if valueType.Kind() == reflect.Pointer {
+			valueType = valueType.Elem()
+		}
+		if !fieldExpressionTypesCompatible(elementType, valueType) {
+			return NewError(ErrorTypeMismatch, fmt.Sprintf("variable %q element type %s is incompatible with assignment expression type %s", variableDefinition.Name(), elementType, valueType))
+		}
+	}
+	return nil
+}
+
+func validateIndexExpressionIsInteger(index Expr) error {
+	indexType := index.Type()
+	if indexType == nil || indexType == typeOf[any]() {
+		return nil
+	}
+	if indexType.Kind() == reflect.Pointer {
+		indexType = indexType.Elem()
+	}
+	switch indexType.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return nil
+	}
+	return NewError(ErrorTypeMismatch, fmt.Sprintf("index expression returns %s, expected an integer value", indexType))
 }
 
 func (s *Statement) processTrigger(ctx context.Context, now time.Time, event Event, variables map[string]Value) error {
@@ -1564,6 +1669,11 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 			values := make([]Value, 0, len(definition.variableAssignments))
 			seen := make(map[string]struct{}, len(definition.variableAssignments))
 			for _, assignment := range definition.variableAssignments {
+				if assignment.Index != nil || assignment.Apply != nil {
+					// Array-element and call-form writes add no output
+					// columns, matching Java's on-set result shape.
+					continue
+				}
 				if _, exists := seen[assignment.Name]; exists {
 					continue
 				}
@@ -2811,7 +2921,6 @@ func executeVariableTriggerAction(ctx context.Context, engine *Engine, definitio
 	for _, assignment := range definition.variableAssignments {
 		stepEvaluation := evaluation
 		stepEvaluation.Variables = working
-		value := assignment.Expr.eval(stepEvaluation)
 		variableDefinition, ok := engine.env.Variable(assignment.Name)
 		if !ok {
 			return NewError(ErrorUnknownName, fmt.Sprintf("variable %q is not registered", assignment.Name))
@@ -2819,35 +2928,29 @@ func executeVariableTriggerAction(ctx context.Context, engine *Engine, definitio
 		if variableDefinition.context != "" && (runtime == nil || runtime.partitionContextName != variableDefinition.context || runtime.partitionKey == "") {
 			return NewError(ErrorState, fmt.Sprintf("context variable %q requires a matching context partition", assignment.Name))
 		}
+		if assignment.Index != nil {
+			written, err := applyVariableIndexAssignment(stepEvaluation, variableDefinition, assignment, working)
+			if err != nil {
+				return err
+			}
+			recordVariableTriggerWrite(variableDefinition, written, working, seen, &assignments, &contextAssignments)
+			continue
+		}
+		if assignment.Apply != nil {
+			transformed := assignment.Apply(working[assignment.Name])
+			coerced, err := variableDefinition.coerce(transformed.Any())
+			if err != nil {
+				return WrapError(ErrorTypeMismatch, "variable."+assignment.Name, err)
+			}
+			recordVariableTriggerWrite(variableDefinition, coerced, working, seen, &assignments, &contextAssignments)
+			continue
+		}
+		value := assignment.Expr.eval(stepEvaluation)
 		coerced, err := variableDefinition.coerce(value.Any())
 		if err != nil {
 			return WrapError(ErrorTypeMismatch, "variable."+assignment.Name, err)
 		}
-		if coerced == nil {
-			working[assignment.Name] = Null()
-		} else {
-			working[assignment.Name] = Present(coerced)
-		}
-		if _, exists := seen[assignment.Name]; !exists {
-			seen[assignment.Name] = struct{}{}
-			assignmentValue := VariableAssignment{Name: assignment.Name, Value: coerced}
-			if variableDefinition.context != "" {
-				contextAssignments = append(contextAssignments, assignmentValue)
-			} else {
-				assignments = append(assignments, assignmentValue)
-			}
-		} else {
-			target := &assignments
-			if variableDefinition.context != "" {
-				target = &contextAssignments
-			}
-			for index := range *target {
-				if (*target)[index].Name == assignment.Name {
-					(*target)[index].Value = coerced
-					break
-				}
-			}
-		}
+		recordVariableTriggerWrite(variableDefinition, coerced, working, seen, &assignments, &contextAssignments)
 	}
 	if len(assignments) > 0 {
 		if err := engine.setVariablesLocked(ctx, assignments); err != nil {
@@ -2865,6 +2968,119 @@ func executeVariableTriggerAction(ctx context.Context, engine *Engine, definitio
 		}
 	}
 	return nil
+}
+
+// recordVariableTriggerWrite stores the written value in the ordered working
+// snapshot and records the whole-variable assignment once per target, keeping
+// the last write for duplicate targets in the emitted trigger row.
+func recordVariableTriggerWrite(definition VariableDefinition, coerced any, working map[string]Value, seen map[string]struct{}, assignments *[]VariableAssignment, contextAssignments *[]VariableAssignment) {
+	if coerced == nil {
+		working[definition.Name()] = Null()
+	} else {
+		working[definition.Name()] = Present(coerced)
+	}
+	if _, exists := seen[definition.Name()]; !exists {
+		seen[definition.Name()] = struct{}{}
+		assignmentValue := VariableAssignment{Name: definition.Name(), Value: coerced}
+		if definition.ContextName() != "" {
+			*contextAssignments = append(*contextAssignments, assignmentValue)
+		} else {
+			*assignments = append(*assignments, assignmentValue)
+		}
+		return
+	}
+	target := assignments
+	if definition.ContextName() != "" {
+		target = contextAssignments
+	}
+	for index := range *target {
+		if (*target)[index].Name == definition.Name() {
+			(*target)[index].Value = coerced
+			break
+		}
+	}
+}
+
+// applyVariableIndexAssignment mirrors Java's
+// VariableTriggerWriteArrayElement semantics: evaluate the index expression
+// first; a null index or a null current array silently skips the element
+// write while still recording the current array as the written value; an
+// out-of-range index fails with Java's exact message; and the element is set
+// in place on the stored array instance so later ordered assignments and all
+// readers observe the mutation through shared backing storage. A null value
+// skips primitive-element writes (Java cannot store null in a primitive
+// array) while pointer-element arrays store nil. Boxed numeric values are
+// coerced into freshly allocated pointer elements.
+func applyVariableIndexAssignment(evaluation EvalContext, definition VariableDefinition, assignment VariableAssignmentExpr, working map[string]Value) (any, error) {
+	name := definition.Name()
+	indexValue := assignment.Index.eval(evaluation)
+	current := Null()
+	if existing, ok := working[name]; ok && !existing.IsMissing() {
+		current = existing
+	}
+	index, hasIndex := variableIndexNumber(indexValue)
+	if !hasIndex || !current.IsPresent() {
+		return current.Any(), nil
+	}
+	array := reflect.ValueOf(current.Any())
+	length := array.Len()
+	if index < 0 || index >= int64(length) {
+		return nil, NewError(ErrorState, fmt.Sprintf("Array length %d less than index %d for variable '%s'", length, index, name))
+	}
+	value := assignment.Expr.eval(evaluation)
+	elementType := array.Type().Elem()
+	if !value.IsPresent() {
+		if elementType.Kind() != reflect.Pointer {
+			// Java skips Array.set for null values on primitive arrays but
+			// still commits the unchanged array reference.
+			return current.Any(), nil
+		}
+		array.Index(int(index)).Set(reflect.Zero(elementType))
+		return current.Any(), nil
+	}
+	// Boxed element types (pointer) accept a value of their underlying type
+	// by allocating a fresh element, mirroring Java's numeric widening plus
+	// autoboxing for Double[]/Integer[] arrays.
+	coerceType := elementType
+	if coerceType.Kind() == reflect.Pointer {
+		coerceType = coerceType.Elem()
+	}
+	elementDefinition := VariableDefinition{name: name, typ: coerceType}
+	element, err := elementDefinition.coerce(value.Any())
+	if err != nil {
+		return nil, WrapError(ErrorTypeMismatch, "variable."+name, err)
+	}
+	if elementType.Kind() == reflect.Pointer {
+		boxed := reflect.New(elementType.Elem())
+		boxed.Elem().Set(reflect.ValueOf(element))
+		element = boxed.Interface()
+	}
+	array.Index(int(index)).Set(reflect.ValueOf(element))
+	return current.Any(), nil
+}
+
+// variableIndexNumber converts an integer-typed evaluation result to the
+// element index. Non-integer results report no index so the write is skipped,
+// matching the build-time rejection of non-integer index expressions.
+func variableIndexNumber(value Value) (int64, bool) {
+	if !value.IsPresent() {
+		return 0, false
+	}
+	number := reflect.ValueOf(value.Any())
+	if number.Kind() == reflect.Pointer {
+		if number.IsNil() {
+			return 0, false
+		}
+		number = number.Elem()
+	}
+	switch number.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return number.Int(), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return int64(number.Uint()), true
+	default:
+		return 0, false
+	}
 }
 
 func cloneTableMergeClauses(clauses []TableMergeClause) []TableMergeClause {

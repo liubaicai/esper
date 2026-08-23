@@ -7,7 +7,13 @@
     "java-runtime-a1c711b411766252f401",
     "java-runtime-e7b63e853b22431a1ef3",
     "java-runtime-275279390f721078251a",
-    "java-runtime-ce691b2f1d8368144c89"
+    "java-runtime-ce691b2f1d8368144c89",
+    "java-runtime-d23e6717c5568c62cf50",
+    "java-runtime-ad6256cf6e3091770906",
+    "java-runtime-f85344604842bf345a7a",
+    "java-runtime-2788fec53520551b63b8",
+    "java-runtime-36715ebec5e33bcb2cff",
+    "java-runtime-691fcb9b5f0fe173348f"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOnSet.java"
@@ -18,7 +24,13 @@
     "EPLVariableOnSetAssignmentOrderNoDup",
     "EPLVariableOnSetAssignmentOrderDup",
     "EPLVariableOnSetRuntimeOrderMultiple",
-    "EPLVariableOnSetCoercion"
+    "EPLVariableOnSetCoercion",
+    "EPLVariableOnSetSubqueryMultikeyWArray",
+    "EPLVariableOnSetArrayAtIndex{soda=false}",
+    "EPLVariableOnSetArrayAtIndex{soda=true}",
+    "EPLVariableOnSetArrayBoxed",
+    "EPLVariableOnSetArrayInvalid",
+    "EPLVariableOnSetExpression"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -226,6 +238,194 @@
         "payload": {
           "id": "A3"
         }
+      },
+      {
+        "op": "case",
+        "case": "onset-subquery-multikey-warray"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E1",
+          "array": [
+            1,
+            2
+          ],
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E2",
+          "array": [
+            1,
+            2
+          ],
+          "value": 11
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "total_sum"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "total_sum"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E3",
+          "array": [
+            1,
+            2
+          ],
+          "value": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "total_sum"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E4",
+          "array": [
+            1
+          ],
+          "value": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "total_sum"
+      },
+      {
+        "op": "case",
+        "case": "onset-array-at-index"
+      },
+      {
+        "op": "read-variable",
+        "name": "doublearray"
+      },
+      {
+        "op": "read-variable",
+        "name": "stringarray"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "doublearray"
+      },
+      {
+        "op": "read-variable",
+        "name": "stringarray"
+      },
+      {
+        "op": "case",
+        "case": "onset-array-boxed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "onset-expression"
+      },
+      {
+        "op": "read-variable",
+        "name": "VAR"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "VAR"
+      },
+      {
+        "op": "case",
+        "case": "onset-array-invalid-runtime"
+      },
+      {
+        "op": "send-error",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "O1",
+          "intBoxed": 10,
+          "doubleBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "O2",
+          "doubleBoxed": 10
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "doublearray"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "O3",
+          "intBoxed": 1
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "doublearray"
       }
     ]
   },
@@ -695,6 +895,315 @@
             }
           }
         ]
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "total_sum",
+        "value": -1
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "total_sum": "21"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "total_sum",
+        "value": 21
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "total_sum": "33"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "total_sum",
+        "value": 33
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "total_sum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "total_sum",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "stringarray",
+        "value": [
+          "a",
+          "b",
+          "c"
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "stringarray",
+        "value": [
+          "a",
+          "x",
+          "c"
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "stringarray",
+        "value": [
+          "a",
+          "b",
+          "c"
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "stringarray",
+        "value": [
+          "a",
+          "x",
+          "c"
+        ]
+      },
+      {
+        "case": "onset-array-boxed",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-boxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                null,
+                1,
+                null
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "send-error",
+        "statement": "SupportBean",
+        "sequence": 0,
+        "value": "Array length 3 less than index 10 for variable 'doublearray'"
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "case": "onset-expression",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "VAR",
+        "value": {
+          "a": 1,
+          "b": 10
+        }
+      },
+      {
+        "case": "onset-expression",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-expression",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "VAR",
+        "value": {
+          "a": 10,
+          "b": 1
+        }
       }
     ]
   },
@@ -1164,6 +1673,315 @@
             }
           }
         ]
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "total_sum",
+        "value": -1
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "total_sum": "21"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "total_sum",
+        "value": 21
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "total_sum": "33"
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "total_sum",
+        "value": 33
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "total_sum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-subquery-multikey-warray",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "total_sum",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "stringarray",
+        "value": [
+          "a",
+          "b",
+          "c"
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "stringarray",
+        "value": [
+          "a",
+          "x",
+          "c"
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "stringarray",
+        "value": [
+          "a",
+          "b",
+          "c"
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-at-index",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "stringarray",
+        "value": [
+          "a",
+          "x",
+          "c"
+        ]
+      },
+      {
+        "case": "onset-array-boxed",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-boxed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                null,
+                1,
+                null
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "send-error",
+        "statement": "SupportBean",
+        "sequence": 0,
+        "value": "Array length 3 less than index 10 for variable 'doublearray'"
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-array-invalid-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "doublearray",
+        "value": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "case": "onset-expression",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "VAR",
+        "value": {
+          "a": 1,
+          "b": 10
+        }
+      },
+      {
+        "case": "onset-expression",
+        "operation": "listener",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "onset-expression",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "VAR",
+        "value": {
+          "a": 10,
+          "b": 1
+        }
       }
     ]
   },

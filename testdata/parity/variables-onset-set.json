@@ -8,7 +8,13 @@
   "java-runtime-52902bb58deb8ee9f48b",
   "java-runtime-a1c711b411766252f401",
   "java-runtime-ce691b2f1d8368144c89",
-  "java-runtime-e7b63e853b22431a1ef3"
+  "java-runtime-e7b63e853b22431a1ef3",
+  "java-runtime-d23e6717c5568c62cf50",
+  "java-runtime-ad6256cf6e3091770906",
+  "java-runtime-f85344604842bf345a7a",
+  "java-runtime-2788fec53520551b63b8",
+  "java-runtime-36715ebec5e33bcb2cff",
+  "java-runtime-691fcb9b5f0fe173348f"
  ],
  "cases": [
   {
@@ -34,6 +40,30 @@
   {
    "case": "onset-coercion",
    "runtimeId": "java-runtime-ce691b2f1d8368144c89"
+  },
+  {
+   "case": "onset-subquery-multikey-warray",
+   "runtimeId": "java-runtime-d23e6717c5568c62cf50"
+  },
+  {
+   "case": "onset-array-at-index",
+   "runtimeId": "java-runtime-ad6256cf6e3091770906"
+  },
+  {
+   "case": "onset-array-at-index",
+   "runtimeId": "java-runtime-f85344604842bf345a7a"
+  },
+  {
+   "case": "onset-array-boxed",
+   "runtimeId": "java-runtime-2788fec53520551b63b8"
+  },
+  {
+   "case": "onset-array-invalid-runtime",
+   "runtimeId": "java-runtime-36715ebec5e33bcb2cff"
+  },
+  {
+   "case": "onset-expression",
+   "runtimeId": "java-runtime-691fcb9b5f0fe173348f"
   }
  ],
  "steps": [
@@ -239,6 +269,194 @@
    "payload": {
     "id": "A3"
    }
+  },
+  {
+   "op": "case",
+   "case": "onset-subquery-multikey-warray"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E1",
+    "array": [
+     1,
+     2
+    ],
+    "value": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E2",
+    "array": [
+     1,
+     2
+    ],
+    "value": 11
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "total_sum"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "total_sum"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E3",
+    "array": [
+     1,
+     2
+    ],
+    "value": 12
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "total_sum"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E4",
+    "array": [
+     1
+    ],
+    "value": 13
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "total_sum"
+  },
+  {
+   "op": "case",
+   "case": "onset-array-at-index"
+  },
+  {
+   "op": "read-variable",
+   "name": "doublearray"
+  },
+  {
+   "op": "read-variable",
+   "name": "stringarray"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "doublearray"
+  },
+  {
+   "op": "read-variable",
+   "name": "stringarray"
+  },
+  {
+   "op": "case",
+   "case": "onset-array-boxed"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "onset-expression"
+  },
+  {
+   "op": "read-variable",
+   "name": "VAR"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "VAR"
+  },
+  {
+   "op": "case",
+   "case": "onset-array-invalid-runtime"
+  },
+  {
+   "op": "send-error",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "O1",
+    "intBoxed": 10,
+    "doubleBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "O2",
+    "doubleBoxed": 10
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "doublearray"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "O3",
+    "intBoxed": 1
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "doublearray"
   }
  ]
 }

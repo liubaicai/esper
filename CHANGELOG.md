@@ -1,3 +1,28 @@
+> 最新补充：Draft 4.238（2026-08-23），完成 `epl.variable-onset` 全部 17 个
+> execution：新增 EPLVariableOnSetSubqueryMultikeyWArray
+>（`java-runtime-d23e6717c5568c62cf50`）、EPLVariableOnSetArrayAtIndex
+> {soda=false,soda=true}（`java-runtime-ad6256cf6e3091770906`、
+> `java-runtime-f85344604842bf345a7a`）、EPLVariableOnSetArrayBoxed
+>（`java-runtime-2788fec53520551b63b8`）、EPLVariableOnSetArrayInvalid
+> runtime 行为（`java-runtime-36715ebec5e33bcb2cff`）与
+> EPLVariableOnSetExpression（`java-runtime-691fcb9b5f0fe173348f`）共 6 个
+> runtime 的差分验证。variables-onset-set 场景扩展至 11 case、Java/Go 各
+> 54 条 records、0 differences；覆盖 int[] 内容等值分组标量子查询赋值
+>（单组 sum/多组 null）、double[primitive]/String[] 元素写入共享后备存储、
+> Double[] null 元素装箱与同事件依赖 select 观测、越界索引精确报错
+> "Array length 3 less than index 10 for variable 'doublearray'"、null 索引
+> 与 primitive 数组 null RHS 静默跳过、对象变量 call-form 变换。引擎新增：
+> `SetVariableIndexExpr`/`SetVariableIndex` 支持 on-set 数组元素写入（Java
+> `VariableTriggerWriteArrayElement` 语义：就地修改、有序可见、null 跳过、
+> 越界抛错）；`SetVariableApply` 支持 call-form 变量变换（对应 Java curly
+> write，无输出列）。数组/call-form 赋值按 Java 语义不产生 on-set 输出列。
+> 场景协议新增 read-variable/send-error 步骤与数组/POJO 规范化渲染；
+> oracle 注册重抛异常处理器并排除 create-variable 回显行（观察协议修订，
+> 记录于 batch contract）。manifest 更新为 535 cases、150 个
+> differential-verified case、504 个 differential runtime IDs、3118 条
+> associations（referenced 2915）。capability remaining 仅保留 Invalid
+> approved difference 登记。
+>
 > 最新补充：Draft 4.237（2026-08-22），扩展 `epl.variable-onset` 至
 > 14/15 DV：新增 EPLVariableOnSetSimple/WithFilter/AssignmentOrderNoDup/
 > AssignmentOrderDup/RuntimeOrderMultiple/Coercion 与

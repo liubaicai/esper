@@ -4,6 +4,24 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.238（2026-08-23），完成 `epl.variable-onset` 全部 17
+> 个 execution：新增 EPLVariableOnSetSubqueryMultikeyWArray
+>（`java-runtime-d23e6717c5568c62cf50`）、EPLVariableOnSetArrayAtIndex
+> {soda=false,soda=true}（`java-runtime-ad6256cf6e3091770906`、
+> `java-runtime-f85344604842bf345a7a`）、EPLVariableOnSetArrayBoxed
+>（`java-runtime-2788fec53520551b63b8`）、EPLVariableOnSetArrayInvalid
+> runtime 行为（`java-runtime-36715ebec5e33bcb2cff`）与
+> EPLVariableOnSetExpression（`java-runtime-691fcb9b5f0fe173348f`）共 6 个
+> runtime 的差分验证。variables-onset-set 场景扩展至 11 case、Java/Go 各
+> 54 条 records、0 differences；覆盖 int[] 内容等值分组标量子查询赋值、
+> 数组元素就地写入与共享后备存储别名、Double[] null 装箱、越界索引精确
+> 报错、null 索引/null RHS 静默跳过、对象变量 call-form 变换。引擎新增
+> `SetVariableIndexExpr`/`SetVariableApply`；数组/call-form on-set 赋值按
+> Java 语义不产生输出列。capability remaining 仅保留 Invalid approved
+> difference 登记。manifest 更新为 535 cases、150 个 differential-verified
+> case、504 个 differential runtime IDs、3118 条 associations（referenced
+> 2915）。
+>
 > 最新补充：Draft 4.237（2026-08-22），扩展 `epl.variable-onset` 至
 > 14/15 DV：新增 EPLVariableOnSetSimple/WithFilter/AssignmentOrderNoDup/
 > AssignmentOrderDup/RuntimeOrderMultiple/Coercion 与
@@ -567,16 +585,16 @@
 
 > 最新补充：Draft 4.196（2026-08-20），新增 `expr-core-current-timestamp` differential-verified 场景，对照固定 Java `ExprCoreCurrentTimestamp` 的三个 execution（`ExprCoreCurrentTimestampGet` `java-runtime-c1c1fd3dc31af4864a50`、`ExprCoreCurrentTimestampOM` `java-runtime-96c8b8cb4cf36a523669`、`ExprCoreCurrentTimestampCompile` `java-runtime-5b126fe7fb865be8b293`），三个 isolated case、四条 listener records、0 differences。Go 侧复用类型化 `CurrentTimestamp()` 和虚拟时钟，覆盖未命名 `current_timestamp()` 字段、重复引用、加一运算，以及 100/999/777 毫秒绝对时间；Java boxed Long 元数据和文本编译诊断继续保持差异边界。Java oracle、固定 commit runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 122 个 differential-verified case、373 个 differential runtime IDs。
 
-截至 2026-08-21，manifest v2 的已校验摘要为：
+截至 2026-08-23，manifest v2 的已校验摘要为：
 
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 534 |
-| Case differential-verified | 148 |
-| Differential-verified runtime | 469 / 4,136 |
-| Runtime 已关联 | 2,908 / 4,136（70.3%） |
-| Runtime 未关联 | 1,228 |
+| Case | 535 |
+| Case differential-verified | 150 |
+| Differential-verified runtime | 504 / 4,136 |
+| Runtime 已关联 | 2,915 / 4,136（70.5%） |
+| Runtime 未关联 | 1,221 |
 | Representative scenario | 94 / 94 通过 |
 | Intentionally-different case | 18 |
 | NFR-verified case | 0 |

@@ -4337,7 +4337,7 @@
    "id": "epl.variable-onset",
    "domain": "variable",
    "level": "G",
-   "summary": "On-set variable triggers: event-driven atomic batch assignment with ordered cross-references, numeric coercion, trigger-stream filters and dependent-statement visibility",
+   "summary": "All 17 executions of EPLVariablesOnSet are covered: 16 differentially verified across three scenarios plus the compile-only Invalid approved difference.",
    "javaRefs": [
     "EPLVariablesOnSet"
    ],
@@ -4352,12 +4352,6 @@
    "phase": 1,
    "status": "implemented",
    "remaining": [
-    "EPLVariableOnSetSubqueryMultikeyWArray: subquery and multikey-array on-set assignments",
-    "EPLVariableOnSetArrayAtIndex (dbls[intPrimitive] = v): array element index assignment",
-    "EPLVariableOnSetArrayAtIndexBoxed variant: boxed array element assignment",
-    "EPLVariableOnSetArrayBoxed: array-typed variable on-set",
-    "EPLVariableOnSetArrayInvalid: compile-error-only array assignment diagnostics (approved difference)",
-    "EPLVariableOnSetExpression: expression / inlined-class variable mutation",
     "EPLVariableOnSetInvalid (java-runtime-c2b1d3116ed43d68d679): compile-time error-only, 5 asserted diagnostics plus 3 skip-only compiles (approved difference)"
    ],
    "verification": [
@@ -4380,7 +4374,13 @@
     "java-runtime-91f1de1b06fddf87b2b1",
     "java-runtime-a1c711b411766252f401",
     "java-runtime-ce691b2f1d8368144c89",
-    "java-runtime-e7b63e853b22431a1ef3"
+    "java-runtime-e7b63e853b22431a1ef3",
+    "java-runtime-d23e6717c5568c62cf50",
+    "java-runtime-ad6256cf6e3091770906",
+    "java-runtime-f85344604842bf345a7a",
+    "java-runtime-2788fec53520551b63b8",
+    "java-runtime-36715ebec5e33bcb2cff",
+    "java-runtime-691fcb9b5f0fe173348f"
    ],
    "representativeScenarioIds": [
     "variable-deploy",
@@ -23659,7 +23659,7 @@
     "differential-evidence",
     "mutation"
    ],
-   "difference": "SODA object-model, subquery/multikey-array, array-index, inlined-class executions remain open (see capability remaining); EPLVariableOnSetInvalid is compile-time error-only (approved difference)",
+   "difference": "SODA object-model compile path is a shared semantic scenario (Compile/ObjectModel); EPLVariableOnSetInvalid is compile-time error-only (approved difference). subquery/multikey-array, array-index and inlined-class executions are now differentially verified under case.epl-variable-onset-array-expression.",
    "verification": [
     "inventoried",
     "implemented",
@@ -31628,7 +31628,7 @@
     "implemented",
     "differential-verified"
    ],
-   "notes": "Compile/ObjectModel share one semantic scenario (typed on-set + dependent select); SimpleSceneTwo covers @public multi-module variables + irstream select; Subquery covers subquery on set RHS with empty-result null assignment. RUNTIMEOPS variants and array-index assignment executions excluded (require array-index assignment targets not yet in Go API).",
+   "notes": "Compile/ObjectModel share one semantic scenario (typed on-set + dependent select); SimpleSceneTwo covers @public multi-module variables + irstream select; Subquery covers subquery on set RHS with empty-result null assignment. RUNTIMEOPS array/subquery/expression executions moved to case.epl-variable-onset-array-expression (Draft 4.238).",
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOnSet.java"
    ],
@@ -31648,6 +31648,66 @@
    ],
    "representativeScenarioIds": [
     "variables-onset"
+   ]
+  },
+  {
+   "id": "case.epl-variable-onset-array-expression",
+   "javaRuntimeIds": [
+    "java-runtime-d23e6717c5568c62cf50",
+    "java-runtime-ad6256cf6e3091770906",
+    "java-runtime-f85344604842bf345a7a",
+    "java-runtime-2788fec53520551b63b8",
+    "java-runtime-36715ebec5e33bcb2cff",
+    "java-runtime-691fcb9b5f0fe173348f"
+   ],
+   "javaNames": [
+    "EPLVariableOnSetSubqueryMultikeyWArray",
+    "EPLVariableOnSetArrayAtIndex{soda=false}",
+    "EPLVariableOnSetArrayAtIndex{soda=true}",
+    "EPLVariableOnSetArrayBoxed",
+    "EPLVariableOnSetArrayInvalid",
+    "EPLVariableOnSetExpression"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOnSet.java"
+   ],
+   "goTests": [
+    "TestVariableOnSetSubqueryMultikeyWArrayParity",
+    "TestVariableOnSetArrayAtIndexParity",
+    "TestVariableOnSetArrayBoxedParity",
+    "TestVariableOnSetExpressionParity",
+    "TestVariableOnSetArrayInvalidRuntimeParity",
+    "TestRunVariablesOnsetSetDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "variable",
+    "on-set",
+    "array-index",
+    "multikey-warray",
+    "expression",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/variables-onset-set.json",
+    "testdata/parity/variables-onset-set.trace.json",
+    "testdata/parity/variables-onset-set.evidence.json"
+   ],
+   "status_note": "Scenario variables-onset-set extended from 6 to 11 distinct cases (12 scenario entries: array-at-index replays once per soda runtime ID); Java/Go each 54 records, 0 differences.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "notes": "ArrayAtIndex soda=false/soda=true share one semantic case (byte-identical observable behavior, two runtime IDs); ArrayBoxed covers Double[] null-element boxing with a dependent select; SubqueryMultikeyWArray assigns from a scalar grouped subquery keyed by int[] content equality (single group sum, multi-group null); Expression mutates an object-typed variable through a call-form assignment. Trace mutations cover element writes, boxed nulls, overflow message drift and swap application.",
+   "difference": "EPLVariableOnSetArrayInvalid compile diagnostics are compile-time error-only and remain an approved difference; its runtime sequence (overflow failure, null-index skip, null-RHS primitive skip) is differentially verified.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d23e6717c5568c62cf50",
+    "java-runtime-ad6256cf6e3091770906",
+    "java-runtime-f85344604842bf345a7a",
+    "java-runtime-2788fec53520551b63b8",
+    "java-runtime-36715ebec5e33bcb2cff",
+    "java-runtime-691fcb9b5f0fe173348f"
    ]
   },
   {
@@ -35478,13 +35538,17 @@
   {
    "capabilityId": "resultset.aggregate-dimensional",
    "caseId": "case.rollup-dimensionality-bound-batch"
+  },
+  {
+   "capabilityId": "epl.variable-onset",
+   "caseId": "case.epl-variable-onset-array-expression"
   }
  ],
  "summary": {
-  "inventoriedCases": 534,
-  "implementedCases": 532,
-  "differentialVerifiedCases": 149,
-  "differentialVerifiedRuntimeIds": 498,
+  "inventoriedCases": 535,
+  "implementedCases": 533,
+  "differentialVerifiedCases": 150,
+  "differentialVerifiedRuntimeIds": 504,
   "intentionallyDifferentCases": 18,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -35494,13 +35558,13 @@
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3112,
-  "referencedJavaRuntimeIds": 2909,
+  "runtimeAssociationCount": 3118,
+  "referencedJavaRuntimeIds": 2915,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1227,
+  "unreferencedJavaRuntimeIds": 1221,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 534,
+  "totalCases": 535,
   "totalCapabilities": 110
  }
 }

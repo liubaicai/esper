@@ -5927,8 +5927,24 @@ func SetOutputVariable(name string, expression Expr) OutputVariableAssignment {
 	return internalengine.SetOutputVariable(name, expression)
 }
 
+// SetVariableApply assigns a runtime variable through a single-variable call
+// when the trigger fires, the Go-native counterpart of Java's
+// `set Helper.mutate(thevar)` on-set assignment. The transform receives the
+// current value and stores its result; like Java's call-form write the
+// statement itself exposes no output column for it.
+func SetVariableApply[T any](name string, transform func(T) T) VariableAssignmentExpr {
+	return internalengine.SetVariableApply[T](name, transform)
+}
+
 func SetVariableExpr(name string, expression Expr) VariableAssignmentExpr {
 	return internalengine.SetVariableExpr(name, expression)
+}
+
+// SetVariableIndexExpr assigns one element of an array-typed runtime
+// variable when the trigger fires, the Go-native counterpart of Java's
+// `set thearray[index] = value` on-set assignment.
+func SetVariableIndexExpr(name string, index, expression Expr) VariableAssignmentExpr {
+	return internalengine.SetVariableIndexExpr(name, index, expression)
 }
 
 // Signum is the Go-native equivalent of Java Math.signum for double-valued
@@ -7443,6 +7459,9 @@ type VariableAssignment = internalengine.VariableAssignment
 
 // VariableAssignmentExpr maps an incoming event expression to one registered
 // runtime variable. It is the fluent equivalent of an on-set assignment.
+// Index is non-nil for an array-element assignment such as
+// thearray[indexExpr] = valueExpr; the whole-array value remains the written
+// variable value, mirroring Java's VariableTriggerWriteArrayElement.
 type VariableAssignmentExpr = internalengine.VariableAssignmentExpr
 
 // VariableChangeEvent is an immutable snapshot of one committed variable

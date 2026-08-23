@@ -97,6 +97,13 @@ func (s Scenario) Validate() error {
 			if strings.TrimSpace(step.Name) == "" {
 				return fmt.Errorf("compat: step %d read-variable has no name", i)
 			}
+		case "send-error":
+			if strings.TrimSpace(step.EventType) == "" {
+				return fmt.Errorf("compat: step %d send-error has no eventType", i)
+			}
+			if len(step.Payload) == 0 {
+				return fmt.Errorf("compat: step %d send-error has no payload", i)
+			}
 		case "snapshot", "snapshot-selector":
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)

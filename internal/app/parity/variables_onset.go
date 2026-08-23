@@ -3,6 +3,7 @@ package parity
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -17,9 +18,25 @@ type variablesOnsetSupportA struct {
 }
 
 type variablesOnsetBean struct {
-	TheString    string `esper:"theString"`
-	IntPrimitive int32  `esper:"intPrimitive"`
-	IntBoxed     *int32 `esper:"intBoxed"`
+	TheString    string   `esper:"theString"`
+	IntPrimitive int32    `esper:"intPrimitive"`
+	IntBoxed     *int32   `esper:"intBoxed"`
+	DoubleBoxed  *float64 `esper:"doubleBoxed"`
+}
+
+// variablesOnsetIntArrayEvent mirrors the oracle's local
+// SupportEventWithIntArray POJO used by the multikey-wArray subquery case.
+type variablesOnsetIntArrayEvent struct {
+	ID    string `esper:"id"`
+	Array []int  `esper:"array"`
+	Value int    `esper:"value"`
+}
+
+// variablesOnsetLocalVar mirrors the oracle's MyLocalVariable mutable POJO
+// used by the expression execution; field names lowercase in trace output.
+type variablesOnsetLocalVar struct {
+	A int
+	B int
 }
 
 var variablesOnsetJavaSources = []string{
@@ -34,6 +51,12 @@ var (
 		"java-runtime-e7b63e853b22431a1ef3",
 		"java-runtime-275279390f721078251a",
 		"java-runtime-ce691b2f1d8368144c89",
+		"java-runtime-d23e6717c5568c62cf50",
+		"java-runtime-ad6256cf6e3091770906",
+		"java-runtime-f85344604842bf345a7a",
+		"java-runtime-2788fec53520551b63b8",
+		"java-runtime-36715ebec5e33bcb2cff",
+		"java-runtime-691fcb9b5f0fe173348f",
 	}
 	variablesOnsetJavaExecutions = []string{
 		"EPLVariableOnSetSimple",
@@ -42,6 +65,12 @@ var (
 		"EPLVariableOnSetAssignmentOrderDup",
 		"EPLVariableOnSetRuntimeOrderMultiple",
 		"EPLVariableOnSetCoercion",
+		"EPLVariableOnSetSubqueryMultikeyWArray",
+		"EPLVariableOnSetArrayAtIndex{soda=false}",
+		"EPLVariableOnSetArrayAtIndex{soda=true}",
+		"EPLVariableOnSetArrayBoxed",
+		"EPLVariableOnSetArrayInvalid",
+		"EPLVariableOnSetExpression",
 	}
 )
 
@@ -53,10 +82,18 @@ func runVariablesOnsetScenario(ctx context.Context, scenario compat.Scenario) (c
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
 	}
+	// onset-array-at-index appears twice because the scenario declares one
+	// entry per Java runtime ID (soda=false / soda=true); the oracle replays
+	// the identical semantic case once per entry and so does this runner.
 	caseOrder := []string{
 		"onset-simple", "onset-with-filter",
 		"onset-order-no-dup", "onset-order-dup",
 		"onset-runtime-order-multiple", "onset-coercion",
+		"onset-subquery-multikey-warray",
+		"onset-array-at-index", "onset-array-at-index",
+		"onset-array-boxed",
+		"onset-array-invalid-runtime",
+		"onset-expression",
 	}
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
 	found := false
@@ -90,6 +127,9 @@ func runVariablesOnsetCase(ctx context.Context, caseScenario compat.Scenario, ca
 		return compat.Trace{}, err
 	}
 	if _, err := esper.RegisterStruct[variablesOnsetSupportA](env, "SupportBean_A"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[variablesOnsetIntArrayEvent](env, "SupportEventWithIntArray"); err != nil {
 		return compat.Trace{}, err
 	}
 
@@ -238,6 +278,73 @@ func runVariablesOnsetCase(ctx context.Context, caseScenario compat.Scenario, ca
 			),
 		)
 		initialSnapshots = true
+	case "onset-subquery-multikey-warray":
+		if err := env.RegisterVariable("total_sum", -1); err != nil {
+			return compat.Trace{}, err
+		}
+		queries = append(queries,
+			esper.OnEvent(esper.From[variablesOnsetBean](env, "SupportBean")).SetVariables(
+				esper.SetVariableExpr("total_sum", esper.SubqueryGroupScalar[[]int, int](
+					esper.FromAny(env, "SupportEventWithIntArray").Window(esper.KeepAll()),
+					esper.Field[esper.Event, []int]("array"),
+					esper.Sum[int](esper.Field[esper.Event, int]("value")),
+				)),
+			).Query(esper.StatementName("set")),
+		)
+	case "onset-array-at-index":
+		if err := env.RegisterVariable("doublearray", []float64{0, 0, 0}); err != nil {
+			return compat.Trace{}, err
+		}
+		if err := env.RegisterVariable("stringarray", []string{"a", "b", "c"}); err != nil {
+			return compat.Trace{}, err
+		}
+		intPrimitive := esper.Field[variablesOnsetBean, int32]("intPrimitive")
+		queries = append(queries,
+			esper.OnEvent(esper.From[variablesOnsetBean](env, "SupportBean")).SetVariables(
+				esper.SetVariableIndexExpr("doublearray", intPrimitive, esper.Literal[float64](1)),
+				esper.SetVariableIndexExpr("stringarray", intPrimitive, esper.Literal("x")),
+			).Query(esper.StatementName("set")),
+		)
+	case "onset-array-boxed":
+		if err := env.RegisterVariable("dbls", []*float64{nil, nil, nil}); err != nil {
+			return compat.Trace{}, err
+		}
+		intPrimitive := esper.Field[variablesOnsetBean, int32]("intPrimitive")
+		queries = append(queries,
+			// The set statement deploys before s0 so the same event delivery
+			// observes the post-update array, mirroring Java @priority(1).
+			esper.OnEvent(esper.From[variablesOnsetBean](env, "SupportBean")).
+				SetVariableIndex("dbls", intPrimitive, esper.Literal(1)).
+				Query(esper.StatementName("set")),
+			esper.Select(esper.From[variablesOnsetBean](env, "SupportBean"),
+				esper.Alias("c0", esper.VariableRef[[]*float64]("dbls")),
+			).Query(esper.StatementName("s0")),
+		)
+	case "onset-expression":
+		if err := env.RegisterVariable("VAR", variablesOnsetLocalVar{A: 1, B: 10}); err != nil {
+			return compat.Trace{}, err
+		}
+		queries = append(queries,
+			esper.OnEvent(esper.From[variablesOnsetBean](env, "SupportBean")).SetVariables(
+				// Call-form assignment mirroring Java's set Helper.swap(VAR):
+				// no output column, the transformed value is written back.
+				esper.SetVariableApply("VAR", func(v variablesOnsetLocalVar) variablesOnsetLocalVar {
+					v.A, v.B = v.B, v.A
+					return v
+				}),
+			).Query(esper.StatementName("set")),
+		)
+	case "onset-array-invalid-runtime":
+		if err := env.RegisterVariable("doublearray", []float64{0, 0, 0}); err != nil {
+			return compat.Trace{}, err
+		}
+		intBoxed := esper.Field[variablesOnsetBean, *int32]("intBoxed")
+		doubleBoxed := esper.Field[variablesOnsetBean, *float64]("doubleBoxed")
+		queries = append(queries,
+			esper.OnEvent(esper.From[variablesOnsetBean](env, "SupportBean")).
+				SetVariableIndex("doublearray", intBoxed, doubleBoxed).
+				Query(esper.StatementName("set")),
+		)
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported variables-onset case %q", caseName)
 	}
@@ -325,21 +432,123 @@ func runVariablesOnsetCase(ctx context.Context, caseScenario compat.Scenario, ca
 	}
 
 	for _, step := range caseScenario.Steps {
-		if step.Op == "case" {
+		switch step.Op {
+		case "case":
 			continue
-		}
-		if step.Op != "send" {
+		case "send":
+			payload, err := decodeVariablesOnsetPayload(step)
+			if err != nil {
+				return trace, err
+			}
+			if err := engine.Send(ctx, step.EventType, payload); err != nil {
+				return trace, err
+			}
+		case "read-variable":
+			record := compat.TraceRecord{
+				Case:      caseName,
+				Operation: "variable",
+				Name:      step.Name,
+			}
+			value, ok := engine.GetVariable(step.Name)
+			if !ok {
+				return trace, fmt.Errorf("variables-onset: variable %q not found", step.Name)
+			}
+			if value.IsNull() || value.IsMissing() {
+				record.Value = map[string]any{"state": "null"}
+			} else {
+				record.Value = canonicalVariablesOnsetValue(value.Any())
+			}
+			trace.Records = append(trace.Records, record)
+		case "send-error":
+			payload, err := decodeVariablesOnsetPayload(step)
+			if err != nil {
+				return trace, err
+			}
+			record := compat.TraceRecord{
+				Case:      caseName,
+				Operation: "send-error",
+				Statement: step.EventType,
+			}
+			if sendErr := engine.Send(ctx, step.EventType, payload); sendErr != nil {
+				// Mirror the oracle's ex.getMessage(): strip the Go error
+				// wrapper and record the bare message text.
+				var espErr *esper.Error
+				if errors.As(sendErr, &espErr) && espErr.Message != "" {
+					record.Value = espErr.Message
+				} else {
+					record.Value = sendErr.Error()
+				}
+			} else {
+				record.Value = "<no-error>"
+			}
+			trace.Records = append(trace.Records, record)
+		default:
 			return trace, fmt.Errorf("unsupported variables-onset step op %q", step.Op)
-		}
-		payload, err := decodeVariablesOnsetPayload(step)
-		if err != nil {
-			return trace, err
-		}
-		if err := engine.Send(ctx, step.EventType, payload); err != nil {
-			return trace, err
 		}
 	}
 	return trace, nil
+}
+
+// canonicalVariablesOnsetValue mirrors the oracle's canonical variable-value
+// rendering: numbers long-truncated, strings/booleans passthrough, arrays as
+// element arrays, POJO structs as sorted public-field objects.
+func canonicalVariablesOnsetValue(value any) any {
+	switch typed := value.(type) {
+	case nil:
+		return nil
+	case bool, string:
+		return typed
+	case int:
+		return int64(typed)
+	case int8:
+		return int64(typed)
+	case int16:
+		return int64(typed)
+	case int32:
+		return int64(typed)
+	case int64:
+		return typed
+	case uint:
+		return int64(typed)
+	case uint8:
+		return int64(typed)
+	case uint16:
+		return int64(typed)
+	case uint32:
+		return int64(typed)
+	case uint64:
+		return int64(typed)
+	case float32:
+		return int64(typed)
+	case float64:
+		return int64(typed)
+	case []float64:
+		rendered := make([]any, len(typed))
+		for i, element := range typed {
+			rendered[i] = int64(element)
+		}
+		return rendered
+	case []string:
+		rendered := make([]any, len(typed))
+		for i, element := range typed {
+			rendered[i] = element
+		}
+		return rendered
+	case []*float64:
+		rendered := make([]any, len(typed))
+		for i, element := range typed {
+			if element == nil {
+				rendered[i] = nil
+			} else {
+				rendered[i] = int64(*element)
+			}
+		}
+		return rendered
+	case variablesOnsetLocalVar:
+		return map[string]any{"a": int64(typed.A), "b": int64(typed.B)}
+	default:
+		return fmt.Sprintf("%v", value)
+	}
 }
 
 // appendVariableSurfaceFields mirrors the oracle's iterator projection:
@@ -360,7 +569,11 @@ func appendVariableSurfaceFields(fields map[string]any, result esper.Result) {
 			fields[name] = int64(typed)
 		case int64:
 			fields[name] = typed
+		case []float64, []string, []*float64, variablesOnsetLocalVar:
+			fields[name] = canonicalVariablesOnsetValue(raw)
 		default:
+			// Legacy scalars (strings, booleans) stringify like Java's
+			// String.valueOf in the oracle's iterator projection.
 			fields[name] = fmt.Sprintf("%v", raw)
 		}
 	}
@@ -392,6 +605,15 @@ func variablesOnsetSurfaceRow(result esper.Result) (map[string]any, error) {
 			fields[name] = javaDoubleString(float64(typed))
 		case float64:
 			fields[name] = javaDoubleString(typed)
+		case []float64, []string, []*float64, variablesOnsetLocalVar:
+			fields[name] = canonicalVariablesOnsetValue(raw)
+		case *float64:
+			// A boxed scalar column renders like the oracle's Double toString.
+			if typed == nil {
+				fields[name] = nil
+			} else {
+				fields[name] = javaDoubleString(float64(*typed))
+			}
 		default:
 			fields[name] = fmt.Sprintf("%v", raw)
 		}
@@ -438,6 +660,12 @@ func decodeVariablesOnsetPayload(step compat.Step) (any, error) {
 		var event variablesOnsetSupportA
 		if err := json.Unmarshal(step.Payload, &event); err != nil {
 			return nil, fmt.Errorf("variables-onset SupportBean_A: %w", err)
+		}
+		return event, nil
+	case "SupportEventWithIntArray":
+		var event variablesOnsetIntArrayEvent
+		if err := json.Unmarshal(step.Payload, &event); err != nil {
+			return nil, fmt.Errorf("variables-onset SupportEventWithIntArray: %w", err)
 		}
 		return event, nil
 	default:
