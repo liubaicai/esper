@@ -4,6 +4,16 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.242（2026-08-23），新增 `view.basic-windows` 的
+> `view-length-batch` differential-verified 场景，对照固定 Java ViewLengthBatch.java
+> 的 8 个 execution（SceneOne、Size2、Size1、Size3、Normal{VIEW/NAMEDWINDOW/GROUPWIN}
+> 及 Invalid compile-only approved difference）。场景 Java/Go 各 48 条 records、
+> 0 differences；覆盖 length_batch(1/2/3) 批次刷新 old/new 对、wildcard irstream 选择、
+> 迭代器部分窗口快照、named-window 消费者与安静删除排除已删行、groupwin(null key)
+> 嵌套。Prev 和 Normal{VIEW} 因 prev-on-batch 评估分歧暂登记 remaining。manifest 更新
+> 为 540 cases、153 个 differential-verified case、20 个 intentionally-different case、
+> 535 个 differential runtime IDs、3156 条 associations（referenced 2953）。
+>
 > 最新补充：Draft 4.241（2026-08-23），新增 `resultset.aggregate-having` 的
 > `resultset-query-type-having` differential-verified 场景，对照固定 Java
 > ResultSetQueryTypeHaving.java 的 Statement（text+OM 双 runtime）与
@@ -632,13 +642,13 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 110 |
-| Case | 538 |
-| Case differential-verified | 152 |
-| Differential-verified runtime | 528 / 4,136 |
-| Runtime 已关联 | 2,945 / 4,136（71.2%） |
-| Runtime 未关联 | 1,191 |
+| Case | 540 |
+| Case differential-verified | 153 |
+| Differential-verified runtime | 535 / 4,136 |
+| Runtime 已关联 | 2,953 / 4,136（71.4%） |
+| Runtime 未关联 | 1,183 |
 | Representative scenario | 94 / 94 通过 |
-| Intentionally-different case | 19 |
+| Intentionally-different case | 20 |
 | NFR-verified case | 0 |
 | 质量摘要 | Docker passed；stress passed；race passed；performance pending |
 

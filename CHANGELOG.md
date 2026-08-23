@@ -1,3 +1,10 @@
+> 最新补充：Draft 4.242（2026-08-23），新增 `view.basic-windows` 的
+> `view-length-batch` differential-verified 场景，覆盖 length_batch(1/2/3) 刷新、
+> wildcard irstream、迭代器快照、named-window 安静删除与 groupwin 嵌套共 8 个
+> execution（Invalid 登记 approved difference）。Java/Go 各 48 条 records、0 差异。
+> manifest 更新为 540 cases、153 个 differential-verified case、20 个
+> intentionally-different case、535 个 differential runtime IDs、3156 条 associations。
+>
 > 最新补充：Draft 4.241（2026-08-23），新增 `resultset.aggregate-having` 的
 > `resultset-query-type-having` differential-verified 场景，对照固定 Java
 > ResultSetQueryTypeHaving.java 的 Statement（text+OM 双 runtime：8a05b343…、

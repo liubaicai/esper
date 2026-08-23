@@ -3986,7 +3986,17 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-97e65154c5aefc5735d4",
+    "java-runtime-964e6db2f54f1b508387",
+    "java-runtime-edd63c54bc9fe03a8380",
+    "java-runtime-5a98579c3673cc0224ce",
+    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-a3dc40576e7c9def33fb",
+    "java-runtime-b6eb26431d8d05188516"
    ]
   },
   {
@@ -33283,6 +33293,77 @@
     "java-runtime-0a3b5f198b8a6467078a",
     "java-runtime-3f45c2d30f96ffe3c19f"
    ]
+  },
+  {
+   "id": "case.view-length-batch",
+   "javaRuntimeIds": [
+    "java-runtime-97e65154c5aefc5735d4",
+    "java-runtime-964e6db2f54f1b508387",
+    "java-runtime-edd63c54bc9fe03a8380",
+    "java-runtime-5a98579c3673cc0224ce",
+    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-a3dc40576e7c9def33fb",
+    "java-runtime-b6eb26431d8d05188516"
+   ],
+   "javaNames": [
+    "ViewLengthBatchSceneOne",
+    "ViewLengthBatchSize2",
+    "ViewLengthBatchSize1",
+    "ViewLengthBatchSize3",
+    "ViewLengthBatchNormal{runType=VIEW}",
+    "ViewLengthBatchNormal{runType=NAMEDWINDOW}",
+    "ViewLengthBatchNormal{runType=GROUPWIN}"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewLengthBatchDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "view",
+    "length-batch",
+    "batch-flush",
+    "wildcard-select",
+    "iterator-snapshot",
+    "named-window",
+    "groupwin",
+    "quiet-delete",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/view-length-batch.json",
+    "testdata/parity/view-length-batch.trace.json",
+    "testdata/parity/view-length-batch.evidence.json",
+    "tools/java-oracle/ViewLengthBatchScenarioOracle.java",
+    "tools/java-oracle/run-view-length-batch.sh"
+   ],
+   "notes": "Draft 4.242: 8 cases covering 8 of 10 executions (Prev and Normal{VIEW} deferred). 48 records, 0 differences.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-97e65154c5aefc5735d4",
+    "java-runtime-964e6db2f54f1b508387",
+    "java-runtime-edd63c54bc9fe03a8380",
+    "java-runtime-5a98579c3673cc0224ce",
+    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-a3dc40576e7c9def33fb",
+    "java-runtime-b6eb26431d8d05188516"
+   ]
+  },
+  {
+   "id": "case.view-length-batch-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-5c9d89c9732aedb6a5da"
+   ],
+   "status": "intentionally-different",
+   "difference": "Compile-only: message text differs.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ]
   }
  ],
  "mappings": [
@@ -35769,29 +35850,37 @@
   {
    "capabilityId": "query.fire-and-forget",
    "caseId": "case.infra-nwtable-faf-invalid"
+  },
+  {
+   "capabilityId": "view.basic-windows",
+   "caseId": "case.view-length-batch"
+  },
+  {
+   "capabilityId": "view.basic-windows",
+   "caseId": "case.view-length-batch-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 538,
-  "implementedCases": 536,
-  "differentialVerifiedCases": 152,
-  "differentialVerifiedRuntimeIds": 528,
-  "intentionallyDifferentCases": 19,
+  "inventoriedCases": 540,
+  "implementedCases": 538,
+  "differentialVerifiedCases": 153,
+  "differentialVerifiedRuntimeIds": 535,
+  "intentionallyDifferentCases": 20,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 110,
   "implementedCapabilities": 109,
-  "differentialVerifiedCapabilities": 19,
+  "differentialVerifiedCapabilities": 20,
   "intentionallyDifferentCapabilities": 7,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3148,
-  "referencedJavaRuntimeIds": 2945,
+  "runtimeAssociationCount": 3156,
+  "referencedJavaRuntimeIds": 2953,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1191,
+  "unreferencedJavaRuntimeIds": 1183,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 538,
+  "totalCases": 540,
   "totalCapabilities": 110
  }
 }

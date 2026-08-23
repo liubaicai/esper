@@ -1838,6 +1838,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "view-length-batch" || *mode == "view-length-batch-diff" {
+		trace, err := runViewLengthBatchScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-length-batch-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewLengthBatchJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewLengthBatchJavaSources),
+				splitMetadata(*javaExecutions, viewLengthBatchJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-query-type-having" || *mode == "resultset-query-type-having-diff" {
 		trace, err := runResultSetQueryTypeHavingScenario(context.Background(), scenario)
 		if err != nil {
