@@ -1,0 +1,763 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-filter-optimizable-value-limited",
+  "description": "Nine listener-observable executions of ExprFilterOptimizableValueLimitedExpr (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c) replayed with one fresh runtime per case: from-pattern-single (every a=SupportBean_S0 -> SupportBean(a.p00 || a.p01 = theString), value re-seeded by every), from-pattern-multi (every [2] a=SupportBean_S0 -> b=SupportBean_S1 -> SupportBean(theString = a[0].p00 || b.p10)), from-pattern-constant (every SupportBean_S0 -> SupportBean_S1 -> SupportBean('a' || 'x' = theString)), from-pattern-half-constant (every s0=SupportBean_S0 -> s1=SupportBean_S1 -> SupportBean('a' || s1.p10 = theString)), from-pattern-with-dot-method (pattern [a=SupportBean -> b=SupportBean(theString=a.getTheString())] projecting tags a/b with intPrimitive 1 and 2), context-with-start (context MyContext start SupportBean_S0 as s0; filter reads context.s0.p00 || context.s0.p01), in-set-of-value-wcoercion (pattern [a=SupportBean_S0 -> b=SupportBean_S1 -> c=SupportBean_S2 -> every SupportBean(longPrimitive in (a.id, b.id, c.id))] with int ids coerced to long: 0 must not match, 10/200/3000 must match), in-range-wcoercion (closed range [a.id - 2 : b.id + 2] with S0(10),S1(200) => [8,202], both in (RANGE_CLOSED) and not-in (NOT_RANGE_CLOSED) modules, boundaries 8/202 inclusive), or-rewrite (context MyContext start SupportBean_S0 as s0; OR of the two context-value concatenations, 'ab' and 'ba' both match, duplicate 'aa' must not match). EqualsIsConstant, EqualsSubstitutionParams, EqualsConstantVariable, EqualsCoercion, RelOpCoercion are covered by filter-val-optimizable; Disqualify asserts only compile-time plan-forge operators (BOOLEAN_EXPRESSION/REBOOL) with no event stream or listener and is intentionally-different. FilterService operator shape assertions (EQUAL/IS/LESS/RANGE_*/IN_LIST_OF_VALUES) are engine-internal planning artifacts and are not part of the fire/no-fire contract.",
+  "javaRuntimes": [
+    "java-runtime-a2154e07f7abfac66d64",
+    "java-runtime-2db81262da4d3b1c6251",
+    "java-runtime-ea00ef620a7902f2bab4",
+    "java-runtime-15c00c4c0b398fd5e023",
+    "java-runtime-869f600f41f8c10e72e0",
+    "java-runtime-ee6996bf56d450131a4a",
+    "java-runtime-88ebfce1e79071f90f69",
+    "java-runtime-9e6dafb20b6ecb46df9a",
+    "java-runtime-6b9f4a2bdb855e3f172b"
+  ],
+  "cases": [
+    {
+      "case": "from-pattern-single"
+    },
+    {
+      "case": "from-pattern-multi"
+    },
+    {
+      "case": "from-pattern-constant"
+    },
+    {
+      "case": "from-pattern-half-constant"
+    },
+    {
+      "case": "from-pattern-with-dot-method"
+    },
+    {
+      "case": "context-with-start"
+    },
+    {
+      "case": "in-set-of-value-wcoercion"
+    },
+    {
+      "case": "in-range-wcoercion"
+    },
+    {
+      "case": "or-rewrite"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "from-pattern-single"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "a",
+        "p01": "x",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ax",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "b",
+        "p01": "y",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ax",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "by",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "case",
+      "case": "from-pattern-multi"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "a",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 2,
+        "p00": "b",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 2,
+        "p10": "x",
+        "p11": "",
+        "p12": "",
+        "p13": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ax",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "z",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 2,
+        "p00": "-",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 2,
+        "p10": "y",
+        "p11": "",
+        "p12": "",
+        "p13": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ax",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "zy",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "case",
+      "case": "from-pattern-constant"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 2,
+        "p10": "",
+        "p11": "",
+        "p12": "",
+        "p13": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ax",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "case",
+      "case": "from-pattern-half-constant"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 2,
+        "p10": "x",
+        "p11": "",
+        "p12": "",
+        "p13": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ax",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "case",
+      "case": "from-pattern-with-dot-method"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "boolPrimitive": false,
+        "intPrimitive": 1,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "boolPrimitive": false,
+        "intPrimitive": 2,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "case",
+      "case": "context-with-start"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "a",
+        "p01": "x",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ax",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "by",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ax",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "case",
+      "case": "in-set-of-value-wcoercion"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10,
+        "p00": "",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 200,
+        "p10": "",
+        "p11": "",
+        "p12": "",
+        "p13": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S2",
+      "payload": {
+        "id": 3000,
+        "p20": "",
+        "p21": "",
+        "p22": "",
+        "p23": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 10,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 200,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 3000,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "case",
+      "case": "in-range-wcoercion"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10,
+        "p00": "",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 200,
+        "p10": "",
+        "p11": "",
+        "p12": "",
+        "p13": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 7,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 8,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 100,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 202,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 203,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10,
+        "p00": "",
+        "p01": "",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 200,
+        "p10": "",
+        "p11": "",
+        "p12": "",
+        "p13": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 7,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 8,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 100,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 202,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 203,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "case",
+      "case": "or-rewrite"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "a",
+        "p01": "b",
+        "p02": "",
+        "p03": "",
+        "value": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ab",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ba",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "aa",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "aa",
+        "boolPrimitive": false,
+        "intPrimitive": 0,
+        "longPrimitive": 0,
+        "doublePrimitive": 0.0
+      }
+    }
+  ]
+}

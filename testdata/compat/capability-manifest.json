@@ -3842,7 +3842,16 @@
     "java-runtime-41e7953d04564de1dee3",
     "java-runtime-d8bdabd44164244862f9",
     "java-runtime-9ffc389f600462a2ad5d",
-    "java-runtime-67affae1accaef51cda4"
+    "java-runtime-67affae1accaef51cda4",
+    "java-runtime-a2154e07f7abfac66d64",
+    "java-runtime-2db81262da4d3b1c6251",
+    "java-runtime-ea00ef620a7902f2bab4",
+    "java-runtime-15c00c4c0b398fd5e023",
+    "java-runtime-869f600f41f8c10e72e0",
+    "java-runtime-ee6996bf56d450131a4a",
+    "java-runtime-88ebfce1e79071f90f69",
+    "java-runtime-9e6dafb20b6ecb46df9a",
+    "java-runtime-6b9f4a2bdb855e3f172b"
    ]
   },
   {
@@ -32146,14 +32155,32 @@
     "java-runtime-ba629b5ddf09069603e0",
     "java-runtime-c67597367418782859c4",
     "java-runtime-e4935b367a7e3c693b88",
-    "java-runtime-e84ef276399c7a200a78"
+    "java-runtime-e84ef276399c7a200a78",
+    "java-runtime-a2154e07f7abfac66d64",
+    "java-runtime-2db81262da4d3b1c6251",
+    "java-runtime-ea00ef620a7902f2bab4",
+    "java-runtime-15c00c4c0b398fd5e023",
+    "java-runtime-869f600f41f8c10e72e0",
+    "java-runtime-ee6996bf56d450131a4a",
+    "java-runtime-88ebfce1e79071f90f69",
+    "java-runtime-9e6dafb20b6ecb46df9a",
+    "java-runtime-6b9f4a2bdb855e3f172b"
    ],
    "javaNames": [
     "ExprFilterOptValEqualsIsConstant",
     "ExprFilterOptValEqualsConstantVariable",
     "ExprFilterOptValEqualsSubstitutionParams",
     "ExprFilterOptValEqualsCoercion",
-    "ExprFilterOptValRelOpCoercion"
+    "ExprFilterOptValRelOpCoercion",
+    "ExprFilterOptValEqualsFromPatternSingle",
+    "ExprFilterOptValEqualsFromPatternMulti",
+    "ExprFilterOptValEqualsFromPatternConstant",
+    "ExprFilterOptValEqualsFromPatternHalfConstant",
+    "ExprFilterOptValEqualsFromPatternWithDotMethod",
+    "ExprFilterOptValEqualsContextWithStart",
+    "ExprFilterOptValInSetOfValueWPatternWCoercion",
+    "ExprFilterOptValInRangeWCoercion",
+    "ExprFilterOptValOrRewrite"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableValueLimitedExpr.java"
@@ -32163,18 +32190,15 @@
     "TestExprFilterOptValEqualsConstantVariableParity",
     "TestExprFilterOptValEqualsSubstitutionParamsParity",
     "TestExprFilterOptValEqualsCoercionParity",
-    "TestExprFilterOptValRelOpCoercionParity"
+    "TestExprFilterOptValRelOpCoercionParity",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptimizableValueLimitedDiffWritesPassingEvidence"
    ],
    "tags": [],
    "status": "differential-verified",
    "evidence": [
-    "testdata/parity/filter-val-optimizable.json",
-    "testdata/parity/filter-val-optimizable.trace.json",
-    "testdata/parity/filter-val-optimizable.evidence.json",
-    "tools/java-oracle/FilterValOptimizableScenarioOracle.java",
-    "tools/java-oracle/run-filter-val-optimizable.sh",
-    "java-oracle-trace",
-    "go-unit"
+    "testdata/parity/expr-filter-optimizable-value-limited.json",
+    "testdata/parity/expr-filter-optimizable-value-limited.trace.json",
+    "testdata/parity/expr-filter-optimizable-value-limited.evidence.json"
    ],
    "difference": null,
    "verification": [
@@ -32187,8 +32211,18 @@
     "java-runtime-ba629b5ddf09069603e0",
     "java-runtime-c67597367418782859c4",
     "java-runtime-e4935b367a7e3c693b88",
-    "java-runtime-e84ef276399c7a200a78"
-   ]
+    "java-runtime-e84ef276399c7a200a78",
+    "java-runtime-a2154e07f7abfac66d64",
+    "java-runtime-2db81262da4d3b1c6251",
+    "java-runtime-ea00ef620a7902f2bab4",
+    "java-runtime-15c00c4c0b398fd5e023",
+    "java-runtime-869f600f41f8c10e72e0",
+    "java-runtime-ee6996bf56d450131a4a",
+    "java-runtime-88ebfce1e79071f90f69",
+    "java-runtime-9e6dafb20b6ecb46df9a",
+    "java-runtime-6b9f4a2bdb855e3f172b"
+   ],
+   "notes": "Draft 4.246: 9 additional executions (FromPatternSingle/Multi/Constant/HalfConstant/WithDotMethod, ContextWithStart, InSetOfValueWPatternWCoercion, InRangeWCoercion, OrRewrite) Java/Go each 19 records, 0 differences. Covers value-limited filter values from pattern variables (incl. every[2] array tags and dot-method), context-partition properties, IN-list and closed-range coercion, and context OR-to-IN rewrite. Disqualify separately intentionally-different (compile-time plan forge assertion only)."
   },
   {
    "id": "case.expr-filter-optimizable-boolean-rebool",
@@ -33561,6 +33595,22 @@
    ],
    "status": "intentionally-different",
    "difference": "Engine-internal filter-service plan assertions (name/operator via getFilterSvcSingle) only; no observable Go equivalent.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ]
+  },
+  {
+   "id": "case.expr-filter-optimizable-value-limited-disqualify",
+   "javaRuntimeIds": [
+    "java-runtime-5203e68c8b1f27077220"
+   ],
+   "javaNames": [
+    "ExprFilterOptValDisqualify"
+   ],
+   "status": "intentionally-different",
+   "difference": "Compile-time plan-forge operator must be BOOLEAN_EXPRESSION/REBOOL (SupportFilterPlanHook); no observable event-stream behavior; no Go plan-hook API.",
    "verification": [
     "inventoried",
     "implemented",
@@ -36076,14 +36126,18 @@
   {
    "capabilityId": "expr.filter-expressions",
    "caseId": "case.expr-filter-optimizable-inspect"
+  },
+  {
+   "capabilityId": "expr.filter-expressions",
+   "caseId": "case.expr-filter-optimizable-value-limited-disqualify"
   }
  ],
  "summary": {
-  "inventoriedCases": 544,
-  "implementedCases": 542,
+  "inventoriedCases": 545,
+  "implementedCases": 543,
   "differentialVerifiedCases": 156,
-  "differentialVerifiedRuntimeIds": 551,
-  "intentionallyDifferentCases": 22,
+  "differentialVerifiedRuntimeIds": 560,
+  "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 111,
@@ -36092,13 +36146,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3175,
-  "referencedJavaRuntimeIds": 2971,
+  "runtimeAssociationCount": 3185,
+  "referencedJavaRuntimeIds": 2981,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1165,
+  "unreferencedJavaRuntimeIds": 1155,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 544,
+  "totalCases": 545,
   "totalCapabilities": 111
  }
 }

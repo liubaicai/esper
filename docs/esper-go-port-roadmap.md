@@ -4,6 +4,19 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.246（2026-08-24），新增 `expr.filter-expressions` 的
+> `expr-filter-optimizable-value-limited` differential-verified 场景（扩展），
+> 对照固定 Java ExprFilterOptimizableValueLimitedExpr.java 追加 9 个未覆盖
+> execution（FromPatternSingle/Multi/Constant/HalfConstant/WithDotMethod、
+> ContextWithStart、InSetOfValueWPatternWCoercion、InRangeWCoercion、OrRewrite）。
+> 场景 Java/Go 各 19 条 records、0 differences；覆盖模式变量值受限过滤
+> （含 every[2] 数组标签、dot-method 值）、context 分区属性、IN-list 与
+> 闭区间 int→long 强转、context OR-to-IN 重写；SupportBean 以真实 bean
+> 类型注册（a.getTheString() 解析）。Disqualify 登记 intentionally-different
+> （compile-time plan forge 断言，无事件流可观测行为）。manifest 更新为
+> 545 cases、156 个 differential-verified case、560 个 differential
+> runtime IDs、3185 条 associations（referenced 2981）。
+>
 > 最新补充：Draft 4.245（2026-08-24），新增 `expr.filter-expressions` 的
 > `expr-filter-optimizable` differential-verified 场景，对照固定 Java
 > ExprFilterOptimizable.java 的 9 个可观测 execution（InAndNotInKeywordMultivalue、

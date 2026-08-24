@@ -1,3 +1,11 @@
+> 最新补充：Draft 4.246（2026-08-24），新增 `expr.filter-expressions` 的
+> `expr-filter-optimizable-value-limited` 扩展场景，追加 9 个未覆盖 execution
+>（模式变量值受限、every[2] 数组标签、dot-method、context 分区属性、
+> IN-list/闭区间强转、context OR-to-IN）。Java/Go 各 19 条 records、0 差异。
+> SupportBean 以真实 bean 类型注册。Disqualify 登记 intentionally-different。
+> manifest 更新为 545 cases、156 个 differential-verified case、560 个
+> differential runtime IDs、3185 条 associations（referenced 2981）。
+>
 > 最新补充：Draft 4.245（2026-08-24），新增 `expr.filter-expressions` 的
 > `expr-filter-optimizable` differential-verified 场景，对照固定 Java
 > ExprFilterOptimizable.java 的 9 个可观测 execution。Java/Go 各 53 条 records、
