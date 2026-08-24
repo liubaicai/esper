@@ -2869,6 +2869,33 @@ func snapshotNamedWindowState(state *namedWindowRuntime) []Event {
 	state.mu.RLock()
 	defer state.mu.RUnlock()
 	result := make([]Event, 0, len(state.entries))
+	if grouped, ok := state.def.retention.(GroupWindowSpec); ok {
+		// Esper's grouped data window iterator walks the group map in
+		// first-appearance order and each group's own view in insertion
+		// order, so rows of the same group are contiguous even when their
+		// arrival interleaved with other groups. Group keys are recomputed
+		// from the stored events rather than retained per entry: field-based
+		// groupwin keys (the differential surface) are stable across
+		// evaluation, while time- or variable-dependent keys would re-resolve
+		// at snapshot time. A group that fully drains and later refills
+		// re-positions to its first surviving appearance instead of keeping
+		// Java's persistent child-view slot; no current parity scenario
+		// exercises that edge.
+		keys := grouped.effectiveKeys()
+		groupOrder := make([]string, 0, len(state.entries))
+		groups := make(map[string][]Event, len(state.entries))
+		for _, entry := range state.entries {
+			key := groupWindowKeys(keys, entry.event, time.Time{}, nil)
+			if _, seen := groups[key]; !seen {
+				groupOrder = append(groupOrder, key)
+			}
+			groups[key] = append(groups[key], entry.event)
+		}
+		for _, key := range groupOrder {
+			result = append(result, groups[key]...)
+		}
+		return result
+	}
 	for _, entry := range state.entries {
 		result = append(result, entry.event)
 	}

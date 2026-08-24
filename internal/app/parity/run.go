@@ -1822,6 +1822,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "infra-named-window-join" || *mode == "infra-named-window-join-diff" {
+		trace, err := runInfraNamedWindowJoinScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-named-window-join-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNamedWindowJoinJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNamedWindowJoinJavaSources),
+				splitMetadata(*javaExecutions, infraNamedWindowJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "infra-nwtable-faf-join" || *mode == "infra-nwtable-faf-join-diff" {
 		trace, err := runInfraNwTableFafJoinScenario(context.Background(), scenario)
 		if err != nil {

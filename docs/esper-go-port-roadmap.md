@@ -4,6 +4,25 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.249（2026-08-24），新增 `infra.namedwindow.views` 的
+> `infra-named-window-join` differential-verified 场景，对照固定 Java
+> InfraNamedWindowJoin.java 的 InfraJoinIndexChoice、
+> InfraRightOuterJoinLateStart 与 InfraFullOuterJoinNamedAggregationLateStart
+> 共 3 个 runtime。场景 Java/Go 各 36 条 records、0 differences；index-choice
+> 以五个隔离 Environment 段行为化重放 unique/keepall 数据窗口与 0..2 个
+> 索引组合下的单向 join（s2/s1/i1 行 E2,E2,20 与 E1,E1,10，监听器序号跨段
+> 连续），right-outer-late-start 填充两个 time(6s) 命名窗口后延迟部署分组
+> 右外连接 s1 与镜像左外连接 s2 并快照十行有序结果，full-outer 填充
+> groupwin(theString,intPrimitive)#length(3) 十九行后快照 create 迭代器
+> （组连续顺序）并部署全外连接聚合快照十组（c3 null-left、c0 匹配 symbol c0、
+> c1/c2 未匹配 null symbol 且 c1/int2 cntBool 3）。运行时修复：join 聚合
+> 语句迭代器按当前 join 元组组合求值（Esper join 迭代器为实时视图，默认
+> count/time 输出视图不再支撑它，输出快照策略的监听器路径保持原状），分组
+> 命名窗口快照按组首现顺序连续迭代、组内保持插入顺序。INDEX_CALLBACK_HOOK
+> 计划断言与 SERDEREQUIRED 序列化检查保持 approved difference。manifest
+> 更新为 548 cases、159 个 differential-verified case、589 个 differential
+> runtime IDs、3214 条 associations（referenced 3010）。
+
 > 最新补充：Draft 4.248（2026-08-24），新增 `client.extend.inlined-class` 的
 > `expr-class-static-method` differential-verified 场景，对照固定 Java
 > ExprClassStaticMethod.java 的 11 个 listener/FAF/compile-only runtime。

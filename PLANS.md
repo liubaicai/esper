@@ -32,46 +32,92 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-24
-- Baseline: `HEAD` == `origin/master` == `23a0b3f2d` (`event: drop dead
-  helpers in fragment runner (4.247 review fix)` pushed). Draft 4.248 edits
-  are limited to the static-method work-unit files; three pre-existing
-  `infra-*`/`resultset-*` scenario inputs are N+1 prefetched assets and remain
-  excluded.
-- Current work unit: `client.extend.inlined-class`, ExprClassStaticMethod
-  observable static-call slice — 11 runtime IDs across nine replay cases;
-  two Java-infrastructure-only executions remain approved differences.
+- Baseline: `HEAD` == `origin/master` == `a29ac965b` (`feat(client): port
+  ExprClassStaticMethod 11 runtimes`). The seven untracked `infra-*` and
+  `resultset-*` files are prefetched assets; they remain outside the current
+  commit unless their own unit is later selected.
+- Current work unit: `infra.namedwindow.join`, three observable executions from
+  fixed `InfraNamedWindowJoin.java`: index-choice, right-outer-late-start, and
+  full-outer-named-agg-late-start. Runtime IDs are
+  `java-runtime-e138d2fc24010a22dbb1`, `java-runtime-26e5704237191a42acf4`,
+  and `java-runtime-38e260a335688bf62391`.
 - Frozen Java contract (fixed commit
-  `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - Listener parity: local and path-created `MyClass.doIt(String)` cover both
-    SODA flags (ordinals 0–3); local-and-created cross-class call (7); package
-    two-argument and local no-argument calls (10, 12). Each emits new-only
-    `c0` rows in source order.
-  - FAF parity: local class in query (5) returns `>E1<` twice; path-created
-    class (6) returns `abc` twice. Both read a `MyWindow#keepall` filled by an
-    on-event merge and trace `faf` records with per-case sequence.
-  - Compile-only success: doc samples (8) and empty-class valid branch (9)
-    emit no records. `CreateCompileVsRuntime` (4; deployed class precedence)
-    and compiler inspection hook (11), plus Janino-only invalid wording, are
-    intentionally different: Go has no runtime Java compilation, compiled
-    class artifact, or inspection callback.
-- Completed differential scope: `expr-class-static-method` Java oracle/scenario
-  and typed Go replay generated 11 Java and 11 Go records with 0 differences.
-  `TestRunExprClassStaticMethodDiffWritesPassingEvidence` passes; six trace
-  mutations reject listener value/order, local/created FAF, cross-class
-  dependency, and package-qualified call drift; two scenario mutations reject
-  deploy label/count drift. Java compile-only plans execute eagerly without
-  trace records. Manifest records `case.expr-class-static-method` plus the 11
-  DV IDs; `client.extend.inlined-class` now carries both the differential-
-  verified slice and its approved JVM-only differences.
-- Allowed files: `internal/app/parity/expr_class_static_method.go`, run-mode
-  wiring and tests; `tools/java-oracle/ExprClassStaticMethodScenarioOracle.java`
-  and its runner; `testdata/parity/expr-class-static-method.{json,trace.json,
-  evidence.json}`; primary-owned `PLANS.md`, manifest, roadmap, CHANGELOG.
-- Forbidden: `/root/app/esper`, prefetched `infra-*`/`resultset-*` assets,
-  unrelated production semantics, hand-authored generated trace/evidence.
-- Validation completed: the pinned Java runner regenerated `testdata/parity/expr-class-static-method.trace.json`; the differential replay regenerated passing evidence with 11 Java records, 11 Go records, 11 runtime IDs, and 0 differences. Targeted parity and compat tests, `go vet ./...`, full `go test ./... -count=1 -timeout 240s`, `make check-layout`, and `git diff --check` passed.
-- Independent reviewer `ECSMParityReview` returned APPROVE with no findings. The three untracked `infra-*`/`resultset-*` scenario/oracle assets are the explicitly prefetched N+1 work unit and remain outside this commit.
-- Next action: commit only the ExprClassStaticMethod work-unit files and push `master`; verify the remote ref read-only.
+  `9e1b9f1cc9117fea4bf33ab043762c045d73839`):
+  - `InfraJoinIndexChoice` preloads `SupportSimpleBeanOne(E1,10,11,12)` and
+    `SupportSimpleBeanOne(E2,20,21,22)`, then probes E2/E1 with
+    `SupportSimpleBeanTwo`, observing `ssb2.s2,ssb1.s1,ssb1.i1` rows
+    `E2,E2,20` and `E1,E1,10` across the five index/data-window combinations.
+    Go records behavioral rows only; Java STATICHOOK backing-table plan
+    assertions are an approved infrastructure difference, not fabricated
+    differential evidence.
+  - `InfraRightOuterJoinLateStart` preloads eight `SupportQueueLeave` rows
+    (id 1..8, locations 0..3, timeLeave 247) and ten `SupportQueueEnter` rows
+    (id 1..10, locations 0..4, alternating sku 166583/169254, timeEnter 123),
+    deploys grouped right/left-equivalent consumers late, and snapshots both
+    iterators in sorted location/sku order. Expected matched groups have
+    avgTime 124/counts 1,1/diff 0; unmatched location 4 has 127/1,0/1.
+  - `InfraFullOuterJoinNamedAggregationLateStart` fills a grouped length(3)
+    named window with 19 literal `SupportBean` rows (`c0`..`c2`, int 0..2,
+    bool true, final c1/int2 replacement), snapshots 19 create rows, deploys
+    the full outer aggregate, sends market symbols c0 and c3, then snapshots
+    ten sorted rows: c3 null-left row plus c0 matched groups and c1/c2
+    unmatched groups with c1/int2 count 3.
+- Go contract: use existing typed named-window, join, outer-join, aggregate,
+  late-seeding, and `Statement.Snapshot` APIs. Index-choice query-plan hook and
+  any Java-only physical index assertion remain approved differences; all
+  emitted behavioral rows and iterator snapshots must compare exactly.
+  Java-evidence-driven shared-runtime repair was required and is authorized by
+  the pinned differential: Esper's join-aggregate statement iterator is a live
+  view over the current join tuple composition (default count/time output rows
+  never back it), and a grouped named-window iterator walks groups contiguously
+  in first-appearance order. Go previously served the last-output rows (join
+  aggregates) and flat insertion order (grouped windows); both diverged from
+  the fixed Java oracle and were repaired in `internal/esper` only after the
+  zero-diff Java trace pinned the expected behavior.
+- Allowed files: `internal/app/parity/infra_named_window_join.go`,
+  `internal/app/parity/run.go`, `internal/app/parity/run_test.go`,
+  `internal/compat/scenario.go`, focused compat protocol tests, asset lane
+  files `tools/java-oracle/InfraNamedWindowJoinScenarioOracle.java`,
+  `tools/java-oracle/run-infra-named-window-join.sh`,
+  `testdata/parity/infra-named-window-join.json`; Java-evidence-driven shared
+  runtime repair `internal/esper/runtime.go`, `internal/esper/rowrecog.go`,
+  `internal/esper/state.go`; primary-owned generated trace/evidence, manifest,
+  roadmap, CHANGELOG, and this checkpoint.
+- Forbidden: `/root/app/esper` changes, prefetched table/order-by assets,
+  unrelated production semantics, hand-authored generated trace/evidence,
+  claiming Java STATICHOOK equivalence from a Go logical plan.
+- Delegation: `NWJJavaContract` and `NWJGoSurface` ran concurrently before
+  implementation; `NWJJavaPrefetch`/`NWJJavaContract` and `NWJGoScout` were
+  re-consulted on the 18-difference first diff. `NWJAssetWriter` supplied and
+  then stopped after writing the oracle and runner script; primary owns the
+  scenario, Go replay, harness lifecycle validation/dispatch, runtime repair,
+  tests, generated trace/evidence, central facts, validation, review, commit,
+  and push.
+- Recovery state: complete through differential evidence. The parity protocol
+  accepts handler-owned `undeploy`/`undeploy-all` cleanup; index-choice replays
+  as five isolated Environment segments with continuous listener sequence
+  numbers. Pinned Java trace `testdata/parity/infra-named-window-join.trace.json`
+  (36 records, oracle regenerated after adding the scenario description header)
+  and passing evidence `testdata/parity/infra-named-window-join.evidence.json`
+  (36 Java / 36 Go records, 0 differences) are checked in; runner tests cover
+  the passing diff plus 8 rejecting mutations (value, row loss, time, groupwin
+  order, null-symbol, count drift).
+- Review: `NWJParityReview` verdict pass (42m, four verification legs: pinned
+  Java iterator delegation through OutputStrategyUtil.getIterator for every
+  join-aggregate output policy, preload path equivalence, byte-identical
+  grouped snapshot order, manifest/CHANGELOG/roadmap fact consistency). Two
+  P3 findings fixed: oracle javadoc draft number corrected to 4.249; grouped
+  snapshot key recomputation boundary (field-stable keys; drained-and-refilled
+  group re-position) documented at the implementation site.
+- Validation: gofmt clean, `go vet ./...` clean, `go test ./... -count=1`
+  green, `make check-layout` ok, `git diff --check` clean, pinned Java trace
+  regenerated from /root/app/esper @9e1b9f1cc9117fea4bf33ab043762c045d73839c,
+  differential evidence passing 36/36 records with 0 differences, 8/8
+  mutations reject, manifest validator green after restoring one-space
+  formatting (77 insertions / 16 deletions on the manifest).
+- Next action: semantic commit and push to master; N+1 prefetch reports
+  (`NWJ2JavaContract`, `NWJ2GoSurface`) cover InfraNamedWindowJoin executions
+  3-9 and stay read-only until this unit is committed.
 
 ## Delegation checkpoint
 

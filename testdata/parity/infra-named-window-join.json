@@ -1,0 +1,1052 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-named-window-join",
+  "description": "Named-window join late-start and index-choice patterns",
+  "javaRuntimes": [
+    "java-runtime-e138d2fc24010a22dbb1",
+    "java-runtime-26e5704237191a42acf4",
+    "java-runtime-38e260a335688bf62391"
+  ],
+  "cases": [
+    {
+      "case": "index-choice",
+      "runtimeId": "java-runtime-e138d2fc24010a22dbb1"
+    },
+    {
+      "case": "right-outer-late-start",
+      "runtimeId": "java-runtime-26e5704237191a42acf4"
+    },
+    {
+      "case": "full-outer-named-agg-late-start",
+      "runtimeId": "java-runtime-38e260a335688bf62391"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "index-choice"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E1",
+        "i1": 10,
+        "d1": 11.0,
+        "l1": 12
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E2",
+        "i1": 20,
+        "d1": 21.0,
+        "l1": 22
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert"
+    },
+    {
+      "op": "deploy",
+      "statement": "index"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E1",
+        "i1": 10,
+        "d1": 11.0,
+        "l1": 12
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E2",
+        "i1": 20,
+        "d1": 21.0,
+        "l1": 22
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert"
+    },
+    {
+      "op": "deploy",
+      "statement": "index"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E1",
+        "i1": 10,
+        "d1": 11.0,
+        "l1": 12
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E2",
+        "i1": 20,
+        "d1": 21.0,
+        "l1": 22
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert"
+    },
+    {
+      "op": "deploy",
+      "statement": "index"
+    },
+    {
+      "op": "deploy",
+      "statement": "index"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E1",
+        "i1": 10,
+        "d1": 11.0,
+        "l1": 12
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E2",
+        "i1": 20,
+        "d1": 21.0,
+        "l1": 22
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert"
+    },
+    {
+      "op": "deploy",
+      "statement": "index"
+    },
+    {
+      "op": "deploy",
+      "statement": "index"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E1",
+        "i1": 10,
+        "d1": 11.0,
+        "l1": 12
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanOne",
+      "payload": {
+        "s1": "E2",
+        "i1": 20,
+        "d1": 21.0,
+        "l1": 22
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E2",
+        "i2": 50,
+        "d2": 21.0,
+        "l2": 22
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportSimpleBeanTwo",
+      "payload": {
+        "s2": "E1",
+        "i2": 60,
+        "d2": 11.0,
+        "l2": 12
+      }
+    },
+    {
+      "op": "undeploy"
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "right-outer-late-start"
+    },
+    {
+      "op": "deploy",
+      "statement": "window-leave"
+    },
+    {
+      "op": "deploy",
+      "statement": "window-enter"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueLeave",
+      "payload": {
+        "id": 1,
+        "location": "0",
+        "timeLeave": 247
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueLeave",
+      "payload": {
+        "id": 2,
+        "location": "0",
+        "timeLeave": 247
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueLeave",
+      "payload": {
+        "id": 3,
+        "location": "1",
+        "timeLeave": 247
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueLeave",
+      "payload": {
+        "id": 4,
+        "location": "1",
+        "timeLeave": 247
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueLeave",
+      "payload": {
+        "id": 5,
+        "location": "2",
+        "timeLeave": 247
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueLeave",
+      "payload": {
+        "id": 6,
+        "location": "2",
+        "timeLeave": 247
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueLeave",
+      "payload": {
+        "id": 7,
+        "location": "3",
+        "timeLeave": 247
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueLeave",
+      "payload": {
+        "id": 8,
+        "location": "3",
+        "timeLeave": 247
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 1,
+        "location": "0",
+        "sku": "166583",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 2,
+        "location": "0",
+        "sku": "169254",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 3,
+        "location": "1",
+        "sku": "166583",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 4,
+        "location": "1",
+        "sku": "169254",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 5,
+        "location": "2",
+        "sku": "166583",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 6,
+        "location": "2",
+        "sku": "169254",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 7,
+        "location": "3",
+        "sku": "166583",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 8,
+        "location": "3",
+        "sku": "169254",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 9,
+        "location": "4",
+        "sku": "166583",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportQueueEnter",
+      "payload": {
+        "id": 10,
+        "location": "4",
+        "sku": "169254",
+        "timeEnter": 123
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "statement": "s2"
+    },
+    {
+      "op": "snapshot",
+      "statement": "s2"
+    },
+    {
+      "op": "snapshot",
+      "statement": "s1"
+    },
+    {
+      "op": "case",
+      "case": "full-outer-named-agg-late-start"
+    },
+    {
+      "op": "deploy",
+      "statement": "create"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c0",
+        "intPrimitive": 0,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c0",
+        "intPrimitive": 0,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c0",
+        "intPrimitive": 1,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c0",
+        "intPrimitive": 1,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c0",
+        "intPrimitive": 2,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c0",
+        "intPrimitive": 2,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c1",
+        "intPrimitive": 0,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c1",
+        "intPrimitive": 0,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c1",
+        "intPrimitive": 1,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c1",
+        "intPrimitive": 1,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c1",
+        "intPrimitive": 2,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c1",
+        "intPrimitive": 2,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c2",
+        "intPrimitive": 0,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c2",
+        "intPrimitive": 0,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c2",
+        "intPrimitive": 1,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c2",
+        "intPrimitive": 1,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c2",
+        "intPrimitive": 2,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c2",
+        "intPrimitive": 2,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c1",
+        "intPrimitive": 2,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "c0",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "c3",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "select"
+    }
+  ]
+}

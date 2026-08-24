@@ -15957,3 +15957,118 @@ func TestRunExprClassStaticMethodDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunInfraNamedWindowJoinDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "infra-named-window-join.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "infra-named-window-join.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-named-window-join.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "infra-named-window-join-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunInfraNamedWindowJoinDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "index-choice-join-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["i1"] = 999
+			},
+		},
+		{
+			name: "index-choice-combination-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New = nil
+			},
+		},
+		{
+			name: "right-outer-joined-group-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[32].New[0].Fields["avgTime"] = 999
+			},
+		},
+		{
+			name: "right-outer-unmatched-group-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[33].New = trace.Records[33].New[:9]
+			},
+		},
+		{
+			name: "right-outer-snapshot-time-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[32].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+		{
+			name: "full-outer-groupwin-order-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[34].New[12], trace.Records[34].New[13] = trace.Records[34].New[13], trace.Records[34].New[12]
+			},
+		},
+		{
+			name: "full-outer-unmatched-null-symbol-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[35].New[4].Fields["symbol"] = "c0"
+			},
+		},
+		{
+			name: "full-outer-select-count-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[35].New[6].Fields["cntBool"] = 999
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "infra-named-window-join.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "infra-named-window-join.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-named-window-join.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "infra-named-window-join-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

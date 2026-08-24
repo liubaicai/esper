@@ -1,3 +1,18 @@
+> 最新补充：Draft 4.249（2026-08-24），新增 `infra.namedwindow.views` 的
+> `infra-named-window-join` differential-verified 场景，对照固定 Java
+> InfraNamedWindowJoin.java 的前 3 个 execution（InfraJoinIndexChoice、
+> InfraRightOuterJoinLateStart、InfraFullOuterJoinNamedAggregationLateStart）。
+> Java/Go 各 36 条 records、0 differences。index-choice 组合行为化重放五组
+> unique/keepall 数据窗口与索引组合的单向 join 投影；right-outer-late-start
+> 验证延迟部署的分组右/左外连接聚合迭代器（匹配组 avgTime 124 cnt 1/1、
+> location 4 未匹配组 127/1/0/1）；full-outer-named-agg-late-start 验证
+> groupwin#length(3) 命名窗口的组连续快照顺序与全外连接聚合的 10 组结果。
+> 运行时修复：join 聚合语句迭代器改为对当前 join 元组组合求值（Esper join
+> 迭代器是实时视图，默认 count/time 输出行不再支撑它），分组命名窗口快照
+> 按组首现顺序连续迭代；INDEX_CALLBACK_HOOK 计划断言保持 approved
+> difference。manifest 更新为 548 cases、159 个 differential-verified case、
+> 589 个 differential runtime IDs、3214 条 associations（referenced 3010）。
+
 > 最新补充：Draft 4.248（2026-08-24），新增 `client.extend.inlined-class` 的
 > `expr-class-static-method` differential-verified 场景，对照固定 Java
 > ExprClassStaticMethod.java 的 11 个 listener/FAF/compile-only runtime。

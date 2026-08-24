@@ -243,3 +243,22 @@ func TestNewDifferentialEvidenceCanonicalizesNumericTraceValues(t *testing.T) {
 		t.Fatalf("loaded evidence = %#v", loaded)
 	}
 }
+
+func TestScenarioAcceptsStatementlessLifecycleCleanup(t *testing.T) {
+	scenario, err := LoadScenario(strings.NewReader(`{
+      "version":"esper-parity/v1",
+      "id":"lifecycle",
+      "steps":[
+        {"op":"case","case":"one"},
+        {"op":"deploy","statement":"s0"},
+        {"op":"undeploy"},
+        {"op":"undeploy-all"}
+      ]
+    }`))
+	if err != nil {
+		t.Fatalf("lifecycle scenario rejected: %v", err)
+	}
+	if len(scenario.Steps) != 4 {
+		t.Fatalf("steps = %d, want 4", len(scenario.Steps))
+	}
+}

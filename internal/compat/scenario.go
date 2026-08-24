@@ -93,6 +93,8 @@ func (s Scenario) Validate() error {
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
 			}
+		case "undeploy", "undeploy-all":
+			// Cleanup targets are selected by the host lifecycle handler.
 		case "read-variable":
 			if strings.TrimSpace(step.Name) == "" {
 				return fmt.Errorf("compat: step %d read-variable has no name", i)
@@ -367,7 +369,7 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
-		case "faf", "deploy", "read-variable", "set-variable", "types":
+		case "faf", "deploy", "undeploy", "undeploy-all", "read-variable", "set-variable", "types":
 			handler := handlers[step.Op]
 			if handler == nil {
 				return trace, fmt.Errorf("compat: no %s handler for step %q", step.Op, step.Statement)
@@ -376,12 +378,22 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 				if attached == nil {
 					return fmt.Errorf("compat: %s step attached a nil statement", step.Op)
 				}
-				for _, existing := range statements {
-					if existing.Name() == attached.Name() {
+				replaced := -1
+				for index, existing := range statements {
+					if existing == nil || existing.Name() != attached.Name() {
+						continue
+					}
+					if existing.State() != esper.StatementDestroyed {
 						return nil
 					}
+					replaced = index
+					break
 				}
-				statements = append(statements, attached)
+				if replaced >= 0 {
+					statements[replaced] = attached
+				} else {
+					statements = append(statements, attached)
+				}
 				if _, err := attached.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
 					listenerSequences[attached.Name()]++
 					appendBatch(caseName, "listener", attached, batch, nil, listenerSequences[attached.Name()])

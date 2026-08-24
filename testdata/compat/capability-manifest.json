@@ -2151,22 +2151,35 @@
    "level": "S",
    "summary": "Named Window data-window retention views: keep-all, length, last-event, first-event, unique/first-unique replacement and drop, and sort windows with sorted iteration, tie recency ordering and self-expel IR pairs, all with insert-into triggers, on-delete triggers, irstream consumer statements and snapshot iterator assertions; time(10) sliding expiry, firsttime anchored admission without timer expiry, and time_batch silent accumulation with anchored boundary rollover delivering completed batches as new-then-old data (including late aggregation consumers); length_batch size-triggered batch rollover, firstlength silent drops, and time_accum shared expiry anchored at the newest retained event with delete re-anchoring; ext_timed sliding external-timestamp expiry riding the triggering insert delta as IR pairs, ext_timed_batch epoch-anchored silent accumulation with boundary-crossing flush, time_order timestamp-sorted retention expiring under the engine clock with pass-through self IR pairs, and time_length_batch size-or-time batch rollover with empty-rollover disarm and insert re-arm; per-group retention via GroupWindow(key, inner): grouped length windows expel the oldest events of an over-full group per insert, and grouped time_batch flushes the completed batch grouped by key in first-seen group order; on-delete trigger alias variants with a computed-projection/grouped-sum/filtered consumer matrix, grouped irstream aggregate null-prior old rows on group creation, double-insert deltas and filtered named-window consumers; timetolive(current_timestamp()+field) dynamic per-row expiry interleaved with on-delete removals, and the invalid matrix: grouped non-data-window retention rejected, unknown delete target rejected, duplicate window names rejected, and consumer-side data windows rejected (groupwin exempt); late-consumer deploy replay into plain/aggregate/join consumers with Esper's batching-window preload skip, univariate (#uni) late statistics, prior(N) window history on consumers, and a named-window left outer join against a keep-all market stream replaying retained rows with null join columns; multi-key groupwin(theString, intPrimitive) grouped retention with late-start grouped count/avg consumers preloading per-group retained rows, and a variable-driven having clause narrowing the iterator on each variable set; pattern consumers over the window insert stream with Esper or-quit semantics (every branch repeats until the plain sibling completes once and quits the expression); preemptive on-trigger cascades reading and inserting named windows (on T insert into OtherStream select from WinOne routed after all sibling statements, on T insert into WinTwo select from WinOne visible to the cascaded select) Intersecting named-window view stacks now retain the intersection of independent child views with Java-probed insert/delete/update IR semantics (IntersectWindows with keep-all/length/unique children) All 58 InfraNamedWindowViews executions now have Go disposition: per-execution parity tests plus documented approved differences (stricter insert-column validation, struct-per-type alias modeling, inert bean-backed representation annotations).",
    "javaRefs": [
-    "InfraNamedWindowViews"
+    "InfraNamedWindowViews",
+    "InfraJoinIndexChoice",
+    "InfraRightOuterJoinLateStart",
+    "InfraFullOuterJoinNamedAggregationLateStart"
    ],
    "goRefs": [
-    "internal/esper/state.go",
-    "internal/esper/trigger.go",
+    "internal/app/parity/infra_named_window_join.go",
+    "internal/app/parity/run_test.go",
+    "internal/esper/infra_named_window_types_parity_test.go",
     "internal/esper/infra_namedwindow_views_parity_test.go",
-    "internal/esper/infra_named_window_types_parity_test.go"
+    "internal/esper/rowrecog.go",
+    "internal/esper/runtime.go",
+    "internal/esper/state.go",
+    "internal/esper/trigger.go"
    ],
    "phase": 1,
    "status": "implemented",
    "remaining": [
-    "full Java/Go shared parity trace beyond per-execution probes, wider created-composite representation matrix and event-type metadata surfaces (BeanEventType/type-class/stateless-select) remain open"
+    "full Java/Go shared parity trace beyond per-execution probes, wider created-composite representation matrix and event-type metadata surfaces (BeanEventType/type-class/stateless-select) remain open; InfraNamedWindowJoin remaining executions (InfraJoinNamedAndStream, InfraJoinBetweenNamed, InfraJoinBetweenSameNamed and later ordinals)"
    ],
    "verification": [
-    "inventoried",
-    "implemented"
+    "differential-verified",
+    "implemented",
+    "inventoried"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-26e5704237191a42acf4",
+    "java-runtime-38e260a335688bf62391",
+    "java-runtime-e138d2fc24010a22dbb1"
    ]
   },
   {
@@ -33832,6 +33845,50 @@
     "java-runtime-a6dac1b76794aa1447ac",
     "java-runtime-10cf1e47a1cfad251b08"
    ]
+  },
+  {
+   "id": "case.infra-named-window-join",
+   "javaRuntimeIds": [
+    "java-runtime-e138d2fc24010a22dbb1",
+    "java-runtime-26e5704237191a42acf4",
+    "java-runtime-38e260a335688bf62391"
+   ],
+   "javaNames": [
+    "InfraJoinIndexChoice",
+    "InfraRightOuterJoinLateStart",
+    "InfraFullOuterJoinNamedAggregationLateStart"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowJoinDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "join",
+    "outer-join",
+    "late-start",
+    "index-choice",
+    "groupwin",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-named-window-join.json",
+    "testdata/parity/infra-named-window-join.trace.json",
+    "testdata/parity/infra-named-window-join.evidence.json"
+   ],
+   "notes": "Draft 4.249: 3 cases; Java/Go each 36 records, 0 differences. InfraJoinIndexChoice replays all five unique/keepall datawindow and index-set combinations behaviorally with the unidirectional s0 join projecting s2/s1/i1 rows E2,E2,20 and E1,E1,10 per combination (pinned INDEX_CALLBACK_HOOK plan assertions remain an approved infrastructure difference). InfraRightOuterJoinLateStart fills WindowLeave/WindowEnter#time(6000), deploys the grouped right-outer s1 and mirrored left-outer s2 late, and snapshots ten ordered rows: matched groups avgTime 124 cnt 1/1 diff 0 plus unmatched location 4 rows 127/1/0/1. InfraFullOuterJoinNamedAggregationLateStart fills MyWindowFO#groupwin(theString,intPrimitive)#length(3) with 19 rows, snapshots the create iterator in groupwin group order, then deploys the full outer aggregation and snapshots ten rows: c3 null-left group, c0 matched groups symbol c0, and c1/c2 unmatched groups with null symbol and c1/int2 cntBool 3. Runtime: join-aggregate statement iterators now evaluate the live join tuple composition (Esper join iterator is a live view; default count/time output rows never back it), and grouped named-window snapshots iterate groups contiguously in first-appearance order with per-group insertion order.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-e138d2fc24010a22dbb1",
+    "java-runtime-26e5704237191a42acf4",
+    "java-runtime-38e260a335688bf62391"
+   ]
   }
  ],
  "mappings": [
@@ -36354,29 +36411,33 @@
   {
    "capabilityId": "client.extend.inlined-class",
    "caseId": "case.expr-class-static-method"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-named-window-join"
   }
  ],
  "summary": {
-  "inventoriedCases": 547,
-  "implementedCases": 545,
-  "differentialVerifiedCases": 158,
-  "differentialVerifiedRuntimeIds": 586,
+  "inventoriedCases": 548,
+  "implementedCases": 546,
+  "differentialVerifiedCases": 159,
+  "differentialVerifiedRuntimeIds": 589,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 111,
   "implementedCapabilities": 110,
-  "differentialVerifiedCapabilities": 24,
+  "differentialVerifiedCapabilities": 25,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3211,
-  "referencedJavaRuntimeIds": 3007,
+  "runtimeAssociationCount": 3214,
+  "referencedJavaRuntimeIds": 3010,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1129,
+  "unreferencedJavaRuntimeIds": 1126,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 547,
+  "totalCases": 548,
   "totalCapabilities": 111
  }
 }

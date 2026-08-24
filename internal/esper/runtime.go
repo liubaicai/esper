@@ -9992,6 +9992,82 @@ func (r *statementRuntime) snapshotAggregateBatch(plan Plan, now time.Time) Resu
 	return r.snapshotAggregateStateBatch(plan, now)
 }
 
+// snapshotJoinAggregateBatch evaluates the aggregate over the current join
+// tuple composition. Esper's statement iterator for a grouped aggregate join
+// is a live view over the join state: a late-deployed join over already
+// populated named windows reports the joined groups immediately (outer-join
+// null padding included), even when no output has fired and the aggregate
+// processor holds no rows of its own. Default count/time output views never
+// back the joined iterator with their last-inserted rows.
+func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) ResultBatch {
+	result := ResultBatch{Time: now}
+	definition := plan.query.aggregate
+	if r == nil || definition == nil || definition.join == nil || r.joinState == nil {
+		return result
+	}
+	tuples := joinKeyedTuples(definition.join, r.joinState, now, r)
+	if len(tuples) == 0 {
+		return result
+	}
+	events := make([]Event, 0, len(tuples))
+	for _, tuple := range tuples {
+		events = append(events, newJoinTupleEvent(tuple.events, now))
+	}
+	if definition.where != nil {
+		events = filterAggregateEvents(events, definition.where, now, r.variables, r.engine)
+	}
+	groupingSets := aggregateGroupingSetsForDefinition(definition)
+	type synthesizedGroup struct {
+		events  []Event
+		ever    []Event
+		set     []int
+		current Event
+		plugin  map[*exprNode]aggregatePluginState
+		multi   map[string]aggregateMultiPluginState
+	}
+	groups := make(map[string]*synthesizedGroup)
+	order := make([]string, 0, len(events))
+	for _, event := range events {
+		for _, groupingSet := range groupingSets {
+			key := aggregateGroupKey(definition.groupBy, groupingSet, event, now, r.variables)
+			group := groups[key]
+			if group == nil {
+				group = &synthesizedGroup{
+					set:    append([]int(nil), groupingSet...),
+					plugin: make(map[*exprNode]aggregatePluginState),
+					multi:  make(map[string]aggregateMultiPluginState),
+				}
+				groups[key] = group
+				order = append(order, key)
+			}
+			group.events = append(group.events, event)
+			group.ever = append(group.ever, event)
+			group.current = event
+		}
+	}
+	entries := make([]aggregateResultEntry, 0, len(order))
+	for _, key := range order {
+		group := groups[key]
+		values, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi)
+		if !visible {
+			continue
+		}
+		entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key})
+	}
+	if len(plan.query.orderBy) > 0 {
+		orderAggregateResults(entries, plan.query.orderBy, definition, events, events, now, r.variables, false)
+	}
+	for _, entry := range entries {
+		result.New = append(result.New, entry.result)
+		result.outputKeysNew = append(result.outputKeysNew, entry.key)
+	}
+	if plan.query.distinct {
+		result.New = distinctSnapshotResults(result.New)
+	}
+	result.New = applyResultWindow(result.New, plan.query)
+	return result
+}
+
 // outputLimitedGroupedIterator reports whether Esper's statement iterator for
 // this output policy is backed by the rows emitted at the last output rather
 // than the live aggregate state. Default count/time output views
