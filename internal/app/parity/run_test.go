@@ -16040,6 +16040,42 @@ func TestRunInfraNamedWindowJoinDiffRejectsTraceMutations(t *testing.T) {
 				trace.Records[35].New[6].Fields["cntBool"] = 999
 			},
 		},
+		{
+			name: "named-and-stream-delete-old-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[37].Old = nil
+			},
+		},
+		{
+			name: "named-and-stream-fanout-batch-truncated",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[39].New = trace.Records[39].New[:1]
+			},
+		},
+		{
+			name: "between-named-routed-insert-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[41].New[0].Fields["b1"] = 999
+			},
+		},
+		{
+			name: "between-named-volume-delete-old-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[47].Old = nil
+			},
+		},
+		{
+			name: "between-same-named-single-old-duplicated",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[51].Old = append(append([]compat.ResultRecord(nil), trace.Records[51].Old...), trace.Records[51].Old[0])
+			},
+		},
+		{
+			name: "single-insert-consumer-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[59].New = nil
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

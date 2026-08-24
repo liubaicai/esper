@@ -2169,7 +2169,7 @@
    "phase": 1,
    "status": "implemented",
    "remaining": [
-    "full Java/Go shared parity trace beyond per-execution probes, wider created-composite representation matrix and event-type metadata surfaces (BeanEventType/type-class/stateless-select) remain open; InfraNamedWindowJoin remaining executions (InfraJoinNamedAndStream, InfraJoinBetweenNamed, InfraJoinBetweenSameNamed and later ordinals)"
+    "full Java/Go shared parity trace beyond per-execution probes, wider created-composite representation matrix and event-type metadata surfaces (BeanEventType/type-class/stateless-select) remain open; InfraNamedWindowJoin executions 7-9 (InfraUnidirectional, InfraWindowUnidirectionalJoin, InfraInnerJoinLateStart)"
    ],
    "verification": [
     "differential-verified",
@@ -2179,7 +2179,11 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-26e5704237191a42acf4",
     "java-runtime-38e260a335688bf62391",
-    "java-runtime-e138d2fc24010a22dbb1"
+    "java-runtime-e138d2fc24010a22dbb1",
+    "java-runtime-479eabd476ce403c4ab8",
+    "java-runtime-342d46139a3313b382b7",
+    "java-runtime-8f4b0394ee32a5524464",
+    "java-runtime-e7320476230a3903e2ec"
    ]
   },
   {
@@ -33851,12 +33855,20 @@
    "javaRuntimeIds": [
     "java-runtime-e138d2fc24010a22dbb1",
     "java-runtime-26e5704237191a42acf4",
-    "java-runtime-38e260a335688bf62391"
+    "java-runtime-38e260a335688bf62391",
+    "java-runtime-479eabd476ce403c4ab8",
+    "java-runtime-342d46139a3313b382b7",
+    "java-runtime-8f4b0394ee32a5524464",
+    "java-runtime-e7320476230a3903e2ec"
    ],
    "javaNames": [
     "InfraJoinIndexChoice",
     "InfraRightOuterJoinLateStart",
-    "InfraFullOuterJoinNamedAggregationLateStart"
+    "InfraFullOuterJoinNamedAggregationLateStart",
+    "InfraJoinNamedAndStream",
+    "InfraJoinBetweenNamed",
+    "InfraJoinBetweenSameNamed",
+    "InfraJoinSingleInsertOneWindow"
    ],
    "goTests": [
     "internal/app/parity/run_test.go:TestRunInfraNamedWindowJoinDiffWritesPassingEvidence"
@@ -33878,7 +33890,7 @@
     "testdata/parity/infra-named-window-join.trace.json",
     "testdata/parity/infra-named-window-join.evidence.json"
    ],
-   "notes": "Draft 4.249: 3 cases; Java/Go each 36 records, 0 differences. InfraJoinIndexChoice replays all five unique/keepall datawindow and index-set combinations behaviorally with the unidirectional s0 join projecting s2/s1/i1 rows E2,E2,20 and E1,E1,10 per combination (pinned INDEX_CALLBACK_HOOK plan assertions remain an approved infrastructure difference). InfraRightOuterJoinLateStart fills WindowLeave/WindowEnter#time(6000), deploys the grouped right-outer s1 and mirrored left-outer s2 late, and snapshots ten ordered rows: matched groups avgTime 124 cnt 1/1 diff 0 plus unmatched location 4 rows 127/1/0/1. InfraFullOuterJoinNamedAggregationLateStart fills MyWindowFO#groupwin(theString,intPrimitive)#length(3) with 19 rows, snapshots the create iterator in groupwin group order, then deploys the full outer aggregation and snapshots ten rows: c3 null-left group, c0 matched groups symbol c0, and c1/c2 unmatched groups with null symbol and c1/int2 cntBool 3. Runtime: join-aggregate statement iterators now evaluate the live join tuple composition (Esper join iterator is a live view; default count/time output rows never back it), and grouped named-window snapshots iterate groups contiguously in first-appearance order with per-group insertion order.",
+   "notes": "Draft 4.249 + 4.250: 7 cases; Java/Go each 60 records, 0 differences. Draft 4.249: index-choice behavioral replay of all five unique/keepall datawindow and index combinations (unidirectional join rows E2,E2,20 / E1,E1,10; pinned INDEX_CALLBACK_HOOK plan assertions remain an approved infrastructure difference), right-outer-late-start grouped right/left-outer iterators (matched groups avgTime 124 cnt 1/1, location 4 rows 127/1/0/1), full-outer-named-agg-late-start groupwin#length(3) group-contiguous create snapshot plus ten-row full outer aggregate. Runtime repairs: join-aggregate statement iterators evaluate the live join tuple composition; grouped named-window snapshots iterate groups contiguously in first-appearance order. Draft 4.250: named-and-stream irstream join with on-delete old rows and 2-row fan-out batches, between-named and single-insert-one-window boolPrimitive-routed inserts with volume-keyed on-deletes, between-same-named self-join whose matched delete emits exactly one old row despite two alias positions.",
    "verification": [
     "inventoried",
     "implemented",
@@ -33887,7 +33899,11 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-e138d2fc24010a22dbb1",
     "java-runtime-26e5704237191a42acf4",
-    "java-runtime-38e260a335688bf62391"
+    "java-runtime-38e260a335688bf62391",
+    "java-runtime-479eabd476ce403c4ab8",
+    "java-runtime-342d46139a3313b382b7",
+    "java-runtime-8f4b0394ee32a5524464",
+    "java-runtime-e7320476230a3903e2ec"
    ]
   }
  ],
@@ -36421,7 +36437,7 @@
   "inventoriedCases": 548,
   "implementedCases": 546,
   "differentialVerifiedCases": 159,
-  "differentialVerifiedRuntimeIds": 589,
+  "differentialVerifiedRuntimeIds": 593,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -36431,10 +36447,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3214,
-  "referencedJavaRuntimeIds": 3010,
+  "runtimeAssociationCount": 3218,
+  "referencedJavaRuntimeIds": 3014,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1126,
+  "unreferencedJavaRuntimeIds": 1122,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
   "totalCases": 548,

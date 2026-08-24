@@ -4,7 +4,11 @@
   "javaRuntimeIds": [
     "java-runtime-e138d2fc24010a22dbb1",
     "java-runtime-26e5704237191a42acf4",
-    "java-runtime-38e260a335688bf62391"
+    "java-runtime-38e260a335688bf62391",
+    "java-runtime-479eabd476ce403c4ab8",
+    "java-runtime-342d46139a3313b382b7",
+    "java-runtime-8f4b0394ee32a5524464",
+    "java-runtime-e7320476230a3903e2ec"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowJoin.java"
@@ -12,7 +16,11 @@
   "javaExecutions": [
     "InfraJoinIndexChoice",
     "InfraRightOuterJoinLateStart",
-    "InfraFullOuterJoinNamedAggregationLateStart"
+    "InfraFullOuterJoinNamedAggregationLateStart",
+    "InfraJoinNamedAndStream",
+    "InfraJoinBetweenNamed",
+    "InfraJoinBetweenSameNamed",
+    "InfraJoinSingleInsertOneWindow"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -1043,6 +1051,388 @@
       {
         "op": "snapshot",
         "statement": "select"
+      },
+      {
+        "op": "case",
+        "case": "named-and-stream"
+      },
+      {
+        "op": "deploy",
+        "statement": "setup"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 0.0,
+          "volume": 0,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 1,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 0.0,
+          "volume": 0,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "intPrimitive": 2,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "price": 0.0,
+          "volume": 0,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "intPrimitive": 3,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "intPrimitive": 4,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S3",
+          "price": 0.0,
+          "volume": 0,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S3"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S3",
+          "price": 0.0,
+          "volume": 0,
+          "feed": ""
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "between-named"
+      },
+      {
+        "op": "deploy",
+        "statement": "setup"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S0",
+          "intPrimitive": 1,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S0",
+          "intPrimitive": 2,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 3,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 4,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 5,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 6,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S0",
+          "price": 0.0,
+          "volume": 0,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S0",
+          "intPrimitive": 7,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S0",
+          "price": 0.0,
+          "volume": 1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S0",
+          "intPrimitive": 8,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "between-same-named"
+      },
+      {
+        "op": "deploy",
+        "statement": "setup"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1",
+          "price": 0.0,
+          "volume": 1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E0",
+          "price": 0.0,
+          "volume": 0,
+          "feed": ""
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "single-insert-one-window"
+      },
+      {
+        "op": "deploy",
+        "statement": "setup"
+      },
+      {
+        "op": "deploy",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S0",
+          "intPrimitive": 1,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S0",
+          "intPrimitive": 2,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 3,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 4,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 5,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "intPrimitive": 6,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S0",
+          "price": 0.0,
+          "volume": 0,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S0",
+          "intPrimitive": 7,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S0",
+          "price": 0.0,
+          "volume": 1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S0",
+          "intPrimitive": 8,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "undeploy-all"
       }
     ]
   },
@@ -2107,6 +2497,467 @@
             }
           }
         ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 2,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 3,
+              "symbol": "S3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 4,
+              "symbol": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 3,
+              "symbol": "S3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 4,
+              "symbol": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 4,
+              "b2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 5,
+              "b2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 4,
+              "b2": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 5,
+              "b2": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 8,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-same-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "E1",
+              "a1": "E1",
+              "b0": 1,
+              "b1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-same-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "E2",
+              "a1": "E2",
+              "b0": 2,
+              "b1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-same-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "E1",
+              "a1": "E1",
+              "b0": 1,
+              "b1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 4,
+              "b2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 5,
+              "b2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 4,
+              "b2": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 5,
+              "b2": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 8,
+              "b2": 7
+            }
+          }
+        ]
       }
     ]
   },
@@ -3168,6 +4019,467 @@
                 "state": "null"
               },
               "theString": "c2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 2,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 3,
+              "symbol": "S3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 4,
+              "symbol": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "named-and-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 3,
+              "symbol": "S3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 4,
+              "symbol": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 4,
+              "b2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 5,
+              "b2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 4,
+              "b2": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 5,
+              "b2": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 8,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-same-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "E1",
+              "a1": "E1",
+              "b0": 1,
+              "b1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-same-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "E2",
+              "a1": "E2",
+              "b0": 2,
+              "b1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "between-same-named",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a0": "E1",
+              "a1": "E1",
+              "b0": 1,
+              "b1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 4,
+              "b2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 5,
+              "b2": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 4,
+              "b2": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S1",
+              "a2": "S1",
+              "b1": 5,
+              "b2": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 1,
+              "b2": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-insert-one-window",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "S0",
+              "a2": "S0",
+              "b1": 8,
+              "b2": 7
             }
           }
         ]

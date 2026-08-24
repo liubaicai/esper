@@ -51,6 +51,10 @@ type infraNamedWindowJoinMarket struct {
 	Feed   string  `esper:"feed"`
 }
 
+type infraNamedWindowJoinBeanA struct {
+	ID string `esper:"id"`
+}
+
 const infraNamedWindowJoinJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 
 var infraNamedWindowJoinJavaSources = []string{
@@ -61,21 +65,33 @@ var infraNamedWindowJoinJavaRuntimeIDs = []string{
 	"java-runtime-e138d2fc24010a22dbb1",
 	"java-runtime-26e5704237191a42acf4",
 	"java-runtime-38e260a335688bf62391",
+	"java-runtime-479eabd476ce403c4ab8",
+	"java-runtime-342d46139a3313b382b7",
+	"java-runtime-8f4b0394ee32a5524464",
+	"java-runtime-e7320476230a3903e2ec",
 }
 
 var infraNamedWindowJoinJavaExecutions = []string{
 	"InfraJoinIndexChoice",
 	"InfraRightOuterJoinLateStart",
 	"InfraFullOuterJoinNamedAggregationLateStart",
+	"InfraJoinNamedAndStream",
+	"InfraJoinBetweenNamed",
+	"InfraJoinBetweenSameNamed",
+	"InfraJoinSingleInsertOneWindow",
 }
 
 var infraNamedWindowJoinCases = []string{
 	"index-choice",
 	"right-outer-late-start",
 	"full-outer-named-agg-late-start",
+	"named-and-stream",
+	"between-named",
+	"between-same-named",
+	"single-insert-one-window",
 }
 
-// runInfraNamedWindowJoinScenario replays three named-window join executions
+// runInfraNamedWindowJoinScenario replays seven named-window join executions
 // with independently isolated epoch-zero engine state. Index-choice recreates
 // its same-named window between five combinations, so each combination uses a
 // fresh Environment as the typed catalog deliberately has no unregister API.
@@ -229,6 +245,26 @@ func registerInfraNamedWindowJoinCase(env *esper.Environment, caseName string) e
 		if _, err := esper.RegisterStruct[infraNamedWindowJoinMarket](env, "SupportMarketDataBean"); err != nil {
 			return err
 		}
+	case "named-and-stream":
+		if _, err := esper.RegisterStruct[infraNamedWindowJoinBean](env, "SupportBean"); err != nil {
+			return err
+		}
+		if _, err := esper.RegisterStruct[infraNamedWindowJoinMarket](env, "SupportMarketDataBean"); err != nil {
+			return err
+		}
+		if _, err := esper.RegisterStruct[infraNamedWindowJoinBeanA](env, "SupportBean_A"); err != nil {
+			return err
+		}
+	case "between-named", "between-same-named", "single-insert-one-window":
+		if _, err := esper.RegisterStruct[infraNamedWindowJoinBean](env, "SupportBean"); err != nil {
+			return err
+		}
+		if _, err := esper.RegisterStruct[infraNamedWindowJoinMarket](env, "SupportMarketDataBean"); err != nil {
+			return err
+		}
+		if _, err := esper.RegisterStruct[infraNamedWindowJoinBeanA](env, "SupportBean_A"); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unsupported infra named-window join case %q", caseName)
 	}
@@ -282,10 +318,10 @@ func (s *infraNamedWindowJoinReplayState) deploy(step compat.Step, attach func(*
 	for _, statement := range deployment.Statements() {
 		s.statements[statement.Name()] = statement
 	}
-	if step.Statement == "s0" {
-		statement, ok := deployment.Statement("s0")
+	if step.Statement == "s0" || (step.Statement == "select" && s.caseName == "single-insert-one-window") {
+		statement, ok := deployment.Statement(step.Statement)
 		if !ok {
-			return nil, fmt.Errorf("index-choice s0 statement is missing")
+			return nil, fmt.Errorf("infra named-window join consumer %q statement is missing", step.Statement)
 		}
 		if err := attach(statement); err != nil {
 			return nil, err
@@ -340,6 +376,14 @@ func (s *infraNamedWindowJoinReplayState) plansFor(statement string) ([]esper.Pl
 		return s.rightOuterPlans(statement)
 	case "full-outer-named-agg-late-start":
 		return s.fullOuterPlans(statement)
+	case "named-and-stream":
+		return s.namedAndStreamPlans(statement)
+	case "between-named":
+		return s.betweenNamedPlans("MyWindowOne", "MyWindowTwo", "a1", "b1", "a2", "b2", "s0", statement)
+	case "between-same-named":
+		return s.betweenSameNamedPlans(statement)
+	case "single-insert-one-window":
+		return s.betweenNamedPlans("MyWindowJSIOne", "MyWindowJSITwo", "a1", "b1", "a2", "b2", "select", statement)
 	default:
 		return nil, fmt.Errorf("unsupported infra named-window join case %q", s.caseName)
 	}
@@ -699,6 +743,230 @@ func (s *infraNamedWindowJoinReplayState) emptyDeploymentPlan(name string) ([]es
 	return []esper.Plan{plan}, nil
 }
 
+// namedAndStreamPlans mirrors InfraJoinNamedAndStream: a keepall window
+// projecting (a, b), an on-SupportBean_A delete keyed by id = a, and an
+// irstream join of SupportMarketDataBean#length(10) with the window.
+func (s *infraNamedWindowJoinReplayState) namedAndStreamPlans(statement string) ([]esper.Plan, error) {
+	switch statement {
+	case "setup":
+		schema, err := esper.NewMapSchema("MyWindowJNS", []esper.FieldSpec{
+			esper.FieldDef("a", reflect.TypeOf("")),
+			esper.FieldDef("b", reflect.TypeOf(int(0))),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if _, err := s.env.RegisterNamedWindow("MyWindowJNS", schema, esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+			return nil, err
+		}
+		if _, ok := s.engine.NamedWindow("MyWindowJNS"); !ok {
+			return nil, fmt.Errorf("named-and-stream window was not materialized")
+		}
+		createPlan, err := s.env.Build(esper.FromNamedWindow(s.env, "MyWindowJNS").CreateNamedWindowQuery(esper.StatementName("create-jns")))
+		if err != nil {
+			return nil, err
+		}
+		insertPlan, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinBean](s.env, "SupportBean")).
+			InsertIntoNamedWindow("MyWindowJNS",
+				esper.SetColumn("a", esper.Field[infraNamedWindowJoinBean, string]("theString")),
+				esper.SetColumn("b", esper.Field[infraNamedWindowJoinBean, int]("intPrimitive")),
+			).Query(esper.StatementName("insert-jns")))
+		if err != nil {
+			return nil, err
+		}
+		deletePlan, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinBeanA](s.env, "SupportBean_A")).
+			DeleteFromNamedWindow("MyWindowJNS",
+				esper.Equal[string](esper.NamedWindowField[string]("a"), esper.Field[infraNamedWindowJoinBeanA, string]("id")),
+			).Query(esper.StatementName("delete-jns")))
+		if err != nil {
+			return nil, err
+		}
+		return []esper.Plan{createPlan, insertPlan, deletePlan}, nil
+	case "s0":
+		market := esper.From[infraNamedWindowJoinMarket](s.env, "SupportMarketDataBean").Window(esper.LengthWindow(10))
+		window := esper.FromNamedWindowAs[infraNamedWindowJoinBean](s.env, "MyWindowJNS")
+		plan, err := s.env.Build(esper.Join(market, window,
+			esper.OnEqual(
+				esper.Field[infraNamedWindowJoinMarket, string]("symbol"),
+				esper.Field[infraNamedWindowJoinBean, string]("a"),
+			),
+		).Select(
+			esper.SelectLeft("symbol", esper.JoinField[string](0, "symbol")),
+			esper.SelectRight("a", esper.JoinField[string](1, "a")),
+			esper.SelectRight("b", esper.JoinField[int](1, "b")),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithOldStream(),
+		))
+		if err != nil {
+			return nil, err
+		}
+		return []esper.Plan{plan}, nil
+	default:
+		return nil, fmt.Errorf("unknown named-and-stream deployment %q", statement)
+	}
+}
+
+// betweenNamedPlans mirrors InfraJoinBetweenNamed and its single-insert twin:
+// two keepall windows with boolPrimitive-routed inserts and volume-keyed
+// on-deletes joined on the string key with an irstream consumer.
+func (s *infraNamedWindowJoinReplayState) betweenNamedPlans(windowOne, windowTwo, keyOne, countOne, keyTwo, countTwo, consumer, statement string) ([]esper.Plan, error) {
+	switch statement {
+	case "setup":
+		schemaOne, err := esper.NewMapSchema(windowOne, []esper.FieldSpec{
+			esper.FieldDef(keyOne, reflect.TypeOf("")),
+			esper.FieldDef(countOne, reflect.TypeOf(int(0))),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if _, err := s.env.RegisterNamedWindow(windowOne, schemaOne, esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+			return nil, err
+		}
+		schemaTwo, err := esper.NewMapSchema(windowTwo, []esper.FieldSpec{
+			esper.FieldDef(keyTwo, reflect.TypeOf("")),
+			esper.FieldDef(countTwo, reflect.TypeOf(int(0))),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if _, err := s.env.RegisterNamedWindow(windowTwo, schemaTwo, esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+			return nil, err
+		}
+		if _, ok := s.engine.NamedWindow(windowOne); !ok {
+			return nil, fmt.Errorf("between-named window %q was not materialized", windowOne)
+		}
+		if _, ok := s.engine.NamedWindow(windowTwo); !ok {
+			return nil, fmt.Errorf("between-named window %q was not materialized", windowTwo)
+		}
+		createOne, err := s.env.Build(esper.FromNamedWindow(s.env, windowOne).CreateNamedWindowQuery(esper.StatementName("create-one")))
+		if err != nil {
+			return nil, err
+		}
+		createTwo, err := s.env.Build(esper.FromNamedWindow(s.env, windowTwo).CreateNamedWindowQuery(esper.StatementName("create-two")))
+		if err != nil {
+			return nil, err
+		}
+		insertOne, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinBean](s.env, "SupportBean").
+			Filter(esper.Equal[bool](esper.Field[infraNamedWindowJoinBean, bool]("boolPrimitive"), esper.Literal(true)))).
+			InsertIntoNamedWindow(windowOne,
+				esper.SetColumn(keyOne, esper.Field[infraNamedWindowJoinBean, string]("theString")),
+				esper.SetColumn(countOne, esper.Field[infraNamedWindowJoinBean, int]("intPrimitive")),
+			).Query(esper.StatementName("insert-one")))
+		if err != nil {
+			return nil, err
+		}
+		insertTwo, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinBean](s.env, "SupportBean").
+			Filter(esper.Equal[bool](esper.Field[infraNamedWindowJoinBean, bool]("boolPrimitive"), esper.Literal(false)))).
+			InsertIntoNamedWindow(windowTwo,
+				esper.SetColumn(keyTwo, esper.Field[infraNamedWindowJoinBean, string]("theString")),
+				esper.SetColumn(countTwo, esper.Field[infraNamedWindowJoinBean, int]("intPrimitive")),
+			).Query(esper.StatementName("insert-two")))
+		if err != nil {
+			return nil, err
+		}
+		deleteOne, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinMarket](s.env, "SupportMarketDataBean").
+			Filter(esper.Equal[int64](esper.Field[infraNamedWindowJoinMarket, int64]("volume"), esper.Literal(int64(1))))).
+			DeleteFromNamedWindow(windowOne,
+				esper.Equal[string](esper.NamedWindowField[string](keyOne), esper.Field[infraNamedWindowJoinMarket, string]("symbol")),
+			).Query(esper.StatementName("delete-one")))
+		if err != nil {
+			return nil, err
+		}
+		deleteTwo, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinMarket](s.env, "SupportMarketDataBean").
+			Filter(esper.Equal[int64](esper.Field[infraNamedWindowJoinMarket, int64]("volume"), esper.Literal(int64(0))))).
+			DeleteFromNamedWindow(windowTwo,
+				esper.Equal[string](esper.NamedWindowField[string](keyTwo), esper.Field[infraNamedWindowJoinMarket, string]("symbol")),
+			).Query(esper.StatementName("delete-two")))
+		if err != nil {
+			return nil, err
+		}
+		return []esper.Plan{createOne, createTwo, insertOne, insertTwo, deleteOne, deleteTwo}, nil
+	case consumer:
+		one := esper.JoinRecordSource(esper.FromNamedWindow(s.env, windowOne))
+		two := esper.JoinRecordSource(esper.FromNamedWindow(s.env, windowTwo))
+		plan, err := s.env.Build(esper.JoinMany(one, two).On(
+			esper.OnSourcesEqual(0, esper.JoinField[string](0, keyOne), 1, esper.JoinField[string](1, keyTwo)),
+		).Select(
+			esper.SelectFrom(0, keyOne, esper.JoinField[string](0, keyOne)),
+			esper.SelectFrom(0, countOne, esper.JoinField[int](0, countOne)),
+			esper.SelectFrom(1, keyTwo, esper.JoinField[string](1, keyTwo)),
+			esper.SelectFrom(1, countTwo, esper.JoinField[int](1, countTwo)),
+		).Query(
+			esper.StatementName(consumer),
+			esper.WithOldStream(),
+		))
+		if err != nil {
+			return nil, err
+		}
+		return []esper.Plan{plan}, nil
+	default:
+		return nil, fmt.Errorf("unknown between-named deployment %q", statement)
+	}
+}
+
+// betweenSameNamedPlans mirrors InfraJoinBetweenSameNamed: one keepall window
+// self-joined under two aliases with an unfiltered on-delete; a matched
+// delete emits exactly one old row despite the two alias positions.
+func (s *infraNamedWindowJoinReplayState) betweenSameNamedPlans(statement string) ([]esper.Plan, error) {
+	switch statement {
+	case "setup":
+		schema, err := esper.NewMapSchema("MyWindowJSN", []esper.FieldSpec{
+			esper.FieldDef("a", reflect.TypeOf("")),
+			esper.FieldDef("b", reflect.TypeOf(int(0))),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if _, err := s.env.RegisterNamedWindow("MyWindowJSN", schema, esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+			return nil, err
+		}
+		if _, ok := s.engine.NamedWindow("MyWindowJSN"); !ok {
+			return nil, fmt.Errorf("between-same-named window was not materialized")
+		}
+		createPlan, err := s.env.Build(esper.FromNamedWindow(s.env, "MyWindowJSN").CreateNamedWindowQuery(esper.StatementName("create-jsn")))
+		if err != nil {
+			return nil, err
+		}
+		insertPlan, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinBean](s.env, "SupportBean")).
+			InsertIntoNamedWindow("MyWindowJSN",
+				esper.SetColumn("a", esper.Field[infraNamedWindowJoinBean, string]("theString")),
+				esper.SetColumn("b", esper.Field[infraNamedWindowJoinBean, int]("intPrimitive")),
+			).Query(esper.StatementName("insert-jsn")))
+		if err != nil {
+			return nil, err
+		}
+		deletePlan, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinMarket](s.env, "SupportMarketDataBean")).
+			DeleteFromNamedWindow("MyWindowJSN",
+				esper.Equal[string](esper.NamedWindowField[string]("a"), esper.Field[infraNamedWindowJoinMarket, string]("symbol")),
+			).Query(esper.StatementName("delete-jsn")))
+		if err != nil {
+			return nil, err
+		}
+		return []esper.Plan{createPlan, insertPlan, deletePlan}, nil
+	case "s0":
+		left := esper.JoinRecordSource(esper.FromNamedWindow(s.env, "MyWindowJSN"))
+		right := esper.JoinRecordSource(esper.FromNamedWindow(s.env, "MyWindowJSN"))
+		plan, err := s.env.Build(esper.JoinMany(left, right).On(
+			esper.OnSourcesEqual(0, esper.JoinField[string](0, "a"), 1, esper.JoinField[string](1, "a")),
+		).Select(
+			esper.SelectFrom(0, "a0", esper.JoinField[string](0, "a")),
+			esper.SelectFrom(0, "b0", esper.JoinField[int](0, "b")),
+			esper.SelectFrom(1, "a1", esper.JoinField[string](1, "a")),
+			esper.SelectFrom(1, "b1", esper.JoinField[int](1, "b")),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithOldStream(),
+		))
+		if err != nil {
+			return nil, err
+		}
+		return []esper.Plan{plan}, nil
+	default:
+		return nil, fmt.Errorf("unknown between-same-named deployment %q", statement)
+	}
+}
+
 func decodeInfraNamedWindowJoinPayload(step compat.Step) (any, error) {
 	switch step.EventType {
 	case "SupportSimpleBeanOne":
@@ -737,6 +1005,12 @@ func decodeInfraNamedWindowJoinPayload(step compat.Step) (any, error) {
 			return nil, fmt.Errorf("decode SupportMarketDataBean: %w", err)
 		}
 		return value, nil
+	case "SupportBean_A":
+		var value infraNamedWindowJoinBeanA
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean_A: %w", err)
+		}
+		return value, nil
 	default:
 		return nil, fmt.Errorf("unsupported infra named-window join event type %q", step.EventType)
 	}
@@ -750,6 +1024,14 @@ func infraNamedWindowJoinRuntimeID(caseName string) string {
 		return infraNamedWindowJoinJavaRuntimeIDs[1]
 	case "full-outer-named-agg-late-start":
 		return infraNamedWindowJoinJavaRuntimeIDs[2]
+	case "named-and-stream":
+		return infraNamedWindowJoinJavaRuntimeIDs[3]
+	case "between-named":
+		return infraNamedWindowJoinJavaRuntimeIDs[4]
+	case "between-same-named":
+		return infraNamedWindowJoinJavaRuntimeIDs[5]
+	case "single-insert-one-window":
+		return infraNamedWindowJoinJavaRuntimeIDs[6]
 	default:
 		return "infra-named-window-join-unknown"
 	}

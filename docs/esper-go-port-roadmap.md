@@ -4,6 +4,20 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.250（2026-08-24），扩展 `infra.namedwindow.views` 的
+> `infra-named-window-join` 场景：新增 InfraNamedWindowJoin.java 的
+> InfraJoinNamedAndStream（java-runtime-479eabd476ce403c4ab8）、
+> InfraJoinBetweenNamed（java-runtime-342d46139a3313b382b7）、
+> InfraJoinBetweenSameNamed（java-runtime-8f4b0394ee32a5524464）与
+> InfraJoinSingleInsertOneWindow（java-runtime-e7320476230a3903e2ec）。
+> 场景 Java/Go 各 60 条 records、0 differences；覆盖 keepall 命名窗口 ×
+> length(10) 流 irstream join 的 on-delete 旧行与 2 行扇出批次、
+> boolPrimitive 路由插入 + volume 键控 on-delete 的双窗口 join 及其单插入
+> 孪生、同窗口自连接匹配删除仅一行旧行。Go 侧以 Join/JoinMany +
+> DeleteFromNamedWindow + Filter 触发流表达，无 internal/esper 改动。
+> manifest 更新为 548 cases、159 个 differential-verified case、593 个
+> differential runtime IDs、3218 条 associations（referenced 3014）。
+>
 > 最新补充：Draft 4.249（2026-08-24），新增 `infra.namedwindow.views` 的
 > `infra-named-window-join` differential-verified 场景，对照固定 Java
 > InfraNamedWindowJoin.java 的 InfraJoinIndexChoice、

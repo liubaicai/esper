@@ -27,12 +27,14 @@ import java.util.Map;
 import java.util.TreeSet;
 
 /**
- * Java oracle for the InfraNamedWindowJoin work-unit Draft 4.249 three-case
- * candidate (pinned Esper 9.0.0 commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c,
+ * Java oracle for the InfraNamedWindowJoin work-unit Draft 4.249 candidate
+ * extended by the Draft 4.250 four-case addition (pinned Esper 9.0.0 commit
+ * 9e1b9f1cc9117fea4bf33ab043762c045d73839c,
  * regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/
  * namedwindow/InfraNamedWindowJoin.java).
  *
- * Covers the first three executions of executions() (inventory ordinals 0-2):
+ * Covers executions of executions() at inventory ordinals 0-2 (Draft 4.249
+ * lane) and 3-6 (Draft 4.250 lane):
  *
  * index-choice (InfraJoinIndexChoice, java-runtime-e138d2fc24010a22dbb1)
  * replays all five datawindow/index-set combos of assertIndexChoice
@@ -71,6 +73,39 @@ import java.util.TreeSet;
  * and snapshots the select iterator (ten rows beginning with the unmatched
  * [null,null,0,c3] group).
  *
+ * named-and-stream (InfraJoinNamedAndStream, java-runtime-479eabd476ce403c4ab8)
+ * deploys keepall MyWindowJNS projecting (theString, intPrimitive) to (a, b)
+ * together with its on-SupportBean_A delete and the insert-into feed as one
+ * setup module, then the consumer named s0 selecting irstream symbol, a, b
+ * from SupportMarketDataBean#length(10) as s0 joined to MyWindowJNS as s1 on
+ * s1.a = symbol, and replays the eleven-send vector of market data, beans and
+ * bean-A deletions: single-row NEW output when the matching bean arrives,
+ * single-row OLD output on the matching deletion, silent otherwise except the
+ * two-row NEW batch for market S3 against both buffered S3 beans and its
+ * mirrored two-row OLD batch when SB_A(S3) empties the window again.
+ *
+ * between-named (InfraJoinBetweenNamed, java-runtime-342d46139a3313b382b7)
+ * routes boolPrimitive-split bean feeds into keepall MyWindowOne (a1, b1) and
+ * MyWindowTwo (a2, b2), deletes from MyWindowOne on market volume=1 and from
+ * MyWindowTwo on volume=0 matching symbol, joins the two windows irstream on
+ * s0.a1 = s1.a2 as s0, and replays the ten-send vector asserting the pairwise
+ * NEW rows as each side fills in, the two-row NEW batch for SB(false,S1,6),
+ * then the delete-and-reinsert cycle around S0 ending with NEW
+ * {a1=S0,b1=8,a2=S0,b2=7}.
+ *
+ * between-same-named (InfraJoinBetweenSameNamed,
+ * java-runtime-8f4b0394ee32a5524464) self-joins keepall MyWindowJSN as s0 and
+ * s1 on s0.a = s1.a projecting renamed a0/b0/a1/b1 columns, feeds the E1 and
+ * E2 beans (one NEW row each), deletes on every market event matching symbol
+ * and asserts the E1 removal yields exactly ONE old row despite both stream
+ * aliases, while market E0 stays silent.
+ *
+ * single-insert-one-window (InfraJoinSingleInsertOneWindow,
+ * java-runtime-e7320476230a3903e2ec) is structurally identical to
+ * between-named over windows MyWindowJSIOne/MyWindowJSITwo with the consumer
+ * statement named select; it replays the identical ten-send vector producing
+ * the same listener records under that statement name.
+ *
  * Conventions and deviations: SupportSimpleBeanOne/SupportSimpleBeanTwo are
  * local mirrors of the regression-lib beans (same field names and primitive
  * types) because regression-lib is not on the oracle classpath;
@@ -81,6 +116,11 @@ import java.util.TreeSet;
  * attached because the suite never reads it; state is observed through the
  * snapshot op instead. The SERDEREQUIRED flag of the right-outer execution is
  * a harness serialization check with no observable effect on a plain runtime.
+ * The Draft 4.250 lanes register SupportBean_A as a map event type with the
+ * String id field mirroring the regression-lib bean, and add @public to the
+ * MyWindowJSN/MyWindowJSIOne/MyWindowJSITwo create-window statements because
+ * the suite compiled setup and consumer as one module while this oracle
+ * deploys them as separate modules.
  * Records follow the standard protocol: listener rows (sorted property names,
  * normalized values, new before old), snapshot rows over the statement
  * iterator in engine order, sequence numbers per case, epoch-zero timestamps
@@ -171,6 +211,18 @@ public class InfraNamedWindowJoinScenarioOracle {
                 marketType.put("feed", String.class);
                 config.getCommon().addEventType("SupportMarketDataBean", marketType);
             }
+            case "named-and-stream", "between-named", "between-same-named", "single-insert-one-window" -> {
+                config.getCommon().addEventType(SupportBean.class);
+                Map<String, Object> marketType = new HashMap<>();
+                marketType.put("symbol", String.class);
+                marketType.put("price", double.class);
+                marketType.put("volume", Long.class);
+                marketType.put("feed", String.class);
+                config.getCommon().addEventType("SupportMarketDataBean", marketType);
+                Map<String, Object> beanAType = new HashMap<>();
+                beanAType.put("id", String.class);
+                config.getCommon().addEventType("SupportBean_A", beanAType);
+            }
             default -> throw new IllegalStateException("unknown case: " + caseName);
         }
         EPRuntime runtime = EPRuntimeProvider.getRuntime("InfraNamedWindowJoinScenarioOracle-" + caseName, config);
@@ -222,6 +274,7 @@ public class InfraNamedWindowJoinScenarioOracle {
         private int queueLeaveSends = 0;
         private int queueEnterSends = 0;
         private int fillBeanSends = 0;
+        private int beanASends = 0;
         private int marketSends = 0;
         private int snapshots = 0;
         private int seq = 0;
@@ -244,7 +297,7 @@ public class InfraNamedWindowJoinScenarioOracle {
             for (EPStatement statement : deployment.getStatements()) {
                 statements.put(statement.getName(), statement);
                 lastDeploymentStatements.add(statement.getName());
-                if ("index-choice".equals(caseName) && "s0".equals(statement.getName())) {
+                if (listenerStatement().equals(statement.getName())) {
                     attachListener(statement);
                 }
             }
@@ -258,6 +311,11 @@ public class InfraNamedWindowJoinScenarioOracle {
                     return rightOuterEpl(key);
                 case "full-outer-named-agg-late-start":
                     return fullOuterEpl(key);
+                case "named-and-stream":
+                case "between-named":
+                case "between-same-named":
+                case "single-insert-one-window":
+                    return joinExecEpl(key);
                 default:
                     throw new IllegalStateException("unknown case " + caseName);
             }
@@ -351,6 +409,46 @@ public class InfraNamedWindowJoinScenarioOracle {
             }
         }
 
+        private String joinExecEpl(String key) {
+            switch (caseName + "/" + key) {
+                case "named-and-stream/setup":
+                    return "@name('create') @public create window MyWindowJNS#keepall as select theString as a, intPrimitive as b from SupportBean;\n" +
+                        "on SupportBean_A delete from MyWindowJNS where id = a;\n" +
+                        "insert into MyWindowJNS select theString as a, intPrimitive as b from SupportBean;\n";
+                case "named-and-stream/s0":
+                    return "@name('s0') select irstream symbol, a, b " +
+                        "from SupportMarketDataBean#length(10) as s0," +
+                        "MyWindowJNS as s1 where s1.a = symbol";
+                case "between-named/setup":
+                    return "@name('createOne') @public create window MyWindowOne#keepall as select theString as a1, intPrimitive as b1 from SupportBean;\n" +
+                        "@name('createTwo') @public create window MyWindowTwo#keepall as select theString as a2, intPrimitive as b2 from SupportBean;\n" +
+                        "on SupportMarketDataBean(volume=1) delete from MyWindowOne where symbol = a1;\n" +
+                        "on SupportMarketDataBean(volume=0) delete from MyWindowTwo where symbol = a2;\n" +
+                        "insert into MyWindowOne select theString as a1, intPrimitive as b1 from SupportBean(boolPrimitive = true);\n" +
+                        "insert into MyWindowTwo select theString as a2, intPrimitive as b2 from SupportBean(boolPrimitive = false);\n";
+                case "between-named/s0":
+                    return "@name('s0') select irstream a1, b1, a2, b2 from MyWindowOne as s0, MyWindowTwo as s1 where s0.a1 = s1.a2";
+                case "between-same-named/setup":
+                    return "@name('create') @public create window MyWindowJSN#keepall as select theString as a, intPrimitive as b from SupportBean;\n" +
+                        "on SupportMarketDataBean delete from MyWindowJSN where symbol = a;\n" +
+                        "insert into MyWindowJSN select theString as a, intPrimitive as b from SupportBean;\n";
+                case "between-same-named/s0":
+                    return "@name('s0') select irstream s0.a as a0, s0.b as b0, s1.a as a1, s1.b as b1 " +
+                        "from MyWindowJSN as s0, MyWindowJSN as s1 where s0.a = s1.a";
+                case "single-insert-one-window/setup":
+                    return "@name('create') @public create window MyWindowJSIOne#keepall as select theString as a1, intPrimitive as b1 from SupportBean;\n" +
+                        "@name('createTwo') @public create window MyWindowJSITwo#keepall as select theString as a2, intPrimitive as b2 from SupportBean;\n" +
+                        "on SupportMarketDataBean(volume=1) delete from MyWindowJSIOne where symbol = a1;\n" +
+                        "on SupportMarketDataBean(volume=0) delete from MyWindowJSITwo where symbol = a2;\n" +
+                        "insert into MyWindowJSIOne select theString as a1, intPrimitive as b1 from SupportBean(boolPrimitive = true);\n" +
+                        "insert into MyWindowJSITwo select theString as a2, intPrimitive as b2 from SupportBean(boolPrimitive = false);\n";
+                case "single-insert-one-window/select":
+                    return "@name('select') select irstream a1, b1, a2, b2 from MyWindowJSIOne as s0, MyWindowJSITwo as s1 where s0.a1 = s1.a2";
+                default:
+                    throw new IllegalStateException("unknown " + caseName + " deploy key " + key);
+            }
+        }
+
         private void undeployLast() throws Exception {
             if (lastDeploymentId == null) {
                 throw new IllegalStateException("undeploy without a previous deploy in case " + caseName);
@@ -368,6 +466,20 @@ public class InfraNamedWindowJoinScenarioOracle {
             statements.clear();
             lastDeploymentId = null;
             lastDeploymentStatements.clear();
+        }
+
+        private String listenerStatement() {
+            switch (caseName) {
+                case "index-choice":
+                case "named-and-stream":
+                case "between-named":
+                case "between-same-named":
+                    return "s0";
+                case "single-insert-one-window":
+                    return "select";
+                default:
+                    return "";
+            }
         }
 
         private void attachListener(EPStatement statement) {
@@ -450,6 +562,12 @@ public class InfraNamedWindowJoinScenarioOracle {
                     runtime.getEventService().sendEventMap(event, "SupportQueueEnter");
                     queueEnterSends++;
                 }
+                case "SupportBean_A" -> {
+                    Map<String, Object> event = new LinkedHashMap<>();
+                    event.put("id", payload.getString("id", null));
+                    runtime.getEventService().sendEventMap(event, "SupportBean_A");
+                    beanASends++;
+                }
                 case "SupportBean" -> {
                     SupportBean event = new SupportBean();
                     event.setTheString(payload.getString("theString", null));
@@ -486,6 +604,21 @@ public class InfraNamedWindowJoinScenarioOracle {
                 case "full-outer-named-agg-late-start" -> {
                     if (fillBeanSends != 19 || marketSends != 2 || snapshots != 2) {
                         throw new IllegalStateException("full-outer requires nineteen bean sends, two market sends and two snapshots");
+                    }
+                }
+                case "named-and-stream" -> {
+                    if (fillBeanSends != 4 || marketSends != 5 || beanASends != 2) {
+                        throw new IllegalStateException("named-and-stream requires four bean sends, five market sends and two bean-A sends");
+                    }
+                }
+                case "between-named", "single-insert-one-window" -> {
+                    if (fillBeanSends != 8 || marketSends != 2) {
+                        throw new IllegalStateException(caseName + " requires eight bean sends and two market sends");
+                    }
+                }
+                case "between-same-named" -> {
+                    if (fillBeanSends != 2 || marketSends != 2) {
+                        throw new IllegalStateException("between-same-named requires two bean sends and two market sends");
                     }
                 }
                 default -> throw new IllegalStateException("unknown case " + caseName);

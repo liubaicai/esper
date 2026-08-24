@@ -5,7 +5,11 @@
   "javaRuntimes": [
     "java-runtime-e138d2fc24010a22dbb1",
     "java-runtime-26e5704237191a42acf4",
-    "java-runtime-38e260a335688bf62391"
+    "java-runtime-38e260a335688bf62391",
+    "java-runtime-479eabd476ce403c4ab8",
+    "java-runtime-342d46139a3313b382b7",
+    "java-runtime-8f4b0394ee32a5524464",
+    "java-runtime-e7320476230a3903e2ec"
   ],
   "cases": [
     {
@@ -19,6 +23,22 @@
     {
       "case": "full-outer-named-agg-late-start",
       "runtimeId": "java-runtime-38e260a335688bf62391"
+    },
+    {
+      "case": "named-and-stream",
+      "runtimeId": "java-runtime-479eabd476ce403c4ab8"
+    },
+    {
+      "case": "between-named",
+      "runtimeId": "java-runtime-342d46139a3313b382b7"
+    },
+    {
+      "case": "between-same-named",
+      "runtimeId": "java-runtime-8f4b0394ee32a5524464"
+    },
+    {
+      "case": "single-insert-one-window",
+      "runtimeId": "java-runtime-e7320476230a3903e2ec"
     }
   ],
   "steps": [
@@ -1047,6 +1067,388 @@
     {
       "op": "snapshot",
       "statement": "select"
+    },
+    {
+      "op": "case",
+      "case": "named-and-stream"
+    },
+    {
+      "op": "deploy",
+      "statement": "setup"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S1",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 1,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_A",
+      "payload": {
+        "id": "S1"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S1",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S2",
+        "intPrimitive": 2,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S2",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S3",
+        "intPrimitive": 3,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S3",
+        "intPrimitive": 4,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S3",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_A",
+      "payload": {
+        "id": "S3"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S3",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "between-named"
+    },
+    {
+      "op": "deploy",
+      "statement": "setup"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S0",
+        "intPrimitive": 1,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S0",
+        "intPrimitive": 2,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 3,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 4,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 5,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 6,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S0",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S0",
+        "intPrimitive": 7,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S0",
+        "price": 0.0,
+        "volume": 1,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S0",
+        "intPrimitive": 8,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "between-same-named"
+    },
+    {
+      "op": "deploy",
+      "statement": "setup"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E1",
+        "price": 0.0,
+        "volume": 1,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E0",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "single-insert-one-window"
+    },
+    {
+      "op": "deploy",
+      "statement": "setup"
+    },
+    {
+      "op": "deploy",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S0",
+        "intPrimitive": 1,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S0",
+        "intPrimitive": 2,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 3,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 4,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 5,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S1",
+        "intPrimitive": 6,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S0",
+        "price": 0.0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S0",
+        "intPrimitive": 7,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "S0",
+        "price": 0.0,
+        "volume": 1,
+        "feed": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "S0",
+        "intPrimitive": 8,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "undeploy-all"
     }
   ]
 }
