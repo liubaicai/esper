@@ -32193,9 +32193,23 @@
     "TestExprFilterOptValRelOpCoercionParity",
     "internal/app/parity/run_test.go:TestRunExprFilterOptimizableValueLimitedDiffWritesPassingEvidence"
    ],
-   "tags": [],
+   "tags": [
+    "expr",
+    "filter",
+    "value-limited",
+    "pattern",
+    "context",
+    "coercion",
+    "in-operator",
+    "range",
+    "or-rewrite",
+    "differential"
+   ],
    "status": "differential-verified",
    "evidence": [
+    "testdata/parity/filter-val-optimizable.json",
+    "testdata/parity/filter-val-optimizable.trace.json",
+    "testdata/parity/filter-val-optimizable.evidence.json",
     "testdata/parity/expr-filter-optimizable-value-limited.json",
     "testdata/parity/expr-filter-optimizable-value-limited.trace.json",
     "testdata/parity/expr-filter-optimizable-value-limited.evidence.json"
@@ -32222,7 +32236,12 @@
     "java-runtime-9e6dafb20b6ecb46df9a",
     "java-runtime-6b9f4a2bdb855e3f172b"
    ],
-   "notes": "Draft 4.246: 9 additional executions (FromPatternSingle/Multi/Constant/HalfConstant/WithDotMethod, ContextWithStart, InSetOfValueWPatternWCoercion, InRangeWCoercion, OrRewrite) Java/Go each 19 records, 0 differences. Covers value-limited filter values from pattern variables (incl. every[2] array tags and dot-method), context-partition properties, IN-list and closed-range coercion, and context OR-to-IN rewrite. Disqualify separately intentionally-different (compile-time plan forge assertion only)."
+   "notes": "Draft 4.246: 9 additional executions (FromPatternSingle/Multi/Constant/HalfConstant/WithDotMethod, ContextWithStart, InSetOfValueWPatternWCoercion, InRangeWCoercion, OrRewrite) Java/Go each 19 records, 0 differences. Covers value-limited filter values from pattern variables (incl. every[2] array tags and dot-method), context-partition properties, IN-list and closed-range coercion, and context OR-to-IN rewrite. Disqualify separately intentionally-different (compile-time plan forge assertion only).",
+   "javaOracleSources": [
+    "tools/java-oracle/FilterValOptimizableScenarioOracle.java",
+    "tools/java-oracle/ExprFilterOptimizableValueLimitedScenarioOracle.java",
+    "tools/java-oracle/run-expr-filter-optimizable-value-limited.sh"
+   ]
   },
   {
    "id": "case.expr-filter-optimizable-boolean-rebool",
