@@ -3830,7 +3830,19 @@
    "remaining": [],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5b7c33d842b03005e93c",
+    "java-runtime-b74571a9e545ee3e6f10",
+    "java-runtime-82215500a28aa2dd7719",
+    "java-runtime-515496ef6ad24a7c21fc",
+    "java-runtime-56bb65b18fd2618f280e",
+    "java-runtime-41e7953d04564de1dee3",
+    "java-runtime-d8bdabd44164244862f9",
+    "java-runtime-9ffc389f600462a2ad5d",
+    "java-runtime-67affae1accaef51cda4"
    ]
   },
   {
@@ -23208,7 +23220,17 @@
   },
   {
    "id": "case.expr-filter-optimizable",
-   "javaRuntimeIds": [],
+   "javaRuntimeIds": [
+    "java-runtime-5b7c33d842b03005e93c",
+    "java-runtime-b74571a9e545ee3e6f10",
+    "java-runtime-82215500a28aa2dd7719",
+    "java-runtime-515496ef6ad24a7c21fc",
+    "java-runtime-56bb65b18fd2618f280e",
+    "java-runtime-41e7953d04564de1dee3",
+    "java-runtime-d8bdabd44164244862f9",
+    "java-runtime-9ffc389f600462a2ad5d",
+    "java-runtime-67affae1accaef51cda4"
+   ],
    "javaNames": [
     "ExprFilterOptimizable",
     "ExprFilterInAndBetween",
@@ -23217,7 +23239,16 @@
     "ExprFilterInDynamic",
     "ExprFilterReuse",
     "ExprFilterInMultipleWithBool",
-    "ExprFilterInMultipleNonMatchingFirst"
+    "ExprFilterInMultipleNonMatchingFirst",
+    "ExprFilterInAndNotInKeywordMultivalue",
+    "ExprFilterOptimizableMethodInvocationContext",
+    "ExprFilterOptimizableTypeOf",
+    "ExprFilterOptimizableVariableAndSeparateThread",
+    "ExprFilterOrToInRewrite",
+    "ExprFilterOrContext",
+    "ExprFilterPatternUDFFilterOptimizable",
+    "ExprFilterDeployTimeConstant",
+    "ExprFilterRegExManyOr"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizable.java",
@@ -23236,7 +23267,8 @@
     "TestExprFilterInMultipleWithBoolMatchesEsper",
     "TestExprFilterReuseMatchesEsper",
     "TestExprFilterLargeThreadingMatchesEsper",
-    "TestExprFilterWhereClauseManyStatementsMatchesEsper"
+    "TestExprFilterWhereClauseManyStatementsMatchesEsper",
+    "internal/app/parity/run_test.go:TestRunExprFilterOptimizableDiffWritesPassingEvidence"
    ],
    "tags": [
     "correctness",
@@ -23249,7 +23281,7 @@
     "typeof",
     "variable-method"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "javaStaticIds": [
     "java-13836443e35d06f55859",
     "java-17cece2bf9c2df0b27f1",
@@ -23258,8 +23290,26 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "evidence": [
+    "testdata/parity/expr-filter-optimizable.json",
+    "testdata/parity/expr-filter-optimizable.trace.json",
+    "testdata/parity/expr-filter-optimizable.evidence.json"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5b7c33d842b03005e93c",
+    "java-runtime-b74571a9e545ee3e6f10",
+    "java-runtime-82215500a28aa2dd7719",
+    "java-runtime-515496ef6ad24a7c21fc",
+    "java-runtime-56bb65b18fd2618f280e",
+    "java-runtime-41e7953d04564de1dee3",
+    "java-runtime-d8bdabd44164244862f9",
+    "java-runtime-9ffc389f600462a2ad5d",
+    "java-runtime-67affae1accaef51cda4"
+   ],
+   "notes": "Draft 4.245: 9 executions (InAndNotInKeywordMultivalue, MethodInvocationContext, TypeOf, VariableAndSeparateThread, OrToInRewrite, OrContext, PatternUDF, DeployTimeConstant, RegExManyOr) Java/Go each 53 records, 0 differences. Engine fix: sequence pattern right leg never consumes the event that armed it. InspectFilter separately intentionally-different (engine-internal plan shape); strict-coercion compile sub-cases unasserted."
   },
   {
    "id": "case.view-unique-basic",
@@ -33500,6 +33550,22 @@
     "java-runtime-ba0287f83e55f5fd2454",
     "java-runtime-5956f7d158bda2623d70"
    ]
+  },
+  {
+   "id": "case.expr-filter-optimizable-inspect",
+   "javaRuntimeIds": [
+    "java-runtime-03298e9fd43b75d32413"
+   ],
+   "javaNames": [
+    "ExprFilterOptimizableInspectFilter"
+   ],
+   "status": "intentionally-different",
+   "difference": "Engine-internal filter-service plan assertions (name/operator via getFilterSvcSingle) only; no observable Go equivalent.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ]
   }
  ],
  "mappings": [
@@ -36006,29 +36072,33 @@
   {
    "capabilityId": "view.basic-windows",
    "caseId": "case.view-unique"
+  },
+  {
+   "capabilityId": "expr.filter-expressions",
+   "caseId": "case.expr-filter-optimizable-inspect"
   }
  ],
  "summary": {
-  "inventoriedCases": 543,
-  "implementedCases": 541,
-  "differentialVerifiedCases": 155,
-  "differentialVerifiedRuntimeIds": 542,
-  "intentionallyDifferentCases": 21,
+  "inventoriedCases": 544,
+  "implementedCases": 542,
+  "differentialVerifiedCases": 156,
+  "differentialVerifiedRuntimeIds": 551,
+  "intentionallyDifferentCases": 22,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 111,
   "implementedCapabilities": 110,
-  "differentialVerifiedCapabilities": 21,
+  "differentialVerifiedCapabilities": 22,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3165,
-  "referencedJavaRuntimeIds": 2961,
+  "runtimeAssociationCount": 3175,
+  "referencedJavaRuntimeIds": 2971,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1175,
+  "unreferencedJavaRuntimeIds": 1165,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 543,
+  "totalCases": 544,
   "totalCapabilities": 111
  }
 }

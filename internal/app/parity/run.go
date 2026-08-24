@@ -1886,6 +1886,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "expr-filter-optimizable" || *mode == "expr-filter-optimizable-diff" {
+		trace, err := runEfoScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-filter-optimizable-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, efoJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, efoJavaSources),
+				splitMetadata(*javaExecutions, efoJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "view-unique" || *mode == "view-unique-diff" {
 		trace, err := runViewUniqueScenario(context.Background(), scenario)
 		if err != nil {

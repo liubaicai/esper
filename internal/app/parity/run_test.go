@@ -13716,6 +13716,122 @@ func TestRunViewUniqueDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunExprFilterOptimizableDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "expr-filter-optimizable.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "expr-filter-optimizable.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-filter-optimizable.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-filter-optimizable-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunExprFilterOptimizableDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "filter-fire-lost",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "in-and-not-in-multivalue" && trace.Records[i].Sequence == 2 {
+						trace.Records[i].New = nil
+						return
+					}
+				}
+				trace.Records[2].New = nil
+			},
+		},
+		{
+			name: "observation-value-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "method-invocation-context" && trace.Records[i].Name == "runtimeURI" {
+						trace.Records[i].Value = "wrong-runtime"
+						return
+					}
+				}
+				trace.Records[9].Value = "wrong-runtime"
+			},
+		},
+		{
+			name: "pattern-tag-row-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "pattern-udf" {
+						fields, ok := trace.Records[i].New[0].Fields["b"].(map[string]any)
+						if ok {
+							fields["theString"] = "WRONG"
+						}
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "deploy-time-constant-listener-lost",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "deploy-time-constant" && trace.Records[i].Statement == "s0" && trace.Records[i].Sequence == 2 {
+						trace.Records[i].New = nil
+						return
+					}
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "expr-filter-optimizable.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "expr-filter-optimizable.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-filter-optimizable.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-filter-optimizable-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunEplOtherWildcardAdditionalDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-wildcard-additional.evidence.json"),

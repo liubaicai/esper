@@ -1,0 +1,1074 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-filter-optimizable",
+  "description": "Nine listener-observable executions of ExprFilterOptimizable (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c) replayed with one fresh runtime per case: in-and-not-in-multivalue (plain '1 in/not in (ints)' over SupportInKeywordBean#length(2), both pattern forms with every a=SupportInKeywordBean -> SupportBean(intPrimitive in/not in (a.ints)), and the initiated context MyContext with s1 #keepall-where and s2 filter over context.mie.ints), method-invocation-context (myCustomOkFunction(e) = 'OK' with EvalContext observation records), typeof (base type fires, derived type does not), variable-and-separate-thread (myCheckServiceProvider.check() filter), or-to-in-rewrite (all four operand orderings of theString='a' or theString='b'), or-context (context initiated by SupportBean with theString='A' or intPrimitive=1), pattern-udf (a=SupportBean() -> b=SupportBean(myCustomBigDecimalEquals(a.bigDecimal, b.bigDecimal))), deploy-time-constant (deploy-time substitution-parameter and constant-variable filters: equals both directions, long coercion, relop both directions, in, in-array and between numeric/string), regex-many-or (17 identical theString regexp '.*test.*' clauses joined by OR). Ordering 4 (ExprFilterOptimizableInspectFilter) is intentionally-different: it asserts engine-internal filter-plan/operator shape only, with no fire/no-fire contract; invalid compile-only sub-cases (long->int strict coercion) and plan-shape assertions (IN_LIST_OF_VALUES/EQUAL/GREATER/RANGE_CLOSED) are out of scope.",
+  "javaRuntimes": [
+    "java-runtime-5b7c33d842b03005e93c",
+    "java-runtime-b74571a9e545ee3e6f10",
+    "java-runtime-82215500a28aa2dd7719",
+    "java-runtime-515496ef6ad24a7c21fc",
+    "java-runtime-56bb65b18fd2618f280e",
+    "java-runtime-41e7953d04564de1dee3",
+    "java-runtime-d8bdabd44164244862f9",
+    "java-runtime-9ffc389f600462a2ad5d",
+    "java-runtime-67affae1accaef51cda4"
+  ],
+  "cases": [
+    {
+      "case": "in-and-not-in-multivalue"
+    },
+    {
+      "case": "method-invocation-context"
+    },
+    {
+      "case": "typeof"
+    },
+    {
+      "case": "variable-and-separate-thread"
+    },
+    {
+      "case": "or-to-in-rewrite"
+    },
+    {
+      "case": "or-context"
+    },
+    {
+      "case": "pattern-udf"
+    },
+    {
+      "case": "deploy-time-constant"
+    },
+    {
+      "case": "regex-many-or"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "in-and-not-in-multivalue"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 1,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 2,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 3,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 0,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 3,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 1,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportInKeywordBean",
+      "payload": {
+        "ints": [
+          1,
+          2
+        ],
+        "longs": [],
+        "mapOfIntKey": {},
+        "collOfInt": []
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 1,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 2,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 3,
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "method-invocation-context"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "typeof"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportOverrideBase",
+      "payload": {
+        "val": ""
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportOverrideOne",
+      "payload": {
+        "val": "b",
+        "valOne": "a"
+      }
+    },
+    {
+      "op": "case",
+      "case": "variable-and-separate-thread"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "",
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "or-to-in-rewrite"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "b",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "b",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "b",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "b",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "or-context"
+    },
+    {
+      "op": "deploy",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 1,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "pattern-udf"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 0,
+        "bigDecimal": 13,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 0,
+        "bigDecimal": 13,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "deploy-time-constant"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": "abc"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "x",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": "abc"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "x",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "x",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "abc",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "x",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "longPrimitive": 100,
+        "theString": ""
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "longPrimitive": 100,
+        "theString": ""
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": 10,
+        "p1": 11
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 9,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 12,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 9,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 12,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": [
+          10,
+          11
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 9,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 12,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 9,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 12,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": 10,
+        "p1": 11
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 9,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 12,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 9,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 11,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 12,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0",
+      "payload": {
+        "p0": "c",
+        "p1": "d"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "b",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "d",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "e",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "b",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "d",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "e",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "regex-many-or"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "mytest.com",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    }
+  ]
+}

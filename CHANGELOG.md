@@ -1,3 +1,14 @@
+> 最新补充：Draft 4.245（2026-08-24），新增 `expr.filter-expressions` 的
+> `expr-filter-optimizable` differential-verified 场景，对照固定 Java
+> ExprFilterOptimizable.java 的 9 个可观测 execution。Java/Go 各 53 条 records、
+> 0 差异。覆盖多值 in/not in plain+pattern+context、EPLMethodInvocationContext
+> UDF 观察、typeof 超类型排除、变量过滤、OR-to-IN 交换律、同类型 initiated
+> context OR 过滤、BigDecimal compareTo==0、部署期常量强转/substitution/in/
+> between、17 重 regexp OR。引擎修复：序列模式右腿不消费触发臂事件。
+> InspectFilter 登记 intentionally-different（引擎内部 plan 形状）。manifest
+> 更新为 544 cases、156 个 differential-verified case、551 个 differential
+> runtime IDs、3175 条 associations（referenced 2971）。
+>
 > 最新补充：Draft 4.244（2026-08-24），新增 `view.basic-windows` 的
 > `view-unique` differential-verified 场景，对照固定 Java ViewUnique.java 的
 > 5 个 execution（SceneOne、SceneTwo、AnnotationPrefix、ExpressionParameter、

@@ -5376,10 +5376,15 @@ type patternProgress struct {
 	// child with that begin state, not with the tags of the match that just
 	// fired, so a restarted attempt must not inherit the previous attempt's
 	// captured events.
-	spawnTags               map[string]Event
-	spawnTagValues          map[string][]Event
-	spawnCaptured           bool
-	minimum                 int
+	spawnTags      map[string]Event
+	spawnTagValues map[string][]Event
+	spawnCaptured  bool
+	minimum        int
+	// skipEvent marks the event that armed this branch (a sequence right leg
+	// spawn when its left completed): Esper never offers the arming event to a
+	// freshly armed filter, so the right side must ignore it even when the
+	// pattern input is dispatched again for the same event instance.
+	skipEvent               *eventIdentityToken
 	maximum                 int
 	boundsResolved          bool
 	sequenceMaximum         int
@@ -16109,6 +16114,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.right = newPatternProgress(progress.node.right)
 					inheritPatternProgressTags(next, next.right)
 					armPatternProgressTimers(next.right, trigger.now, variables)
+					next.right.skipEvent = trigger.event.identity
 					next.started = true
 					if patternSatisfied(next.right) {
 						// A right branch satisfied at spawn (a not, or an or with a
@@ -16136,6 +16142,14 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 			return result
 		}
 
+		if progress.right != nil && progress.right.skipEvent != nil && progress.right.skipEvent == trigger.event.identity {
+			// Same-event guard: this sequence's right branch was armed by the
+			// very event being dispatched, so the event must not satisfy the
+			// right filter (detached from the arming event via the trigger's
+			// shared input dispatch path).
+			next := clonePatternProgress(progress)
+			return []patternTransition{patternTransitionFor(next)}
+		}
 		rightTransitions := advancePatternNodeTrigger(progress.right, trigger, variables)
 		result := make([]patternTransition, 0, len(rightTransitions))
 		for _, rightTransition := range rightTransitions {
@@ -16157,6 +16171,7 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 			if rightSatisfied {
 				next.phase = 2
 				next.done = true
+				next.right.skipEvent = trigger.event.identity
 			}
 			seqTransition := patternTransitionFrom(next, patternSatisfied(next), rightTransition)
 			seqTransition.fireOnly = rightTransition.fireOnly && rightTransition.complete
