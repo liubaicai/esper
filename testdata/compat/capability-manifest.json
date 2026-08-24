@@ -3674,23 +3674,43 @@
    "javaRefs": [
     "ClientExtendUDFInlinedClass",
     "ClientExtendAggregationInlinedClass",
+    "ExprClassStaticMethod",
     "ClassProvided"
    ],
    "goRefs": [
     "internal/esper/expr.go",
-    "internal/esper/client_extend_udf_parity_test.go"
+    "internal/esper/expression_definition.go",
+    "internal/esper/faf.go",
+    "internal/esper/client_extend_udf_parity_test.go",
+    "internal/app/parity/expr_class_static_method.go"
    ],
    "phase": 8,
    "status": "intentionally-different",
    "remaining": [
-    "Java uses Janino to compile inline Java source into deployment artifacts; Go has no runtime code compilation. UDFs map to Func1/Func2 with statically linked Go functions, aggregation functions map to PluginAggregateFactory, and FAF/overloaded/multi-module-uses patterns map to their Go-native equivalents. All 14 executions are approved-difference."
+    "Java uses Janino to compile inline Java source into deployment artifacts; Go has no runtime Java compilation. The verified ExprClassStaticMethod listener/FAF static-call slice maps local classes to typed Func0/Func1 closures and created classes to DefineExpression/ExpressionRef.",
+    "CreateCompileVsRuntime deploy-time class-version binding, Janino syntax/duplicate-class diagnostics, and CompilerInlinedClassInspectionOption remain intentionally different because Go has no compiled Java class artifact or inspection callback.",
+    "ClientExtend UDF/aggregation inlined-class executions remain approved differences: UDFs map to statically linked Func1/Func2 and aggregation functions to PluginAggregateFactory; FAF/overloaded/multi-module-uses patterns use their Go-native equivalents."
    ],
    "verification": [
     "inventoried",
     "implemented",
+    "differential-verified",
     "intentionally-different"
    ],
-   "difference": "Java uses Janino to compile inline Java source into deployment artifacts; Go has no runtime code compilation. UDFs map to Func1/Func2 with statically linked Go functions, aggregation functions map to PluginAggregateFactory, and FAF/overloaded/multi-module-uses patterns map to their Go-native equivalents. All 14 executions are approved-difference."
+   "difference": "Go has no runtime Java/Janino compilation, compiled class artifact, or compiler inspection callback. Its typed static-call equivalents are local Func0/Func1 closures and module-level DefineExpression/ExpressionRef registrations. Eleven ExprClassStaticMethod listener/FAF/compile-only executions are differential-verified; deploy-time class-version binding, Janino-only invalid diagnostics, and compiler inspection remain intentionally different, as do the ClientExtend inlined-class execution families.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-23ebc0a94390e9ac66cd",
+    "java-runtime-7f2346b554acf5f94745",
+    "java-runtime-bf25fdd8aadf8784565f",
+    "java-runtime-00b7147ca51c1d12efb7",
+    "java-runtime-43b48f547e0b645a0225",
+    "java-runtime-d778a673081da61e849c",
+    "java-runtime-19af491ff80c737aa9b2",
+    "java-runtime-5a87cab48e592ec8cb3c",
+    "java-runtime-0c4767c9a92380fcf0e4",
+    "java-runtime-a6dac1b76794aa1447ac",
+    "java-runtime-10cf1e47a1cfad251b08"
+   ]
   },
   {
    "id": "client.extend.adapter-loader",
@@ -33736,6 +33756,82 @@
     "java-runtime-415ec6ff4f1b6f87cc65",
     "java-runtime-aa515a1f3bad40ec148b"
    ]
+  },
+  {
+   "id": "case.expr-class-static-method",
+   "javaRuntimeIds": [
+    "java-runtime-23ebc0a94390e9ac66cd",
+    "java-runtime-7f2346b554acf5f94745",
+    "java-runtime-bf25fdd8aadf8784565f",
+    "java-runtime-00b7147ca51c1d12efb7",
+    "java-runtime-43b48f547e0b645a0225",
+    "java-runtime-d778a673081da61e849c",
+    "java-runtime-19af491ff80c737aa9b2",
+    "java-runtime-5a87cab48e592ec8cb3c",
+    "java-runtime-0c4767c9a92380fcf0e4",
+    "java-runtime-a6dac1b76794aa1447ac",
+    "java-runtime-10cf1e47a1cfad251b08"
+   ],
+   "javaNames": [
+    "ExprClassStaticMethodLocal{soda=false}",
+    "ExprClassStaticMethodLocal{soda=true}",
+    "ExprClassStaticMethodCreate{soda=false}",
+    "ExprClassStaticMethodCreate{soda=true}",
+    "ExprClassStaticMethodLocalFAFQuery",
+    "ExprClassStaticMethodCreateFAFQuery",
+    "ExprClassStaticMethodLocalAndCreateClassTogether",
+    "ExprClassDocSamples",
+    "ExprClassInvalidCompile",
+    "ExprClassStaticMethodCreateClassWithPackageName",
+    "ExprClassStaticMethodLocalWithPackageName"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassStaticMethod.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprClassStaticMethodDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprClassStaticMethodDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "client",
+    "extension",
+    "inlined-class",
+    "static-method",
+    "declared-expression",
+    "named-window",
+    "fire-and-forget",
+    "package-qualified",
+    "compile-only",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/expr-class-static-method.json",
+    "testdata/parity/expr-class-static-method.trace.json",
+    "testdata/parity/expr-class-static-method.evidence.json",
+    "tools/java-oracle/ExprClassStaticMethodScenarioOracle.java",
+    "tools/java-oracle/run-expr-class-static-method.sh"
+   ],
+   "difference": "Go represents local inlined static calls with typed Func0/Func1 closures and created class methods with DefineExpression/ExpressionRef. SODA variants collapse into the same typed builder replay. CreateCompileVsRuntime (deploy-time class-version binding), CompilerInlinedClassInspectionOption, and Janino-specific invalid-class diagnostics remain separately intentionally different; this case differentially verifies only the listed listener/FAF/compile-only observables.",
+   "notes": "Draft 4.248: 11 observable runtime IDs across nine cases; Java/Go each 11 records, 0 differences. Covers local and created static String calls (both Java SODA flags), local and created FAF class calls over a keepall named window, cross-class local-to-created static call, compile-only recursive/doc and empty-class success, package-qualified two-argument and no-argument calls. Mutation tests reject listener value/order, local/created FAF result, cross-class dependency result, and package-qualified call drift. The Java deploy-time class-version binding (ordinal 4), compiler inspection hook (ordinal 11), and Janino-only invalid diagnostics are approved differences.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-23ebc0a94390e9ac66cd",
+    "java-runtime-7f2346b554acf5f94745",
+    "java-runtime-bf25fdd8aadf8784565f",
+    "java-runtime-00b7147ca51c1d12efb7",
+    "java-runtime-43b48f547e0b645a0225",
+    "java-runtime-d778a673081da61e849c",
+    "java-runtime-19af491ff80c737aa9b2",
+    "java-runtime-5a87cab48e592ec8cb3c",
+    "java-runtime-0c4767c9a92380fcf0e4",
+    "java-runtime-a6dac1b76794aa1447ac",
+    "java-runtime-10cf1e47a1cfad251b08"
+   ]
   }
  ],
  "mappings": [
@@ -36254,29 +36350,33 @@
   {
    "capabilityId": "event.property-access-render",
    "caseId": "case.event-bean-property-fragment"
+  },
+  {
+   "capabilityId": "client.extend.inlined-class",
+   "caseId": "case.expr-class-static-method"
   }
  ],
  "summary": {
-  "inventoriedCases": 546,
-  "implementedCases": 544,
-  "differentialVerifiedCases": 157,
-  "differentialVerifiedRuntimeIds": 575,
+  "inventoriedCases": 547,
+  "implementedCases": 545,
+  "differentialVerifiedCases": 158,
+  "differentialVerifiedRuntimeIds": 586,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 111,
   "implementedCapabilities": 110,
-  "differentialVerifiedCapabilities": 23,
+  "differentialVerifiedCapabilities": 24,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3200,
-  "referencedJavaRuntimeIds": 2996,
+  "runtimeAssociationCount": 3211,
+  "referencedJavaRuntimeIds": 3007,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1140,
+  "unreferencedJavaRuntimeIds": 1129,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 546,
+  "totalCases": 547,
   "totalCapabilities": 111
  }
 }

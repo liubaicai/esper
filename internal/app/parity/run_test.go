@@ -15774,3 +15774,186 @@ func TestRunVariablesUseDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunExprClassStaticMethodDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-static-method.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "expr-class-static-method.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-static-method.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "expr-class-static-method-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if len(evidence.JavaTrace.Records) != 11 ||
+		evidence.JavaTrace.Records[0].Case != "local" ||
+		evidence.JavaTrace.Records[8].Case != "local-and-create" ||
+		evidence.JavaTrace.Records[9].Case != "package-create" ||
+		evidence.JavaTrace.Records[10].Case != "package-local" {
+		t.Fatalf("record layout = %#v", evidence.JavaTrace.Records)
+	}
+}
+
+func TestRunExprClassStaticMethodRejectsDeploymentScenarioMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Scenario)
+		want   string
+	}{
+		{
+			name: "wrong-label",
+			mutate: func(scenario *compat.Scenario) {
+				for index := range scenario.Steps {
+					if scenario.Steps[index].Op == "deploy" && scenario.Steps[index].Statement == "create-class" {
+						scenario.Steps[index].Statement = "s0"
+						return
+					}
+				}
+			},
+			want: `case "create" deploy step 0 = "s0", want "create-class"`,
+		},
+		{
+			name: "missing-marker",
+			mutate: func(scenario *compat.Scenario) {
+				for index := range scenario.Steps {
+					if scenario.Steps[index].Op == "deploy" && scenario.Steps[index].Statement == "create-class" {
+						scenario.Steps = append(scenario.Steps[:index], scenario.Steps[index+1:]...)
+						return
+					}
+				}
+			},
+			want: `case "create" deploy step 0 = "s0", want "create-class"`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			scenarioPath := writeEcsmScenarioMutation(t, test.mutate)
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-class-static-method",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr)
+			if code == 0 || !strings.Contains(stderr.String(), test.want) {
+				t.Fatalf("exit code=%d stdout=%q stderr=%q, want %q", code, stdout.String(), stderr.String(), test.want)
+			}
+		})
+	}
+}
+
+func writeEcsmScenarioMutation(t *testing.T, mutate func(*compat.Scenario)) string {
+	t.Helper()
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-static-method.json")
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(file)
+	closeErr := file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	mutate(&scenario)
+	data, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path = filepath.Join(t.TempDir(), "expr-class-static-method.json")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestRunExprClassStaticMethodDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "local-listener-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["c0"] = "|wrong|"
+			},
+		},
+		{
+			name: "created-listener-order-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].Sequence = 1
+			},
+		},
+		{
+			name: "local-faf-class-result-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["c0"] = ">wrong<"
+			},
+		},
+		{
+			name: "created-faf-replay-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New = nil
+			},
+		},
+		{
+			name: "cross-class-dependency-result-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[0].Fields["c0"] = "|wrong|"
+			},
+		},
+		{
+			name: "package-qualified-call-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[0].Fields["c0"] = "E12"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-static-method.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "expr-class-static-method.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "expr-class-static-method.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "expr-class-static-method-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

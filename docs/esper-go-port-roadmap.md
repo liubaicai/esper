@@ -4,6 +4,20 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.248（2026-08-24），新增 `client.extend.inlined-class` 的
+> `expr-class-static-method` differential-verified 场景，对照固定 Java
+> ExprClassStaticMethod.java 的 11 个 listener/FAF/compile-only runtime。
+> 场景 Java/Go 各 11 条 records、0 differences；覆盖 local 与 created static
+> String 调用（各自合并 Java SODA true/false 编译路径）、local 与 path-created
+> class 的 keepall named-window FAF 重放、同 module local→created 跨 class 调用、
+> recursive/doc 与 empty-class compile-only 成功，以及 package-qualified 2 参数/
+> 0 参数调用。Go 以类型化 Func0/Func1 closure 和
+> DefineExpression/ExpressionRef 表达，不引入 EPL 或 Java 编译入口。
+> CreateCompileVsRuntime 的 deployed-class precedence、compiler inspection hook
+> 与 Janino-only invalid diagnostics 保持 approved difference。manifest 更新为
+> 547 cases、158 个 differential-verified case、586 个 differential runtime
+> IDs、3211 条 associations（referenced 3007）。
+>
 > 最新补充：Draft 4.247（2026-08-24），新增 `event.property-access-render` 的
 > `event-bean-property-fragment` differential-verified 场景，对照固定 Java
 > EventBeanPropertyResolutionFragment.java（event/bean）的全部 15 个

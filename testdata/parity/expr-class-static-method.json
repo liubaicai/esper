@@ -1,0 +1,209 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-class-static-method",
+  "description": "Nine listener/FAF-observable executions of ExprClassStaticMethod (pinned Esper 9.0.0 commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c) replayed with one fresh runtime per case and the pinned EPL compiled verbatim: local (single-module inlined_class MyClass.doIt returning '|'+parameter+'|' with select s0 in the same module; one replay covers the soda=false/soda=true compile paths of ordinals 0+1), create (@public create inlined_class module plus a path-compiled select s0; covers ordinals 2+3), local-faf (MyWindow#keepall fed by an on-SupportBean merge, then a fire-and-forget query that embeds its own local inlined_class MyClass.doIt returning '>'+parameter+'<' compiled path-aware and executed twice; ordinal 5), create-faf (one module holding @public create inlined_class MyClass.doIt returning 'abc' plus the window and merge, then a path-compiled FAF query without class text executed twice; ordinal 6), local-and-create (one module with a bare local MyUtil.returnBubba class consumed by a @public create MyClass.doIt, plus a path-compiled select s0; ordinal 7), doc-samples (compile-only doc samples: local recursive MyUtility.fib, then @public create MyUtility.midPrice on a path, then a path-compiled midPrice query; ordinal 8 deploys and sends nothing, so both hosts emit zero records), invalid-compile-valid (the valid case-1 of the invalid-compile suite: empty inlined-class text compiles; ordinal 9 deploys and sends nothing, zero records), package-create (one module: create inlined_class declaring 'package mypackage;' with two-arg MyUtil.doIt plus select s0 invoking mypackage.MyUtil.doIt(theString, intPrimitive); ordinal 10), package-local (single module with a local package-qualified no-arg mypackage.MyUtil.doIt class and select s0; ordinal 12). Sends carry SupportBean with the pinned theString/intPrimitive payloads. FAF executions are replayed as compileExecuteFAF (compile path-aware plus fire-and-forget execute) twice per FAF case and each execution emits one operation 'faf' record for statement s0 with a per-execution sequence and the result rows; listener records use the per-statement sequence, engine time and scalar normalization. The compile-vs-deploy class-binding execution (ordinal 4) and the compiler inspection-option execution (ordinal 11) are intentionally-different and have no scenario case; the error-message branches of ordinal 9 are intentionally-different Janino wording and only its valid case-1 is covered.",
+  "javaRuntimes": [
+    "java-runtime-23ebc0a94390e9ac66cd",
+    "java-runtime-7f2346b554acf5f94745",
+    "java-runtime-bf25fdd8aadf8784565f",
+    "java-runtime-00b7147ca51c1d12efb7",
+    "java-runtime-43b48f547e0b645a0225",
+    "java-runtime-d778a673081da61e849c",
+    "java-runtime-19af491ff80c737aa9b2",
+    "java-runtime-5a87cab48e592ec8cb3c",
+    "java-runtime-0c4767c9a92380fcf0e4",
+    "java-runtime-a6dac1b76794aa1447ac",
+    "java-runtime-10cf1e47a1cfad251b08"
+  ],
+  "cases": [
+    {
+      "case": "local"
+    },
+    {
+      "case": "create"
+    },
+    {
+      "case": "local-faf"
+    },
+    {
+      "case": "create-faf"
+    },
+    {
+      "case": "local-and-create"
+    },
+    {
+      "case": "doc-samples"
+    },
+    {
+      "case": "invalid-compile-valid"
+    },
+    {
+      "case": "package-create"
+    },
+    {
+      "case": "package-local"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "local"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "create"
+    },
+    {
+      "op": "deploy",
+      "statement": "create-class"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "local-faf"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "faf",
+      "statement": "s0"
+    },
+    {
+      "op": "faf",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "create-faf"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "faf",
+      "statement": "s0"
+    },
+    {
+      "op": "faf",
+      "statement": "s0"
+    },
+    {
+      "op": "case",
+      "case": "local-and-create"
+    },
+    {
+      "op": "deploy",
+      "statement": "classes"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "case",
+      "case": "doc-samples"
+    },
+    {
+      "op": "case",
+      "case": "invalid-compile-valid"
+    },
+    {
+      "op": "case",
+      "case": "package-create"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "case",
+      "case": "package-local"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    }
+  ]
+}

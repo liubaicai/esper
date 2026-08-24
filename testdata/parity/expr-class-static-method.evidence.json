@@ -1,0 +1,535 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-23ebc0a94390e9ac66cd",
+    "java-runtime-7f2346b554acf5f94745",
+    "java-runtime-bf25fdd8aadf8784565f",
+    "java-runtime-00b7147ca51c1d12efb7",
+    "java-runtime-43b48f547e0b645a0225",
+    "java-runtime-d778a673081da61e849c",
+    "java-runtime-19af491ff80c737aa9b2",
+    "java-runtime-5a87cab48e592ec8cb3c",
+    "java-runtime-0c4767c9a92380fcf0e4",
+    "java-runtime-a6dac1b76794aa1447ac",
+    "java-runtime-10cf1e47a1cfad251b08"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/clazz/ExprClassStaticMethod.java"
+  ],
+  "javaExecutions": [
+    "ExprClassStaticMethodLocal{soda=false}",
+    "ExprClassStaticMethodLocal{soda=true}",
+    "ExprClassStaticMethodCreate{soda=false}",
+    "ExprClassStaticMethodCreate{soda=true}",
+    "ExprClassStaticMethodLocalFAFQuery",
+    "ExprClassStaticMethodCreateFAFQuery",
+    "ExprClassStaticMethodLocalAndCreateClassTogether",
+    "ExprClassDocSamples",
+    "ExprClassInvalidCompile",
+    "ExprClassStaticMethodCreateClassWithPackageName",
+    "ExprClassStaticMethodLocalWithPackageName"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-static-method",
+    "steps": [
+      {
+        "op": "case",
+        "case": "local"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "create"
+      },
+      {
+        "op": "deploy",
+        "statement": "create-class"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "local-faf"
+      },
+      {
+        "op": "deploy",
+        "statement": "window"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "s0"
+      },
+      {
+        "op": "faf",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "create-faf"
+      },
+      {
+        "op": "deploy",
+        "statement": "window"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "s0"
+      },
+      {
+        "op": "faf",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "local-and-create"
+      },
+      {
+        "op": "deploy",
+        "statement": "classes"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "doc-samples"
+      },
+      {
+        "op": "case",
+        "case": "invalid-compile-valid"
+      },
+      {
+        "op": "case",
+        "case": "package-create"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "package-local"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-static-method",
+    "records": [
+      {
+        "case": "local",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|E1|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "local",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|E2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|E1|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|E2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "local-faf",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 1,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "\u003eE1\u003c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "local-faf",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 2,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "\u003eE1\u003c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create-faf",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 1,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create-faf",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 2,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "local-and-create",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|bubba|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "package-create",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E11"
+            }
+          }
+        ]
+      },
+      {
+        "case": "package-local",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "test"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "expr-class-static-method",
+    "records": [
+      {
+        "case": "local",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|E1|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "local",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|E2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|E1|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|E2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "local-faf",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 1,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "\u003eE1\u003c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "local-faf",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 2,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "\u003eE1\u003c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create-faf",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 1,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create-faf",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 2,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "local-and-create",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "|bubba|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "package-create",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E11"
+            }
+          }
+        ]
+      },
+      {
+        "case": "package-local",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "test"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

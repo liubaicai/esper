@@ -31,39 +31,47 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-08-21
-- Baseline: `HEAD` == `origin/master` == `7fd4f42dd` (`resultset: verify
-  rollup dimensionality parity (Draft 4.226)` pushed).
-- Current work unit: `resultset.aggregate-dimensional`,
-  rollup-dimensionality cube slice — two executions (UnboundCubeUnenclosed,
-  UnboundCube4Dim) extending the scenario to fourteen cases; one shared-core
-  fix (`cubeGroupingSets` enumeration bit order).
+- Updated: 2026-08-24
+- Baseline: `HEAD` == `origin/master` == `23a0b3f2d` (`event: drop dead
+  helpers in fragment runner (4.247 review fix)` pushed). Draft 4.248 edits
+  are limited to the static-method work-unit files; three pre-existing
+  `infra-*`/`resultset-*` scenario inputs are N+1 prefetched assets and remain
+  excluded.
+- Current work unit: `client.extend.inlined-class`, ExprClassStaticMethod
+  observable static-call slice — 11 runtime IDs across nine replay cases;
+  two Java-infrastructure-only executions remain approved differences.
 - Frozen Java contract (fixed commit
   `9e1b9f1cc9117fea4bf33ab043762c045d73839c`):
-  - BoundRollup2Dim (`java-runtime-3b6467afa76b0966c475`):
-    length(3) + rollup(theString,intPrimitive) over SupportBean; 11 rounds
-    with window-expiry empty-group rows (key retained + sum=null).
-  - UnboundRollup2DimBatchWindow (`java-runtime-274b66386ba625a8b24c`):
-    length_batch(4) + irstream; two flushes each producing 6 new rows and
-    6 old rows (old = previous aggregate snapshot (first flush empty so sums are null; second flush carries evicted batch actual sums)).
-- Differential scope: `rollup-dimensionality` scenario extended to fourteen
-  cases; Go runner gains cube branches over the same bean; shared-core fix:
-  `cubeGroupingSets` enumerates dim0-highest-bit descending to match Esper
-  canonical row order (existing esper tests green); four new trace
-  mutations.
-- Allowed files: `internal/app/parity/subselect_filtered.go`,
-  `internal/app/parity/run_test.go`,
-  `tools/java-oracle/EPLSubselectFilteredScenarioOracle.java` +
-  `tools/java-oracle/run-subselect-filtered.sh` (worker/primary fix),
-  `testdata/parity/subselect-filtered.json`, regenerated trace/evidence, and
-  primary-owned `PLANS.md`, manifest, roadmap, CHANGELOG, README.
-- Forbidden: changes under `/root/app/esper`, `goal.txt`, other
-  `internal/esper` production semantics beyond the frozen
-  cubeGroupingSets enumeration-order fix, hand-authored generated
-  trace/evidence.
-- Targeted validation: pinned Java oracle runner, filtered diff/mutation
-  tests, `go test ./internal/compat ./internal/app/manifest -count=1`, full
-  local gates, independent review.
+  - Listener parity: local and path-created `MyClass.doIt(String)` cover both
+    SODA flags (ordinals 0–3); local-and-created cross-class call (7); package
+    two-argument and local no-argument calls (10, 12). Each emits new-only
+    `c0` rows in source order.
+  - FAF parity: local class in query (5) returns `>E1<` twice; path-created
+    class (6) returns `abc` twice. Both read a `MyWindow#keepall` filled by an
+    on-event merge and trace `faf` records with per-case sequence.
+  - Compile-only success: doc samples (8) and empty-class valid branch (9)
+    emit no records. `CreateCompileVsRuntime` (4; deployed class precedence)
+    and compiler inspection hook (11), plus Janino-only invalid wording, are
+    intentionally different: Go has no runtime Java compilation, compiled
+    class artifact, or inspection callback.
+- Completed differential scope: `expr-class-static-method` Java oracle/scenario
+  and typed Go replay generated 11 Java and 11 Go records with 0 differences.
+  `TestRunExprClassStaticMethodDiffWritesPassingEvidence` passes; six trace
+  mutations reject listener value/order, local/created FAF, cross-class
+  dependency, and package-qualified call drift; two scenario mutations reject
+  deploy label/count drift. Java compile-only plans execute eagerly without
+  trace records. Manifest records `case.expr-class-static-method` plus the 11
+  DV IDs; `client.extend.inlined-class` now carries both the differential-
+  verified slice and its approved JVM-only differences.
+- Allowed files: `internal/app/parity/expr_class_static_method.go`, run-mode
+  wiring and tests; `tools/java-oracle/ExprClassStaticMethodScenarioOracle.java`
+  and its runner; `testdata/parity/expr-class-static-method.{json,trace.json,
+  evidence.json}`; primary-owned `PLANS.md`, manifest, roadmap, CHANGELOG.
+- Forbidden: `/root/app/esper`, prefetched `infra-*`/`resultset-*` assets,
+  unrelated production semantics, hand-authored generated trace/evidence.
+- Validation completed: the pinned Java runner regenerated `testdata/parity/expr-class-static-method.trace.json`; the differential replay regenerated passing evidence with 11 Java records, 11 Go records, 11 runtime IDs, and 0 differences. Targeted parity and compat tests, `go vet ./...`, full `go test ./... -count=1 -timeout 240s`, `make check-layout`, and `git diff --check` passed.
+- Independent reviewer `ECSMParityReview` returned APPROVE with no findings. The three untracked `infra-*`/`resultset-*` scenario/oracle assets are the explicitly prefetched N+1 work unit and remain outside this commit.
+- Next action: commit only the ExprClassStaticMethod work-unit files and push `master`; verify the remote ref read-only.
 
 ## Delegation checkpoint
 
@@ -137,6 +145,16 @@ activity or a single coverage percentage.
   isolated) authored the Java oracle extension on the frozen scenario
   contract while the primary agent wrote the shared engine fix, Go runner,
   scenario, and tests. File ownership was disjoint.
+- ExprClassStaticMethod unit agents: `ECSMJavaScout` (java-oracle-scout) and
+  `ECSMGoScout` (scout) ran concurrently before implementation. They froze
+  the 13-ordinal source contract and confirmed that 11 observable runtime IDs
+  map to existing typed `Func0`/`Func1`/`Func2`, `DefineExpression`,
+  `ExpressionRef`, named-window, and FAF surfaces without shared-runtime
+  changes; ordinals 4 and 11 plus Janino error wording are real approved
+  differences. `ECSMAssetWriter` (parity-asset-worker) authored only the
+  oracle, runner script, and scenario on the frozen contract; primary owns Go
+  runner, generated trace/evidence, tests, central facts, validation, review,
+  commit, and push. File ownership is disjoint.
 - Cast Dates repair review: `CastDatesReview-2`, APPROVED after canonical
   metadata/evidence alignment; repair commit `c29aab39f` pushed.
 - Primary agent owns shared semantics, parity assets, generated trace/evidence,
