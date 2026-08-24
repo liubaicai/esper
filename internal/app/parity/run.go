@@ -1839,6 +1839,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "infra-table-insert-into" || *mode == "infra-table-insert-into-diff" {
+		trace, err := runInfraTableInsertIntoScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-insert-into-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableInsertIntoJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableInsertIntoJavaSources),
+				splitMetadata(*javaExecutions, infraTableInsertIntoJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "infra-nwtable-faf-join" || *mode == "infra-nwtable-faf-join-diff" {
 		trace, err := runInfraNwTableFafJoinScenario(context.Background(), scenario)
 		if err != nil {

@@ -16157,3 +16157,130 @@ func TestRunInfraNamedWindowJoinDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunInfraTableInsertIntoDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-insert-into.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "infra-table-insert-into.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-insert-into.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "infra-table-insert-into-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunInfraTableInsertIntoDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "insert-delete-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["c0"] = 999
+			},
+		},
+		{
+			name: "insert-delete-compound-key-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[1].Fields["pkey0"] = "E9"
+			},
+		},
+		{
+			name: "insert-delete-drained-snapshot-refilled",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New = trace.Records[4].New
+			},
+		},
+		{
+			name: "unkeyed-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New = nil
+			},
+		},
+		{
+			name: "unkeyed-violation-message-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].Value = "table row already exists"
+			},
+		},
+		{
+			name: "unkeyed-violation-suppressed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].Value = "<no-error>"
+			},
+		},
+		{
+			name: "wildcard-map-column-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[14].New[0].Fields["p1"] = "z"
+			},
+		},
+		{
+			name: "keyed-aggregate-accumulation-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[18].New[0].Fields["thesum"] = 999
+			},
+		},
+		{
+			name: "keyed-merge-created-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[19].New = trace.Records[19].New[:3]
+			},
+		},
+		{
+			name: "snapshot-time-boundary-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-insert-into.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "infra-table-insert-into.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-insert-into.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "infra-table-insert-into-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}

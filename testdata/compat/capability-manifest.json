@@ -1327,7 +1327,7 @@
     "mapped/nested property assignment beyond direct Map/ObjectArray composite columns",
     "representation-specific conversion and metadata",
     "split-stream and complete on-trigger action ordering matrix",
-    "remaining Java on-trigger cases outside the mapped InfraNamedWindowOnMerge and selected InfraNWTableOnMerge slices",
+    "remaining Java on-trigger cases outside the mapped InfraNamedWindowOnMerge, selected InfraNWTableOnMerge and InfraTableInsertInto slices",
     "persistence"
    ],
    "verification": [
@@ -1339,7 +1339,12 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-62b4f6edf3c24229e8ac",
     "java-runtime-3707b3fa08171bbd791c",
-    "java-runtime-d00485a2855b2128289f"
+    "java-runtime-d00485a2855b2128289f",
+    "java-runtime-185fe3d8699570122804",
+    "java-runtime-6ee6e846c37d6ad8b769",
+    "java-runtime-e8d546810d8419632df9",
+    "java-runtime-ded301fd8afee9d9cfbd",
+    "java-runtime-fa61d002dc3374573126"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -33917,6 +33922,57 @@
     "java-runtime-09ca3e1b6ac4f52b0b7e",
     "java-runtime-2a245ed9721b6b840746"
    ]
+  },
+  {
+   "id": "case.infra-table-insert-into",
+   "javaRuntimeIds": [
+    "java-runtime-185fe3d8699570122804",
+    "java-runtime-6ee6e846c37d6ad8b769",
+    "java-runtime-e8d546810d8419632df9",
+    "java-runtime-ded301fd8afee9d9cfbd",
+    "java-runtime-fa61d002dc3374573126"
+   ],
+   "javaNames": [
+    "InfraInsertIntoAndDelete",
+    "InfraInsertIntoSameModuleUnkeyed",
+    "InfraInsertIntoTwoModulesUnkeyed",
+    "InfraInsertIntoWildcard",
+    "InfraInsertIntoSameModuleKeyed"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraTableInsertIntoDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "insert-into",
+    "on-delete",
+    "into-table",
+    "merge",
+    "unkeyed",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-insert-into.json",
+    "testdata/parity/infra-table-insert-into.trace.json",
+    "testdata/parity/infra-table-insert-into.evidence.json"
+   ],
+   "notes": [
+    "Five InfraTableInsertInto executions replayed through the shared scenario: compound-PK insert/delete cycle via table snapshots, unkeyed single-row tables in one and two modules with the pinned unique-index violation text, wildcard map insert (DEFAULT representation iteration; the other five representation loops are an approved infrastructure difference), and the keyed aggregate/on-insert/on-not-matched-merge module."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-185fe3d8699570122804",
+    "java-runtime-6ee6e846c37d6ad8b769",
+    "java-runtime-e8d546810d8419632df9",
+    "java-runtime-ded301fd8afee9d9cfbd",
+    "java-runtime-fa61d002dc3374573126"
+   ]
   }
  ],
  "mappings": [
@@ -36443,13 +36499,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-named-window-join"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-insert-into"
   }
  ],
  "summary": {
-  "inventoriedCases": 548,
-  "implementedCases": 546,
-  "differentialVerifiedCases": 159,
-  "differentialVerifiedRuntimeIds": 596,
+  "inventoriedCases": 549,
+  "implementedCases": 547,
+  "differentialVerifiedCases": 160,
+  "differentialVerifiedRuntimeIds": 601,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -36459,13 +36519,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3221,
-  "referencedJavaRuntimeIds": 3017,
+  "runtimeAssociationCount": 3226,
+  "referencedJavaRuntimeIds": 3022,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1119,
+  "unreferencedJavaRuntimeIds": 1114,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 548,
+  "totalCases": 549,
   "totalCapabilities": 111
  }
 }

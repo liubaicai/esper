@@ -4,6 +4,25 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.252（2026-08-25），新增 `trigger.table-named-window` 的
+> `infra-table-insert-into` differential-verified 场景，对照固定 Java
+> InfraTableInsertInto.java（infra/tbl/）的 InfraInsertIntoAndDelete、
+> InfraInsertIntoSameModuleUnkeyed、InfraInsertIntoTwoModulesUnkeyed、
+> InfraInsertIntoWildcard 与 InfraInsertIntoSameModuleKeyed 共 5 个
+> runtime。场景 Java/Go 各 20 条 records、0 differences：复合主键表的
+> insert/delete/reinsert 循环以建表语句迭代器快照观察（含两次删除后的
+> 空表位置），单/双模块 unkeyed 单行表以 send-error 记录固定编译器的
+> "Unique index violation, table 'MyTableIIU' is a declared to hold a
+> single un-keyed row" 原文（oracle 侧镜像 pinned runner 的 rethrow
+> exception handler；Go 侧 unkeyed 表 insert-only 重复插入对齐同一
+> 文案），wildcard map 插入为 pinned 六表示循环的 DEFAULT 迭代子集
+> （已登记基础设施差异），keyed 表覆盖 into-table 分组聚合、on-insert
+> 建行与 on-merge not-matched 建行。runner 采用 variables-onset 式
+> 自定义步骤循环（deploy 隐含于 case 装配、send-error 记录裸消息、
+> snapshot 经 FromTable fire-and-forget 计划）。manifest 更新为 549
+> cases、160 个 differential-verified case、601 个 differential runtime
+> IDs、3226 条 associations（referenced 3022）。
+>
 > 最新补充：Draft 4.251（2026-08-25），完成 `infra.namedwindow.views` 的
 > `infra-named-window-join` 场景收口：新增 InfraNamedWindowJoin.java 的
 > InfraUnidirectional（java-runtime-98c12887d1e25c26c101）、

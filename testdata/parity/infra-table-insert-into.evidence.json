@@ -1,0 +1,952 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-185fe3d8699570122804",
+    "java-runtime-6ee6e846c37d6ad8b769",
+    "java-runtime-e8d546810d8419632df9",
+    "java-runtime-ded301fd8afee9d9cfbd",
+    "java-runtime-fa61d002dc3374573126"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableInsertInto.java"
+  ],
+  "javaExecutions": [
+    "InfraInsertIntoAndDelete",
+    "InfraInsertIntoSameModuleUnkeyed",
+    "InfraInsertIntoTwoModulesUnkeyed",
+    "InfraInsertIntoWildcard",
+    "InfraInsertIntoSameModuleKeyed"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-insert-into",
+    "steps": [
+      {
+        "op": "case",
+        "case": "insert-delete"
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11,
+          "longPrimitive": 101
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 200
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 11,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 12,
+          "longPrimitive": 102
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 21,
+          "longPrimitive": 201
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "case",
+        "case": "same-module-unkeyed"
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "case",
+        "case": "two-modules-unkeyed"
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send-error",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "wildcard-map"
+      },
+      {
+        "op": "send",
+        "eventType": "MySchema",
+        "payload": {
+          "p0": "a",
+          "p1": "b"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "case",
+        "case": "same-module-keyed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 11,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0,
+          "p10": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 0,
+          "p20": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 4,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-insert-into",
+    "records": [
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 101,
+              "pkey0": "E1",
+              "pkey1": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 101,
+              "pkey0": "E1",
+              "pkey1": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E2",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 102,
+              "pkey0": "E1",
+              "pkey1": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 201,
+              "pkey0": "E2",
+              "pkey1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "same-module-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-modules-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "two-modules-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-modules-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-modules-unkeyed",
+        "operation": "send-error",
+        "statement": "SupportBean",
+        "sequence": 0,
+        "value": "Unique index violation, table 'MyTableIIU' is a declared to hold a single un-keyed row"
+      },
+      {
+        "case": "wildcard-map",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "thesum": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "thesum": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "thesum": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "thesum": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E4",
+              "thesum": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-insert-into",
+    "records": [
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 101,
+              "pkey0": "E1",
+              "pkey1": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 101,
+              "pkey0": "E1",
+              "pkey1": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E2",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insert-delete",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 102,
+              "pkey0": "E1",
+              "pkey1": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 201,
+              "pkey0": "E2",
+              "pkey1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "same-module-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-modules-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "two-modules-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-modules-unkeyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-modules-unkeyed",
+        "operation": "send-error",
+        "statement": "SupportBean",
+        "sequence": 0,
+        "value": "Unique index violation, table 'MyTableIIU' is a declared to hold a single un-keyed row"
+      },
+      {
+        "case": "wildcard-map",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "thesum": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "thesum": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "same-module-keyed",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "thesum": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "thesum": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "thesum": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E4",
+              "thesum": 4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

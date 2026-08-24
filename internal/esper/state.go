@@ -1371,6 +1371,13 @@ func (s *tableState) upsert(values map[string]any, insertOnly bool, allocateIden
 		return TableRow{}, err
 	}
 	if _, exists := s.rows[rowKey]; exists && insertOnly {
+		if len(s.def.primaryKey) == 0 {
+			// An unkeyed table declares a single row; the pinned engine
+			// rejects a second insert with its unique-index wording
+			// (TableInstanceUngroupedImpl.addEvent), grammar verbatim.
+			return TableRow{}, NewError(ErrorState, fmt.Sprintf(
+				"Unique index violation, table '%s' is a declared to hold a single un-keyed row", s.def.name))
+		}
 		return TableRow{}, NewError(ErrorState, "table row already exists")
 	}
 	row := TableRow{values: converted, version: s.version + 1}

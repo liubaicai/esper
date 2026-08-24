@@ -1,3 +1,19 @@
+> 最新补充：Draft 4.252（2026-08-25），新增 `infra-table-insert-into`
+> differential-verified 场景：InfraTableInsertInto.java 的
+> InfraInsertIntoAndDelete、InfraInsertIntoSameModuleUnkeyed、
+> InfraInsertIntoTwoModulesUnkeyed、InfraInsertIntoWildcard 与
+> InfraInsertIntoSameModuleKeyed 共 5 个 runtime。场景 Java/Go 各 20 条
+> records、0 differences。覆盖复合主键表 insert/delete/reinsert 循环的
+> 建表迭代器快照、单/双模块 unkeyed 单行表与固定编译器的
+> "Unique index violation, table 'MyTableIIU' is a declared to hold a
+> single un-keyed row" 原文（oracle 镜像 pinned runner 的 rethrow
+> handler，Go 侧 unkeyed 表 insert-only 重复插入对齐同一文案）、
+> wildcard map 插入（DEFAULT 表示迭代子集，其余五表示为已登记基础
+> 设施差异）以及 keyed 表的 into-table 分组聚合、on-insert 与
+> on-merge not-matched 建行。manifest 更新为 549 cases、160 个
+> differential-verified case、601 个 differential runtime IDs、3226 条
+> associations（referenced 3022）。
+>
 > 最新补充：Draft 4.251（2026-08-25），`infra-named-window-join` 场景收口至
 > 14 cases：新增 InfraNamedWindowJoin.java 的 InfraUnidirectional、
 > InfraWindowUnidirectionalJoin 与 InfraInnerJoinLateStart（按

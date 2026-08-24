@@ -31,69 +31,83 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-08-24
-- Current work unit (Draft 4.251): `infra.namedwindow.join` executions 7-9 of
-  fixed `InfraNamedWindowJoin.java`, the unidirectional family. Runtime IDs:
-  InfraUnidirectional `java-runtime-98c12887d1e25c26c101`,
-  InfraWindowUnidirectionalJoin `java-runtime-09ca3e1b6ac4f52b0b7e`,
-  InfraInnerJoinLateStart `java-runtime-2a245ed9721b6b840746`.
-- Frozen Java contract (scouts `NWJ3JavaContract` + `NWJ3GoSurface`, plus
-  primary scratch probes of both unidirectional shapes, since deleted):
-  - Exec 7 "unidirectional": one module (create window MyWindowU#keepall
-    select * from SupportBean; insert; `@name('select') select w.* from
-    MyWindowU w unidirectional, SupportBean_A#lastevent s where s.id =
-    w.theString`). Sends SB(E1,1), A(E1), A(E2), SB(E2,1). Exactly ONE new
-    listener row whose surface is the full 20-property SupportBean
-    (charPrimitive renders as "\u0000" string, primitives default, boxed and
-    enumValue null). A-side arrivals never emit even on where-match.
-  - Exec 8 "window-unidirectional-join": one module (create window
-    MyWindowWUJ#keepall as SupportBean; insert; on SupportBean_S1 s1 delete
-    from MyWindowWUJ where s1.p10 = theString; `@name('s0') select
-    window(win.*) as c0, window(win.*).where(v => v.intPrimitive < 2) as c1,
-    window(win.*).toMap(k=>k.theString,v=>v.intPrimitive) as c2 from
-    SupportBean_S0 as s0 unidirectional, MyWindowWUJ as win`). Send vector
-    SB(E0,0),SB(E1,1),S0(10),SB(E2,2),S0(10),S1(11,E1),S0(12),S1(13,E0),
-    S0(14),S1(15,E2),S0(16) yields FOUR records (c0 full window, c1 filtered
-    intPrimitive<2 with an empty-array case, c2 sorted-key map; final S0
-    emits nothing), then three compile-only window(win.*) deploys (plain,
-    join, subquery forms) that emit zero records.
-  - Exec 9 "inner-join-late-start-*": per representation OBJECTARRAY, MAP,
-    JSON, JSONCLASSPROVIDED, DEFAULT one case each (identical deploys
-    schema/window/insert-product/portfolio-window/insert-portfolio/query2,
-    seven sends P(A,1),P(B,2),F(A),F(B),F(C),P(C,3),F(C), exactly two new
-    rows productB/size 2 and productC/size 3). AVRO representation is an
-    approved infrastructure difference: the underlying-class matrix is
-    harness-internal and the oracle lane has no Avro precedent.
-  - Protocol decisions frozen before first run: the oracle renders
-    window(win.*) elements (raw SupportBean underlyings) row-shaped via the
-    registered event type, consistent with its EventBean branch — toString
-    fallback is not implementable on the Go side; the Go runner adapts c2 map
-    columns to the oracle's row-shaped sorted-key Map rendering via a
-    per-mode trace normalizer (the shared compat normalizer stays untouched;
-    104 checked-in evidences pin its plain-object map rendering).
-- Progress: asset writer `NWJ3AssetWriter` delivered the oracle/scenario
-  extension; primary review fixed its send-path payload coercion (Product/
-  Portfolio positional arrays), and the pinned-compiler duplicate generated
-  JSON underlying class forced two harness adaptations documented in the
-  oracle header: the plain-json case compiles its five population statements
-  as one module (single pathable) and the runner script forks one JVM per
-  case, merging records in scenario order (zero-padded). Primary runner lane
-  added the seven case builders (unidirectional whole-row projection,
-  window-unidirectional-join via JoinStream.Aggregate +
-  WindowValues/EnumWhere/EnumToMap with embedded one-module setup and
-  compile-only trio, five representation cases via the faf-join pattern),
-  the per-mode map-column row normalizer, and extended the mutation suite to
-  22. Pinned Java trace regenerated: 75 records; differential evidence
-  passing 75/75 records, 0 differences. Manifest extended to 10 DV runtime
-- Review: `NWJ3ParityReview` initial pass found one P1 (the per-mode
-  normalizer's array branch re-enveloped producer rows inside c0/c1 arrays,
-  symmetrically mangling the stored evidence) and one conditioned P3. Fix:
-  the array branch treats kind=="row" items as opaque; trace/evidence
-  regenerated through the pinned oracle + fixed adapter. Follow-up verdict
-  PASS: evidence matches producer output modulo the pre-established omitempty
-  empty-array convention, all 22 mutations reject, runtime IDs bound
-  correctly.
+- Updated: 2026-08-25
+- Baseline: `HEAD` == `origin/master`; the previous unit (Draft 4.251,
+  InfraNamedWindowJoin executions 7-9, commit `a8f2b0c1e`) is pushed. The six
+  untracked `infra-table-insert-into` / `resultset-orderby-row-per-group`
+  files are prefetch assets and remain outside commits until their units are
+  selected.
+- Current work unit (N+1, Draft 4.252): `infra.namedwindow.views` /
+  `infra-table-insert-into`, five executions of fixed
+  `InfraTableInsertInto.java` carried by the prefetched oracle
+  `tools/java-oracle/InfraTableInsertIntoScenarioOracle.java` + scenario
+  testdata/parity/infra-table-insert-into.json (cases insert-delete,
+  same-module-unkeyed, two-modules-unkeyed, wildcard-map, same-module-keyed;
+  runtime IDs 185fe3d8699570122804, 6ee6e846c37d6ad8b769, e8d546810d8419632df9,
+  + `TIIGoSurface` reports: the prefetched oracle/scenario are verified
+  drift-free against the pinned suite (infra/tbl/InfraTableInsertInto.java),
+  so this unit has NO asset-writer lane — serial exception recorded: every
+  write is primary-lane. Observable contract: 20 records (7 insert-delete
+  snapshots, 3 same-module-unkeyed, 4 two-modules-unkeyed incl. one
+  send-error, 1 wildcard-map DEFAULT-representation subset — disclosed
+  approved difference vs the pinned six-representation loop, 5
+  same-module-keyed); snapshot records iterate the create-table statement
+  with sorted property names and insertion-order rows; send-error carries the
+  bare root-cause message, which for the unkeyed duplicate insert is exactly
+  "Unique index violation, table 'MyTableIIU' is a declared to hold a single
+  un-keyed row" (pinned TableInstanceUngroupedImpl.java:53-54, grammar
+  verbatim).
+- Go contract: new runner internal/app/parity/infra_table_insert_into.go
+  (custom step loop per variables_onset/faf-scene-two precedent: deploy via
+  DeployPlans, send via typed decode, send-error recording the bare
+  *esper.Error message, snapshot via per-step FromTable fire-and-forget plans +
+  compat.NormalizeResults), dispatch + fixture tests per the
+  infra-named-window-join pattern. ONE shared-runtime change is authorized:
+  tableState.upsert insert-only duplicate on an UNKEYED table (no primary
+  key) produces the pinned message above; keyed duplicates keep the existing
+  message (no pinned observable depends on it).
+- Allowed files: internal/esper/state.go (the one message change),
+  internal/app/parity/infra_table_insert_into.go (new), run.go, run_test.go;
+  primary owns generated trace/evidence, manifest, roadmap, CHANGELOG, PLANS.
+- Forbidden: unrelated engine semantics, weakening the keyed duplicate
+  message. The prefetched oracle/scenario were verified drift-free against
+  the pinned suite, but the first differential surfaced two oracle harness
+  defects; the primary fixed them in place (documented in the oracle
+  Javadoc): listener hooks the pinned suite never attaches recorded
+  engine-internal generated names, and the plain runtime swallowed the
+  statement exception the pinned runner rethrows via
+  SupportExceptionHandlerFactoryRethrow.
+- Progress: primary implemented the unkeyed duplicate-insert message parity
+  (internal/esper/state.go) and the custom-step-loop runner, dispatch, and
+  10 mutations. The prefetched oracle needed two primary fixes surfaced by
+  the first differential run: it attached listeners the pinned suite never
+  attaches (recording engine-internal generated names on insert-into-table
+  rows) and its plain runtime swallowed the statement exception the pinned
+  runner rethrows — fixed by removing the listener hooks and mirroring the
+  pinned SupportExceptionHandlerFactoryRethrow wrapper. Pinned Java trace
+  regenerated: 20 records; differential evidence passing 20/20 records,
+  0 differences. Manifest extended with case.infra-table-insert-into (160
+  DV cases, 601 DV runtime IDs, 3226 associations, referenced 3022).
+- Review: `TIIParityReview` verdict PASS with one P3 (PLANS record-breakdown
+  arithmetic: 6 vs the actual 5 same-module-keyed records, plus a
+  "pre-built FAF plans" wording drift) — both fixed in this file; no code or
+  evidence changes required.
 - Next action: semantic commit and push.
+- Previous unit outcome (closed; Draft 4.251, commit `a8f2b0c1e`):
+  InfraNamedWindowJoin executions 7-9 differential-verified at 75/75 records,
+  0 differences; unidirectional w.* whole-row surface, window(win.*)
+  aggregate/filter/toMap forms, and five representation cases of
+  inner-join-late-start (AVRO approved difference); registered-underlying
+  oracle rendering protocol, plain-json population module grouping, per-case
+  JVM fork; review PASS after the normalizer double-envelope P1 fix.
+- Draft 4.251 unit agents: prefetch scouts `NWJ3JavaContract`
+  (java-oracle-scout) and `NWJ3GoSurface` (scout) ran concurrently before
+  implementation; asset writer `NWJ3AssetWriter` (parity-asset-worker)
+  authored the oracle/scenario extension (primary fixed its payload-coercion
+  defect and the pinned-compiler duplicate-class harness adaptations);
+  `NWJ3ParityReview` reviewed twice (initial P1 normalizer double-envelope
+  fixed, follow-up PASS). File ownership disjoint except primary-owned
+  review fixes.
 
 ## Delegation checkpoint
 

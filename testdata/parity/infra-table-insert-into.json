@@ -1,0 +1,305 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-table-insert-into",
+ "description": "InfraTableInsertInto insert-into-table family replaying five executions: compound-PK table fed by a SupportBean insert-into with composite-key on-SupportBean_S0 deletes across an insert/delete/reinsert cycle, unkeyed single-row tables filled once within one module and across two modules where the second insert is rejected by the unique-index violation recorded as a canonical send-error root-cause message, the map-representation subset of the wildcard copy inserting select * rows into a two-column table, and the keyed module combining primary-key routing, into-table sum(id) accumulation grouped by p00, on-insert creation from SupportBean_S1 and on-merge not-matched creation from SupportBean_S2",
+ "javaRuntimes": [
+  "java-runtime-185fe3d8699570122804",
+  "java-runtime-6ee6e846c37d6ad8b769",
+  "java-runtime-e8d546810d8419632df9",
+  "java-runtime-ded301fd8afee9d9cfbd",
+  "java-runtime-fa61d002dc3374573126"
+ ],
+ "cases": [
+  {
+   "case": "insert-delete",
+   "runtimeId": "java-runtime-185fe3d8699570122804"
+  },
+  {
+   "case": "same-module-unkeyed",
+   "runtimeId": "java-runtime-6ee6e846c37d6ad8b769"
+  },
+  {
+   "case": "two-modules-unkeyed",
+   "runtimeId": "java-runtime-e8d546810d8419632df9"
+  },
+  {
+   "case": "wildcard-map",
+   "runtimeId": "java-runtime-ded301fd8afee9d9cfbd"
+  },
+  {
+   "case": "same-module-keyed",
+   "runtimeId": "java-runtime-fa61d002dc3374573126"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "insert-delete"
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 101
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 200
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 20,
+    "p00": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 11,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 12,
+    "longPrimitive": 102
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 21,
+    "longPrimitive": 201
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "case",
+   "case": "same-module-unkeyed"
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "case",
+   "case": "two-modules-unkeyed"
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "send-error",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "wildcard-map"
+  },
+  {
+   "op": "send",
+   "eventType": "MySchema",
+   "payload": {
+    "p0": "a",
+    "p1": "b"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "case",
+   "case": "same-module-keyed"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 20,
+    "p00": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 11,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 0,
+    "p10": "E3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S2",
+   "payload": {
+    "id": 0,
+    "p20": "E4"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 3,
+    "p00": "E3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 4,
+    "p00": "E4"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create"
+  }
+ ]
+}
