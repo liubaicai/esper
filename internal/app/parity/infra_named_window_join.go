@@ -55,6 +55,60 @@ type infraNamedWindowJoinBeanA struct {
 	ID string `esper:"id"`
 }
 
+// infraNamedWindowJoinSupportBean mirrors the full pinned
+// com.espertech.esper.common.internal.support.SupportBean property surface.
+// Executions 7-8 project whole window rows (w.* and window(win.*)), so the
+// trace carries every property: primitives default, boxed pointers stay nil
+// for null, and charPrimitive mirrors the Java char default "\u0000".
+type infraNamedWindowJoinSupportBean struct {
+	TheString       string   `esper:"theString"`
+	BoolPrimitive   bool     `esper:"boolPrimitive"`
+	IntPrimitive    int      `esper:"intPrimitive"`
+	LongPrimitive   int64    `esper:"longPrimitive"`
+	CharPrimitive   string   `esper:"charPrimitive"`
+	ShortPrimitive  int16    `esper:"shortPrimitive"`
+	BytePrimitive   int8     `esper:"bytePrimitive"`
+	FloatPrimitive  float32  `esper:"floatPrimitive"`
+	DoublePrimitive float64  `esper:"doublePrimitive"`
+	BoolBoxed       *bool    `esper:"boolBoxed"`
+	IntBoxed        *int     `esper:"intBoxed"`
+	LongBoxed       *int64   `esper:"longBoxed"`
+	CharBoxed       *string  `esper:"charBoxed"`
+	ShortBoxed      *int16   `esper:"shortBoxed"`
+	ByteBoxed       *int8    `esper:"byteBoxed"`
+	FloatBoxed      *float32 `esper:"floatBoxed"`
+	DoubleBoxed     *float64 `esper:"doubleBoxed"`
+	BigDecimal      *float64 `esper:"bigDecimal"`
+	BigInteger      *int64   `esper:"bigInteger"`
+	EnumValue       *string  `esper:"enumValue"`
+}
+
+type infraNamedWindowJoinS0 struct {
+	ID  int    `esper:"id"`
+	P00 string `esper:"p00"`
+	P01 string `esper:"p01"`
+	P02 string `esper:"p02"`
+	P03 string `esper:"p03"`
+}
+
+type infraNamedWindowJoinS1 struct {
+	ID  int    `esper:"id"`
+	P10 string `esper:"p10"`
+	P11 string `esper:"p11"`
+	P12 string `esper:"p12"`
+	P13 string `esper:"p13"`
+}
+
+type infraNamedWindowJoinProduct struct {
+	Product string `esper:"product"`
+	Size    int    `esper:"size"`
+}
+
+type infraNamedWindowJoinPortfolio struct {
+	Portfolio string `esper:"portfolio"`
+	Product   string `esper:"product"`
+}
+
 const infraNamedWindowJoinJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 
 var infraNamedWindowJoinJavaSources = []string{
@@ -69,6 +123,9 @@ var infraNamedWindowJoinJavaRuntimeIDs = []string{
 	"java-runtime-342d46139a3313b382b7",
 	"java-runtime-8f4b0394ee32a5524464",
 	"java-runtime-e7320476230a3903e2ec",
+	"java-runtime-98c12887d1e25c26c101",
+	"java-runtime-09ca3e1b6ac4f52b0b7e",
+	"java-runtime-2a245ed9721b6b840746",
 }
 
 var infraNamedWindowJoinJavaExecutions = []string{
@@ -79,6 +136,9 @@ var infraNamedWindowJoinJavaExecutions = []string{
 	"InfraJoinBetweenNamed",
 	"InfraJoinBetweenSameNamed",
 	"InfraJoinSingleInsertOneWindow",
+	"InfraUnidirectional",
+	"InfraWindowUnidirectionalJoin",
+	"InfraInnerJoinLateStart",
 }
 
 var infraNamedWindowJoinCases = []string{
@@ -89,10 +149,37 @@ var infraNamedWindowJoinCases = []string{
 	"between-named",
 	"between-same-named",
 	"single-insert-one-window",
+	"unidirectional",
+	"window-unidirectional-join",
+	"inner-join-late-start-objectarray",
+	"inner-join-late-start-map",
+	"inner-join-late-start-json",
+	"inner-join-late-start-jsonprovided",
+	"inner-join-late-start-default",
 }
 
-// runInfraNamedWindowJoinScenario replays seven named-window join executions
-// with independently isolated epoch-zero engine state. Index-choice recreates
+// infraNamedWindowJoinRepresentation returns the EventRepresentationChoice
+// variant a case replays; empty for the non-representation executions.
+func infraNamedWindowJoinRepresentation(caseName string) string {
+	switch caseName {
+	case "inner-join-late-start-objectarray":
+		return "objectarray"
+	case "inner-join-late-start-map":
+		return "map"
+	case "inner-join-late-start-json":
+		return "json"
+	case "inner-join-late-start-jsonprovided":
+		return "jsonprovided"
+	case "inner-join-late-start-default":
+		return "default"
+	default:
+		return ""
+	}
+}
+
+// runInfraNamedWindowJoinScenario replays ten named-window join executions
+// (fourteen cases; the representation execution expands to five cases) with
+// independently isolated epoch-zero engine state. Index-choice recreates
 // its same-named window between five combinations, so each combination uses a
 // fresh Environment as the typed catalog deliberately has no unregister API.
 func runInfraNamedWindowJoinScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
@@ -205,7 +292,7 @@ func runInfraNamedWindowJoinReplayCase(ctx context.Context, scenario compat.Scen
 		return compat.Trace{}, err
 	}
 	return compat.ReplayWithStatementsAndHandlers(ctx, engine, anchor, scenario,
-		decodeInfraNamedWindowJoinPayload,
+		state.decodePayload,
 		state.resolve,
 		map[string]compat.StepHandler{
 			"deploy":       state.deploy,
@@ -215,13 +302,78 @@ func runInfraNamedWindowJoinReplayCase(ctx context.Context, scenario compat.Scen
 	)
 }
 
+// decodePayload decodes scenario payloads for the case's event surface.
+// Representation cases deliver Product/Portfolio events in the case's
+// representation; the unidirectional cases mirror the full SupportBean
+// surface whose charPrimitive defaults to the Java char zero.
+func (s *infraNamedWindowJoinReplayState) decodePayload(step compat.Step) (any, error) {
+	switch step.EventType {
+	case "SupportBean":
+		if s.caseName == "unidirectional" || s.caseName == "window-unidirectional-join" {
+			var value infraNamedWindowJoinSupportBean
+			if err := json.Unmarshal(step.Payload, &value); err != nil {
+				return nil, fmt.Errorf("decode SupportBean: %w", err)
+			}
+			value.CharPrimitive = "\u0000"
+			return value, nil
+		}
+		var value infraNamedWindowJoinBean
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean: %w", err)
+		}
+		return value, nil
+	case "SupportBean_S0":
+		var value infraNamedWindowJoinS0
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean_S0: %w", err)
+		}
+		return value, nil
+	case "SupportBean_S1":
+		var value infraNamedWindowJoinS1
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean_S1: %w", err)
+		}
+		return value, nil
+	case "Product", "Portfolio":
+		rep := infraNamedWindowJoinRepresentation(s.caseName)
+		if rep == "objectarray" {
+			// The scenario carries positional values in schema declaration
+			// order, mirroring the pinned sendEventObjectArray helper.
+			var ordered []any
+			if err := json.Unmarshal(step.Payload, &ordered); err != nil {
+				return nil, fmt.Errorf("decode %s: %w", step.EventType, err)
+			}
+			for index, value := range ordered {
+				if number, ok := value.(float64); ok {
+					ordered[index] = int(number)
+				}
+			}
+			return ordered, nil
+		}
+		var fields map[string]any
+		if err := json.Unmarshal(step.Payload, &fields); err != nil {
+			return nil, fmt.Errorf("decode %s: %w", step.EventType, err)
+		}
+		typed := make(map[string]any, len(fields))
+		for name, value := range fields {
+			if number, ok := value.(float64); ok {
+				typed[name] = int(number)
+				continue
+			}
+			typed[name] = value
+		}
+		return typed, nil
+	default:
+		return decodeInfraNamedWindowJoinPayload(step)
+	}
+}
+
 func registerInfraNamedWindowJoinAnchor(env *esper.Environment) error {
 	_, err := esper.RegisterMap(env, infraNamedWindowJoinAnchorEvent, []esper.FieldSpec{
 		esper.FieldDef("unused", reflect.TypeOf("")),
 	})
 	return err
 }
-
 func registerInfraNamedWindowJoinCase(env *esper.Environment, caseName string) error {
 	switch caseName {
 	case "index-choice":
@@ -238,22 +390,17 @@ func registerInfraNamedWindowJoinCase(env *esper.Environment, caseName string) e
 		if _, err := esper.RegisterStruct[infraNamedWindowJoinQueueEnter](env, "SupportQueueEnter"); err != nil {
 			return err
 		}
-	case "full-outer-named-agg-late-start":
+	case "full-outer-named-agg-late-start", "named-and-stream":
 		if _, err := esper.RegisterStruct[infraNamedWindowJoinBean](env, "SupportBean"); err != nil {
 			return err
 		}
 		if _, err := esper.RegisterStruct[infraNamedWindowJoinMarket](env, "SupportMarketDataBean"); err != nil {
 			return err
 		}
-	case "named-and-stream":
-		if _, err := esper.RegisterStruct[infraNamedWindowJoinBean](env, "SupportBean"); err != nil {
-			return err
-		}
-		if _, err := esper.RegisterStruct[infraNamedWindowJoinMarket](env, "SupportMarketDataBean"); err != nil {
-			return err
-		}
-		if _, err := esper.RegisterStruct[infraNamedWindowJoinBeanA](env, "SupportBean_A"); err != nil {
-			return err
+		if caseName == "named-and-stream" {
+			if _, err := esper.RegisterStruct[infraNamedWindowJoinBeanA](env, "SupportBean_A"); err != nil {
+				return err
+			}
 		}
 	case "between-named", "between-same-named", "single-insert-one-window":
 		if _, err := esper.RegisterStruct[infraNamedWindowJoinBean](env, "SupportBean"); err != nil {
@@ -265,10 +412,64 @@ func registerInfraNamedWindowJoinCase(env *esper.Environment, caseName string) e
 		if _, err := esper.RegisterStruct[infraNamedWindowJoinBeanA](env, "SupportBean_A"); err != nil {
 			return err
 		}
+	case "unidirectional", "window-unidirectional-join":
+		if _, err := esper.RegisterStruct[infraNamedWindowJoinSupportBean](env, "SupportBean"); err != nil {
+			return err
+		}
+		if _, err := esper.RegisterStruct[infraNamedWindowJoinBeanA](env, "SupportBean_A"); err != nil {
+			return err
+		}
+		if caseName == "window-unidirectional-join" {
+			if _, err := esper.RegisterStruct[infraNamedWindowJoinS0](env, "SupportBean_S0"); err != nil {
+				return err
+			}
+			if _, err := esper.RegisterStruct[infraNamedWindowJoinS1](env, "SupportBean_S1"); err != nil {
+				return err
+			}
+		}
+	case "inner-join-late-start-objectarray", "inner-join-late-start-map", "inner-join-late-start-json", "inner-join-late-start-jsonprovided", "inner-join-late-start-default":
+		if err := registerInfraNamedWindowJoinRepresentationSchemas(env, infraNamedWindowJoinRepresentation(caseName)); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unsupported infra named-window join case %q", caseName)
 	}
 	return nil
+}
+
+// registerInfraNamedWindowJoinRepresentationSchemas registers Product and
+// Portfolio under the case's EventRepresentationChoice variant, mirroring the
+// pinned suite's representation matrix (AVRO is an approved infrastructure
+// difference for this lane).
+func registerInfraNamedWindowJoinRepresentationSchemas(env *esper.Environment, rep string) error {
+	productFields := []esper.FieldSpec{
+		esper.FieldDef("product", reflect.TypeOf("")),
+		esper.FieldDef("size", reflect.TypeOf(int(0))),
+	}
+	portfolioFields := []esper.FieldSpec{
+		esper.FieldDef("portfolio", reflect.TypeOf("")),
+		esper.FieldDef("product", reflect.TypeOf("")),
+	}
+	switch rep {
+	case "objectarray":
+		if _, err := esper.RegisterObjectArray(env, "Product", productFields); err != nil {
+			return err
+		}
+		_, err := esper.RegisterObjectArray(env, "Portfolio", portfolioFields)
+		return err
+	case "json", "jsonprovided":
+		if _, err := esper.RegisterJSON(env, "Product", productFields); err != nil {
+			return err
+		}
+		_, err := esper.RegisterJSON(env, "Portfolio", portfolioFields)
+		return err
+	default:
+		if _, err := esper.RegisterMap(env, "Product", productFields); err != nil {
+			return err
+		}
+		_, err := esper.RegisterMap(env, "Portfolio", portfolioFields)
+		return err
+	}
 }
 
 type infraNamedWindowJoinReplayState struct {
@@ -310,6 +511,12 @@ func (s *infraNamedWindowJoinReplayState) deploy(step compat.Step, attach func(*
 	if err != nil {
 		return nil, err
 	}
+	if len(plans) == 0 {
+		// Compile-only steps (the window(win.*) trio) and representation
+		// schema steps validate their Build during planning; the Java oracle
+		// deploys them but they emit zero records either way.
+		return nil, nil
+	}
 	deployment, err := s.engine.DeployPlans(s.ctx, plans)
 	if err != nil {
 		return nil, err
@@ -318,16 +525,51 @@ func (s *infraNamedWindowJoinReplayState) deploy(step compat.Step, attach func(*
 	for _, statement := range deployment.Statements() {
 		s.statements[statement.Name()] = statement
 	}
-	if step.Statement == "s0" || (step.Statement == "select" && s.caseName == "single-insert-one-window") {
-		statement, ok := deployment.Statement(step.Statement)
+	attachName := s.attachStatement(step.Statement)
+	if attachName != "" {
+		statement, ok := deployment.Statement(attachName)
 		if !ok {
-			return nil, fmt.Errorf("infra named-window join consumer %q statement is missing", step.Statement)
+			return nil, fmt.Errorf("infra named-window join consumer %q statement is missing", attachName)
 		}
 		if err := attach(statement); err != nil {
 			return nil, err
 		}
 	}
 	return nil, nil
+}
+
+// attachStatement resolves which statement of a deployment carries the
+// case's pinned listener. Executions 7-8 compile their consumer inside the
+// one-module setup deployment; every other consumer deploys as its own step.
+func (s *infraNamedWindowJoinReplayState) attachStatement(deployed string) string {
+	consumer := infraNamedWindowJoinConsumerStatement(s.caseName)
+	if consumer == "" {
+		return ""
+	}
+	if deployed == consumer || (consumer == "Query2" && deployed == "query2") {
+		return consumer
+	}
+	if deployed == "setup" && (s.caseName == "unidirectional" || s.caseName == "window-unidirectional-join") {
+		return consumer
+	}
+	return ""
+}
+
+// infraNamedWindowJoinConsumerStatement names the statement carrying the
+// case's pinned listener; empty for listener-less cases (full-outer select).
+func infraNamedWindowJoinConsumerStatement(caseName string) string {
+	switch caseName {
+	case "index-choice", "named-and-stream", "between-named", "between-same-named", "window-unidirectional-join":
+		return "s0"
+	case "unidirectional", "single-insert-one-window":
+		return "select"
+	case "inner-join-late-start-objectarray", "inner-join-late-start-map", "inner-join-late-start-json", "inner-join-late-start-jsonprovided", "inner-join-late-start-default":
+		// The pinned EPL names the consumer @Name("Query2"); the scenario
+		// deploy step key stays lowercase "query2".
+		return "Query2"
+	default:
+		return ""
+	}
 }
 
 func (s *infraNamedWindowJoinReplayState) undeploy(_ compat.Step, _ func(*esper.Statement) error) ([]compat.TraceRecord, error) {
@@ -384,6 +626,12 @@ func (s *infraNamedWindowJoinReplayState) plansFor(statement string) ([]esper.Pl
 		return s.betweenSameNamedPlans(statement)
 	case "single-insert-one-window":
 		return s.betweenNamedPlans("MyWindowJSIOne", "MyWindowJSITwo", "a1", "b1", "a2", "b2", "select", statement)
+	case "unidirectional":
+		return s.unidirectionalPlans(statement)
+	case "window-unidirectional-join":
+		return s.windowUnidirectionalJoinPlans(statement)
+	case "inner-join-late-start-objectarray", "inner-join-late-start-map", "inner-join-late-start-json", "inner-join-late-start-jsonprovided", "inner-join-late-start-default":
+		return s.innerJoinLateStartPlans(statement)
 	default:
 		return nil, fmt.Errorf("unsupported infra named-window join case %q", s.caseName)
 	}
@@ -743,6 +991,245 @@ func (s *infraNamedWindowJoinReplayState) emptyDeploymentPlan(name string) ([]es
 	return []esper.Plan{plan}, nil
 }
 
+// unidirectionalPlans mirrors InfraUnidirectional: a keepall window over the
+// full SupportBean surface fed by insert, joined unidirectionally (window
+// side drives) with SupportBean_A#lastevent on id = theString; the consumer
+// projects the whole w.* row surface as named columns.
+func (s *infraNamedWindowJoinReplayState) unidirectionalPlans(statement string) ([]esper.Plan, error) {
+	switch statement {
+	case "setup":
+		if _, err := s.env.RegisterNamedWindow("MyWindowU", infraNamedWindowJoinSupportBeanSchema("MyWindowU"), esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+			return nil, err
+		}
+		if _, ok := s.engine.NamedWindow("MyWindowU"); !ok {
+			return nil, fmt.Errorf("unidirectional window was not materialized")
+		}
+		createPlan, err := s.env.Build(esper.FromNamedWindow(s.env, "MyWindowU").CreateNamedWindowQuery(esper.StatementName("create-u")))
+		if err != nil {
+			return nil, err
+		}
+		insertPlan, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinSupportBean](s.env, "SupportBean")).
+			InsertIntoNamedWindow("MyWindowU", esper.CopyMatchingFields()).
+			Query(esper.StatementName("insert-u")))
+		if err != nil {
+			return nil, err
+		}
+		selectPlan, err := s.unidirectionalSelectPlan()
+		if err != nil {
+			return nil, err
+		}
+		// The pinned suite compiles create, insert and the consumer as ONE
+		// module; the scenario deploys them as the single setup step.
+		return []esper.Plan{createPlan, insertPlan, selectPlan}, nil
+	default:
+		return nil, fmt.Errorf("unknown unidirectional deployment %q", statement)
+	}
+}
+
+// unidirectionalSelectPlan builds the w.* consumer: the whole window-row
+// surface projected as named columns over the unidirectional window-side
+// driver joined to SupportBean_A#lastevent.
+func (s *infraNamedWindowJoinReplayState) unidirectionalSelectPlan() (esper.Plan, error) {
+	window := esper.FromNamedWindowAs[infraNamedWindowJoinSupportBean](s.env, "MyWindowU")
+	lastA := esper.From[infraNamedWindowJoinBeanA](s.env, "SupportBean_A").Window(esper.LastEvent())
+	return s.env.Build(esper.Join(window, lastA,
+		esper.OnEqual(
+			esper.Field[infraNamedWindowJoinSupportBean, string]("theString"),
+			esper.Field[infraNamedWindowJoinBeanA, string]("id"),
+		),
+	).Unidirectional(esper.JoinLeft).Select(
+		esper.SelectFrom(0, "theString", esper.JoinField[string](0, "theString")),
+		esper.SelectFrom(0, "boolPrimitive", esper.JoinField[bool](0, "boolPrimitive")),
+		esper.SelectFrom(0, "intPrimitive", esper.JoinField[int](0, "intPrimitive")),
+		esper.SelectFrom(0, "longPrimitive", esper.JoinField[int64](0, "longPrimitive")),
+		esper.SelectFrom(0, "charPrimitive", esper.JoinField[string](0, "charPrimitive")),
+		esper.SelectFrom(0, "shortPrimitive", esper.JoinField[int16](0, "shortPrimitive")),
+		esper.SelectFrom(0, "bytePrimitive", esper.JoinField[int8](0, "bytePrimitive")),
+		esper.SelectFrom(0, "floatPrimitive", esper.JoinField[float32](0, "floatPrimitive")),
+		esper.SelectFrom(0, "doublePrimitive", esper.JoinField[float64](0, "doublePrimitive")),
+		esper.SelectFrom(0, "boolBoxed", esper.JoinField[*bool](0, "boolBoxed")),
+		esper.SelectFrom(0, "intBoxed", esper.JoinField[*int](0, "intBoxed")),
+		esper.SelectFrom(0, "longBoxed", esper.JoinField[*int64](0, "longBoxed")),
+		esper.SelectFrom(0, "charBoxed", esper.JoinField[*string](0, "charBoxed")),
+		esper.SelectFrom(0, "shortBoxed", esper.JoinField[*int16](0, "shortBoxed")),
+		esper.SelectFrom(0, "byteBoxed", esper.JoinField[*int8](0, "byteBoxed")),
+		esper.SelectFrom(0, "floatBoxed", esper.JoinField[*float32](0, "floatBoxed")),
+		esper.SelectFrom(0, "doubleBoxed", esper.JoinField[*float64](0, "doubleBoxed")),
+		esper.SelectFrom(0, "bigDecimal", esper.JoinField[*float64](0, "bigDecimal")),
+		esper.SelectFrom(0, "bigInteger", esper.JoinField[*int64](0, "bigInteger")),
+		esper.SelectFrom(0, "enumValue", esper.JoinField[*string](0, "enumValue")),
+	).Query(esper.StatementName("select")))
+}
+
+// windowUnidirectionalJoinPlans mirrors InfraWindowUnidirectionalJoin: a
+// keepall window over the full SupportBean surface with an on-S1 delete, an
+// unconditioned unidirectional join whose aggregate projects window(win.*),
+// its filtered and toMap enumeration forms, and three compile-only
+// window(win.*) statements (plain, join, subquery) that emit no records.
+func (s *infraNamedWindowJoinReplayState) windowUnidirectionalJoinPlans(statement string) ([]esper.Plan, error) {
+	switch statement {
+	case "setup":
+		if _, err := s.env.RegisterNamedWindow("MyWindowWUJ", infraNamedWindowJoinSupportBeanSchema("MyWindowWUJ"), esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+			return nil, err
+		}
+		if _, ok := s.engine.NamedWindow("MyWindowWUJ"); !ok {
+			return nil, fmt.Errorf("window-unidirectional-join window was not materialized")
+		}
+		createPlan, err := s.env.Build(esper.FromNamedWindow(s.env, "MyWindowWUJ").CreateNamedWindowQuery(esper.StatementName("create-wuj")))
+		if err != nil {
+			return nil, err
+		}
+		insertPlan, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinSupportBean](s.env, "SupportBean")).
+			InsertIntoNamedWindow("MyWindowWUJ", esper.CopyMatchingFields()).
+			Query(esper.StatementName("insert-wuj")))
+		if err != nil {
+			return nil, err
+		}
+		deletePlan, err := s.env.Build(esper.OnEvent(esper.From[infraNamedWindowJoinS1](s.env, "SupportBean_S1")).
+			DeleteFromNamedWindow("MyWindowWUJ",
+				esper.Equal[string](esper.Field[infraNamedWindowJoinS1, string]("p10"), esper.NamedWindowField[string]("theString")),
+			).Query(esper.StatementName("delete-wuj")))
+		if err != nil {
+			return nil, err
+		}
+		s0Plan, err := s.windowUnidirectionalJoinS0Plan()
+		if err != nil {
+			return nil, err
+		}
+		// The pinned suite compiles create, insert, delete and the consumer
+		// as ONE module; the scenario deploys them as the single setup step.
+		return []esper.Plan{createPlan, insertPlan, deletePlan, s0Plan}, nil
+	case "compile-a", "compile-b", "compile-c":
+		var query esper.Query
+		switch statement {
+		case "compile-a":
+			// select window(win.*) from MyWindowWUJ as win
+			query = esper.FromNamedWindow(s.env, "MyWindowWUJ").Aggregate(
+				esper.Alias("window", esper.WindowEvents()),
+			).Query()
+		case "compile-b":
+			// select window(win.*) as c0 from SupportBean_S0#lastevent as s0, MyWindowWUJ as win
+			query = esper.Join(
+				esper.From[infraNamedWindowJoinS0](s.env, "SupportBean_S0").Window(esper.LastEvent()),
+				esper.FromNamedWindowAs[infraNamedWindowJoinSupportBean](s.env, "MyWindowWUJ"),
+			).Aggregate(
+				esper.Alias("c0", esper.WindowValues[esper.Event](esper.JoinEventValue[esper.Event](1))),
+			).Query()
+		default:
+			// select (select window(win.*) from MyWindowWUJ as win) from SupportBean_S0
+			query = esper.Select(
+				esper.From[infraNamedWindowJoinS0](s.env, "SupportBean_S0"),
+				esper.Alias("window", esper.SubqueryValue[[]esper.Event](
+					esper.FromNamedWindow(s.env, "MyWindowWUJ"),
+					esper.WindowEvents(),
+				)),
+			).Query()
+		}
+		if _, err := s.env.Build(query); err != nil {
+			return nil, err
+		}
+		// Compile-only proof: the plan is built but never deployed, so the
+		// deployment stack and the trace stay unaffected.
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("unknown window-unidirectional-join deployment %q", statement)
+	}
+}
+
+// over the unconditioned unidirectional join.
+func (s *infraNamedWindowJoinReplayState) windowUnidirectionalJoinS0Plan() (esper.Plan, error) {
+	win := esper.WindowValues[esper.Event](esper.JoinEventValue[esper.Event](1))
+	return s.env.Build(esper.Join(
+		esper.From[infraNamedWindowJoinS0](s.env, "SupportBean_S0"),
+		esper.FromNamedWindowAs[infraNamedWindowJoinSupportBean](s.env, "MyWindowWUJ"),
+	).Unidirectional(esper.JoinLeft).Aggregate(
+		esper.Alias("c0", win),
+		esper.Alias("c1", esper.EnumWhere[esper.Event](win, esper.Less[int](
+			esper.EnumField[esper.Event, int]("intPrimitive"),
+			esper.Literal(2),
+		))),
+		esper.Alias("c2", esper.EnumToMap[esper.Event, string, int](
+			win,
+			esper.EnumField[esper.Event, string]("theString"),
+			esper.EnumField[esper.Event, int]("intPrimitive"),
+		)),
+	).Query(esper.StatementName("s0")))
+}
+
+// innerJoinLateStartPlans mirrors InfraInnerJoinLateStart per representation:
+// Product/Portfolio keepall windows are populated before the unidirectional
+// PortfolioWin-driven join deploys late, so pre-existing rows still match.
+func (s *infraNamedWindowJoinReplayState) innerJoinLateStartPlans(statement string) ([]esper.Plan, error) {
+	switch statement {
+	case "schema":
+		// Schemas register at case setup; the deploy step mirrors the Java
+		// schema deployment and emits no records.
+		return nil, nil
+	case "window", "portfolio-window":
+		windowName := "ProductWin"
+		schemaName := "ProductWinSchema"
+		if statement == "portfolio-window" {
+			windowName = "PortfolioWin"
+			schemaName = "PortfolioWinSchema"
+		}
+		eventType := "Product"
+		if statement == "portfolio-window" {
+			eventType = "Portfolio"
+		}
+		schema, ok := s.env.Schema(eventType)
+		if !ok {
+			return nil, fmt.Errorf("inner-join-late-start event type %q is not registered", eventType)
+		}
+		if _, err := s.env.RegisterNamedWindow(windowName, schema, esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+			return nil, err
+		}
+		if _, ok := s.engine.NamedWindow(windowName); !ok {
+			return nil, fmt.Errorf("inner-join-late-start window %q was not materialized", windowName)
+		}
+		return s.emptyDeploymentPlan(schemaName)
+	case "insert-product", "insert-portfolio":
+		eventType := "Product"
+		windowName := "ProductWin"
+		if statement == "insert-portfolio" {
+			eventType = "Portfolio"
+			windowName = "PortfolioWin"
+		}
+		plan, err := s.env.Build(esper.OnRecord(esper.FromAny(s.env, eventType)).
+			InsertIntoNamedWindow(windowName, esper.CopyMatchingFields()).
+			Query(esper.StatementName(statement)))
+		if err != nil {
+			return nil, err
+		}
+		return []esper.Plan{plan}, nil
+	case "query2":
+		portfolio := esper.JoinRecordSource(esper.FromNamedWindow(s.env, "PortfolioWin")).Unidirectional()
+		product := esper.JoinRecordSource(esper.FromNamedWindow(s.env, "ProductWin"))
+		plan, err := s.env.Build(esper.JoinMany(portfolio, product).On(
+			esper.OnSourcesEqual(0, esper.JoinField[string](0, "product"), 1, esper.JoinField[string](1, "product")),
+		).Select(
+			esper.SelectFrom(0, "portfolio", esper.JoinField[string](0, "portfolio")),
+			esper.SelectFrom(1, "ProductWin.product", esper.JoinField[string](1, "product")),
+			esper.SelectFrom(1, "size", esper.JoinField[int](1, "size")),
+		).Query(esper.StatementName("Query2")))
+		if err != nil {
+			return nil, err
+		}
+		return []esper.Plan{plan}, nil
+	default:
+		return nil, fmt.Errorf("unknown inner-join-late-start deployment %q", statement)
+	}
+}
+
+// infraNamedWindowJoinSupportBeanSchema builds a named struct schema over the
+// full SupportBean mirror for whole-row named windows.
+func infraNamedWindowJoinSupportBeanSchema(name string) esper.Schema {
+	schema, err := esper.StructSchema[infraNamedWindowJoinSupportBean](name)
+	if err != nil {
+		panic(err)
+	}
+	return schema
+}
+
 // namedAndStreamPlans mirrors InfraJoinNamedAndStream: a keepall window
 // projecting (a, b), an on-SupportBean_A delete keyed by id = a, and an
 // irstream join of SupportMarketDataBean#length(10) with the window.
@@ -1035,4 +1522,80 @@ func infraNamedWindowJoinRuntimeID(caseName string) string {
 	default:
 		return "infra-named-window-join-unknown"
 	}
+}
+
+// normalizeInfraNamedWindowJoinTrace adapts map-valued columns to the
+// InfraNamedWindowJoin oracle's Map rendering: a raw Go map (for example
+// window(win.*).toMap results) becomes the row-shaped sorted-key object the
+// oracle emits for java.util.Map values. Values that already carry the row
+// shape are left untouched, so the adapter is idempotent over both traces.
+// The shared compat normalizer stays untouched; 104 checked-in evidences pin
+// its plain-object rendering of nested maps.
+func normalizeInfraNamedWindowJoinTrace(trace compat.Trace) compat.Trace {
+	for index := range trace.Records {
+		record := &trace.Records[index]
+		normalizeInfraNamedWindowJoinRows(record.New)
+		normalizeInfraNamedWindowJoinRows(record.Old)
+	}
+	return trace
+}
+
+func normalizeInfraNamedWindowJoinRows(rows []compat.ResultRecord) {
+	for _, row := range rows {
+		normalizeInfraNamedWindowJoinFields(row.Fields)
+	}
+}
+
+func normalizeInfraNamedWindowJoinFields(fields map[string]any) {
+	for name, value := range fields {
+		normalized, changed := normalizeInfraNamedWindowJoinValue(value)
+		if changed {
+			fields[name] = normalized
+			continue
+		}
+		switch typed := value.(type) {
+		case map[string]any:
+			if kind, hasKind := typed["kind"]; hasKind && kind == "row" {
+				continue
+			}
+			normalizeInfraNamedWindowJoinFields(typed)
+		case []any:
+			for _, item := range typed {
+				if nested, ok := item.(map[string]any); ok {
+					if kind, hasKind := nested["kind"]; hasKind && kind == "row" {
+						// Producer-emitted rows are opaque; descending into
+						// them would re-envelope their fields member.
+						continue
+					}
+					normalizeInfraNamedWindowJoinFields(nested)
+				}
+			}
+		}
+	}
+}
+
+func normalizeInfraNamedWindowJoinValue(value any) (any, bool) {
+	if sentinel, ok := value.(map[string]any); ok {
+		if _, hasState := sentinel["state"]; hasState && len(sentinel) == 1 {
+			// Null/missing sentinels are protocol atoms, never maps to wrap.
+			return nil, false
+		}
+	}
+	nested, ok := value.(map[string]any)
+	if !ok {
+		if typed, isTyped := value.(map[string]int); isTyped {
+			converted := make(map[string]any, len(typed))
+			for key, item := range typed {
+				converted[key] = item
+			}
+			nested, ok = converted, true
+		}
+	}
+	if !ok {
+		return nil, false
+	}
+	if kind, hasKind := nested["kind"]; hasKind && kind == "row" {
+		return nil, false
+	}
+	return map[string]any{"kind": "row", "fields": nested}, true
 }

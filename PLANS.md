@@ -32,61 +32,67 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-24
-- Current work unit (N+1, Draft 4.250): `infra.namedwindow.views` executions
-  3-6 of fixed `InfraNamedWindowJoin.java`: InfraJoinNamedAndStream
-  (java-runtime-479eabd476ce403c4ab8), InfraJoinBetweenNamed
-  (java-runtime-342d46139a3313b382b7), InfraJoinBetweenSameNamed
-  (java-runtime-8f4b0394ee32a5524464), InfraJoinSingleInsertOneWindow
-  (java-runtime-e7320476230a3903e2ec). Frozen from `NWJ2JavaContract` +
-  `NWJ2GoSurface` prefetch reports: four irstream join-consumer executions over
-  keepall named windows with on-delete triggers; observable contract is
-  listener new/old rows only (property-name inspection is engine-internal).
-  Statement-name/step contract: each case deploys "setup" (create+insert +
-  on-delete plans in one deployment) then the consumer ("s0" for ordinals
-  3-5, "select" for ordinal 6), replays the pinned Java send vectors, and
-  ends with undeploy-all. Ordinals 4/6 route inserts by boolPrimitive and
-  deletes by market volume (1 -> One window, 0 -> Two window); ordinal 5 is a
-  same-window self-join whose matched delete emits exactly ONE old row.
-- Allowed files: asset lane `tools/java-oracle/InfraNamedWindowJoinScenarioOracle.java`
-  + `testdata/parity/infra-named-window-join.json` (worker); primary lane
-  `internal/app/parity/infra_named_window_join.go` + `run_test.go`; primary
-  owns generated trace/evidence, manifest, roadmap, CHANGELOG, PLANS.
-- Forbidden: shared-runtime changes (no `internal/esper` edits anticipated;
-  exec 8 window(win.*) gap is out of this unit's scope), prefetched
-  table/order-by assets, oracle weakening.
-- Delegation: `NWJ2JavaContract` (java-oracle-scout) and `NWJ2GoSurface`
-  (scout) prefetch reports frozen this contract; asset writer extends the
-  oracle/scenario while the primary extends the Go runner (file-disjoint).
-- Baseline: `HEAD` == `origin/master`; the previous unit (Draft 4.249,
-  InfraNamedWindowJoin executions 0-2, commit `1becce2ad`) is pushed. The six
-  untracked `infra-table-insert-into` / `resultset-orderby-row-per-group`
-  files are older prefetch assets and remain outside commits until their units
-  are selected.
-- Previous unit outcome (closed): executions 0-2 differential-verified at 36/36
-  records, 0 differences; join-aggregate iterators now evaluate the live join
-  tuple composition and grouped named-window snapshots iterate group-contiguous
-  in first-appearance order (`internal/esper` repairs, review pass). Executions
-  3-9 prefetch reports (`NWJ2JavaContract`, `NWJ2GoSurface`) are in; this unit
-  takes 3-6, executions 7-9 (unidirectional family, exec 8 window(win.*) gap)
-  remain for a later unit.
-- Progress: asset writer `NWJ2AssetWriter` delivered the oracle/scenario
-  extension (its SupportBean_A String-id correction over the contract's int
-  was accepted: the pinned `SupportBean_A(String id)` joins `where id = a`).
-  Primary runner lane added the four case builders (named-and-stream,
-  between-named/between-same-named/single-insert via a shared parameterized
-  builder, SupportBean_A decode), scoped listener attach to the new consumer
-  statements (the full-outer "select" must NOT attach), and extended the
-  mutation suite to 14 (6 new: delete-old loss, fan-out truncation, routed
-  insert drift, volume-delete old loss, self-join single-old duplication,
-  consumer row loss). Pinned Java trace regenerated: 60 records; differential
-  evidence passing 60/60 records, 0 differences. Manifest extended to 7 DV
-  runtime IDs (593 total DV, 3218 associations, referenced 3014).
-- Review: `NWJParityReview` follow-up verdict PASS, no P1/P2; both P3 nits
-  fixed (runner doc comment now says seven executions; CHANGELOG/roadmap
-  "旧流行" transposition corrected to 旧行). Review verified the four send
-  vectors and EPL against the pinned suite, the independently derived record
-  layout (24 new records incl. the self-join single-old contract), attach
-  scoping symmetry, mutation targeting, and central-fact recomputation.
+- Current work unit (Draft 4.251): `infra.namedwindow.join` executions 7-9 of
+  fixed `InfraNamedWindowJoin.java`, the unidirectional family. Runtime IDs:
+  InfraUnidirectional `java-runtime-98c12887d1e25c26c101`,
+  InfraWindowUnidirectionalJoin `java-runtime-09ca3e1b6ac4f52b0b7e`,
+  InfraInnerJoinLateStart `java-runtime-2a245ed9721b6b840746`.
+- Frozen Java contract (scouts `NWJ3JavaContract` + `NWJ3GoSurface`, plus
+  primary scratch probes of both unidirectional shapes, since deleted):
+  - Exec 7 "unidirectional": one module (create window MyWindowU#keepall
+    select * from SupportBean; insert; `@name('select') select w.* from
+    MyWindowU w unidirectional, SupportBean_A#lastevent s where s.id =
+    w.theString`). Sends SB(E1,1), A(E1), A(E2), SB(E2,1). Exactly ONE new
+    listener row whose surface is the full 20-property SupportBean
+    (charPrimitive renders as "\u0000" string, primitives default, boxed and
+    enumValue null). A-side arrivals never emit even on where-match.
+  - Exec 8 "window-unidirectional-join": one module (create window
+    MyWindowWUJ#keepall as SupportBean; insert; on SupportBean_S1 s1 delete
+    from MyWindowWUJ where s1.p10 = theString; `@name('s0') select
+    window(win.*) as c0, window(win.*).where(v => v.intPrimitive < 2) as c1,
+    window(win.*).toMap(k=>k.theString,v=>v.intPrimitive) as c2 from
+    SupportBean_S0 as s0 unidirectional, MyWindowWUJ as win`). Send vector
+    SB(E0,0),SB(E1,1),S0(10),SB(E2,2),S0(10),S1(11,E1),S0(12),S1(13,E0),
+    S0(14),S1(15,E2),S0(16) yields FOUR records (c0 full window, c1 filtered
+    intPrimitive<2 with an empty-array case, c2 sorted-key map; final S0
+    emits nothing), then three compile-only window(win.*) deploys (plain,
+    join, subquery forms) that emit zero records.
+  - Exec 9 "inner-join-late-start-*": per representation OBJECTARRAY, MAP,
+    JSON, JSONCLASSPROVIDED, DEFAULT one case each (identical deploys
+    schema/window/insert-product/portfolio-window/insert-portfolio/query2,
+    seven sends P(A,1),P(B,2),F(A),F(B),F(C),P(C,3),F(C), exactly two new
+    rows productB/size 2 and productC/size 3). AVRO representation is an
+    approved infrastructure difference: the underlying-class matrix is
+    harness-internal and the oracle lane has no Avro precedent.
+  - Protocol decisions frozen before first run: the oracle renders
+    window(win.*) elements (raw SupportBean underlyings) row-shaped via the
+    registered event type, consistent with its EventBean branch — toString
+    fallback is not implementable on the Go side; the Go runner adapts c2 map
+    columns to the oracle's row-shaped sorted-key Map rendering via a
+    per-mode trace normalizer (the shared compat normalizer stays untouched;
+    104 checked-in evidences pin its plain-object map rendering).
+- Progress: asset writer `NWJ3AssetWriter` delivered the oracle/scenario
+  extension; primary review fixed its send-path payload coercion (Product/
+  Portfolio positional arrays), and the pinned-compiler duplicate generated
+  JSON underlying class forced two harness adaptations documented in the
+  oracle header: the plain-json case compiles its five population statements
+  as one module (single pathable) and the runner script forks one JVM per
+  case, merging records in scenario order (zero-padded). Primary runner lane
+  added the seven case builders (unidirectional whole-row projection,
+  window-unidirectional-join via JoinStream.Aggregate +
+  WindowValues/EnumWhere/EnumToMap with embedded one-module setup and
+  compile-only trio, five representation cases via the faf-join pattern),
+  the per-mode map-column row normalizer, and extended the mutation suite to
+  22. Pinned Java trace regenerated: 75 records; differential evidence
+  passing 75/75 records, 0 differences. Manifest extended to 10 DV runtime
+- Review: `NWJ3ParityReview` initial pass found one P1 (the per-mode
+  normalizer's array branch re-enveloped producer rows inside c0/c1 arrays,
+  symmetrically mangling the stored evidence) and one conditioned P3. Fix:
+  the array branch treats kind=="row" items as opaque; trace/evidence
+  regenerated through the pinned oracle + fixed adapter. Follow-up verdict
+  PASS: evidence matches producer output modulo the pre-established omitempty
+  empty-array convention, all 22 mutations reject, runtime IDs bound
+  correctly.
 - Next action: semantic commit and push.
 
 ## Delegation checkpoint

@@ -4,6 +4,27 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.251（2026-08-25），完成 `infra.namedwindow.views` 的
+> `infra-named-window-join` 场景收口：新增 InfraNamedWindowJoin.java 的
+> InfraUnidirectional（java-runtime-98c12887d1e25c26c101）、
+> InfraWindowUnidirectionalJoin（java-runtime-09ca3e1b6ac4f52b0b7e）与
+> InfraInnerJoinLateStart（java-runtime-2a245ed9721b6b840746，按
+> objectarray/map/json/jsonprovided/default 五种表示各一 case；AVRO 迭代
+> 为已登记的基础设施差异）。场景 Java/Go 各 75 条 records、0 differences。
+> unidirectional 以单向命名窗口驱动侧 join SupportBean_A#lastevent 验证
+> A 侧到达不触发、窗口插入才触发的非对称契约并投影 w.* 全 20 属性行
+> （charPrimitive 渲染 "\u0000"）；window-unidirectional-join 以
+> JoinStream.Aggregate + WindowValues[Event](JoinEventValue[Event](1)) +
+> EnumWhere/EnumToMap 表达 window(win.*) 及其过滤与 toMap 形态（含空 c1
+> 数组与空窗口零输出），三个 compile-only window(win.*) 语句仅编译不部署；
+> inner-join-late-start 五种表示字节级一致地验证延迟部署 join 命中预填充
+> 行。oracle 侧为 window(win.*) 裸底层登记 registered-underlying 行形
+> 渲染协议，plain-json case 以单一 population 模块编译规避固定编译器对
+> 路径上生成 JSON 底层的重复注册；runner 脚本改为逐 case JVM 执行后按
+> 场景顺序合并。manifest 更新为 548 cases、159 个 differential-verified
+> case、596 个 differential runtime IDs、3221 条 associations（referenced
+> 3017）。capability remaining 移除 executions 7-9。
+>
 > 最新补充：Draft 4.250（2026-08-24），扩展 `infra.namedwindow.views` 的
 > `infra-named-window-join` 场景：新增 InfraNamedWindowJoin.java 的
 > InfraJoinNamedAndStream（java-runtime-479eabd476ce403c4ab8）、

@@ -9,7 +9,10 @@
     "java-runtime-479eabd476ce403c4ab8",
     "java-runtime-342d46139a3313b382b7",
     "java-runtime-8f4b0394ee32a5524464",
-    "java-runtime-e7320476230a3903e2ec"
+    "java-runtime-e7320476230a3903e2ec",
+    "java-runtime-98c12887d1e25c26c101",
+    "java-runtime-09ca3e1b6ac4f52b0b7e",
+    "java-runtime-2a245ed9721b6b840746"
   ],
   "cases": [
     {
@@ -39,6 +42,34 @@
     {
       "case": "single-insert-one-window",
       "runtimeId": "java-runtime-e7320476230a3903e2ec"
+    },
+    {
+      "case": "unidirectional",
+      "runtimeId": "java-runtime-98c12887d1e25c26c101"
+    },
+    {
+      "case": "window-unidirectional-join",
+      "runtimeId": "java-runtime-09ca3e1b6ac4f52b0b7e"
+    },
+    {
+      "case": "inner-join-late-start-objectarray",
+      "runtimeId": "java-runtime-2a245ed9721b6b840746"
+    },
+    {
+      "case": "inner-join-late-start-map",
+      "runtimeId": "java-runtime-2a245ed9721b6b840746"
+    },
+    {
+      "case": "inner-join-late-start-json",
+      "runtimeId": "java-runtime-2a245ed9721b6b840746"
+    },
+    {
+      "case": "inner-join-late-start-jsonprovided",
+      "runtimeId": "java-runtime-2a245ed9721b6b840746"
+    },
+    {
+      "case": "inner-join-late-start-default",
+      "runtimeId": "java-runtime-2a245ed9721b6b840746"
     }
   ],
   "steps": [
@@ -1445,6 +1476,588 @@
         "theString": "S0",
         "intPrimitive": 8,
         "boolPrimitive": true
+      }
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "unidirectional"
+    },
+    {
+      "op": "deploy",
+      "statement": "setup"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_A",
+      "payload": {
+        "id": "E1"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_A",
+      "payload": {
+        "id": "E2"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "window-unidirectional-join"
+    },
+    {
+      "op": "deploy",
+      "statement": "setup"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E0",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 10
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 11,
+        "p10": "E1"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 12
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 13,
+        "p10": "E0"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 14
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 15,
+        "p10": "E2"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 16
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "compile-a"
+    },
+    {
+      "op": "deploy",
+      "statement": "compile-b"
+    },
+    {
+      "op": "deploy",
+      "statement": "compile-c"
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "inner-join-late-start-objectarray"
+    },
+    {
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-product"
+    },
+    {
+      "op": "deploy",
+      "statement": "portfolio-window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-portfolio"
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": [
+        "productA",
+        1
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": [
+        "productB",
+        2
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": [
+        "Portfolio",
+        "productA"
+      ]
+    },
+    {
+      "op": "deploy",
+      "statement": "query2"
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": [
+        "Portfolio",
+        "productB"
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": [
+        "Portfolio",
+        "productC"
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": [
+        "productC",
+        3
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": [
+        "Portfolio",
+        "productC"
+      ]
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "inner-join-late-start-map"
+    },
+    {
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-product"
+    },
+    {
+      "op": "deploy",
+      "statement": "portfolio-window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-portfolio"
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productA",
+        "size": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productB",
+        "size": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productA"
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "query2"
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productB"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productC"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productC",
+        "size": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productC"
+      }
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "inner-join-late-start-json"
+    },
+    {
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-product"
+    },
+    {
+      "op": "deploy",
+      "statement": "portfolio-window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-portfolio"
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productA",
+        "size": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productB",
+        "size": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productA"
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "query2"
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productB"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productC"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productC",
+        "size": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productC"
+      }
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "inner-join-late-start-jsonprovided"
+    },
+    {
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-product"
+    },
+    {
+      "op": "deploy",
+      "statement": "portfolio-window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-portfolio"
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productA",
+        "size": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productB",
+        "size": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productA"
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "query2"
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productB"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productC"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productC",
+        "size": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productC"
+      }
+    },
+    {
+      "op": "undeploy-all"
+    },
+    {
+      "op": "case",
+      "case": "inner-join-late-start-default"
+    },
+    {
+      "op": "deploy",
+      "statement": "schema"
+    },
+    {
+      "op": "deploy",
+      "statement": "window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-product"
+    },
+    {
+      "op": "deploy",
+      "statement": "portfolio-window"
+    },
+    {
+      "op": "deploy",
+      "statement": "insert-portfolio"
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productA",
+        "size": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productB",
+        "size": 2
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productA"
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "query2"
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productB"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productC"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Product",
+      "payload": {
+        "product": "productC",
+        "size": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "Portfolio",
+      "payload": {
+        "portfolio": "Portfolio",
+        "product": "productC"
       }
     },
     {

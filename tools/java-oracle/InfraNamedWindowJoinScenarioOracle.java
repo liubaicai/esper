@@ -1,5 +1,6 @@
 import com.espertech.esper.common.client.EPCompiled;
 import com.espertech.esper.common.client.EventBean;
+import com.espertech.esper.common.client.EventType;
 import com.espertech.esper.common.client.configuration.Configuration;
 import com.espertech.esper.common.client.json.minimaljson.Json;
 import com.espertech.esper.common.client.json.minimaljson.JsonArray;
@@ -14,6 +15,7 @@ import com.espertech.esper.runtime.client.EPRuntime;
 import com.espertech.esper.runtime.client.EPRuntimeProvider;
 import com.espertech.esper.runtime.client.EPStatement;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,13 +30,14 @@ import java.util.TreeSet;
 
 /**
  * Java oracle for the InfraNamedWindowJoin work-unit Draft 4.249 candidate
- * extended by the Draft 4.250 four-case addition (pinned Esper 9.0.0 commit
+ * extended by the Draft 4.250 four-case addition and the Draft 4.251
+ * seven-case addition (pinned Esper 9.0.0 commit
  * 9e1b9f1cc9117fea4bf33ab043762c045d73839c,
  * regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/
  * namedwindow/InfraNamedWindowJoin.java).
  *
  * Covers executions of executions() at inventory ordinals 0-2 (Draft 4.249
- * lane) and 3-6 (Draft 4.250 lane):
+ * lane), 3-6 (Draft 4.250 lane) and 7-9 (Draft 4.251 lane):
  *
  * index-choice (InfraJoinIndexChoice, java-runtime-e138d2fc24010a22dbb1)
  * replays all five datawindow/index-set combos of assertIndexChoice
@@ -106,6 +109,59 @@ import java.util.TreeSet;
  * statement named select; it replays the identical ten-send vector producing
  * the same listener records under that statement name.
  *
+ * unidirectional (InfraUnidirectional, java-runtime-98c12887d1e25c26c101)
+ * deploys the pinned three-statement module (keepall MyWindowU over the full
+ * SupportBean surface with its insert feed and the consumer named select
+ * projecting w.* over MyWindowU w unidirectional joined to
+ * SupportBean_A#lastevent on id = theString) and replays the four-send vector
+ * E1 bean, A(E1), A(E2), E2 bean: only the E2 bean arrival joins, so exactly
+ * one record carries the full twenty-property SupportBean row while A-side
+ * arrivals against an already-matching window stay silent.
+ *
+ * window-unidirectional-join (InfraWindowUnidirectionalJoin,
+ * java-runtime-09ca3e1b6ac4f52b0b7e) deploys the pinned four-statement module
+ * (@public keepall MyWindowWUJ over SupportBean, its insert feed, the
+ * on-SupportBean_S1 delete keyed by p10 = theString, and the s0 consumer
+ * selecting window(win.*) as c0, window(win.*).where(v => v.intPrimitive < 2)
+ * as c1 and window(win.*).toMap(k=>k.theString,v=>v.intPrimitive) as c2 from
+ * unidirectional SupportBean_S0 joined to MyWindowWUJ) and replays the
+ * eleven-send vector of three beans, five S0 triggers and three deletes: the
+ * first four triggers each produce one record while the window fills and
+ * shrinks (c1 shrinks to [] ahead of c0/c2 because 2 < 2 is false), the fifth
+ * trigger finds the window empty so zero join rows reach the listener guard;
+ * three compile-only deployments then prove the non-unidirectional selection,
+ * join and subquery forms of window(win.*) without listeners or sends.
+ *
+ * inner-join-late-start-{objectarray,map,json,jsonprovided,default}
+ * (InfraInnerJoinLateStart, java-runtime-2a245ed9721b6b840746) replay five of
+ * the six pinned EventRepresentationChoice iterations with byte-identical
+ * records apart from the case name: the annotated @public @buseventtype
+ * Product/Portfolio schemas (jsonprovided prefixes "@JsonSchema(
+ * className='<oracle mirror FQCN>') @EventRepresentation('json')" mirroring
+ * EventRepresentationChoice.JSONCLASSPROVIDED.getAnnotationTextWJsonProvided
+ * and resolving the local MyLocalJsonProvided* mirror classes exactly like
+ * the pinned suite resolves its own nested mirrors), the keepall windows over
+ * both schemas with their insert feeds, the productA/productB/productA
+ * preload vector, the Query2 unidirectional inner join carrying the listener,
+ * and the assertion vector: matching portfolio productB emits one
+ * {portfolio, ProductWin.product, size} row, unmatched portfolio productC and
+ * product-only insert productC stay silent, and the retrying portfolio
+ * productC emits the second row.
+ *
+ * Draft 4.251 documented deviations: (1) window(win.*) evaluates to raw
+ * SupportBean UNDERLYINGS which the pinned assertions compare element-wise
+ * via SupportBean.equals; the renderer therefore defines the protocol that a
+ * value whose class equals the underlying class of a REGISTERED event type
+ * renders row-shaped over the engine-resolved property surface, consistent
+ * with the EventBean branch and preserving the full property surface that the
+ * String.valueOf fallback would flatten into a "SupportBean(...)" string;
+ * resolution uses a case-local underlying-class-to-event-type map populated
+ * from the preconfigured registration. (2) The AVRO representation iteration
+ * of InfraInnerJoinLateStart is skipped as an approved infrastructure
+ * difference: this oracle lane has no Avro precedent, and the pinned
+ * underlying-class matrix assertions are harness-internal checks that emit no
+ * records either way.
+ *
  * Conventions and deviations: SupportSimpleBeanOne/SupportSimpleBeanTwo are
  * local mirrors of the regression-lib beans (same field names and primitive
  * types) because regression-lib is not on the oracle classpath;
@@ -121,6 +177,10 @@ import java.util.TreeSet;
  * MyWindowJSN/MyWindowJSIOne/MyWindowJSITwo create-window statements because
  * the suite compiled setup and consumer as one module while this oracle
  * deploys them as separate modules.
+ * The Draft 4.251 lanes register SupportBean_S0/SupportBean_S1 as map event
+ * types with id int and p00..p03/p10..p13 String mirrors (the regression
+ * beans' private value field has no getter and is therefore not an event
+ * property).
  * Records follow the standard protocol: listener rows (sorted property names,
  * normalized values, new before old), snapshot rows over the statement
  * iterator in engine order, sequence numbers per case, epoch-zero timestamps
@@ -153,17 +213,21 @@ public class InfraNamedWindowJoinScenarioOracle {
     };
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 1) {
-            System.err.println("usage: InfraNamedWindowJoinScenarioOracle <scenario.json>");
+        if (args.length != 1 && args.length != 2) {
+            System.err.println("usage: InfraNamedWindowJoinScenarioOracle <scenario.json> [case-filter]");
             System.exit(2);
         }
         String scenarioText = Files.readString(Path.of(args[0]), StandardCharsets.UTF_8);
         JsonObject scenario = Json.parse(scenarioText).asObject();
         JsonArray allSteps = scenario.get("steps").asArray();
+        String caseFilter = args.length == 2 ? args[1] : null;
         List<JsonObject> records = new ArrayList<>();
 
         for (JsonValue caseVal : scenario.get("cases").asArray()) {
             String caseName = caseVal.asObject().getString("case", "");
+            if (caseFilter != null && !caseFilter.equals(caseName)) {
+                continue;
+            }
             runCase(allSteps, caseName, records);
         }
 
@@ -223,6 +287,36 @@ public class InfraNamedWindowJoinScenarioOracle {
                 beanAType.put("id", String.class);
                 config.getCommon().addEventType("SupportBean_A", beanAType);
             }
+            case "unidirectional" -> {
+                config.getCommon().addEventType(SupportBean.class);
+                Map<String, Object> beanAType = new HashMap<>();
+                beanAType.put("id", String.class);
+                config.getCommon().addEventType("SupportBean_A", beanAType);
+            }
+            case "window-unidirectional-join" -> {
+                config.getCommon().addEventType(SupportBean.class);
+                Map<String, Object> s0Type = new LinkedHashMap<>();
+                s0Type.put("id", int.class);
+                s0Type.put("p00", String.class);
+                s0Type.put("p01", String.class);
+                s0Type.put("p02", String.class);
+                s0Type.put("p03", String.class);
+                config.getCommon().addEventType("SupportBean_S0", s0Type);
+                Map<String, Object> s1Type = new LinkedHashMap<>();
+                s1Type.put("id", int.class);
+                s1Type.put("p10", String.class);
+                s1Type.put("p11", String.class);
+                s1Type.put("p12", String.class);
+                s1Type.put("p13", String.class);
+                config.getCommon().addEventType("SupportBean_S1", s1Type);
+            }
+            case "inner-join-late-start-objectarray",
+                 "inner-join-late-start-map",
+                 "inner-join-late-start-json",
+                 "inner-join-late-start-jsonprovided",
+                 "inner-join-late-start-default" -> {
+                // Product/Portfolio types come from the pinned schema deployment itself.
+            }
             default -> throw new IllegalStateException("unknown case: " + caseName);
         }
         EPRuntime runtime = EPRuntimeProvider.getRuntime("InfraNamedWindowJoinScenarioOracle-" + caseName, config);
@@ -276,6 +370,15 @@ public class InfraNamedWindowJoinScenarioOracle {
         private int fillBeanSends = 0;
         private int beanASends = 0;
         private int marketSends = 0;
+        private int sZeroSends = 0;
+        private int sOneSends = 0;
+        private int productSends = 0;
+        private int portfolioSends = 0;
+
+        // Registered-underlying protocol support (see class Javadoc):
+        // underlying classes of preconfigured bean event types mapped to
+        // their engine-resolved event types.
+        private final Map<Class<?>, EventType> underlyingEventTypes = new HashMap<>();
         private int snapshots = 0;
         private int seq = 0;
 
@@ -284,12 +387,43 @@ public class InfraNamedWindowJoinScenarioOracle {
             this.runtime = runtime;
             this.records = records;
             this.config = config;
+            EventType preconfiguredSupportBean =
+                runtime.getEventTypeService().getEventTypePreconfigured("SupportBean");
+            if (preconfiguredSupportBean != null) {
+                underlyingEventTypes.put(preconfiguredSupportBean.getUnderlyingType(), preconfiguredSupportBean);
+            }
         }
 
         private void deploy(String key) throws Exception {
+            if (jsonPopulationModule(key)) {
+                // The plain-json representation is the only lane whose path
+                // carries a GENERATED (non-provided) JSON event type; the
+                // pinned compiler re-adds generated underlyings from every
+                // path registry entry, so a second compilation whose runtime
+                // path holds more than one deployment aborts with a duplicate
+                // class error. The five population statements therefore
+                // compile and deploy as ONE module at the first population
+                // deploy step (single pathable) and the remaining population
+                // deploy steps become no-ops. Module grouping is already an
+                // established deviation of this lane; late-start semantics
+                // are preserved because the population statements emit no
+                // records and query2 still deploys after the preload sends.
+                deployJsonPopulationModule();
+                return;
+            }
+            if (jsonPopulationConsumed(key)) {
+                return;
+            }
             String epl = eplFor(key);
             CompilerArguments compilerArgs = new CompilerArguments(config);
-            compilerArgs.getPath().add(runtime.getRuntimePath());
+            if (jsonQuery2(key)) {
+                // Compile against the single population module pathable; the
+                // accumulating runtime path would carry the generated JSON
+                // type once per deployment.
+                compilerArgs.getPath().add(populationCompiled);
+            } else {
+                compilerArgs.getPath().add(runtime.getRuntimePath());
+            }
             EPCompiled compiled = EPCompilerProvider.getCompiler().compile(epl, compilerArgs);
             EPDeployment deployment = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
             lastDeploymentId = deployment.getDeploymentId();
@@ -300,6 +434,39 @@ public class InfraNamedWindowJoinScenarioOracle {
                 if (listenerStatement().equals(statement.getName())) {
                     attachListener(statement);
                 }
+            }
+        }
+
+        private EPCompiled populationCompiled;
+
+        private boolean jsonQuery2(String key) {
+            return "inner-join-late-start-json".equals(caseName) && "query2".equals(key);
+        }
+
+        private boolean jsonPopulationModule(String key) {
+            return "inner-join-late-start-json".equals(caseName) && "schema".equals(key);
+        }
+
+        private boolean jsonPopulationConsumed(String key) {
+            return "inner-join-late-start-json".equals(caseName)
+                && ("window".equals(key) || "insert-product".equals(key)
+                || "portfolio-window".equals(key) || "insert-portfolio".equals(key));
+        }
+
+        private void deployJsonPopulationModule() throws Exception {
+            String epl = innerJoinLateStartEpl("schema") + innerJoinLateStartEpl("window") + ";\n"
+                + innerJoinLateStartEpl("insert-product") + ";\n"
+                + innerJoinLateStartEpl("portfolio-window") + ";\n"
+                + innerJoinLateStartEpl("insert-portfolio") + ";\n";
+            CompilerArguments compilerArgs = new CompilerArguments(config);
+            EPCompiled compiled = EPCompilerProvider.getCompiler().compile(epl, compilerArgs);
+            EPDeployment deployment = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
+            populationCompiled = compiled;
+            lastDeploymentId = deployment.getDeploymentId();
+            lastDeploymentStatements.clear();
+            for (EPStatement statement : deployment.getStatements()) {
+                statements.put(statement.getName(), statement);
+                lastDeploymentStatements.add(statement.getName());
             }
         }
 
@@ -316,6 +483,16 @@ public class InfraNamedWindowJoinScenarioOracle {
                 case "between-same-named":
                 case "single-insert-one-window":
                     return joinExecEpl(key);
+                case "unidirectional":
+                    return unidirectionalEpl(key);
+                case "window-unidirectional-join":
+                    return windowUnidirectionalJoinEpl(key);
+                case "inner-join-late-start-objectarray":
+                case "inner-join-late-start-map":
+                case "inner-join-late-start-json":
+                case "inner-join-late-start-jsonprovided":
+                case "inner-join-late-start-default":
+                    return innerJoinLateStartEpl(key);
                 default:
                     throw new IllegalStateException("unknown case " + caseName);
             }
@@ -449,6 +626,99 @@ public class InfraNamedWindowJoinScenarioOracle {
             }
         }
 
+        /**
+         * Pinned InfraUnidirectional module: three statements deployed as
+         * one module exactly as the suite compiles them.
+         */
+        private String unidirectionalEpl(String key) {
+            switch (key) {
+                case "setup":
+                    return "create window MyWindowU#keepall select * from SupportBean;\n" +
+                        "insert into MyWindowU select * from SupportBean;\n" +
+                        "@name('select') select w.* from MyWindowU w unidirectional, SupportBean_A#lastevent s where s.id = w.theString;\n";
+                default:
+                    throw new IllegalStateException("unknown unidirectional deploy key " + key);
+            }
+        }
+
+        /**
+         * Pinned InfraWindowUnidirectionalJoin module plus the three trailing
+         * compile-only window(win.*) forms (selection, join, subquery).
+         */
+        private String windowUnidirectionalJoinEpl(String key) {
+            switch (key) {
+                case "setup":
+                    return "@public create window MyWindowWUJ#keepall as SupportBean;\n" +
+                        "insert into MyWindowWUJ select * from SupportBean;\n" +
+                        "on SupportBean_S1 as s1 delete from MyWindowWUJ where s1.p10 = theString;\n" +
+                        "@name('s0') select window(win.*) as c0," +
+                        "window(win.*).where(v => v.intPrimitive < 2) as c1, " +
+                        "window(win.*).toMap(k=>k.theString,v=>v.intPrimitive) as c2 " +
+                        "from SupportBean_S0 as s0 unidirectional, MyWindowWUJ as win";
+                case "compile-a":
+                    return "select window(win.*) from MyWindowWUJ as win";
+                case "compile-b":
+                    return "select window(win.*) as c0 from SupportBean_S0#lastevent as s0, MyWindowWUJ as win";
+                case "compile-c":
+                    return "select (select window(win.*) from MyWindowWUJ as win) from SupportBean_S0";
+                default:
+                    throw new IllegalStateException("unknown window-unidirectional-join deploy key " + key);
+            }
+        }
+
+        /**
+         * Mirrors EventRepresentationChoice.getAnnotationTextWJsonProvided(Class)
+         * per representation; only JSONCLASSPROVIDED differs from the plain
+         * annotation text, prefixing "@JsonSchema(className='...')" that
+         * resolves the local MyLocalJsonProvided* mirror class named by the
+         * caller (same shape as the pinned suite's own nested mirrors).
+         */
+        private String representationAnnotation(String providedClassSimpleName) {
+            switch (caseName) {
+                case "inner-join-late-start-objectarray":
+                    return "@EventRepresentation('objectarray')";
+                case "inner-join-late-start-map":
+                    return "@EventRepresentation('map')";
+                case "inner-join-late-start-json":
+                    return "@EventRepresentation('json')";
+                case "inner-join-late-start-jsonprovided":
+                    return "@JsonSchema(className='" + InfraNamedWindowJoinScenarioOracle.class.getName() +
+                        "$" + providedClassSimpleName + "') @EventRepresentation('json')";
+                case "inner-join-late-start-default":
+                    return "";
+                default:
+                    throw new IllegalStateException("representation annotation undefined for case " + caseName);
+            }
+        }
+
+        /**
+         * Pinned InfraInnerJoinLateStart deployments; the annotation text of
+         * the schema module varies per representation while every other
+         * deployment is identical across the five replayed representations.
+         */
+        private String innerJoinLateStartEpl(String key) {
+            switch (key) {
+                case "schema":
+                    return representationAnnotation("MyLocalJsonProvidedProduct") +
+                        "@name('schema') @public @buseventtype create schema Product (product string, size int);\n" +
+                        representationAnnotation("MyLocalJsonProvidedPortfolio") +
+                        " @public @buseventtype create schema Portfolio (portfolio string, product string);\n";
+                case "window":
+                    return "@name('window') @public create window ProductWin#keepall as Product";
+                case "insert-product":
+                    return "insert into ProductWin select * from Product";
+                case "portfolio-window":
+                    return "@public create window PortfolioWin#keepall as Portfolio";
+                case "insert-portfolio":
+                    return "insert into PortfolioWin select * from Portfolio";
+                case "query2":
+                    return "@Name(\"Query2\") select portfolio, ProductWin.product, size " +
+                        "from PortfolioWin unidirectional inner join ProductWin on PortfolioWin.product=ProductWin.product";
+                default:
+                    throw new IllegalStateException("unknown inner-join-late-start deploy key " + key);
+            }
+        }
+
         private void undeployLast() throws Exception {
             if (lastDeploymentId == null) {
                 throw new IllegalStateException("undeploy without a previous deploy in case " + caseName);
@@ -475,8 +745,14 @@ public class InfraNamedWindowJoinScenarioOracle {
                 case "between-named":
                 case "between-same-named":
                     return "s0";
-                case "single-insert-one-window":
+                case "single-insert-one-window", "unidirectional":
                     return "select";
+                case "window-unidirectional-join":
+                    return "s0";
+                case "inner-join-late-start-objectarray", "inner-join-late-start-map",
+                        "inner-join-late-start-json", "inner-join-late-start-jsonprovided",
+                        "inner-join-late-start-default":
+                    return "Query2";
                 default:
                     return "";
             }
@@ -527,7 +803,12 @@ public class InfraNamedWindowJoinScenarioOracle {
 
         private void send(JsonObject step) {
             String type = step.getString("eventType", "");
-            JsonObject payload = step.get("payload").asObject();
+            JsonValue rawPayload = step.get("payload");
+            // Representation sends carry positional JSON arrays; every other
+            // event type carries an object payload.
+            JsonObject payload = type.equals("Product") || type.equals("Portfolio")
+                ? null
+                : rawPayload.asObject();
             switch (type) {
                 case "SupportSimpleBeanOne" -> {
                     SupportSimpleBeanOne event = new SupportSimpleBeanOne(
@@ -585,7 +866,73 @@ public class InfraNamedWindowJoinScenarioOracle {
                     runtime.getEventService().sendEventMap(event, "SupportMarketDataBean");
                     marketSends++;
                 }
+                case "SupportBean_S0" -> {
+                    Map<String, Object> event = new LinkedHashMap<>();
+                    event.put("id", payload.getInt("id", 0));
+                    event.put("p00", payload.getString("p00", null));
+                    event.put("p01", payload.getString("p01", null));
+                    event.put("p02", payload.getString("p02", null));
+                    event.put("p03", payload.getString("p03", null));
+                    runtime.getEventService().sendEventMap(event, "SupportBean_S0");
+                    sZeroSends++;
+                }
+                case "SupportBean_S1" -> {
+                    Map<String, Object> event = new LinkedHashMap<>();
+                    event.put("id", payload.getInt("id", 0));
+                    event.put("p10", payload.getString("p10", null));
+                    event.put("p11", payload.getString("p11", null));
+                    event.put("p12", payload.getString("p12", null));
+                    event.put("p13", payload.getString("p13", null));
+                    runtime.getEventService().sendEventMap(event, "SupportBean_S1");
+                    sOneSends++;
+                }
+                case "Product", "Portfolio" -> sendRepresentationEvent(type, rawPayload);
                 default -> throw new IllegalStateException("unknown eventType " + type + " in case " + caseName);
+            }
+        }
+
+        /**
+         * Sends a Product or Portfolio event using the pinned helper semantics
+         * for the representation under test: positional object array in schema
+         * declaration order, LinkedHashMap map send, or JsonObject JSON send;
+         * values come from the scenario payload.
+         */
+        private void sendRepresentationEvent(String type, JsonValue payload) {
+            boolean product = type.equals("Product");
+            if (caseName.equals("inner-join-late-start-objectarray")) {
+                JsonArray values = payload.asArray();
+                Object[] event = product
+                    ? new Object[]{values.get(0).asString(), values.get(1).asInt()}
+                    : new Object[]{values.get(0).asString(), values.get(1).asString()};
+                runtime.getEventService().sendEventObjectArray(event, type);
+            } else if (caseName.equals("inner-join-late-start-map")
+                || caseName.equals("inner-join-late-start-default")) {
+                JsonObject payloadObject = payload.asObject();
+                Map<String, Object> event = new LinkedHashMap<>();
+                if (product) {
+                    event.put("product", payloadObject.getString("product", null));
+                    event.put("size", payloadObject.getInt("size", 0));
+                } else {
+                    event.put("portfolio", payloadObject.getString("portfolio", null));
+                    event.put("product", payloadObject.getString("product", null));
+                }
+                runtime.getEventService().sendEventMap(event, type);
+            } else {
+                JsonObject payloadObject = payload.asObject();
+                JsonObject event = new JsonObject();
+                if (product) {
+                    event.add("product", payloadObject.getString("product", null));
+                    event.add("size", payloadObject.getInt("size", 0));
+                } else {
+                    event.add("portfolio", payloadObject.getString("portfolio", null));
+                    event.add("product", payloadObject.getString("product", null));
+                }
+                runtime.getEventService().sendEventJson(event.toString(), type);
+            }
+            if (product) {
+                productSends++;
+            } else {
+                portfolioSends++;
             }
         }
 
@@ -621,89 +968,141 @@ public class InfraNamedWindowJoinScenarioOracle {
                         throw new IllegalStateException("between-same-named requires two bean sends and two market sends");
                     }
                 }
+                case "unidirectional" -> {
+                    if (fillBeanSends != 2 || beanASends != 2) {
+                        throw new IllegalStateException("unidirectional requires two bean sends and two bean-A sends");
+                    }
+                }
+                case "window-unidirectional-join" -> {
+                    if (fillBeanSends != 3 || sZeroSends != 5 || sOneSends != 3) {
+                        throw new IllegalStateException(
+                            "window-unidirectional-join requires three bean sends, five S0 sends and three S1 sends");
+                    }
+                }
+                case "inner-join-late-start-objectarray", "inner-join-late-start-map",
+                        "inner-join-late-start-json", "inner-join-late-start-jsonprovided",
+                        "inner-join-late-start-default" -> {
+                    if (productSends != 3 || portfolioSends != 4) {
+                        throw new IllegalStateException(caseName + " requires three product sends and four portfolio sends");
+                    }
+                }
                 default -> throw new IllegalStateException("unknown case " + caseName);
             }
         }
-    }
 
-    private static JsonArray renderRows(EventBean[] events) {
-        JsonArray rows = new JsonArray();
-        if (events == null) {
+        private JsonArray renderRows(EventBean[] events) {
+            JsonArray rows = new JsonArray();
+            if (events == null) {
+                return rows;
+            }
+            for (EventBean event : events) {
+                rows.add(renderRow(event));
+            }
             return rows;
         }
-        for (EventBean event : events) {
-            rows.add(renderRow(event));
-        }
-        return rows;
-    }
 
-    private static JsonObject renderRow(EventBean event) {
-        JsonObject fields = new JsonObject();
-        for (String prop : new TreeSet<>(Arrays.asList(event.getEventType().getPropertyNames()))) {
-            fields.add(prop, normalize(event.get(prop)));
+        private JsonObject renderRow(EventBean event) {
+            JsonObject fields = new JsonObject();
+            for (String prop : new TreeSet<>(Arrays.asList(event.getEventType().getPropertyNames()))) {
+                fields.add(prop, normalize(event.get(prop)));
+            }
+            JsonObject item = new JsonObject();
+            item.add("kind", "row");
+            item.add("fields", fields);
+            return item;
         }
-        JsonObject item = new JsonObject();
-        item.add("kind", "row");
-        item.add("fields", fields);
-        return item;
-    }
 
-    private static JsonValue normalize(Object value) {
-        if (value == null) {
-            JsonObject nullObj = new JsonObject();
-            nullObj.add("state", "null");
-            return nullObj;
-        }
-        if (value instanceof Integer || value instanceof Long || value instanceof Short || value instanceof Byte) {
-            return Json.value(((Number) value).longValue());
-        }
-        if (value instanceof Number) {
-            return Json.value(((Number) value).doubleValue());
-        }
-        if (value instanceof Boolean) {
-            return Json.value((Boolean) value);
-        }
-        if (value instanceof Map<?, ?>) {
-            Map<?, ?> mapValue = (Map<?, ?>) value;
-            TreeSet<String> keys = new TreeSet<>();
-            for (Object key : mapValue.keySet()) {
-                keys.add(String.valueOf(key));
+        private JsonValue normalize(Object value) {
+            if (value == null) {
+                JsonObject nullObj = new JsonObject();
+                nullObj.add("state", "null");
+                return nullObj;
             }
-            JsonObject fields = new JsonObject();
-            for (String key : keys) {
-                fields.add(key, normalize(mapValue.get(key)));
+            if (value instanceof Integer || value instanceof Long || value instanceof Short || value instanceof Byte) {
+                return Json.value(((Number) value).longValue());
             }
-            JsonObject rowObj = new JsonObject();
-            rowObj.add("kind", "row");
-            rowObj.add("fields", fields);
-            return rowObj;
-        }
-        if (value instanceof EventBean) {
-            EventBean inner = (EventBean) value;
-            JsonObject fields = new JsonObject();
-            for (String prop : new TreeSet<>(Arrays.asList(inner.getEventType().getPropertyNames()))) {
-                fields.add(prop, normalize(inner.get(prop)));
+            if (value instanceof Number) {
+                return Json.value(((Number) value).doubleValue());
             }
-            JsonObject rowObj = new JsonObject();
-            rowObj.add("kind", "row");
-            rowObj.add("fields", fields);
-            return rowObj;
-        }
-        if (value instanceof Object[]) {
-            JsonArray array = new JsonArray();
-            for (Object item : (Object[]) value) {
-                array.add(normalize(item));
+            if (value instanceof Boolean) {
+                return Json.value((Boolean) value);
             }
-            return array;
-        }
-        if (value instanceof Collection<?>) {
-            JsonArray array = new JsonArray();
-            for (Object item : (Collection<?>) value) {
-                array.add(normalize(item));
+            if (value instanceof Map<?, ?>) {
+                Map<?, ?> mapValue = (Map<?, ?>) value;
+                TreeSet<String> keys = new TreeSet<>();
+                for (Object key : mapValue.keySet()) {
+                    keys.add(String.valueOf(key));
+                }
+                JsonObject fields = new JsonObject();
+                for (String key : keys) {
+                    fields.add(key, normalize(mapValue.get(key)));
+                }
+                JsonObject rowObj = new JsonObject();
+                rowObj.add("kind", "row");
+                rowObj.add("fields", fields);
+                return rowObj;
             }
-            return array;
+            if (value instanceof EventBean) {
+                EventBean inner = (EventBean) value;
+                JsonObject fields = new JsonObject();
+                for (String prop : new TreeSet<>(Arrays.asList(inner.getEventType().getPropertyNames()))) {
+                    fields.add(prop, normalize(inner.get(prop)));
+                }
+                JsonObject rowObj = new JsonObject();
+                rowObj.add("kind", "row");
+                rowObj.add("fields", fields);
+                return rowObj;
+            }
+            // Registered-underlying protocol: a raw underlying whose class is
+            // the underlying class of a registered event type renders
+            // row-shaped exactly like the EventBean branch instead of the
+            // String.valueOf fallback (see class Javadoc).
+            if (underlyingEventTypes.containsKey(value.getClass())) {
+                return renderRow(new UnderlyingEventBean(value, underlyingEventTypes.get(value.getClass())));
+            }
+            if (value instanceof Object[]) {
+                JsonArray array = new JsonArray();
+                for (Object item : (Object[]) value) {
+                    array.add(normalize(item));
+                }
+                return array;
+            }
+            if (value instanceof Collection<?>) {
+                JsonArray array = new JsonArray();
+                for (Object item : (Collection<?>) value) {
+                    array.add(normalize(item));
+                }
+                return array;
+            }
+            return Json.value(String.valueOf(value));
         }
-        return Json.value(String.valueOf(value));
+
+        /** Minimal engine-independent EventBean view over a raw underlying. */
+        private static final class UnderlyingEventBean implements EventBean {
+            private final Object underlying;
+            private final EventType eventType;
+
+            UnderlyingEventBean(Object underlying, EventType eventType) {
+                this.underlying = underlying;
+                this.eventType = eventType;
+            }
+
+            public EventType getEventType() {
+                return eventType;
+            }
+
+            public Object get(String propertyExpression) {
+                return eventType.getGetter(propertyExpression).get(this);
+            }
+
+            public Object getUnderlying() {
+                return underlying;
+            }
+
+            public Object getFragment(String propertyExpression) {
+                return eventType.getGetter(propertyExpression).getFragment(this);
+            }
+        }
     }
 
     /** Local mirror of the regression-lib SupportSimpleBeanOne (regression-lib is not on the oracle classpath). */
@@ -766,5 +1165,17 @@ public class InfraNamedWindowJoinScenarioOracle {
         public long getL2() {
             return l2;
         }
+    }
+
+    /** Local mirrors of the pinned InfraNamedWindowJoin.MyLocalJsonProvided* json-provided classes (regression-lib is not on the oracle classpath). */
+    public static class MyLocalJsonProvidedProduct implements Serializable {
+        public String product;
+        public int size;
+    }
+
+    /** Local mirrors of the pinned InfraNamedWindowJoin.MyLocalJsonProvided* json-provided classes (regression-lib is not on the oracle classpath). */
+    public static class MyLocalJsonProvidedPortfolio implements Serializable {
+        public String portfolio;
+        public String product;
     }
 }

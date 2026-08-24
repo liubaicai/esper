@@ -16076,6 +16076,55 @@ func TestRunInfraNamedWindowJoinDiffRejectsTraceMutations(t *testing.T) {
 				trace.Records[59].New = nil
 			},
 		},
+		{
+			name: "unidirectional-whole-row-surface-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[60].New[0].Fields["charPrimitive"] = "E2"
+			},
+		},
+		{
+			name: "unidirectional-boxed-null-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[60].New[0].Fields["bigDecimal"] = 1.5
+			},
+		},
+		{
+			name: "window-join-window-content-drift",
+			mutate: func(trace *compat.Trace) {
+				c0 := trace.Records[62].New[0].Fields["c0"].([]any)
+				c0[2].(map[string]any)["fields"].(map[string]any)["theString"] = "E9"
+			},
+		},
+		{
+			name: "window-join-filtered-column-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[63].New[0].Fields["c1"] = []any{}
+			},
+		},
+		{
+			name: "window-join-empty-filter-refilled",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[64].New[0].Fields["c1"] = trace.Records[61].New[0].Fields["c1"]
+			},
+		},
+		{
+			name: "window-join-to-map-column-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[64].New[0].Fields["c2"] = map[string]any{"kind": "row", "fields": map[string]any{"E2": 9}}
+			},
+		},
+		{
+			name: "inner-join-representation-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[65].New[0].Fields["size"] = 999
+			},
+		},
+		{
+			name: "inner-join-representation-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[74].New = nil
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

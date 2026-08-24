@@ -1828,10 +1828,11 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			return fail(stderr, err)
 		}
 		if *mode == "infra-named-window-join-diff" {
-			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
 				splitMetadata(*javaRuntimeIDs, infraNamedWindowJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNamedWindowJoinJavaSources),
-				splitMetadata(*javaExecutions, infraNamedWindowJoinJavaExecutions), scenario, trace)
+				splitMetadata(*javaExecutions, infraNamedWindowJoinJavaExecutions), scenario, trace,
+				normalizeInfraNamedWindowJoinTrace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

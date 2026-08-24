@@ -1,1 +1,2471 @@
-{"version":"esper-parity/v1","id":"infra-named-window-join","scenario":"Named-window join late-start and index-choice patterns","javaCommit":"9e1b9f1cc9117fea4bf33ab043762c045d73839c","java":"17.0.20","records":[{"case":"index-choice","operation":"listener","statement":"s0","sequence":1,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":2,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":3,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":4,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":5,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":6,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":7,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":8,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":9,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":10,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":11,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":12,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":13,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":14,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":15,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":16,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":17,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":18,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":19,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":20,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":21,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":22,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":23,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":24,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":25,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":26,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":27,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":28,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":29,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":30,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":31,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":20,"s1":"E2","s2":"E2"}}]},{"case":"index-choice","operation":"listener","statement":"s0","sequence":32,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"i1":10,"s1":"E1","s2":"E1"}}]},{"case":"right-outer-late-start","operation":"snapshot","statement":"s2","sequence":0,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"0","sku":"166583"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"0","sku":"169254"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"1","sku":"166583"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"1","sku":"169254"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"2","sku":"166583"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"2","sku":"169254"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"3","sku":"166583"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"3","sku":"169254"}},{"kind":"row","fields":{"avgTime":127,"cntEnter":1,"cntLeave":0,"diff":1,"loc":"4","sku":"166583"}},{"kind":"row","fields":{"avgTime":127,"cntEnter":1,"cntLeave":0,"diff":1,"loc":"4","sku":"169254"}}]},{"case":"right-outer-late-start","operation":"snapshot","statement":"s1","sequence":0,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"0","sku":"166583"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"0","sku":"169254"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"1","sku":"166583"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"1","sku":"169254"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"2","sku":"166583"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"2","sku":"169254"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"3","sku":"166583"}},{"kind":"row","fields":{"avgTime":124,"cntEnter":1,"cntLeave":1,"diff":0,"loc":"3","sku":"169254"}},{"kind":"row","fields":{"avgTime":127,"cntEnter":1,"cntLeave":0,"diff":1,"loc":"4","sku":"166583"}},{"kind":"row","fields":{"avgTime":127,"cntEnter":1,"cntLeave":0,"diff":1,"loc":"4","sku":"169254"}}]},{"case":"full-outer-named-agg-late-start","operation":"snapshot","statement":"create","sequence":0,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":0,"theString":"c0"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":0,"theString":"c0"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":1,"theString":"c0"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":1,"theString":"c0"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":2,"theString":"c0"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":2,"theString":"c0"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":0,"theString":"c1"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":0,"theString":"c1"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":1,"theString":"c1"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":1,"theString":"c1"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":2,"theString":"c1"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":2,"theString":"c1"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":2,"theString":"c1"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":0,"theString":"c2"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":0,"theString":"c2"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":1,"theString":"c2"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":1,"theString":"c2"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":2,"theString":"c2"}},{"kind":"row","fields":{"boolPrimitive":true,"intPrimitive":2,"theString":"c2"}}]},{"case":"full-outer-named-agg-late-start","operation":"snapshot","statement":"select","sequence":0,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"cntBool":0,"intPrimitive":{"state":"null"},"symbol":"c3","theString":{"state":"null"}}},{"kind":"row","fields":{"cntBool":2,"intPrimitive":0,"symbol":"c0","theString":"c0"}},{"kind":"row","fields":{"cntBool":2,"intPrimitive":1,"symbol":"c0","theString":"c0"}},{"kind":"row","fields":{"cntBool":2,"intPrimitive":2,"symbol":"c0","theString":"c0"}},{"kind":"row","fields":{"cntBool":2,"intPrimitive":0,"symbol":{"state":"null"},"theString":"c1"}},{"kind":"row","fields":{"cntBool":2,"intPrimitive":1,"symbol":{"state":"null"},"theString":"c1"}},{"kind":"row","fields":{"cntBool":3,"intPrimitive":2,"symbol":{"state":"null"},"theString":"c1"}},{"kind":"row","fields":{"cntBool":2,"intPrimitive":0,"symbol":{"state":"null"},"theString":"c2"}},{"kind":"row","fields":{"cntBool":2,"intPrimitive":1,"symbol":{"state":"null"},"theString":"c2"}},{"kind":"row","fields":{"cntBool":2,"intPrimitive":2,"symbol":{"state":"null"},"theString":"c2"}}]},{"case":"named-and-stream","operation":"listener","statement":"s0","sequence":1,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a":"S1","b":1,"symbol":"S1"}}]},{"case":"named-and-stream","operation":"listener","statement":"s0","sequence":2,"time":"1970-01-01T00:00:00Z","new":[],"old":[{"kind":"row","fields":{"a":"S1","b":1,"symbol":"S1"}}]},{"case":"named-and-stream","operation":"listener","statement":"s0","sequence":3,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a":"S2","b":2,"symbol":"S2"}}]},{"case":"named-and-stream","operation":"listener","statement":"s0","sequence":4,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a":"S3","b":3,"symbol":"S3"}},{"kind":"row","fields":{"a":"S3","b":4,"symbol":"S3"}}]},{"case":"named-and-stream","operation":"listener","statement":"s0","sequence":5,"time":"1970-01-01T00:00:00Z","new":[],"old":[{"kind":"row","fields":{"a":"S3","b":3,"symbol":"S3"}},{"kind":"row","fields":{"a":"S3","b":4,"symbol":"S3"}}]},{"case":"between-named","operation":"listener","statement":"s0","sequence":1,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":1,"b2":2}}]},{"case":"between-named","operation":"listener","statement":"s0","sequence":2,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S1","a2":"S1","b1":4,"b2":3}}]},{"case":"between-named","operation":"listener","statement":"s0","sequence":3,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S1","a2":"S1","b1":5,"b2":3}}]},{"case":"between-named","operation":"listener","statement":"s0","sequence":4,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S1","a2":"S1","b1":4,"b2":6}},{"kind":"row","fields":{"a1":"S1","a2":"S1","b1":5,"b2":6}}]},{"case":"between-named","operation":"listener","statement":"s0","sequence":5,"time":"1970-01-01T00:00:00Z","new":[],"old":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":1,"b2":2}}]},{"case":"between-named","operation":"listener","statement":"s0","sequence":6,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":1,"b2":7}}]},{"case":"between-named","operation":"listener","statement":"s0","sequence":7,"time":"1970-01-01T00:00:00Z","new":[],"old":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":1,"b2":7}}]},{"case":"between-named","operation":"listener","statement":"s0","sequence":8,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":8,"b2":7}}]},{"case":"between-same-named","operation":"listener","statement":"s0","sequence":1,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a0":"E1","a1":"E1","b0":1,"b1":1}}]},{"case":"between-same-named","operation":"listener","statement":"s0","sequence":2,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a0":"E2","a1":"E2","b0":2,"b1":2}}]},{"case":"between-same-named","operation":"listener","statement":"s0","sequence":3,"time":"1970-01-01T00:00:00Z","new":[],"old":[{"kind":"row","fields":{"a0":"E1","a1":"E1","b0":1,"b1":1}}]},{"case":"single-insert-one-window","operation":"listener","statement":"select","sequence":1,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":1,"b2":2}}]},{"case":"single-insert-one-window","operation":"listener","statement":"select","sequence":2,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S1","a2":"S1","b1":4,"b2":3}}]},{"case":"single-insert-one-window","operation":"listener","statement":"select","sequence":3,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S1","a2":"S1","b1":5,"b2":3}}]},{"case":"single-insert-one-window","operation":"listener","statement":"select","sequence":4,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S1","a2":"S1","b1":4,"b2":6}},{"kind":"row","fields":{"a1":"S1","a2":"S1","b1":5,"b2":6}}]},{"case":"single-insert-one-window","operation":"listener","statement":"select","sequence":5,"time":"1970-01-01T00:00:00Z","new":[],"old":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":1,"b2":2}}]},{"case":"single-insert-one-window","operation":"listener","statement":"select","sequence":6,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":1,"b2":7}}]},{"case":"single-insert-one-window","operation":"listener","statement":"select","sequence":7,"time":"1970-01-01T00:00:00Z","new":[],"old":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":1,"b2":7}}]},{"case":"single-insert-one-window","operation":"listener","statement":"select","sequence":8,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a1":"S0","a2":"S0","b1":8,"b2":7}}]}]}
+{
+  "version": "esper-parity/v1",
+  "id": "infra-named-window-join",
+  "scenario": "Named-window join late-start and index-choice patterns",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "java": "17.0.20",
+  "records": [
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 3,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 4,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 5,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 6,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 7,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 8,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 9,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 10,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 11,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 12,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 13,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 14,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 15,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 16,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 17,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 18,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 19,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 20,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 21,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 22,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 23,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 24,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 25,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 26,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 27,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 28,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 29,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 30,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 31,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 20,
+            "s1": "E2",
+            "s2": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "index-choice",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 32,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "i1": 10,
+            "s1": "E1",
+            "s2": "E1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "right-outer-late-start",
+      "operation": "snapshot",
+      "statement": "s2",
+      "sequence": 0,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "0",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "0",
+            "sku": "169254"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "1",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "1",
+            "sku": "169254"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "2",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "2",
+            "sku": "169254"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "3",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "3",
+            "sku": "169254"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 127,
+            "cntEnter": 1,
+            "cntLeave": 0,
+            "diff": 1,
+            "loc": "4",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 127,
+            "cntEnter": 1,
+            "cntLeave": 0,
+            "diff": 1,
+            "loc": "4",
+            "sku": "169254"
+          }
+        }
+      ]
+    },
+    {
+      "case": "right-outer-late-start",
+      "operation": "snapshot",
+      "statement": "s1",
+      "sequence": 0,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "0",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "0",
+            "sku": "169254"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "1",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "1",
+            "sku": "169254"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "2",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "2",
+            "sku": "169254"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "3",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 124,
+            "cntEnter": 1,
+            "cntLeave": 1,
+            "diff": 0,
+            "loc": "3",
+            "sku": "169254"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 127,
+            "cntEnter": 1,
+            "cntLeave": 0,
+            "diff": 1,
+            "loc": "4",
+            "sku": "166583"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "avgTime": 127,
+            "cntEnter": 1,
+            "cntLeave": 0,
+            "diff": 1,
+            "loc": "4",
+            "sku": "169254"
+          }
+        }
+      ]
+    },
+    {
+      "case": "full-outer-named-agg-late-start",
+      "operation": "snapshot",
+      "statement": "create",
+      "sequence": 0,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 0,
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 0,
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 1,
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 1,
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 2,
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 2,
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 0,
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 0,
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 1,
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 1,
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 2,
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 2,
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 2,
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 0,
+            "theString": "c2"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 0,
+            "theString": "c2"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 1,
+            "theString": "c2"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 1,
+            "theString": "c2"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 2,
+            "theString": "c2"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "boolPrimitive": true,
+            "intPrimitive": 2,
+            "theString": "c2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "full-outer-named-agg-late-start",
+      "operation": "snapshot",
+      "statement": "select",
+      "sequence": 0,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 0,
+            "intPrimitive": {
+              "state": "null"
+            },
+            "symbol": "c3",
+            "theString": {
+              "state": "null"
+            }
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 2,
+            "intPrimitive": 0,
+            "symbol": "c0",
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 2,
+            "intPrimitive": 1,
+            "symbol": "c0",
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 2,
+            "intPrimitive": 2,
+            "symbol": "c0",
+            "theString": "c0"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 2,
+            "intPrimitive": 0,
+            "symbol": {
+              "state": "null"
+            },
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 2,
+            "intPrimitive": 1,
+            "symbol": {
+              "state": "null"
+            },
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 3,
+            "intPrimitive": 2,
+            "symbol": {
+              "state": "null"
+            },
+            "theString": "c1"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 2,
+            "intPrimitive": 0,
+            "symbol": {
+              "state": "null"
+            },
+            "theString": "c2"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 2,
+            "intPrimitive": 1,
+            "symbol": {
+              "state": "null"
+            },
+            "theString": "c2"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "cntBool": 2,
+            "intPrimitive": 2,
+            "symbol": {
+              "state": "null"
+            },
+            "theString": "c2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "named-and-stream",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a": "S1",
+            "b": 1,
+            "symbol": "S1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "named-and-stream",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [],
+      "old": [
+        {
+          "kind": "row",
+          "fields": {
+            "a": "S1",
+            "b": 1,
+            "symbol": "S1"
+          }
+        }
+      ]
+    },
+    {
+      "case": "named-and-stream",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 3,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a": "S2",
+            "b": 2,
+            "symbol": "S2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "named-and-stream",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 4,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a": "S3",
+            "b": 3,
+            "symbol": "S3"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "a": "S3",
+            "b": 4,
+            "symbol": "S3"
+          }
+        }
+      ]
+    },
+    {
+      "case": "named-and-stream",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 5,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [],
+      "old": [
+        {
+          "kind": "row",
+          "fields": {
+            "a": "S3",
+            "b": 3,
+            "symbol": "S3"
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "a": "S3",
+            "b": 4,
+            "symbol": "S3"
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 1,
+            "b2": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S1",
+            "a2": "S1",
+            "b1": 4,
+            "b2": 3
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 3,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S1",
+            "a2": "S1",
+            "b1": 5,
+            "b2": 3
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 4,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S1",
+            "a2": "S1",
+            "b1": 4,
+            "b2": 6
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S1",
+            "a2": "S1",
+            "b1": 5,
+            "b2": 6
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 5,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [],
+      "old": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 1,
+            "b2": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 6,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 1,
+            "b2": 7
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 7,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [],
+      "old": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 1,
+            "b2": 7
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 8,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 8,
+            "b2": 7
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-same-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a0": "E1",
+            "a1": "E1",
+            "b0": 1,
+            "b1": 1
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-same-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a0": "E2",
+            "a1": "E2",
+            "b0": 2,
+            "b1": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "between-same-named",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 3,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [],
+      "old": [
+        {
+          "kind": "row",
+          "fields": {
+            "a0": "E1",
+            "a1": "E1",
+            "b0": 1,
+            "b1": 1
+          }
+        }
+      ]
+    },
+    {
+      "case": "single-insert-one-window",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 1,
+            "b2": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "single-insert-one-window",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S1",
+            "a2": "S1",
+            "b1": 4,
+            "b2": 3
+          }
+        }
+      ]
+    },
+    {
+      "case": "single-insert-one-window",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 3,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S1",
+            "a2": "S1",
+            "b1": 5,
+            "b2": 3
+          }
+        }
+      ]
+    },
+    {
+      "case": "single-insert-one-window",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 4,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S1",
+            "a2": "S1",
+            "b1": 4,
+            "b2": 6
+          }
+        },
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S1",
+            "a2": "S1",
+            "b1": 5,
+            "b2": 6
+          }
+        }
+      ]
+    },
+    {
+      "case": "single-insert-one-window",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 5,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [],
+      "old": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 1,
+            "b2": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "single-insert-one-window",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 6,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 1,
+            "b2": 7
+          }
+        }
+      ]
+    },
+    {
+      "case": "single-insert-one-window",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 7,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [],
+      "old": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 1,
+            "b2": 7
+          }
+        }
+      ]
+    },
+    {
+      "case": "single-insert-one-window",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 8,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "a1": "S0",
+            "a2": "S0",
+            "b1": 8,
+            "b2": 7
+          }
+        }
+      ]
+    },
+    {
+      "case": "unidirectional",
+      "operation": "listener",
+      "statement": "select",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "bigDecimal": {
+              "state": "null"
+            },
+            "bigInteger": {
+              "state": "null"
+            },
+            "boolBoxed": {
+              "state": "null"
+            },
+            "boolPrimitive": false,
+            "byteBoxed": {
+              "state": "null"
+            },
+            "bytePrimitive": 0,
+            "charBoxed": {
+              "state": "null"
+            },
+            "charPrimitive": "\u0000",
+            "doubleBoxed": {
+              "state": "null"
+            },
+            "doublePrimitive": 0,
+            "enumValue": {
+              "state": "null"
+            },
+            "floatBoxed": {
+              "state": "null"
+            },
+            "floatPrimitive": 0,
+            "intBoxed": {
+              "state": "null"
+            },
+            "intPrimitive": 1,
+            "longBoxed": {
+              "state": "null"
+            },
+            "longPrimitive": 0,
+            "shortBoxed": {
+              "state": "null"
+            },
+            "shortPrimitive": 0,
+            "theString": "E2"
+          }
+        }
+      ]
+    },
+    {
+      "case": "window-unidirectional-join",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "c0": [
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 0,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E0"
+                }
+              },
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                }
+              }
+            ],
+            "c1": [
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 0,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E0"
+                }
+              },
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                }
+              }
+            ],
+            "c2": {
+              "kind": "row",
+              "fields": {
+                "E0": 0,
+                "E1": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "window-unidirectional-join",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "c0": [
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 0,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E0"
+                }
+              },
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                }
+              },
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 2,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                }
+              }
+            ],
+            "c1": [
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 0,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E0"
+                }
+              },
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                }
+              }
+            ],
+            "c2": {
+              "kind": "row",
+              "fields": {
+                "E0": 0,
+                "E1": 1,
+                "E2": 2
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "window-unidirectional-join",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 3,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "c0": [
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 0,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E0"
+                }
+              },
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 2,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                }
+              }
+            ],
+            "c1": [
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 0,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E0"
+                }
+              }
+            ],
+            "c2": {
+              "kind": "row",
+              "fields": {
+                "E0": 0,
+                "E2": 2
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "window-unidirectional-join",
+      "operation": "listener",
+      "statement": "s0",
+      "sequence": 4,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "c0": [
+              {
+                "kind": "row",
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 2,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                }
+              }
+            ],
+            "c1": [],
+            "c2": {
+              "kind": "row",
+              "fields": {
+                "E2": 2
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-objectarray",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productB",
+            "portfolio": "Portfolio",
+            "size": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-objectarray",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productC",
+            "portfolio": "Portfolio",
+            "size": 3
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-map",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productB",
+            "portfolio": "Portfolio",
+            "size": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-map",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productC",
+            "portfolio": "Portfolio",
+            "size": 3
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-json",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productB",
+            "portfolio": "Portfolio",
+            "size": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-json",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productC",
+            "portfolio": "Portfolio",
+            "size": 3
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-jsonprovided",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productB",
+            "portfolio": "Portfolio",
+            "size": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-jsonprovided",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productC",
+            "portfolio": "Portfolio",
+            "size": 3
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-default",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 1,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productB",
+            "portfolio": "Portfolio",
+            "size": 2
+          }
+        }
+      ]
+    },
+    {
+      "case": "inner-join-late-start-default",
+      "operation": "listener",
+      "statement": "Query2",
+      "sequence": 2,
+      "time": "1970-01-01T00:00:00Z",
+      "new": [
+        {
+          "kind": "row",
+          "fields": {
+            "ProductWin.product": "productC",
+            "portfolio": "Portfolio",
+            "size": 3
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -114,9 +114,32 @@ classpath="$classpath:$(tr '\n' ':' < "$work/compiler-cp.txt"):$(tr '\n' ':' < "
 
 parent=$(dirname "$output")
 mkdir -p "$parent"
-"$java_bin" -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Duser.language=en \
-    -Duser.country=US -Duser.variant= -cp "$classpath" \
-    InfraNamedWindowJoinScenarioOracle "$scenario" > "$output"
+
+# The pinned compiler re-adds generated JSON underlyings from every path
+# registry entry, so a second in-JVM compilation of a module whose path
+# carries a generated (non-provided) JSON event type aborts with a duplicate
+# class error. Each case therefore runs in its own JVM and the per-case
+# records merge in scenario case order; per-case behavior and records are
+# unchanged because every case already owns an isolated runtime.
+cases_file="$work/cases.txt"
+jq -r '.cases[].case' "$scenario" > "$cases_file"
+total=$(wc -l < "$cases_file" | tr -d ' ')
+index=0
+while IFS= read -r case_name; do
+    index=$((index + 1))
+    case_output="$work/case-$(printf '%02d' "$index").json"
+    if ! "$java_bin" -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Duser.language=en \
+        -Duser.country=US -Duser.variant= -cp "$classpath" \
+        InfraNamedWindowJoinScenarioOracle "$scenario" "$case_name" > "$case_output"; then
+        echo "Java oracle failed for case $case_name ($index/$total)" >&2
+        exit 1
+    fi
+done < "$cases_file"
+
+description=$(jq -r '.scenario // ""' "$work/case-01.json")
+jq -s -r --arg desc "$description" \
+    '. as $docs | ($docs[0] | .scenario = $desc | .records = ([$docs[].records] | add // []))' \
+    "$work"/case-*.json > "$output"
 
 if ! jq -e '.version == "esper-parity/v1" and (.id | length > 0) and (.records | type == "array")' "$output" >/dev/null 2>&1; then
     echo "Java oracle produced an invalid trace: $output" >&2

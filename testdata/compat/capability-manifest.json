@@ -2169,7 +2169,7 @@
    "phase": 1,
    "status": "implemented",
    "remaining": [
-    "full Java/Go shared parity trace beyond per-execution probes, wider created-composite representation matrix and event-type metadata surfaces (BeanEventType/type-class/stateless-select) remain open; InfraNamedWindowJoin executions 7-9 (InfraUnidirectional, InfraWindowUnidirectionalJoin, InfraInnerJoinLateStart)"
+    "full Java/Go shared parity trace beyond per-execution probes, wider created-composite representation matrix and event-type metadata surfaces (BeanEventType/type-class/stateless-select) remain open"
    ],
    "verification": [
     "differential-verified",
@@ -2183,7 +2183,10 @@
     "java-runtime-479eabd476ce403c4ab8",
     "java-runtime-342d46139a3313b382b7",
     "java-runtime-8f4b0394ee32a5524464",
-    "java-runtime-e7320476230a3903e2ec"
+    "java-runtime-e7320476230a3903e2ec",
+    "java-runtime-98c12887d1e25c26c101",
+    "java-runtime-09ca3e1b6ac4f52b0b7e",
+    "java-runtime-2a245ed9721b6b840746"
    ]
   },
   {
@@ -6054,7 +6057,7 @@
     "java-junit",
     "go-unit"
    ],
-   "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1→5/5/1, then 5→7/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text.",
+   "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1\u21925/5/1, then 5\u21927/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text.",
    "verification": [
     "inventoried",
     "implemented"
@@ -6483,7 +6486,7 @@
     "java-junit",
     "go-unit"
    ],
-   "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null→B/source-inner, true→source-inner, false→A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open.",
+   "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null\u2192B/source-inner, true\u2192source-inner, false\u2192A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open.",
    "verification": [
     "inventoried",
     "implemented"
@@ -9387,7 +9390,7 @@
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k–100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open.",
+   "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k\u2013100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open.",
    "verification": [
     "inventoried",
     "implemented",
@@ -23031,7 +23034,7 @@
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "Java fires a bare not-root at deploy time (begin-state true) and the listener loop is driven by that fire; the Go port rejects bare negative roots at Build (root negative pattern has no positive completion), so the replay drives the same listener-callback deploy/undeploy/redeploy cycles (ST1..ST10) from an explicit driver statement and asserts the bare not-root build rejection. The smoke property — reentrant lifecycle calls from a pattern listener neither deadlock nor corrupt the engine — is identical.",
+   "difference": "Java fires a bare not-root at deploy time (begin-state true) and the listener loop is driven by that fire; the Go port rejects bare negative roots at Build (root negative pattern has no positive completion), so the replay drives the same listener-callback deploy/undeploy/redeploy cycles (ST1..ST10) from an explicit driver statement and asserts the bare not-root build rejection. The smoke property \u2014 reentrant lifecycle calls from a pattern listener neither deadlock nor corrupt the engine \u2014 is identical.",
    "verification": [
     "inventoried",
     "implemented"
@@ -33859,7 +33862,10 @@
     "java-runtime-479eabd476ce403c4ab8",
     "java-runtime-342d46139a3313b382b7",
     "java-runtime-8f4b0394ee32a5524464",
-    "java-runtime-e7320476230a3903e2ec"
+    "java-runtime-e7320476230a3903e2ec",
+    "java-runtime-98c12887d1e25c26c101",
+    "java-runtime-09ca3e1b6ac4f52b0b7e",
+    "java-runtime-2a245ed9721b6b840746"
    ],
    "javaNames": [
     "InfraJoinIndexChoice",
@@ -33868,7 +33874,10 @@
     "InfraJoinNamedAndStream",
     "InfraJoinBetweenNamed",
     "InfraJoinBetweenSameNamed",
-    "InfraJoinSingleInsertOneWindow"
+    "InfraJoinSingleInsertOneWindow",
+    "InfraUnidirectional",
+    "InfraWindowUnidirectionalJoin",
+    "InfraInnerJoinLateStart"
    ],
    "goTests": [
     "internal/app/parity/run_test.go:TestRunInfraNamedWindowJoinDiffWritesPassingEvidence"
@@ -33903,7 +33912,10 @@
     "java-runtime-479eabd476ce403c4ab8",
     "java-runtime-342d46139a3313b382b7",
     "java-runtime-8f4b0394ee32a5524464",
-    "java-runtime-e7320476230a3903e2ec"
+    "java-runtime-e7320476230a3903e2ec",
+    "java-runtime-98c12887d1e25c26c101",
+    "java-runtime-09ca3e1b6ac4f52b0b7e",
+    "java-runtime-2a245ed9721b6b840746"
    ]
   }
  ],
@@ -36437,7 +36449,7 @@
   "inventoriedCases": 548,
   "implementedCases": 546,
   "differentialVerifiedCases": 159,
-  "differentialVerifiedRuntimeIds": 593,
+  "differentialVerifiedRuntimeIds": 596,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -36447,10 +36459,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3218,
-  "referencedJavaRuntimeIds": 3014,
+  "runtimeAssociationCount": 3221,
+  "referencedJavaRuntimeIds": 3017,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1122,
+  "unreferencedJavaRuntimeIds": 1119,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
   "totalCases": 548,
