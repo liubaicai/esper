@@ -4,6 +4,19 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.244（2026-08-24），新增 `view.basic-windows` 的
+> `view-unique` differential-verified 场景，对照固定 Java ViewUnique.java
+> 的 5 个 execution（SceneOne、SceneTwo、AnnotationPrefix、
+> ExpressionParameter、TwoWindows）。场景 Java/Go 各 33 条 records、
+> 0 differences；覆盖 #unique(symbol) irstream 替换对（重复 key 投递
+> new+old、新 key 仅 new）、双 key #unique(symbol, feed) 窗口、SupportBean
+> 上 theString/intPrimitive 的 c0/c1 投影、#unique(Math.abs(intPrimitive))
+> 表达式键窗口（默认 stream：替换不以 remove 投递但窗口状态更新，
+> 快照保留每键最新行 {E2,E4}）以及双独立 #unique(intBoxed) 语句的延迟
+> s1 部署（s1 只见 E2 为 new-only）。manifest 更新为 543 cases、155 个
+> differential-verified case、542 个 differential runtime IDs、3165 条
+> associations（referenced 2961）。
+>
 > 最新补充：Draft 4.243（2026-08-23），新增 `epl.other.select-wildcard-additional`
 > differential-verified 场景，对照固定 Java EPLOtherSelectWildcardWAdditional.java
 > 的 Single 和 WildcardMapEvent 共两个 runtime。场景 Java/Go 各 3 条 records、

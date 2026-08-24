@@ -3961,7 +3961,8 @@
     "ViewLengthBatchSceneOne",
     "ViewLengthBatchSize2",
     "ViewLengthBatchSize1",
-    "ViewUnionSceneOne"
+    "ViewUnionSceneOne",
+    "ViewLastUniqueWithAnnotationPrefix"
    ],
    "goRefs": [
     "internal/esper/view_expression_parity_test.go",
@@ -3996,7 +3997,12 @@
     "java-runtime-5a98579c3673cc0224ce",
     "java-runtime-8bc763b2e677e747ee4c",
     "java-runtime-a3dc40576e7c9def33fb",
-    "java-runtime-b6eb26431d8d05188516"
+    "java-runtime-b6eb26431d8d05188516",
+    "java-runtime-0f8822c71264f4aaf788",
+    "java-runtime-2461852109912927f5ac",
+    "java-runtime-f354e2a6054730d80312",
+    "java-runtime-ba0287f83e55f5fd2454",
+    "java-runtime-5956f7d158bda2623d70"
    ]
   },
   {
@@ -33447,6 +33453,53 @@
     "implemented",
     "intentionally-different"
    ]
+  },
+  {
+   "id": "case.view-unique",
+   "javaRuntimeIds": [
+    "java-runtime-0f8822c71264f4aaf788",
+    "java-runtime-2461852109912927f5ac",
+    "java-runtime-f354e2a6054730d80312",
+    "java-runtime-ba0287f83e55f5fd2454",
+    "java-runtime-5956f7d158bda2623d70"
+   ],
+   "javaNames": [
+    "ViewLastUniqueSceneOne",
+    "ViewLastUniqueSceneTwo",
+    "ViewLastUniqueWithAnnotationPrefix",
+    "ViewUniqueExpressionParameter",
+    "ViewUniqueTwoWindows"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewUniqueDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "view",
+    "unique",
+    "expression-parameter",
+    "irstream",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/view-unique.json",
+    "testdata/parity/view-unique.trace.json",
+    "testdata/parity/view-unique.evidence.json"
+   ],
+   "notes": "Draft 4.244: 5 cases; Java/Go each 33 records, 0 differences. Covers #unique(symbol) irstream replacement pairs, two-key #unique(symbol, feed), unique over SupportBean fields with c0/c1 projection, #unique(Math.abs(intPrimitive)) expression-key window (default stream: replacements not delivered as removals), and twin independent #unique(intBoxed) statements with deferred s1 deployment.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0f8822c71264f4aaf788",
+    "java-runtime-2461852109912927f5ac",
+    "java-runtime-f354e2a6054730d80312",
+    "java-runtime-ba0287f83e55f5fd2454",
+    "java-runtime-5956f7d158bda2623d70"
+   ]
   }
  ],
  "mappings": [
@@ -35949,13 +36002,17 @@
   {
    "capabilityId": "epl.other.select-wildcard-additional",
    "caseId": "case.epl-other-wildcard-additional-invalid"
+  },
+  {
+   "capabilityId": "view.basic-windows",
+   "caseId": "case.view-unique"
   }
  ],
  "summary": {
-  "inventoriedCases": 542,
-  "implementedCases": 540,
-  "differentialVerifiedCases": 154,
-  "differentialVerifiedRuntimeIds": 537,
+  "inventoriedCases": 543,
+  "implementedCases": 541,
+  "differentialVerifiedCases": 155,
+  "differentialVerifiedRuntimeIds": 542,
   "intentionallyDifferentCases": 21,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -35965,13 +36022,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3160,
-  "referencedJavaRuntimeIds": 2956,
+  "runtimeAssociationCount": 3165,
+  "referencedJavaRuntimeIds": 2961,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1180,
+  "unreferencedJavaRuntimeIds": 1175,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 542,
+  "totalCases": 543,
   "totalCapabilities": 111
  }
 }

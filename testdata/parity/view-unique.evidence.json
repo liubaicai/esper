@@ -1,0 +1,1691 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0f8822c71264f4aaf788",
+    "java-runtime-2461852109912927f5ac",
+    "java-runtime-f354e2a6054730d80312",
+    "java-runtime-ba0287f83e55f5fd2454",
+    "java-runtime-5956f7d158bda2623d70"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewUnique.java"
+  ],
+  "javaExecutions": [
+    "ViewLastUniqueSceneOne",
+    "ViewLastUniqueSceneTwo",
+    "ViewLastUniqueWithAnnotationPrefix",
+    "ViewUniqueExpressionParameter",
+    "ViewUniqueTwoWindows"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "view-unique",
+    "steps": [
+      {
+        "op": "case",
+        "case": "scene-one"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 100,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "price": 5,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 101,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 102,
+          "feed": ""
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "price": 6,
+          "feed": ""
+        }
+      },
+      {
+        "op": "case",
+        "case": "scene-two"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "feed": "F1",
+          "price": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "feed": "F1",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "feed": "F1",
+          "price": 101
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "feed": "F1",
+          "price": 102
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "feed": "F2",
+          "price": 6
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "annotation-prefix"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 22
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "case",
+        "case": "expression-parameter"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "two-windows"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-unique",
+    "records": [
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 100,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 101,
+              "symbol": "S1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 100,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 102,
+              "symbol": "S1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 101,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 102,
+              "symbol": "S1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 6,
+              "symbol": "S2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 100,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 101,
+              "symbol": "S1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 100,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 102,
+              "symbol": "S2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 101,
+              "symbol": "S1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 102,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F2",
+              "price": 6,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 101,
+              "symbol": "S1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 102,
+              "symbol": "S2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F2",
+              "price": 6,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 22
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 3
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3",
+              "c1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -10,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -5,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 5,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -10,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 5,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-windows",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-windows",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-windows",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-unique",
+    "records": [
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 100,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 101,
+              "symbol": "S1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 100,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 102,
+              "symbol": "S1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 101,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 102,
+              "symbol": "S1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 6,
+              "symbol": "S2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 100,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 101,
+              "symbol": "S1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 100,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 102,
+              "symbol": "S2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 5,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 101,
+              "symbol": "S1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 102,
+              "symbol": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F2",
+              "price": 6,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 101,
+              "symbol": "S1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F1",
+              "price": 102,
+              "symbol": "S2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "F2",
+              "price": 6,
+              "symbol": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 22
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 3
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "annotation-prefix",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3",
+              "c1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -10,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -5,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 5,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-parameter",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": -10,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 5,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-windows",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-windows",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "two-windows",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

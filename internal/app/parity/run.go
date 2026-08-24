@@ -1886,6 +1886,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "view-unique" || *mode == "view-unique-diff" {
+		trace, err := runViewUniqueScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-unique-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewUniqueJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewUniqueJavaSources),
+				splitMetadata(*javaExecutions, viewUniqueJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "variables-onset" || *mode == "variables-onset-diff" {
 		trace, err := runVariablesOnsetScenario(context.Background(), scenario)
 		if err != nil {

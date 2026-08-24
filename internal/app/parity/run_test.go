@@ -13625,6 +13625,97 @@ func TestRunViewLengthBatchDiffWritesPassingEvidence(t *testing.T) {
 	}
 }
 
+func TestRunViewUniqueDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-unique.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "view-unique.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-unique.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "view-unique-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunViewUniqueDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "listener-alias-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[14].New[0].Fields["c0"] = "WRONG"
+			},
+		},
+		{
+			name: "unique-evicted-old-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[18].Old = nil
+			},
+		},
+		{
+			name: "snapshot-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[15].New[0].Fields["c1"] = 99
+			},
+		},
+		{
+			name: "two-windows-deferred-statement-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[32].New = nil
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-unique.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "view-unique.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-unique.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "view-unique-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunEplOtherWildcardAdditionalDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-wildcard-additional.evidence.json"),

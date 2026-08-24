@@ -1,0 +1,63 @@
+{
+  "version": "esper-parity/v1",
+  "id": "view-unique",
+  "description": "All five executions of ViewUnique replayed per pinned module: unique(symbol) market window with irstream symbol/price projection and ordered iterator over replacements, two-key unique(symbol, feed) window where a fresh second key delivers new-only and iterators hold {101.0,102.0} then {101.0,6.0,102.0}, SupportBean#unique(theString) c0/c1 projection with per-milestone empty/partial/full window snapshots and eviction pairs E1/2 vs E1/1, E2/21 vs E2/20, E2/22 vs E2/21 and E1/3 vs E1/2, the expression-parameter window keyed by Math.abs(intPrimitive) where |-10|==10 evicts E1 and |5|==5 evicts E3 leaving {E2,E4}, and two independent #unique(intBoxed) windows where s1 deploys mid-case after E1 and E2 reaches s0 as new+old (same null key) but s1 as new-only; snapshot rows render in canonical sorted-field order because unique-view iteration order is not contractual (AnyOrder assertions)",
+  "javaRuntimes": [
+    "ViewLastUniqueSceneOne",
+    "ViewLastUniqueSceneTwo",
+    "ViewLastUniqueWithAnnotationPrefix",
+    "ViewUniqueExpressionParameter",
+    "ViewUniqueTwoWindows"
+  ],
+  "cases": [
+    {"case": "scene-one"},
+    {"case": "scene-two"},
+    {"case": "annotation-prefix"},
+    {"case": "expression-parameter"},
+    {"case": "two-windows"}
+  ],
+  "steps": [
+    {"op": "case", "case": "scene-one"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S1", "price": 100, "feed": ""}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S2", "price": 5, "feed": ""}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S1", "price": 101, "feed": ""}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S1", "price": 102, "feed": ""}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S2", "price": 6, "feed": ""}},
+
+    {"op": "case", "case": "scene-two"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S1", "feed": "F1", "price": 100}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S2", "feed": "F1", "price": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S1", "feed": "F1", "price": 101}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S2", "feed": "F1", "price": 102}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "S1", "feed": "F2", "price": 6}},
+    {"op": "snapshot", "statement": "s0"},
+
+    {"op": "case", "case": "annotation-prefix"},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 2}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 21}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 22}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 3}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 30}},
+
+    {"op": "case", "case": "expression-parameter"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": -10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": -5}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 5}},
+    {"op": "snapshot", "statement": "s0"},
+
+    {"op": "case", "case": "two-windows"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "deploy", "statement": "s1"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}}
+  ]
+}
