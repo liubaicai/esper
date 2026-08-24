@@ -32,74 +32,25 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-25
-- Baseline: `HEAD` == `origin/master`; the previous unit (Draft 4.251,
-  InfraNamedWindowJoin executions 7-9, commit `a8f2b0c1e`) is pushed. The six
-  untracked `infra-table-insert-into` / `resultset-orderby-row-per-group`
-  files are prefetch assets and remain outside commits until their units are
-  selected.
-- Current work unit (N+1, Draft 4.252): `infra.namedwindow.views` /
-  `infra-table-insert-into`, five executions of fixed
-  `InfraTableInsertInto.java` carried by the prefetched oracle
-  `tools/java-oracle/InfraTableInsertIntoScenarioOracle.java` + scenario
-  testdata/parity/infra-table-insert-into.json (cases insert-delete,
-  same-module-unkeyed, two-modules-unkeyed, wildcard-map, same-module-keyed;
-  runtime IDs 185fe3d8699570122804, 6ee6e846c37d6ad8b769, e8d546810d8419632df9,
-  + `TIIGoSurface` reports: the prefetched oracle/scenario are verified
-  drift-free against the pinned suite (infra/tbl/InfraTableInsertInto.java),
-  so this unit has NO asset-writer lane — serial exception recorded: every
-  write is primary-lane. Observable contract: 20 records (7 insert-delete
-  snapshots, 3 same-module-unkeyed, 4 two-modules-unkeyed incl. one
-  send-error, 1 wildcard-map DEFAULT-representation subset — disclosed
-  approved difference vs the pinned six-representation loop, 5
-  same-module-keyed); snapshot records iterate the create-table statement
-  with sorted property names and insertion-order rows; send-error carries the
-  bare root-cause message, which for the unkeyed duplicate insert is exactly
-  "Unique index violation, table 'MyTableIIU' is a declared to hold a single
-  un-keyed row" (pinned TableInstanceUngroupedImpl.java:53-54, grammar
-  verbatim).
-- Go contract: new runner internal/app/parity/infra_table_insert_into.go
-  (custom step loop per variables_onset/faf-scene-two precedent: deploy via
-  DeployPlans, send via typed decode, send-error recording the bare
-  *esper.Error message, snapshot via per-step FromTable fire-and-forget plans +
-  compat.NormalizeResults), dispatch + fixture tests per the
-  infra-named-window-join pattern. ONE shared-runtime change is authorized:
-  tableState.upsert insert-only duplicate on an UNKEYED table (no primary
-  key) produces the pinned message above; keyed duplicates keep the existing
-  message (no pinned observable depends on it).
-- Allowed files: internal/esper/state.go (the one message change),
-  internal/app/parity/infra_table_insert_into.go (new), run.go, run_test.go;
-  primary owns generated trace/evidence, manifest, roadmap, CHANGELOG, PLANS.
-- Forbidden: unrelated engine semantics, weakening the keyed duplicate
-  message. The prefetched oracle/scenario were verified drift-free against
-  the pinned suite, but the first differential surfaced two oracle harness
-  defects; the primary fixed them in place (documented in the oracle
-  Javadoc): listener hooks the pinned suite never attaches recorded
-  engine-internal generated names, and the plain runtime swallowed the
-  statement exception the pinned runner rethrows via
-  SupportExceptionHandlerFactoryRethrow.
-- Progress: primary implemented the unkeyed duplicate-insert message parity
-  (internal/esper/state.go) and the custom-step-loop runner, dispatch, and
-  10 mutations. The prefetched oracle needed two primary fixes surfaced by
-  the first differential run: it attached listeners the pinned suite never
-  attaches (recording engine-internal generated names on insert-into-table
-  rows) and its plain runtime swallowed the statement exception the pinned
-  runner rethrows — fixed by removing the listener hooks and mirroring the
-  pinned SupportExceptionHandlerFactoryRethrow wrapper. Pinned Java trace
-  regenerated: 20 records; differential evidence passing 20/20 records,
-  0 differences. Manifest extended with case.infra-table-insert-into (160
-  DV cases, 601 DV runtime IDs, 3226 associations, referenced 3022).
-- Review: `TIIParityReview` verdict PASS with one P3 (PLANS record-breakdown
-  arithmetic: 6 vs the actual 5 same-module-keyed records, plus a
-  "pre-built FAF plans" wording drift) — both fixed in this file; no code or
-  evidence changes required.
-- Next action: semantic commit and push.
-- Previous unit outcome (closed; Draft 4.251, commit `a8f2b0c1e`):
-  InfraNamedWindowJoin executions 7-9 differential-verified at 75/75 records,
-  0 differences; unidirectional w.* whole-row surface, window(win.*)
-  aggregate/filter/toMap forms, and five representation cases of
-  inner-join-late-start (AVRO approved difference); registered-underlying
-  oracle rendering protocol, plain-json population module grouping, per-case
-  JVM fork; review PASS after the normalizer double-envelope P1 fix.
+- Baseline: `HEAD` == `origin/master`; the previous unit (Draft 4.252,
+  InfraTableInsertInto 5 runtimes, commit `8fa0ab8da`) is pushed. The three
+  untracked `resultset-orderby-row-per-group` files are prefetch assets and
+  remain outside commits until their units are selected.
+- Current work unit (N+1, Draft 4.253): `resultset.orderby-row-per-group`,
+  first half of the nine ResultSetOrderByRowPerGroup executions carried by
+  the prefetched oracle `tools/java-oracle/ResultSetOrderByRowPerGroupScenarioOracle.java`
+  + scenario `testdata/parity/resultset-orderby-row-per-group.json` + runner
+  script; this unit takes the no-having/having pair without join and the
+  three join variants (no-having-join, having-join, having-join-alias), the
+  second unit takes last/last-join/iterator/order-by-last. Prefetch contract
+  consolidation pending the parallel Java/Go scout gate.
+- Next action: launch the N+1 Java/Go scout batch, freeze the contract
+  split, then implement.
+- Previous unit outcome (closed; Draft 4.252, commit `8fa0ab8da`):
+  InfraTableInsertInto 5 executions differential-verified at 20/20 records,
+  0 differences; unkeyed duplicate-insert message parity in
+  internal/esper/state.go; oracle listener-hook removal and rethrow-handler
+  mirror; review PASS after one P3 PLANS arithmetic fix.
 - Draft 4.251 unit agents: prefetch scouts `NWJ3JavaContract`
   (java-oracle-scout) and `NWJ3GoSurface` (scout) ran concurrently before
   implementation; asset writer `NWJ3AssetWriter` (parity-asset-worker)
@@ -110,6 +61,13 @@ activity or a single coverage percentage.
   review fixes.
 
 ## Delegation checkpoint
+- Draft 4.252 unit agents: prefetch scouts `TIIJavaContract`
+  (java-oracle-scout) and `TIIGoSurface` (scout) ran concurrently before
+  implementation; no asset writer (prefetched assets verified drift-free —
+  recorded serial exception); `TIIParityReview` verdict PASS with one P3
+  PLANS arithmetic fix. Primary-owned: the unkeyed message parity fix and
+  two oracle harness fixes surfaced by the first differential run.
+
 
 - Coercion unit agents: prefetch scouts `CoercionJavaContract`
   (java-oracle-scout) and `CoercionGoSurface` (scout) ran concurrently with
