@@ -110,7 +110,7 @@ func runEbprCase(ctx context.Context, scenario compat.Scenario, caseName string)
 	seq := uint64(0)
 	statements := make(map[string]*esper.Statement)
 
-	deployAny := func(name string, query esper.Query, waitOrder bool) error {
+	deployAny := func(query esper.Query) error {
 		plan, err := env.Build(query)
 		if err != nil {
 			return err
@@ -172,7 +172,7 @@ func runEbprCase(ctx context.Context, scenario compat.Scenario, caseName string)
 			// the Java oracle's per-deployment TraceWriter.
 			seq = 0
 			deploy := func(query esper.Query) error {
-				return deployAny("s0", query, false)
+				return deployAny(query)
 			}
 			switch caseName {
 			case "native-bean-fragment":
@@ -561,12 +561,6 @@ func ebprConvertOA(caseName string, arr []any) []any {
 	return out
 }
 
-// ebprCoerceOA converts raw JSON []interface{} values into the typed shapes
-// the object-array schema expects ([][]any stays, []any of numbers -> []int32).
-func ebprCoerceOA(caseName string, arr []any) []any {
-	return arr
-}
-
 func ebprConvertValue(caseName, key string, v any) any {
 	switch val := v.(type) {
 	case map[string]any:
@@ -649,20 +643,6 @@ func jsonIntSlice(m any) []int {
 		for _, v := range arr {
 			if n, ok := v.(float64); ok {
 				out = append(out, int(n))
-			}
-		}
-	}
-	return out
-}
-
-func jsonAnyMapSlice(m any) []map[string]any {
-	var out []map[string]any
-	if arr, ok := m.([]any); ok {
-		for _, v := range arr {
-			if mm, ok := v.(map[string]any); ok {
-				out = append(out, mm)
-			} else {
-				out = append(out, nil)
 			}
 		}
 	}
