@@ -16114,7 +16114,13 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 					next.right = newPatternProgress(progress.node.right)
 					inheritPatternProgressTags(next, next.right)
 					armPatternProgressTimers(next.right, trigger.now, variables)
-					next.right.skipEvent = trigger.event.identity
+					if leftTransition.matched {
+						// Only an event-caused left completion arms the right against
+						// the arming event itself. A start-vacuous left (not, or an
+						// or-with-not) completes without consuming an event, so the
+						// right branch legitimately receives the first event.
+						next.right.skipEvent = trigger.event.identity
+					}
 					next.started = true
 					if patternSatisfied(next.right) {
 						// A right branch satisfied at spawn (a not, or an or with a
@@ -16171,7 +16177,6 @@ func advancePatternNodeTrigger(progress *patternProgress, trigger patternTrigger
 			if rightSatisfied {
 				next.phase = 2
 				next.done = true
-				next.right.skipEvent = trigger.event.identity
 			}
 			seqTransition := patternTransitionFrom(next, patternSatisfied(next), rightTransition)
 			seqTransition.fireOnly = rightTransition.fireOnly && rightTransition.complete
