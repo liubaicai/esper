@@ -96,7 +96,25 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1abd87887a2624440680",
+    "java-runtime-59d49f62d061fc49f9ee",
+    "java-runtime-2eaac4dcd93014962bd8",
+    "java-runtime-43a5f4e4ec952ad9887c",
+    "java-runtime-276de28b1f0e90a5e292",
+    "java-runtime-544ea453ff05cbd7f75f",
+    "java-runtime-ca984db35e239326a14a",
+    "java-runtime-77591a9e2caed406cc58",
+    "java-runtime-9231049b0bac5cc51f78",
+    "java-runtime-f6149bcefb8f4290f17c",
+    "java-runtime-b83f0d5666898d8dcd04",
+    "java-runtime-b4077c7d900735417782",
+    "java-runtime-93fd5baf00af2e252e0b",
+    "java-runtime-415ec6ff4f1b6f87cc65",
+    "java-runtime-aa515a1f3bad40ec148b"
    ]
   },
   {
@@ -33635,6 +33653,89 @@
     "implemented",
     "intentionally-different"
    ]
+  },
+  {
+   "id": "case.event-bean-property-fragment",
+   "javaRuntimeIds": [
+    "java-runtime-1abd87887a2624440680",
+    "java-runtime-59d49f62d061fc49f9ee",
+    "java-runtime-2eaac4dcd93014962bd8",
+    "java-runtime-43a5f4e4ec952ad9887c",
+    "java-runtime-276de28b1f0e90a5e292",
+    "java-runtime-544ea453ff05cbd7f75f",
+    "java-runtime-ca984db35e239326a14a",
+    "java-runtime-77591a9e2caed406cc58",
+    "java-runtime-9231049b0bac5cc51f78",
+    "java-runtime-f6149bcefb8f4290f17c",
+    "java-runtime-b83f0d5666898d8dcd04",
+    "java-runtime-b4077c7d900735417782",
+    "java-runtime-93fd5baf00af2e252e0b",
+    "java-runtime-415ec6ff4f1b6f87cc65",
+    "java-runtime-aa515a1f3bad40ec148b"
+   ],
+   "javaNames": [
+    "EPLBeanMapSimpleTypes",
+    "EPLBeanObjectArraySimpleTypes",
+    "EPLBeanWrapperFragmentWithMap",
+    "EPLBeanWrapperFragmentWithObjectArray",
+    "EPLBeanNativeBeanFragment",
+    "EPLBeanMapFragmentMapNested",
+    "EPLBeanObjectArrayFragmentObjectArrayNested",
+    "EPLBeanMapFragmentMapUnnamed",
+    "EPLBeanMapFragmentTransposedMapEventBean",
+    "EPLBeanObjectArrayFragmentTransposedMapEventBean",
+    "EPLBeanMapFragmentMapBeans",
+    "EPLBeanObjectArrayFragmentBeans",
+    "EPLBeanMapFragmentMap3Level",
+    "EPLBeanObjectArrayFragment3Level",
+    "EPLBeanFragmentMapMulti"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/bean/EventBeanPropertyResolutionFragment.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventBeanPropertyFragmentDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "event",
+    "property",
+    "fragment",
+    "map",
+    "object-array",
+    "bean",
+    "nested",
+    "pattern-until",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-bean-property-fragment.json",
+    "testdata/parity/event-bean-property-fragment.trace.json",
+    "testdata/parity/event-bean-property-fragment.evidence.json"
+   ],
+   "notes": "Draft 4.247: all 15 executions; Java/Go each 16 records (native-bean-fragment two phases), 0 differences. Covers scalar map/oa non-fragment resolution, named fragment wrappers (plusone/mybean), native bean fragments (ComplexProps + CombinedProps two-phase), named fragment + fragment-array nesting, unnamed inline map non-fragment, pattern[one until two] transpose (map + object-array, order-sensitive one[0]/one[1]), bean fragments in map/oa roots, 3-level named chains (map + oa), and multi-level map-multi. Java fragment-API assertions (getFragmentType/isFragment) are engine-internal; EPL-level rows demonstrate the equivalent observable nested resolution.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1abd87887a2624440680",
+    "java-runtime-59d49f62d061fc49f9ee",
+    "java-runtime-2eaac4dcd93014962bd8",
+    "java-runtime-43a5f4e4ec952ad9887c",
+    "java-runtime-276de28b1f0e90a5e292",
+    "java-runtime-544ea453ff05cbd7f75f",
+    "java-runtime-ca984db35e239326a14a",
+    "java-runtime-77591a9e2caed406cc58",
+    "java-runtime-9231049b0bac5cc51f78",
+    "java-runtime-f6149bcefb8f4290f17c",
+    "java-runtime-b83f0d5666898d8dcd04",
+    "java-runtime-b4077c7d900735417782",
+    "java-runtime-93fd5baf00af2e252e0b",
+    "java-runtime-415ec6ff4f1b6f87cc65",
+    "java-runtime-aa515a1f3bad40ec148b"
+   ]
   }
  ],
  "mappings": [
@@ -36149,29 +36250,33 @@
   {
    "capabilityId": "expr.filter-expressions",
    "caseId": "case.expr-filter-optimizable-value-limited-disqualify"
+  },
+  {
+   "capabilityId": "event.property-access-render",
+   "caseId": "case.event-bean-property-fragment"
   }
  ],
  "summary": {
-  "inventoriedCases": 545,
-  "implementedCases": 543,
-  "differentialVerifiedCases": 156,
-  "differentialVerifiedRuntimeIds": 560,
+  "inventoriedCases": 546,
+  "implementedCases": 544,
+  "differentialVerifiedCases": 157,
+  "differentialVerifiedRuntimeIds": 575,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 111,
   "implementedCapabilities": 110,
-  "differentialVerifiedCapabilities": 22,
+  "differentialVerifiedCapabilities": 23,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3185,
-  "referencedJavaRuntimeIds": 2981,
+  "runtimeAssociationCount": 3200,
+  "referencedJavaRuntimeIds": 2996,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1155,
+  "unreferencedJavaRuntimeIds": 1140,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 545,
+  "totalCases": 546,
   "totalCapabilities": 111
  }
 }

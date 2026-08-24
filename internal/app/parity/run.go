@@ -1886,6 +1886,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "event-bean-property-fragment" || *mode == "event-bean-property-fragment-diff" {
+		trace, err := runEbprScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-bean-property-fragment-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, ebprJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, ebprJavaSources),
+				splitMetadata(*javaExecutions, ebprJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "expr-filter-optimizable-value-limited" || *mode == "expr-filter-optimizable-value-limited-diff" {
 		trace, err := runEfovScenario(context.Background(), scenario)
 		if err != nil {

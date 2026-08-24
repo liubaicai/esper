@@ -1,0 +1,1627 @@
+{
+  "version": "esper-parity/v1",
+  "id": "event-bean-property-fragment",
+  "description": "Fifteen listener-observable executions of EventBeanPropertyResolutionFragment (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c) replayed with one fresh runtime per case: map-simple-types (select * from MSTypeOne carrying the pinned p0simple/p0array/p0map payload keys that are not on the event type, so p0int/p0intarray render null), object-array-simple-types (OASimple), wrapper-map (Frosty with named p0simple fragment and bean p0bean, plus p0simple.p1id + 1 as plusone and p0bean as mybean), wrapper-object-array (WheatRoot, same projection), native-bean-fragment (two phases separated by undeployAll: SupportBeanComplexProps then SupportBeanCombinedProps), map-nested (HomerunRoot with named fragment and fragment array), object-array-nested (GoalRoot), map-unnamed (FlywheelRoot with an inline unnamed nested map type), transposed-map (pattern[one=GistMapOne until two=GistMapTwo] with GistMapOne id 1, id 2 then GistMapTwo id 3 in pinned order), transposed-object-array (CashMapOne id 1/id 2 then CashMapTwo id 3), map-beans (TXTypeRoot with SupportBean/SupportBeanComplexProps fragments inside named level-one maps), object-array-beans (LocalTypeRoot), map-3level (JimTypeRoot, three named map levels), object-array-3level (JackTypeRoot, three named object-array levels), map-multi (MMOuterMap with MMInnerMap-valued fragment carrying bean, complex, bean-array and inline inner-map properties). Map/bean event type payloads are JSON objects and object-array payloads are JSON arrays, carrying the full pinned event payloads. The Java fragment API assertions (getFragmentType/isFragment/getFragment) are engine-level and covered on the Go side as unit tests; the EPL-observable contract here is the select * listener row carrying the fully resolved nested values.",
+  "javaRuntimes": [
+    "java-runtime-1abd87887a2624440680",
+    "java-runtime-59d49f62d061fc49f9ee",
+    "java-runtime-2eaac4dcd93014962bd8",
+    "java-runtime-43a5f4e4ec952ad9887c",
+    "java-runtime-276de28b1f0e90a5e292",
+    "java-runtime-544ea453ff05cbd7f75f",
+    "java-runtime-ca984db35e239326a14a",
+    "java-runtime-77591a9e2caed406cc58",
+    "java-runtime-9231049b0bac5cc51f78",
+    "java-runtime-f6149bcefb8f4290f17c",
+    "java-runtime-b83f0d5666898d8dcd04",
+    "java-runtime-b4077c7d900735417782",
+    "java-runtime-93fd5baf00af2e252e0b",
+    "java-runtime-415ec6ff4f1b6f87cc65",
+    "java-runtime-aa515a1f3bad40ec148b"
+  ],
+  "cases": [
+    {
+      "case": "map-simple-types"
+    },
+    {
+      "case": "object-array-simple-types"
+    },
+    {
+      "case": "wrapper-map"
+    },
+    {
+      "case": "wrapper-object-array"
+    },
+    {
+      "case": "native-bean-fragment"
+    },
+    {
+      "case": "map-nested"
+    },
+    {
+      "case": "object-array-nested"
+    },
+    {
+      "case": "map-unnamed"
+    },
+    {
+      "case": "transposed-map"
+    },
+    {
+      "case": "transposed-object-array"
+    },
+    {
+      "case": "map-beans"
+    },
+    {
+      "case": "object-array-beans"
+    },
+    {
+      "case": "map-3level"
+    },
+    {
+      "case": "object-array-3level"
+    },
+    {
+      "case": "map-multi"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "map-simple-types"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "MSTypeOne",
+      "payload": {
+        "p0simple": 99,
+        "p0array": [
+          101,
+          102
+        ],
+        "p0map": {
+          "p1someval": "A"
+        }
+      }
+    },
+    {
+      "op": "case",
+      "case": "object-array-simple-types"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "OASimple",
+      "payload": [
+        99,
+        [
+          101,
+          102
+        ],
+        {
+          "p1someval": "A"
+        }
+      ]
+    },
+    {
+      "op": "case",
+      "case": "wrapper-map"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "Frosty",
+      "payload": {
+        "p0simple": {
+          "p1id": 10
+        },
+        "p0bean": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "objectArray": null,
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        }
+      }
+    },
+    {
+      "op": "case",
+      "case": "wrapper-object-array"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "WheatRoot",
+      "payload": [
+        [
+          10
+        ],
+        {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "objectArray": null,
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        }
+      ]
+    },
+    {
+      "op": "case",
+      "case": "native-bean-fragment"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanComplexProps",
+      "payload": {
+        "simpleProperty": "simple",
+        "mapped": {
+          "keyOne": "valueOne",
+          "keyTwo": "valueTwo"
+        },
+        "indexed": [
+          1,
+          2
+        ],
+        "mapProperty": {
+          "xOne": "yOne",
+          "xTwo": "yTwo"
+        },
+        "arrayProperty": [
+          10,
+          20,
+          30
+        ],
+        "objectArray": null,
+        "nestedValue": "nestedValue",
+        "nestedNestedValue": "nestedNestedValue"
+      }
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanCombinedProps",
+      "payload": {
+        "array": [
+          {
+            "0ma": "0ma0",
+            "0mb": "0ma1"
+          },
+          {
+            "1ma": "1ma0",
+            "1mb": "1ma1"
+          },
+          {
+            "2ma": "valueOne",
+            "2mb": "2ma1"
+          },
+          null
+        ]
+      }
+    },
+    {
+      "op": "case",
+      "case": "map-nested"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "HomerunRoot",
+      "payload": {
+        "p0simple": {
+          "p1id": 10
+        },
+        "p0array": [
+          {
+            "p1id": 10
+          },
+          {
+            "p1id": 10
+          }
+        ]
+      }
+    },
+    {
+      "op": "case",
+      "case": "object-array-nested"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "GoalRoot",
+      "payload": [
+        [
+          10
+        ],
+        [
+          [
+            20
+          ],
+          [
+            21
+          ]
+        ]
+      ]
+    },
+    {
+      "op": "case",
+      "case": "map-unnamed"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "FlywheelRoot",
+      "payload": {
+        "p0simple": {
+          "p1id": 10
+        }
+      }
+    },
+    {
+      "op": "case",
+      "case": "transposed-map"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "GistMapOne",
+      "payload": {
+        "id": 1,
+        "bean": {
+          "theString": "E1",
+          "intPrimitive": 100
+        },
+        "beanarray": [
+          {
+            "theString": "E1",
+            "intPrimitive": 100
+          },
+          {
+            "theString": "E2",
+            "intPrimitive": 200
+          }
+        ],
+        "complex": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "objectArray": null,
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        },
+        "complexarray": [
+          {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          }
+        ],
+        "map": {
+          "p2id": 2000
+        },
+        "maparray": [
+          {
+            "p2id": 2000
+          },
+          {
+            "p2id": 2000
+          }
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "GistMapOne",
+      "payload": {
+        "id": 2,
+        "bean": {
+          "theString": "E1",
+          "intPrimitive": 100
+        },
+        "beanarray": [
+          {
+            "theString": "E1",
+            "intPrimitive": 100
+          },
+          {
+            "theString": "E2",
+            "intPrimitive": 200
+          }
+        ],
+        "complex": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "objectArray": null,
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        },
+        "complexarray": [
+          {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          }
+        ],
+        "map": {
+          "p2id": 2000
+        },
+        "maparray": [
+          {
+            "p2id": 2000
+          },
+          {
+            "p2id": 2000
+          }
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "GistMapTwo",
+      "payload": {
+        "id": 3,
+        "bean": {
+          "theString": "E1",
+          "intPrimitive": 100
+        },
+        "beanarray": [
+          {
+            "theString": "E1",
+            "intPrimitive": 100
+          },
+          {
+            "theString": "E2",
+            "intPrimitive": 200
+          }
+        ],
+        "complex": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "objectArray": null,
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        },
+        "complexarray": [
+          {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          }
+        ],
+        "map": {
+          "p2id": 2000
+        },
+        "maparray": [
+          {
+            "p2id": 2000
+          },
+          {
+            "p2id": 2000
+          }
+        ]
+      }
+    },
+    {
+      "op": "case",
+      "case": "transposed-object-array"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "CashMapOne",
+      "payload": [
+        1,
+        {
+          "theString": "E1",
+          "intPrimitive": 100
+        },
+        [
+          {
+            "theString": "E1",
+            "intPrimitive": 100
+          },
+          {
+            "theString": "E2",
+            "intPrimitive": 200
+          }
+        ],
+        {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "objectArray": null,
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        },
+        [
+          {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          }
+        ],
+        [
+          2000
+        ],
+        [
+          [
+            2000
+          ],
+          [
+            2000
+          ]
+        ]
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "CashMapOne",
+      "payload": [
+        2,
+        {
+          "theString": "E1",
+          "intPrimitive": 100
+        },
+        [
+          {
+            "theString": "E1",
+            "intPrimitive": 100
+          },
+          {
+            "theString": "E2",
+            "intPrimitive": 200
+          }
+        ],
+        {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "objectArray": null,
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        },
+        [
+          {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          }
+        ],
+        [
+          2000
+        ],
+        [
+          [
+            2000
+          ],
+          [
+            2000
+          ]
+        ]
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "CashMapTwo",
+      "payload": [
+        3,
+        {
+          "theString": "E1",
+          "intPrimitive": 100
+        },
+        [
+          {
+            "theString": "E1",
+            "intPrimitive": 100
+          },
+          {
+            "theString": "E2",
+            "intPrimitive": 200
+          }
+        ],
+        {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "objectArray": null,
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        },
+        [
+          {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          }
+        ],
+        [
+          2000
+        ],
+        [
+          [
+            2000
+          ],
+          [
+            2000
+          ]
+        ]
+      ]
+    },
+    {
+      "op": "case",
+      "case": "map-beans"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "TXTypeRoot",
+      "payload": {
+        "p0simple": {
+          "p1simple": {
+            "theString": "E1",
+            "intPrimitive": 11
+          },
+          "p1array": [
+            {
+              "theString": "A1",
+              "intPrimitive": 21
+            },
+            {
+              "theString": "A2",
+              "intPrimitive": 22
+            }
+          ],
+          "p1complex": {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          },
+          "p1complexarray": [
+            {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            },
+            {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          ]
+        },
+        "p0array": [
+          {
+            "p1simple": {
+              "theString": "E1",
+              "intPrimitive": 11
+            },
+            "p1array": [
+              {
+                "theString": "A1",
+                "intPrimitive": 21
+              },
+              {
+                "theString": "A2",
+                "intPrimitive": 22
+              }
+            ],
+            "p1complex": {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            },
+            "p1complexarray": [
+              {
+                "simpleProperty": "simple",
+                "mapped": {
+                  "keyOne": "valueOne",
+                  "keyTwo": "valueTwo"
+                },
+                "indexed": [
+                  1,
+                  2
+                ],
+                "mapProperty": {
+                  "xOne": "yOne",
+                  "xTwo": "yTwo"
+                },
+                "arrayProperty": [
+                  10,
+                  20,
+                  30
+                ],
+                "objectArray": null,
+                "nestedValue": "nestedValue",
+                "nestedNestedValue": "nestedNestedValue"
+              },
+              {
+                "simpleProperty": "simple",
+                "mapped": {
+                  "keyOne": "valueOne",
+                  "keyTwo": "valueTwo"
+                },
+                "indexed": [
+                  1,
+                  2
+                ],
+                "mapProperty": {
+                  "xOne": "yOne",
+                  "xTwo": "yTwo"
+                },
+                "arrayProperty": [
+                  10,
+                  20,
+                  30
+                ],
+                "objectArray": null,
+                "nestedValue": "nestedValue",
+                "nestedNestedValue": "nestedNestedValue"
+              }
+            ]
+          },
+          {
+            "p1simple": {
+              "theString": "E1",
+              "intPrimitive": 11
+            },
+            "p1array": [
+              {
+                "theString": "A1",
+                "intPrimitive": 21
+              },
+              {
+                "theString": "A2",
+                "intPrimitive": 22
+              }
+            ],
+            "p1complex": {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            },
+            "p1complexarray": [
+              {
+                "simpleProperty": "simple",
+                "mapped": {
+                  "keyOne": "valueOne",
+                  "keyTwo": "valueTwo"
+                },
+                "indexed": [
+                  1,
+                  2
+                ],
+                "mapProperty": {
+                  "xOne": "yOne",
+                  "xTwo": "yTwo"
+                },
+                "arrayProperty": [
+                  10,
+                  20,
+                  30
+                ],
+                "objectArray": null,
+                "nestedValue": "nestedValue",
+                "nestedNestedValue": "nestedNestedValue"
+              },
+              {
+                "simpleProperty": "simple",
+                "mapped": {
+                  "keyOne": "valueOne",
+                  "keyTwo": "valueTwo"
+                },
+                "indexed": [
+                  1,
+                  2
+                ],
+                "mapProperty": {
+                  "xOne": "yOne",
+                  "xTwo": "yTwo"
+                },
+                "arrayProperty": [
+                  10,
+                  20,
+                  30
+                ],
+                "objectArray": null,
+                "nestedValue": "nestedValue",
+                "nestedNestedValue": "nestedNestedValue"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "case",
+      "case": "object-array-beans"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "LocalTypeRoot",
+      "payload": [
+        [
+          {
+            "theString": "E1",
+            "intPrimitive": 11
+          },
+          [
+            {
+              "theString": "A1",
+              "intPrimitive": 21
+            },
+            {
+              "theString": "A2",
+              "intPrimitive": 22
+            }
+          ],
+          {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          },
+          [
+            {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            },
+            {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "theString": "E1",
+              "intPrimitive": 11
+            },
+            [
+              {
+                "theString": "A1",
+                "intPrimitive": 21
+              },
+              {
+                "theString": "A2",
+                "intPrimitive": 22
+              }
+            ],
+            {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            },
+            [
+              {
+                "simpleProperty": "simple",
+                "mapped": {
+                  "keyOne": "valueOne",
+                  "keyTwo": "valueTwo"
+                },
+                "indexed": [
+                  1,
+                  2
+                ],
+                "mapProperty": {
+                  "xOne": "yOne",
+                  "xTwo": "yTwo"
+                },
+                "arrayProperty": [
+                  10,
+                  20,
+                  30
+                ],
+                "objectArray": null,
+                "nestedValue": "nestedValue",
+                "nestedNestedValue": "nestedNestedValue"
+              },
+              {
+                "simpleProperty": "simple",
+                "mapped": {
+                  "keyOne": "valueOne",
+                  "keyTwo": "valueTwo"
+                },
+                "indexed": [
+                  1,
+                  2
+                ],
+                "mapProperty": {
+                  "xOne": "yOne",
+                  "xTwo": "yTwo"
+                },
+                "arrayProperty": [
+                  10,
+                  20,
+                  30
+                ],
+                "objectArray": null,
+                "nestedValue": "nestedValue",
+                "nestedNestedValue": "nestedNestedValue"
+              }
+            ]
+          ],
+          [
+            {
+              "theString": "E1",
+              "intPrimitive": 11
+            },
+            [
+              {
+                "theString": "A1",
+                "intPrimitive": 21
+              },
+              {
+                "theString": "A2",
+                "intPrimitive": 22
+              }
+            ],
+            {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            },
+            [
+              {
+                "simpleProperty": "simple",
+                "mapped": {
+                  "keyOne": "valueOne",
+                  "keyTwo": "valueTwo"
+                },
+                "indexed": [
+                  1,
+                  2
+                ],
+                "mapProperty": {
+                  "xOne": "yOne",
+                  "xTwo": "yTwo"
+                },
+                "arrayProperty": [
+                  10,
+                  20,
+                  30
+                ],
+                "objectArray": null,
+                "nestedValue": "nestedValue",
+                "nestedNestedValue": "nestedNestedValue"
+              },
+              {
+                "simpleProperty": "simple",
+                "mapped": {
+                  "keyOne": "valueOne",
+                  "keyTwo": "valueTwo"
+                },
+                "indexed": [
+                  1,
+                  2
+                ],
+                "mapProperty": {
+                  "xOne": "yOne",
+                  "xTwo": "yTwo"
+                },
+                "arrayProperty": [
+                  10,
+                  20,
+                  30
+                ],
+                "objectArray": null,
+                "nestedValue": "nestedValue",
+                "nestedNestedValue": "nestedNestedValue"
+              }
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "op": "case",
+      "case": "map-3level"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "JimTypeRoot",
+      "payload": {
+        "p0simple": {
+          "p1simple": {
+            "p2id": 10
+          },
+          "p1array": [
+            {
+              "p2id": 10
+            },
+            {
+              "p2id": 10
+            }
+          ]
+        },
+        "p0array": [
+          {
+            "p1simple": {
+              "p2id": 10
+            },
+            "p1array": [
+              {
+                "p2id": 10
+              },
+              {
+                "p2id": 10
+              }
+            ]
+          },
+          {
+            "p1simple": {
+              "p2id": 10
+            },
+            "p1array": [
+              {
+                "p2id": 10
+              },
+              {
+                "p2id": 10
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "case",
+      "case": "object-array-3level"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "JackTypeRoot",
+      "payload": [
+        [
+          [
+            10
+          ],
+          [
+            [
+              10
+            ],
+            [
+              10
+            ]
+          ]
+        ],
+        [
+          [
+            [
+              10
+            ],
+            [
+              [
+                10
+              ],
+              [
+                10
+              ]
+            ]
+          ],
+          [
+            [
+              10
+            ],
+            [
+              [
+                10
+              ],
+              [
+                10
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    {
+      "op": "case",
+      "case": "map-multi"
+    },
+    {
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "MMOuterMap",
+      "payload": {
+        "p0simple": {
+          "p1bean": {
+            "theString": "string1",
+            "intPrimitive": 2000
+          },
+          "p1beanComplex": {
+            "simpleProperty": "simple",
+            "mapped": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexed": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "objectArray": null,
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          },
+          "p1beanArray": [
+            {
+              "theString": "string2",
+              "intPrimitive": 1
+            },
+            {
+              "theString": "string3",
+              "intPrimitive": 2
+            }
+          ],
+          "p1innerId": 50,
+          "p1innerMap": {
+            "p2id": 10
+          }
+        },
+        "p0array": [
+          {
+            "p1bean": {
+              "theString": "string1",
+              "intPrimitive": 2000
+            },
+            "p1beanComplex": {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            },
+            "p1beanArray": [
+              {
+                "theString": "string2",
+                "intPrimitive": 1
+              },
+              {
+                "theString": "string3",
+                "intPrimitive": 2
+              }
+            ],
+            "p1innerId": 50,
+            "p1innerMap": {
+              "p2id": 10
+            }
+          },
+          {
+            "p1bean": {
+              "theString": "string1",
+              "intPrimitive": 2000
+            },
+            "p1beanComplex": {
+              "simpleProperty": "simple",
+              "mapped": {
+                "keyOne": "valueOne",
+                "keyTwo": "valueTwo"
+              },
+              "indexed": [
+                1,
+                2
+              ],
+              "mapProperty": {
+                "xOne": "yOne",
+                "xTwo": "yTwo"
+              },
+              "arrayProperty": [
+                10,
+                20,
+                30
+              ],
+              "objectArray": null,
+              "nestedValue": "nestedValue",
+              "nestedNestedValue": "nestedNestedValue"
+            },
+            "p1beanArray": [
+              {
+                "theString": "string2",
+                "intPrimitive": 1
+              },
+              {
+                "theString": "string3",
+                "intPrimitive": 2
+              }
+            ],
+            "p1innerId": 50,
+            "p1innerMap": {
+              "p2id": 10
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

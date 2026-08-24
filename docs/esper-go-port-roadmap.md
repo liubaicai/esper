@@ -4,6 +4,20 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.247（2026-08-24），新增 `event.property-access-render` 的
+> `event-bean-property-fragment` differential-verified 场景，对照固定 Java
+> EventBeanPropertyResolutionFragment.java（event/bean）的全部 15 个
+> execution。场景 Java/Go 各 16 条 records（native-bean-fragment 两阶段）、
+> 0 differences；覆盖标量 map/oa 非 fragment 解析、命名 fragment 包装
+>（plusone/mybean 投影）、原生 bean fragment（ComplexProps+CombinedProps
+> 两阶段）、命名 fragment 与 fragment 数组嵌套、未命名内联 map 非
+> fragment、pattern[one until two] 转置（map+object-array，顺序敏感的
+> one[0]/one[1]）、bean fragment 根、3 级命名链（map+oa）、多级 map-multi。
+> Java fragment API 断言（getFragmentType/isFragment）为引擎内部；EPL 行
+> 输出展示等价的嵌套解析。manifest 更新为 546 cases、157 个
+> differential-verified case、575 个 differential runtime IDs、3200 条
+> associations（referenced 2996）。
+>
 > 最新补充：Draft 4.246（2026-08-24），新增 `expr.filter-expressions` 的
 > `expr-filter-optimizable-value-limited` differential-verified 场景（扩展），
 > 对照固定 Java ExprFilterOptimizableValueLimitedExpr.java 追加 9 个未覆盖

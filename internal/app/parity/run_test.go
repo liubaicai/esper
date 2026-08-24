@@ -13832,6 +13832,128 @@ func TestRunExprFilterOptimizableValueLimitedDiffRejectsTraceMutations(t *testin
 	}
 }
 
+func TestRunEventBeanPropertyFragmentDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "event-bean-property-fragment.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "event-bean-property-fragment.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-bean-property-fragment.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "event-bean-property-fragment-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEventBeanPropertyFragmentDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "wrapper-plusone-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "wrapper-map" {
+						trace.Records[i].New[0].Fields["plusone"] = 99
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "transposed-one-order-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "transposed-map" {
+						arr, ok := trace.Records[i].New[0].Fields["one"].([]any)
+						if ok && len(arr) > 0 {
+							if m, ok := arr[0].(map[string]any); ok {
+								m["id"] = 2
+							}
+						}
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "3level-nested-value-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "map-3level" {
+						simple, ok := trace.Records[i].New[0].Fields["p0simple"].(map[string]any)
+						if ok {
+							inner, ok := simple["p1simple"].(map[string]any)
+							if ok {
+								inner["p2id"] = 99
+							}
+						}
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "bean-fragment-row-lost",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "native-bean-fragment" && trace.Records[i].Sequence == 1 {
+						trace.Records[i].New = nil
+						return
+					}
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "event-bean-property-fragment.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "event-bean-property-fragment.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-bean-property-fragment.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "event-bean-property-fragment-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunExprFilterOptimizableDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "expr-filter-optimizable.evidence.json"),

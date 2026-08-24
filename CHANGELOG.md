@@ -1,3 +1,11 @@
+> 最新补充：Draft 4.247（2026-08-24），新增 `event.property-access-render` 的
+> `event-bean-property-fragment` differential-verified 场景，对照固定 Java
+> EventBeanPropertyResolutionFragment.java 的全部 15 个 execution。Java/Go
+> 各 16 条 records、0 差异。覆盖标量/命名/未命名 fragment 解析、原生 bean
+> fragment 两阶段、pattern-until 转置、3 级命名链与多级嵌套。manifest 更新
+> 为 546 cases、157 个 differential-verified case、575 个 differential
+> runtime IDs、3200 条 associations（referenced 2996）。
+>
 > 最新补充：Draft 4.246（2026-08-24），新增 `expr.filter-expressions` 的
 > `expr-filter-optimizable-value-limited` 扩展场景，追加 9 个未覆盖 execution
 >（模式变量值受限、every[2] 数组标签、dot-method、context 分区属性、
