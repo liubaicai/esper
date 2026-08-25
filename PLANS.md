@@ -55,12 +55,13 @@ activity or a single coverage percentage.
   nesting), cross-type sender rejection (ObjectArray sender to Map type),
   and Java-bean property navigation inside Map-typed values. These need a
   dedicated unit focused on Map event representation parity.
-- Current work unit (Draft 4.256): `expr/datetime/`
-  ExprDTRound.java 4 executions (all unreferenced): Input
-  (9838679b35a6a3507332), Ceil (8a02976a0c5c4eb03030), Floor
-  (95d240ad18c89abe6e99), Half (be79bf345b96e2ccc206). Datetime rounding
-  is a pure function; expr/datetime lane proven by 4.198 ExprDTBetween.
-- Deferred unit (EPLVariablesUse, NOT implemented):
+- Deferred unit (ExprDTRound, NOT implemented):
+  expr/datetime/ExprDTRound.java 4 executions (all unreferenced). Go
+  lacks DateTimeRound/Ceil/Floor builders entirely. Requires new datetime
+  expression builders for three rounding modes across five representations
+  (Date/Long/Calendar/LDT/ZDT), month-length-dependent half-carry
+  thresholds, an apparent oracle self-inconsistency in roundHalf(month),
+  and LDT/ZDT roundHalf runtime error paths.
   epl/variable/EPLVariablesUse.java 8 unreferenced executions. Scout
   investigation revealed extensive API contract surfaces: EPRuntime alone
   has ~20 distinct assertion points (typed get/set, atomic rollback,
