@@ -48,76 +48,15 @@ activity or a single coverage percentage.
   prior-state having; join-family three executions remain unregistered.
 - Deferred unit (AggregateGrouped, NOT implemented):
   resultset/querytype/ResultSetQueryTypeAggregateGrouped.java (9 executions,
-  all unreferenced). Full probe implementation reached 57/57 records 0
-  differences only after three grouped-emit engine changes that rippled into
-  six legacy surfaces; deferred until each surface gets its own Java-truth
-  verification pass. Divergences recorded: (1) grouped-view istream emits an
-  eviction-echo new row for groups whose state changed only via window
-  expiry (Java generateOutputEventsView loops per input event only);
-  (2) length_batch flush collapses to one row per key while Java emits one
-  row per batch member when non-aggregated selections read the underlying
-  event (CriteriaByDotMethod [{100,30},{200,30}] vs
-  ContextKeySegmentedRowPerGroupBatchContextProp {200,2}); (3) grouped-JOIN
-  statement iterators collapse per group while Java enumerates per join
-  tuple (SumJoin snapshots).
-- Deferred unit (InfraNamedWindowOnUpdate, NOT implemented):
-  infra/namedwindow/InfraNamedWindowOnUpdate.java (8 executions, all
-  unreferenced). Full probe implementation exposed multiple unresolved
-  Go/Java mismatches: on-update IStream/RStream delivery semantics differ
-  (Java produces pre-update old rows via named-window consumers; Go's
-  FromNamedWindow consumers only emit post-update new rows), int[] multikey
-  window inserts produce null fields via CopyMatchingFields with typed
-  structs, and non-property set forms require representation mappings that
-  alter downstream observable state. Deferred until the on-update named-
-  window consumer path gets its own Java-truth verification pass.
-- Allowed files: tools/java-oracle/InfraNamedWindowOnUpdateScenarioOracle.java
-  (new), tools/java-oracle/run-infra-named-window-on-update.sh (new),
-  testdata/parity/infra-named-window-on-update.json (new), internal/app/
-  parity/infra_named_window_on_update.go (new), run.go dispatch registration,
-  run_test.go mutations; internal/esper/** only where differential replay
-  proves a gap (primary-owned). Primary additionally owns generated
-  traces/evidence, manifest, roadmap, CHANGELOG, and this file.
-- Forbidden: unrelated runner edits; oracle EPL strings drifting from the
-  pinned suite; manifest/evidence updates before the differential passes.
-- Progress: scouts delivered; contract frozen. Asset worker `ITTO Assets`
-  (parity-asset-worker, isolated) authored the oracle/scenario/script trio
-  and validated the pinned Java trace twice byte-stable (59 records: 33
-  snapshot + 6 build-error + 20 listener); its structured return failed the
-  output schema and the isolated worktree was discarded, so the primary
-  recovered all three files from the session transcript and proved fidelity
-  by regenerating a byte-identical pinned trace. Shared core (primary):
-  scalar MaxEver/MinEver aggregations, TableColumn declared-aggregation
-  signatures via WithTableAgg, into-table compile-time compatibility
-  validation reproducing all six Java diagnostics verbatim, SortedEventsBy
-  for join-fed sorted columns, and a registered representation difference:
-  Go materializes the unkeyed logical row at deployment while Java defers it
-  to the first contribution, so the runner normalizes pre-contribution
-  snapshots to the Java-observable empty set (an engine-level suppression
-  was attempted first but broke three established table-reader behaviors and
-  was reverted in favor of the runner normalization).
-  internal/app/parity/infra_table_into_table.go handles 11 cases with
-  canonical any-order snapshots, listener mirroring, FAF reads, and
-  build-error probes appending the bracketed EPL source. Differential:
-  passing 59/59 records, 0 differences; 16 trace mutations rejected.
-  Manifest updated to case.infra-table-into-table under
-  trigger.table-named-window (162 DV cases, 619 DV runtime IDs, 3244
-  associations, referenced 3040). Engine regression tests in
-  internal/esper/into_table_agg_compatibility_test.go.
-- Review: `ITTOParityReview` first verdict fail with one P2 (runtime-ID
-  mapping function mismapped 8/11 cases) plus two P3s; fixes applied
-  (explicit per-case mapping + TestInfraTableIntoTableRuntimeIDMapping-
-  MatchesScenario guard, by-ever explicit-key representation registered in
-  runner comment and manifest notes, zero-key evaluation limitation
-  documented on aggregateByEverVariadic). Re-review verdict PASS with zero
-  remaining findings. Gates re-run green after fixes: go vet ./..., full
-  go test ./... -count=1, make check, git diff --check.
-- Next action: semantic commit and push.
-- Previous unit outcome (closed; Draft 4.253, commits `f1d4e2e5e`,
-  `90820b963`): ResultSetOrderByRowPerGroup 9 executions differential-verified
-  22/22 records, 0 differences; three runtime fixes (compareOrderValues
-  null-first ordering, having-gated creation null-prior rows, grouped
-  output-last per-group consolidation); independent review PASS.
-
+  all unreferenced). Three grouped-emit divergences documented with repros.
+- Deferred unit (EPLVariablesUse, NOT implemented):
+  epl/variable/EPLVariablesUse.java 8 unreferenced executions. Scout
+  investigation revealed extensive API contract surfaces: EPRuntime alone
+  has ~20 distinct assertion points (typed get/set, atomic rollback,
+  numeric coercion, error messages), ConstantVariable covers a 17-operator
+  truth table plus constant write protection across four channels.
+  Deferred until dedicated units can verify each surface against Java
+  truth without rushing.
 ## Delegation checkpoint
 - Draft 4.254 unit agents: investigation scouts `InfraTTJavaContract`
   (java-oracle-scout) and `InfraTTGoSurface` (scout) ran concurrently in one
