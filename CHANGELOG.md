@@ -1,3 +1,13 @@
+> 最新补充：Draft 4.257（2026-08-26），新增 `resultset.querytype-aggregate-grouped`
+> differential-verified 能力：ResultSetQueryTypeAggregateGrouped.java 全部
+> 9 个 execution。场景 Java/Go 各 53 条 records、0 differences。引擎修复：
+> grouped row-per-event 与 row-per-group 处理器分拆（per-event 新行绑定、
+> leaving-only 组不发新行）、grouped join 迭代器 per-tuple 行、context
+> 分区维按 group 键、differ 对 mode=any 快照无序规范化。manifest 更新为
+> 554 cases、165 个 differential-verified case、638 个 differential
+> runtime IDs、3263 条 associations（referenced 3059）；capability 115 个
+> （29 DV）。
+>
 > 最新补充：Draft 4.256（2026-08-26），新增 `resultset.orderby-row-for-all`
 > differential-verified 能力：ResultSetOrderByRowForAll.java 全部 3 个
 > execution。NoOutputRateJoin 以 iterator snapshot 观测连续 join 求和；

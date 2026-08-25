@@ -10107,11 +10107,30 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 	entries := make([]aggregateResultEntry, 0, len(order))
 	for _, key := range order {
 		group := groups[key]
-		values, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi)
+		_, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi)
 		if !visible {
 			continue
 		}
-		entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key})
+		// Java's grouped join iterator shape follows the result-set
+		// processor split: AggregateGroupedImpl (non-key scalar reads) is a
+		// live view over the join tuples — one row per member event with
+		// plain columns bound to that member — while RowPerGroupImpl
+		// (keys and aggregates only) and ungrouped joins keep one row per
+		// group built from the group representative.
+		if len(definition.groupBy) == 0 || !aggregateDefinitionReadsNonKeyEvent(definition) {
+			values, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi)
+			if visible {
+				entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key})
+			}
+			continue
+		}
+		for _, member := range group.events {
+			values, memberVisible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, member, events, events, now, r.variables, group.plugin, group.multi)
+			if !memberVisible {
+				continue
+			}
+			entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key})
+		}
 	}
 	if len(plan.query.orderBy) > 0 {
 		orderAggregateResults(entries, plan.query.orderBy, definition, events, events, now, r.variables, false)
@@ -17561,7 +17580,11 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		}
 		emittedBefore := group.emitted
 		tableSource := containsTableSource(plan.query.input, nil) || containsNamedWindow(plan.query.input, nil)
-		aggregateGroupedRowPerEvent := !tableSource && len(definition.groupBy) > 0 && len(groupingSets) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
+		// Context-dimension folding applies to the update path; the
+		// output-limit dispatch sites below still use the plain predicate
+		// until context-partitioned output-limit shapes are
+		// differential-verified in their own units.
+		aggregateGroupedRowPerEvent := !tableSource && len(definition.groupBy) > 0 && len(groupingSets) == 1 && aggregateDefinitionReadsNonKeyEventExceptContext(definition, r.engine.env, plan.query.contextName)
 		// Rollup/cube result sets (multiple grouping sets), ungrouped
 		// aggregates, grouped joins, named-window consumers and grouped
 		// row-per-group result sets post the previous row as old whenever the
@@ -17689,7 +17712,28 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			}
 		}
 		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
-		if visible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
+		if aggregateGroupedRowPerEvent {
+			// Java ResultSetProcessorAggregateGroupedImpl: one new row per
+			// incoming event of this group (plain columns bound to that
+			// event, aggregates over the post-update group state). A group
+			// touched only by leaving events posts no new row. The
+			// current-binding evaluation above only feeds the
+			// previous/emitted bookkeeping below.
+			for _, current := range delta.newEvents {
+				currentKey := aggregateGroupKey(definition.groupBy, group.groupingSet, current, now, r.variables)
+				if currentKey != key {
+					continue
+				}
+				values, eventVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+				if eventVisible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
+					newEntries = append(newEntries, aggregateResultEntry{
+						result: resultRow(newRow(plan.resultSchema, values)),
+						group:  group,
+						key:    key,
+					})
+				}
+			}
+		} else if visible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, newValues)),
 				group:  group,
@@ -18706,6 +18750,51 @@ func aggregateDefinitionIsRowForEvent(definition *aggregateDefinition) bool {
 // projections are only group-by keys and aggregates route to
 // ResultSetProcessorRowPerGroupImpl (one row per group, old rows on every
 // update).
+// aggregateDefinitionReadsNonKeyEventExceptContext matches
+// aggregateDefinitionReadsNonKeyEvent but treats projected properties that
+// are context partition dimensions as group-key reads: Esper folds the
+// context dimension into the effective group-by, so a partitioned statement
+// projecting its context key routes to the row-per-group processor.
+func aggregateDefinitionReadsNonKeyEventExceptContext(definition *aggregateDefinition, env *Environment, contextName string) bool {
+	if definition == nil || env == nil || strings.TrimSpace(contextName) == "" {
+		return aggregateDefinitionReadsNonKeyEvent(definition)
+	}
+	contextDefinition, ok := env.Context(contextName)
+	if !ok {
+		return aggregateDefinitionReadsNonKeyEvent(definition)
+	}
+	dimensions := map[string]bool{}
+	for _, name := range contextDefinition.KeyPropertyNames() {
+		dimensions[name] = true
+	}
+	if len(dimensions) == 0 {
+		return aggregateDefinitionReadsNonKeyEvent(definition)
+	}
+	matchesGroupKey := func(expression Expr) bool {
+		if expression == nil || expression.node() == nil {
+			return false
+		}
+		for _, key := range definition.groupBy {
+			if key != nil && key.Description() == expression.Description() {
+				return true
+			}
+		}
+		if dimensions[expression.node().fieldName] {
+			return true
+		}
+		return false
+	}
+	hasAggregate := false
+	readsNonKeyEvent := false
+	for _, selection := range definition.selections {
+		hasAggregate = hasAggregate || isAggregateExpression(selection.Expr)
+		if !isAggregateExpression(selection.Expr) && expressionTreeReadsCurrentEvent(selection.Expr) && !matchesGroupKey(selection.Expr) {
+			readsNonKeyEvent = true
+		}
+	}
+	return hasAggregate && readsNonKeyEvent
+}
+
 func aggregateDefinitionReadsNonKeyEvent(definition *aggregateDefinition) bool {
 	if definition == nil {
 		return false

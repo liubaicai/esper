@@ -4,6 +4,23 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.257（2026-08-26），新增
+> `resultset.querytype-aggregate-grouped` differential-verified 能力，对照固定
+> Java ResultSetQueryTypeAggregateGrouped.java 全部 9 个 execution：dot-method
+> 与 int[] multikey 分组键、unbound 迭代器组更新、阈值边界 having、
+> wildcard+min 全表面行、ESPER-185 双键 irstream（计数递减 old 行与空组
+> count=0 old 行、有序 per-member 快照）、跨组 IR pair（view 与 join 孪生、
+> join 快照 per-tuple）、mid-case insert-into 部署、数组键累计。场景
+> Java/Go 各 53 条 records、0 differences。引擎修复：(1) grouped
+> row-per-event（AggregateGroupedImpl）按事件发新行并按事件绑定普通列，
+> leaving-only 组不再发新行，row-per-group（RowPerGroupImpl）保持每组
+> new+old；(2) grouped join 迭代器按 AggregateGroupedImpl 形态走 per-tuple
+> 行；(3) 语句投影的 context 分区维按 group 键处理；(4) differ 对
+> mode=any 快照行做无序规范化（Java grouped join 迭代器按 HashMap 组序）。
+> manifest 更新为 554 cases、165 个 differential-verified case、638 个
+> differential runtime IDs、3263 条 associations（referenced 3059）；
+> capability 115 个（29 DV）。
+>
 > 最新补充：Draft 4.256（2026-08-26），新增
 > `resultset.orderby-row-for-all` differential-verified 能力，对照固定
 > Java ResultSetOrderByRowForAll.java 全部 3 个 execution：

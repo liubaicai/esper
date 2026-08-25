@@ -1850,6 +1850,30 @@ func (e *Environment) removeContextDefinition(name string) error {
 	return nil
 }
 
+// KeyPropertyNames returns the partition key property names of a keyed
+// context. Esper treats a context dimension projected by a partitioned
+// statement as an additional group-by key: the effective result-set
+// processor becomes row-per-group, so a projected partition property does
+// not make the query row-per-event.
+func (d ContextDefinition) KeyPropertyNames() []string {
+	names := make([]string, 0, len(d.keys)+1)
+	appendKey := func(expr Expr) {
+		if expr == nil {
+			return
+		}
+		node := expr.node()
+		if node == nil || node.fieldName == "" {
+			return
+		}
+		names = append(names, node.fieldName)
+	}
+	appendKey(d.key)
+	for _, key := range d.keys {
+		appendKey(key)
+	}
+	return names
+}
+
 func (e *Environment) Context(name string) (ContextDefinition, bool) {
 	if e == nil {
 		return ContextDefinition{}, false

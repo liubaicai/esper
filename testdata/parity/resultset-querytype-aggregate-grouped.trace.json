@@ -1,0 +1,1363 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-querytype-aggregate-grouped",
+ "records": [
+  {
+   "case": "criteria-by-dot-method",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "c0": 100,
+      "c1": 30
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "c0": 200,
+      "c1": 30
+     }
+    }
+   ]
+  },
+  {
+   "case": "iterate-unbound",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "c0": "E1",
+      "c1": 10
+     }
+    }
+   ]
+  },
+  {
+   "case": "iterate-unbound",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "c0": "E1",
+      "c1": 10
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "c0": "E2",
+      "c1": 20
+     }
+    }
+   ]
+  },
+  {
+   "case": "iterate-unbound",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 3,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "c0": "E1",
+      "c1": 21
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "c0": "E2",
+      "c1": 20
+     }
+    }
+   ]
+  },
+  {
+   "case": "unaggregated-having",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "theString": "E1"
+     }
+    }
+   ]
+  },
+  {
+   "case": "unaggregated-having",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "theString": "E3"
+     }
+    }
+   ]
+  },
+  {
+   "case": "wildcard-min",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "bigDecimal": {
+       "state": "null"
+      },
+      "bigInteger": {
+       "state": "null"
+      },
+      "boolBoxed": {
+       "state": "null"
+      },
+      "boolPrimitive": false,
+      "byteBoxed": {
+       "state": "null"
+      },
+      "bytePrimitive": 0,
+      "charBoxed": {
+       "state": "null"
+      },
+      "charPrimitive": "\u0000",
+      "doubleBoxed": {
+       "state": "null"
+      },
+      "doublePrimitive": 0,
+      "enumValue": {
+       "state": "null"
+      },
+      "floatBoxed": {
+       "state": "null"
+      },
+      "floatPrimitive": 0,
+      "intBoxed": {
+       "state": "null"
+      },
+      "intPrimitive": 10,
+      "longBoxed": {
+       "state": "null"
+      },
+      "longPrimitive": 0,
+      "minval": 10,
+      "shortBoxed": {
+       "state": "null"
+      },
+      "shortPrimitive": 0,
+      "theString": "G1"
+     }
+    }
+   ]
+  },
+  {
+   "case": "wildcard-min",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "bigDecimal": {
+       "state": "null"
+      },
+      "bigInteger": {
+       "state": "null"
+      },
+      "boolBoxed": {
+       "state": "null"
+      },
+      "boolPrimitive": false,
+      "byteBoxed": {
+       "state": "null"
+      },
+      "bytePrimitive": 0,
+      "charBoxed": {
+       "state": "null"
+      },
+      "charPrimitive": "\u0000",
+      "doubleBoxed": {
+       "state": "null"
+      },
+      "doublePrimitive": 0,
+      "enumValue": {
+       "state": "null"
+      },
+      "floatBoxed": {
+       "state": "null"
+      },
+      "floatPrimitive": 0,
+      "intBoxed": {
+       "state": "null"
+      },
+      "intPrimitive": 9,
+      "longBoxed": {
+       "state": "null"
+      },
+      "longPrimitive": 0,
+      "minval": 9,
+      "shortBoxed": {
+       "state": "null"
+      },
+      "shortPrimitive": 0,
+      "theString": "G1"
+     }
+    }
+   ]
+  },
+  {
+   "case": "wildcard-min",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 3,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "bigDecimal": {
+       "state": "null"
+      },
+      "bigInteger": {
+       "state": "null"
+      },
+      "boolBoxed": {
+       "state": "null"
+      },
+      "boolPrimitive": false,
+      "byteBoxed": {
+       "state": "null"
+      },
+      "bytePrimitive": 0,
+      "charBoxed": {
+       "state": "null"
+      },
+      "charPrimitive": "\u0000",
+      "doubleBoxed": {
+       "state": "null"
+      },
+      "doublePrimitive": 0,
+      "enumValue": {
+       "state": "null"
+      },
+      "floatBoxed": {
+       "state": "null"
+      },
+      "floatPrimitive": 0,
+      "intBoxed": {
+       "state": "null"
+      },
+      "intPrimitive": 11,
+      "longBoxed": {
+       "state": "null"
+      },
+      "longPrimitive": 0,
+      "minval": 9,
+      "shortBoxed": {
+       "state": "null"
+      },
+      "shortPrimitive": 0,
+      "theString": "G1"
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1000
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1000
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 3,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 11,
+      "symbol": "DELL",
+      "volume": 900
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 4,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 11,
+      "symbol": "DELL",
+      "volume": 900
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 5,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1500
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 6,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 11,
+      "symbol": "DELL",
+      "volume": 900
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1500
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 7,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 500
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 8,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 11,
+      "symbol": "DELL",
+      "volume": 900
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1500
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 500
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 9,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 600
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 10,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 11,
+      "symbol": "DELL",
+      "volume": 900
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1500
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 500
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 2,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 600
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 11,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 3,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 500
+     }
+    }
+   ],
+   "old": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1000
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 12,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 11,
+      "symbol": "DELL",
+      "volume": 900
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1500
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 3,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 500
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 3,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 600
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 3,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 500
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 13,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 4,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 600
+     }
+    }
+   ],
+   "old": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 0,
+      "price": 11,
+      "symbol": "DELL",
+      "volume": 900
+     }
+    }
+   ]
+  },
+  {
+   "case": "aggregation-over-grouped-props",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 14,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 1,
+      "price": 10,
+      "symbol": "DELL",
+      "volume": 1500
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 4,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 500
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 4,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 600
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 4,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 500
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mycount": 4,
+      "price": 5,
+      "symbol": "IBM",
+      "volume": 600
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z"
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 51,
+      "symbol": "DELL",
+      "volume": 10000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 3,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 4,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 10000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 5,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 70,
+      "symbol": "IBM",
+      "volume": 30000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 6,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 10000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 70,
+      "symbol": "IBM",
+      "volume": 30000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 7,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 10000
+     }
+    }
+   ],
+   "old": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 52,
+      "symbol": "DELL",
+      "volume": 10000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 8,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 52,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 30000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 10000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 9,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 45,
+      "symbol": "DELL",
+      "volume": 40000
+     }
+    }
+   ],
+   "old": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 45,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-one-view",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 10,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 30000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 10000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 45,
+      "symbol": "DELL",
+      "volume": 40000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z"
+  },
+  {
+   "case": "sum-join",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 51,
+      "symbol": "DELL",
+      "volume": 10000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 3,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 4,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 10000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 5,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 70,
+      "symbol": "IBM",
+      "volume": 30000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 6,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 10000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 103,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 70,
+      "symbol": "IBM",
+      "volume": 30000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 7,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 10000
+     }
+    }
+   ],
+   "old": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 52,
+      "symbol": "DELL",
+      "volume": 10000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 8,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 52,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 30000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 10000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 9,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 45,
+      "symbol": "DELL",
+      "volume": 40000
+     }
+    }
+   ],
+   "old": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 45,
+      "symbol": "DELL",
+      "volume": 20000
+     }
+    }
+   ]
+  },
+  {
+   "case": "sum-join",
+   "operation": "snapshot",
+   "statement": "s0",
+   "sequence": 10,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 45,
+      "symbol": "DELL",
+      "volume": 40000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 30000
+     }
+    },
+    {
+     "kind": "row",
+     "fields": {
+      "mySum": 90,
+      "symbol": "IBM",
+      "volume": 10000
+     }
+    }
+   ]
+  },
+  {
+   "case": "insert-into",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "average": 10,
+      "sumation": 20000,
+      "symbol": "IBM"
+     }
+    }
+   ]
+  },
+  {
+   "case": "insert-into",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "average": 15,
+      "sumation": 60000,
+      "symbol": "IBM"
+     }
+    }
+   ]
+  },
+  {
+   "case": "insert-into",
+   "operation": "listener",
+   "statement": "s2",
+   "sequence": 3,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "average": 20,
+      "sumation": 40000,
+      "symbol": "IBM"
+     }
+    }
+   ]
+  },
+  {
+   "case": "multikey-w-array",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "id": "E1",
+      "thesum": 5
+     }
+    }
+   ]
+  },
+  {
+   "case": "multikey-w-array",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "id": "E2",
+      "thesum": 15
+     }
+    }
+   ]
+  },
+  {
+   "case": "multikey-w-array",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 3,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "id": "E3",
+      "thesum": 11
+     }
+    }
+   ]
+  },
+  {
+   "case": "multikey-w-array",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 4,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "id": "E4",
+      "thesum": 12
+     }
+    }
+   ]
+  },
+  {
+   "case": "multikey-w-array",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 5,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "id": "E5",
+      "thesum": 24
+     }
+    }
+   ]
+  },
+  {
+   "case": "multikey-w-array",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 6,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "id": "E6",
+      "thesum": 27
+     }
+    }
+   ]
+  },
+  {
+   "case": "multikey-w-array",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 7,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "id": "E7",
+      "thesum": 31
+     }
+    }
+   ]
+  }
+ ]
+}

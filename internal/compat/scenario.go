@@ -43,6 +43,8 @@ type Step struct {
 	PropertyTypes  map[string]string `json:"propertyTypes,omitempty"`
 	Payload        json.RawMessage   `json:"payload,omitempty"`
 	Epl            string            `json:"epl,omitempty"`
+	Mode           string            `json:"mode,omitempty"`
+	Label          string            `json:"label,omitempty"`
 }
 
 func LoadScenario(reader io.Reader) (Scenario, error) {

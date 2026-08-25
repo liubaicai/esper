@@ -1919,6 +1919,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-query-type-aggregate-grouped" || *mode == "resultset-query-type-aggregate-grouped-diff" {
+		trace, err := runResultSetQueryTypeAggregateGroupedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-query-type-aggregate-grouped-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeAggregateGroupedJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeAggregateGroupedJavaSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeAggregateGroupedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-orderby-row-for-all" || *mode == "resultset-orderby-row-for-all-diff" {
 		trace, err := runResultSetOrderByRowForAllScenario(context.Background(), scenario)
 		if err != nil {

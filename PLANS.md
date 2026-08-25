@@ -45,6 +45,18 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
+- Current work unit (Draft 4.257, implemented pending review):
+  resultset/querytype/ResultSetQueryTypeAggregateGrouped.java all 9
+  executions differential-verified at 53/53 records, 0 differences.
+  Engine fixes shipped in internal/esper/runtime.go (grouped per-event vs
+  per-group processor split, grouped join per-tuple iterators, context
+  dimension as group key) and internal/compat/differential.go (mode=any
+  snapshot canonicalization). Assets from `AGGAssets` (parity-asset-worker,
+  isolated) after `AGGJavaContract`/`AGGGoSurface` prefetch scouts. `AGGReview`
+  verdict PASS-with-findings (5xP3): two mutation index/name mismatches
+  fixed, differ comment corrected, context-folding scope documented in
+  code and manifest notes (hash/multi-stream contexts and output-limit
+  dispatch deferred to their own units).
 - Closed deferral: ResultSetOrderByRowForAll implemented in Draft 4.256
   after fixing the engine divergence (order-by alias-column snapshot
   resolution in batched deliveries). All 3 executions differential-verified:
@@ -87,7 +99,7 @@ activity or a single coverage percentage.
   primary agent. `RFAReview` verdict PASS-with-findings: P2 runner
   fallback ID list swapped (fixed + provenance assertion added), P3
   manifest serialization hygiene (newline + 4 raw punctuation chars
-  restored).
+  restored). Draft 4.256 shipped as `b625de490`.
 
 - Draft 4.254 unit agents: investigation scouts `InfraTTJavaContract`
   (java-oracle-scout) and `InfraTTGoSurface` (scout) ran concurrently in one
