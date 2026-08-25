@@ -2727,7 +2727,7 @@ func orderRowRecogResults(results []Result, keys []SortKey, now time.Time, varia
 		for _, key := range keys {
 			leftValue := evalResultOrderExpression(key.Expr, ordered[left], now, variables)
 			rightValue := evalResultOrderExpression(key.Expr, ordered[right], now, variables)
-			comparison, ok := compareValues(leftValue, rightValue)
+			comparison, ok := compareOrderValues(leftValue, rightValue)
 			if !ok || comparison == 0 {
 				continue
 			}

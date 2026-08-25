@@ -36,16 +36,80 @@ activity or a single coverage percentage.
   InfraTableInsertInto 5 runtimes, commit `8fa0ab8da`) is pushed. The three
   untracked `resultset-orderby-row-per-group` files are prefetch assets and
   remain outside commits until their units are selected.
-- Current work unit (N+1, Draft 4.253): `resultset.orderby-row-per-group`,
-  first half of the nine ResultSetOrderByRowPerGroup executions carried by
-  the prefetched oracle `tools/java-oracle/ResultSetOrderByRowPerGroupScenarioOracle.java`
+- Current work unit (Draft 4.253): `resultset.orderby-row-per-group`, ALL
+  NINE ResultSetOrderByRowPerGroup executions carried by the prefetched
+  oracle `tools/java-oracle/ResultSetOrderByRowPerGroupScenarioOracle.java`
   + scenario `testdata/parity/resultset-orderby-row-per-group.json` + runner
-  script; this unit takes the no-having/having pair without join and the
-  three join variants (no-having-join, having-join, having-join-alias), the
-  second unit takes last/last-join/iterator/order-by-last. Prefetch contract
-  consolidation pending the parallel Java/Go scout gate.
-- Next action: launch the N+1 Java/Go scout batch, freeze the contract
-  split, then implement.
+  script. Scope amended from the planned 5-case split: the nine executions
+  share one Java class, one scenario, one oracle and one runner surface, so
+  the unit ports them together (the ECSM multi-runtime precedent); a split
+  would have required scenario case-filtering machinery for no benefit.
+  Frozen from `ROJavaContract` + `ROGoSurface` reports: the prefetched
+  oracle/scenario are drift-free (EPL strings byte-match the pinned suite;
+  listener attachment is 1:1 — one statement s0 per case). Observable
+  contract: 22 records — output-every cases emit exactly 2 listener records
+  (ordered new+old arrays; having filters BOTH streams), output-last cases
+  consolidate per group (new = last state, old = first-appearance prior),
+  iterator-row-per-group emits 5 continuous rows + 2 snapshots, and
+  order-by-last is istream-only. Runtime IDs: 0378ad5f02530ec9a035,
+  76c087fbdf95d5f7880b, c2f6f59e3e46c835a29e, e07133b5b6253e493ded,
+  252daca2010790c61878, 9d22340c3f0b36d2a3f7, 3124b316394d884cf8f3,
+  fbb5b1ed4cd702566ff1, be39f23e1ad826e99352.
+- Go contract: new runner internal/app/parity/resultset_orderby_row_per_group.go
+  using the GENERIC replay (scenario carries only case/send steps): per-case
+  env + one Build + deployParityStatement + ReplayWithStatements. Plans:
+  From[md].Window(LengthWindow(20)).GroupBy(symbol)[.Having(Greater(sum,0))]
+  .Select(Alias("symbol",...), Alias("mysum", sum)).Query(StatementName("s0"),
+  WithOldStream(), WithOutput(OutputEvery(6)), OrderBy(...)); join cases via
+  Join(From[md].Window(20), From[sbs].Window(100), OnEqual(symbol, theString))
+  .GroupBy(JoinField(0,"symbol")) with JoinField selections. ONE parity-risk
+  resolution (asset-only, per ROGoSurface): ALL order keys are expressed as
+  ResultField projections (Ascending(ResultField[float64]("mysum")),
+  Ascending(ResultField[string]("symbol"))) because the boundary re-sort of
+  output-every batches evaluates keys via resultOrderContext where a direct
+  aggregate key is inert (empty group) — Java re-sorts the whole buffered
+  batch globally, and ResultField reproduces that order including null-first
+  old rows; alias vs expression spelling is observationally identical in the
+  pinned expectations. WithOldStream() except order-by-last (istream only).
+- Allowed files: internal/app/parity/resultset_orderby_row_per_group.go
+  (new), run.go, run_test.go, internal/esper/runtime.go, internal/esper/
+  rowrecog.go; primary owns generated trace/evidence, manifest, roadmap,
+  CHANGELOG, PLANS.
+- Forbidden: oracle/scenario/script changes (verified drift-free except the
+  primary-fixed latent compile defect: the SupportMarketDataBean mirror
+  never assigned its final id field), unrelated runner edits.
+- Delegation: `ROJavaContract` (java-oracle-scout) and `ROGoSurface`
+  (scout) reports frozen this contract; no asset writer needed (prefetched
+  assets drift-free — recorded serial exception).
+- Progress: primary implemented the nine-case runner, dispatch, and 12
+  mutations. The first differential surfaced three shared-runtime gaps,
+  all fixed and full-suite verified: (1) orderRowRecogResults re-sorted
+  ordered batches with compareValues, whose null-vs-value (0,false)
+  demoted null-first ordering to the next sort key — now uses
+  compareOrderValues; (2) grouped-aggregate creation null-prior old rows
+  bypassed the having gate — now gated via evaluateEmptyAggregateGroup
+  (only when a having exists: the evaluation instantiates plugin aggregate
+  states as a side effect); (3) grouped output-last delivered per-event
+  prior fragments — now consolidates per group (new = last state, old =
+  first-appearance prior) with the pending buffer keeping raw fragments.
+  The runner expresses order keys as ResultField projections (the boundary
+  re-sort evaluates keys against projected rows; direct aggregate keys are
+  inert in that context). Pinned Java trace regenerated: 22 records;
+  differential evidence passing 22/22 records, 0 differences. Manifest
+  extended with capability resultset.orderby-row-per-group +
+  case.resultset-orderby-row-per-group (161 DV cases, 610 DV runtime IDs,
+  3235 associations, referenced 3031, 112 capabilities / 26 DV).
+- Review: `ROParityReview` verdict: no P1/P2, five P3s — three applied
+  (dead unreachable IsNull block in compareOrderValues removed: Null()
+  carries IsPresent()==false so the pre-existing switch already ranks
+  null-first, and the live fix is solely the rowrecog comparator swap;
+  scratch probe file removed; iterator case builds the pinned #length(10)
+  directly instead of chaining onto the shared length(20) stream), two
+  documented latent limitations (creation null-prior having gate evaluates
+  without event context — identical for pure-aggregate having; removal-only
+  groups produce no consolidated NEW row under output-last — no eviction in
+  this lane). Post-fix differential re-verified passing 22/22, 0 differences.
+- Next action: semantic commit and push.
 - Previous unit outcome (closed; Draft 4.252, commit `8fa0ab8da`):
   InfraTableInsertInto 5 executions differential-verified at 20/20 records,
   0 differences; unkeyed duplicate-insert message parity in

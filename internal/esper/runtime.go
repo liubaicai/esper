@@ -9276,8 +9276,25 @@ func (r *statementRuntime) applyLastEveryEvents(policy OutputPolicy, batch Resul
 	state.lastEverySeen += inserted
 	state.lastEverySeenRemoved += removed
 	if !batch.empty() {
-		copyBatch := mergeLastOutputBatch(state.pending, batch)
-		state.pending = &copyBatch
+		if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 && len(aggregateGroupingSetsForDefinition(plans[0].query.aggregate)) == 1 {
+			// Grouped row-per-group output-last consolidates at the boundary
+			// (first-appearance prior as old, last state as new), so the
+			// pending buffer must keep every per-update fragment intact
+			// instead of collapsing per group key while accumulating.
+			if state.pending == nil {
+				copyBatch := batch.clone()
+				state.pending = &copyBatch
+			} else {
+				state.pending.New = append(state.pending.New, batch.New...)
+				state.pending.Old = append(state.pending.Old, batch.Old...)
+				state.pending.outputKeysNew = append(state.pending.outputKeysNew, batch.outputKeysNew...)
+				state.pending.outputKeysOld = append(state.pending.outputKeysOld, batch.outputKeysOld...)
+				state.pending.Time = batch.Time
+			}
+		} else {
+			copyBatch := mergeLastOutputBatch(state.pending, batch)
+			state.pending = &copyBatch
+		}
 	}
 	if state.lastEverySeen < policy.Count && state.lastEverySeenRemoved < policy.Count {
 		return ResultBatch{}
@@ -9289,6 +9306,48 @@ func (r *statementRuntime) applyLastEveryEvents(policy OutputPolicy, batch Resul
 	}
 	result := state.pending.clone()
 	state.pending = nil
+	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 && len(aggregateGroupingSetsForDefinition(plans[0].query.aggregate)) == 1 {
+		// Java's row-per-group output-last regeneration (processOutputLimited
+		// ViewLastCodegen) consolidates the buffered pairs per group: the new
+		// stream carries the LAST per-group state (generateOutputBatchedArr
+		// FromIterator over the group representatives) and the old stream
+		// carries the group's FIRST-appearance prior state (put-if-absent in
+		// groupRepsView gates the old-row generation).
+		lastNew := make(map[string]Result)
+		newOrder := make([]string, 0, len(result.New))
+		firstOld := make(map[string]Result)
+		oldOrder := make([]string, 0, len(result.Old))
+		for index, row := range result.New {
+			key := ""
+			if index < len(result.outputKeysNew) {
+				key = result.outputKeysNew[index]
+			}
+			if _, exists := lastNew[key]; !exists {
+				newOrder = append(newOrder, key)
+			}
+			lastNew[key] = row
+		}
+		for index, row := range result.Old {
+			key := ""
+			if index < len(result.outputKeysOld) {
+				key = result.outputKeysOld[index]
+			}
+			if _, exists := firstOld[key]; !exists {
+				oldOrder = append(oldOrder, key)
+				firstOld[key] = row
+			}
+		}
+		consolidated := ResultBatch{Time: result.Time, forced: result.forced, outputCountsSet: result.outputCountsSet, outputInserted: result.outputInserted, outputRemoved: result.outputRemoved}
+		for _, key := range newOrder {
+			consolidated.New = append(consolidated.New, lastNew[key])
+			consolidated.outputKeysNew = append(consolidated.outputKeysNew, key)
+		}
+		for _, key := range oldOrder {
+			consolidated.Old = append(consolidated.Old, firstOld[key])
+			consolidated.outputKeysOld = append(consolidated.outputKeysOld, key)
+		}
+		result = consolidated
+	}
 	return r.finishOutput(policy, result, now, plans...)
 }
 
@@ -17638,21 +17697,33 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			// irstream semantics: creating a group pairs the first new row
 			// with a prior old row whose group-by columns are populated and
 			// whose aggregate columns evaluate over the empty group: count(*)
-			// is 0 while sum/avg/min/max are null.
-			nullPrior := make([]Value, len(newValues))
-			emptyCtx := aggregateGroupContext(definition, nil, nil, nil, false, group.groupingSet, group.current, nil, nil, now, r.variables, group.pluginStates, group.multiPluginStates)
-			for index, selection := range definition.selections {
-				if isAggregateExpression(selection.Expr) {
-					nullPrior[index] = evaluateAggregateExpression(selection.Expr, emptyCtx)
-				} else {
-					nullPrior[index] = newValues[index]
-				}
+			// is 0 while sum/avg/min/max are null. The pinned processor
+			// evaluates the having clause against every generated row
+			// (shortcutEvalGivenKey), so a null-prior old row is suppressed
+			// when the having fails over the empty group.
+			// evaluateEmptyAggregateGroup instantiates plugin aggregate
+			// states as a side effect, so only run it when a having clause
+			// can actually reject the null-prior old row.
+			emptyVisible := true
+			if definition.having != nil {
+				_, emptyVisible = evaluateEmptyAggregateGroup(definition, now, r.variables)
 			}
-			oldEntries = append(oldEntries, aggregateResultEntry{
-				result: resultRow(newRow(plan.resultSchema, nullPrior)),
-				group:  group,
-				key:    key,
-			})
+			if emptyVisible {
+				nullPrior := make([]Value, len(newValues))
+				emptyCtx := aggregateGroupContext(definition, nil, nil, nil, false, group.groupingSet, group.current, nil, nil, now, r.variables, group.pluginStates, group.multiPluginStates)
+				for index, selection := range definition.selections {
+					if isAggregateExpression(selection.Expr) {
+						nullPrior[index] = evaluateAggregateExpression(selection.Expr, emptyCtx)
+					} else {
+						nullPrior[index] = newValues[index]
+					}
+				}
+				oldEntries = append(oldEntries, aggregateResultEntry{
+					result: resultRow(newRow(plan.resultSchema, nullPrior)),
+					group:  group,
+					key:    key,
+				})
+			}
 		}
 		if visible && !emittedBefore && len(definition.groupBy) == 0 && plan.query.selector == SelectIRStream && !aggregateDefinitionReadsNonKeyEvent(definition) {
 			// Ungrouped irstream aggregates pair the first new row with an
@@ -18564,6 +18635,9 @@ func compareOrderValues(left, right Value) (int, bool) {
 			return 1, true
 		}
 	}
+	// Null() values carry IsPresent()==false, so the switch above already
+	// ranks them null-first ascending / null-last descending exactly like
+	// Esper's CollectionUtil.compareValues contract.
 	return compareValues(left, right)
 }
 

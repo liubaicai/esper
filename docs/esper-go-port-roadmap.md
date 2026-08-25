@@ -4,6 +4,25 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.253（2026-08-25），新增
+> `resultset.orderby-row-per-group` differential-verified 能力，对照固定
+> Java ResultSetOrderByRowPerGroup.java 全部 9 个 execution：no-having/
+> having 无 join 对、no-having/having/having-alias 三个 join 孪生、last
+> 与 last-join、iterator-row-per-group（连续 join + 两次迭代器快照）与
+> order-by-last（length_batch istream）。场景 Java/Go 各 22 条 records、
+> 0 differences。运行时三项修复：(1) order-by 比较器 null-first 语义——
+> orderRowRecogResults 改用 compareOrderValues（compareValues 对
+> null-vs-value 返回不可比较导致边界重排序退化为符号序）；
+> (2) 分组建流的创建 null-prior old 行按 having 门控（pinned
+> shortcutEvalGivenKey 对每条生成行求值 having）；(3) grouped
+> output-last 批次按组合并——new 取组内末状态、old 取组内首次出现前的
+> 先验状态（processOutputLimitedViewLastCodegen 的 put-if-absent 语义），
+> pending 累积保留全部片段。runner 以 ResultField 投影表达 order-by 键
+> （output-every 边界重排序按投影行求值，直接聚合键在该上下文惰性）。
+> manifest 更新为 550 cases、161 个 differential-verified case、610 个
+> differential runtime IDs、3235 条 associations（referenced 3031）；
+> capability 112 个（26 DV）。
+>
 > 最新补充：Draft 4.252（2026-08-25），新增 `trigger.table-named-window` 的
 > `infra-table-insert-into` differential-verified 场景，对照固定 Java
 > InfraTableInsertInto.java（infra/tbl/）的 InfraInsertIntoAndDelete、

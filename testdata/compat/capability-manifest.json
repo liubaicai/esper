@@ -4549,6 +4549,43 @@
    ]
   },
   {
+   "id": "resultset.orderby-row-per-group",
+   "domain": "resultset",
+   "level": "S",
+   "summary": "Grouped row-per-group order-by over batched windows: irstream having variants, join and alias order forms, output-last consolidation, iterator observation and length_batch order-by-last",
+   "javaRefs": [
+    "ResultSetOrderByRowPerGroup"
+   ],
+   "goRefs": [
+    "internal/app/parity/resultset_orderby_row_per_group.go",
+    "internal/app/parity/run_test.go",
+    "internal/esper/runtime.go"
+   ],
+   "phase": 3,
+   "status": "differential-verified",
+   "remaining": [
+    "wider output-rate matrix (time/first/snapshot policies) beyond output every 6 events",
+    "order-by expression forms beyond sum/alias/last descriptors",
+    "shared Java/Go trace beyond the nine pinned executions"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0378ad5f02530ec9a035",
+    "java-runtime-76c087fbdf95d5f7880b",
+    "java-runtime-c2f6f59e3e46c835a29e",
+    "java-runtime-e07133b5b6253e493ded",
+    "java-runtime-252daca2010790c61878",
+    "java-runtime-9d22340c3f0b36d2a3f7",
+    "java-runtime-3124b316394d884cf8f3",
+    "java-runtime-fbb5b1ed4cd702566ff1",
+    "java-runtime-be39f23e1ad826e99352"
+   ]
+  },
+  {
    "id": "epl.other.select-wildcard-additional",
    "domain": "epl",
    "level": "G",
@@ -33973,6 +34010,70 @@
     "java-runtime-ded301fd8afee9d9cfbd",
     "java-runtime-fa61d002dc3374573126"
    ]
+  },
+  {
+   "id": "case.resultset-orderby-row-per-group",
+   "javaRuntimeIds": [
+    "java-runtime-0378ad5f02530ec9a035",
+    "java-runtime-76c087fbdf95d5f7880b",
+    "java-runtime-c2f6f59e3e46c835a29e",
+    "java-runtime-e07133b5b6253e493ded",
+    "java-runtime-252daca2010790c61878",
+    "java-runtime-9d22340c3f0b36d2a3f7",
+    "java-runtime-3124b316394d884cf8f3",
+    "java-runtime-fbb5b1ed4cd702566ff1",
+    "java-runtime-be39f23e1ad826e99352"
+   ],
+   "javaNames": [
+    "ResultSetNoHavingNoJoin",
+    "ResultSetHavingNoJoin",
+    "ResultSetNoHavingJoin",
+    "ResultSetHavingJoin",
+    "ResultSetHavingJoinAlias",
+    "ResultSetLast",
+    "ResultSetLastJoin",
+    "ResultSetIteratorRowPerGroup",
+    "ResultSetOrderByLast"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyRowPerGroupDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "resultset",
+    "order-by",
+    "row-per-group",
+    "having",
+    "output-rate",
+    "irstream",
+    "join",
+    "iterator",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-orderby-row-per-group.json",
+    "testdata/parity/resultset-orderby-row-per-group.trace.json",
+    "testdata/parity/resultset-orderby-row-per-group.evidence.json"
+   ],
+   "notes": [
+    "All nine ResultSetOrderByRowPerGroup executions replayed through the shared scenario: irstream row-per-group sums with having variants (having filters both streams), the SupportBeanString join twins incl. the alias order-by form, output-last consolidation (new = last per-group state, old = first-appearance prior), the continuous join observed through iterator snapshots, and the length_batch order-by-last bean case (istream only). Runtime fixes: order-by null-first comparator (orderRowRecogResults now uses compareOrderValues), having-gated null-prior old rows, and grouped output-last batch consolidation."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0378ad5f02530ec9a035",
+    "java-runtime-76c087fbdf95d5f7880b",
+    "java-runtime-c2f6f59e3e46c835a29e",
+    "java-runtime-e07133b5b6253e493ded",
+    "java-runtime-252daca2010790c61878",
+    "java-runtime-9d22340c3f0b36d2a3f7",
+    "java-runtime-3124b316394d884cf8f3",
+    "java-runtime-fbb5b1ed4cd702566ff1",
+    "java-runtime-be39f23e1ad826e99352"
+   ]
   }
  ],
  "mappings": [
@@ -36503,29 +36604,33 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-table-insert-into"
+  },
+  {
+   "capabilityId": "resultset.orderby-row-per-group",
+   "caseId": "case.resultset-orderby-row-per-group"
   }
  ],
  "summary": {
-  "inventoriedCases": 549,
-  "implementedCases": 547,
-  "differentialVerifiedCases": 160,
-  "differentialVerifiedRuntimeIds": 601,
+  "inventoriedCases": 550,
+  "implementedCases": 548,
+  "differentialVerifiedCases": 161,
+  "differentialVerifiedRuntimeIds": 610,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 111,
-  "implementedCapabilities": 110,
-  "differentialVerifiedCapabilities": 25,
+  "inventoriedCapabilities": 112,
+  "implementedCapabilities": 111,
+  "differentialVerifiedCapabilities": 26,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3226,
-  "referencedJavaRuntimeIds": 3022,
+  "runtimeAssociationCount": 3235,
+  "referencedJavaRuntimeIds": 3031,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1114,
+  "unreferencedJavaRuntimeIds": 1105,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 549,
-  "totalCapabilities": 111
+  "totalCases": 550,
+  "totalCapabilities": 112
  }
 }

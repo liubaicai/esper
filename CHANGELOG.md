@@ -1,3 +1,17 @@
+> 最新补充：Draft 4.253（2026-08-25），新增 `resultset.orderby-row-per-group`
+> differential-verified 能力：ResultSetOrderByRowPerGroup.java 全部 9 个
+> execution。场景 Java/Go 各 22 条 records、0 differences。覆盖 irstream
+> row-per-group 求和的 having 变体（having 同时过滤新旧流）、
+> SupportBeanString join 孪生与别名 order-by 形态、output-last 按组合并
+> （new 取组内末状态、old 取首次出现先验）、连续 join 的迭代器快照观察
+> 与 length_batch order-by-last（istream）。运行时修复：order-by 比较器
+> null-first 语义（orderRowRecogResults 改用 compareOrderValues）、创建
+> null-prior old 行的 having 门控、grouped output-last 批次按组合并。
+> runner 的 order-by 键以 ResultField 投影表达。manifest 更新为 550
+> cases、161 个 differential-verified case、610 个 differential runtime
+> IDs、3235 条 associations（referenced 3031）；capability 112 个
+> （26 DV）。
+>
 > 最新补充：Draft 4.252（2026-08-25），新增 `infra-table-insert-into`
 > differential-verified 场景：InfraTableInsertInto.java 的
 > InfraInsertIntoAndDelete、InfraInsertIntoSameModuleUnkeyed、

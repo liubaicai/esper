@@ -1,0 +1,3482 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0378ad5f02530ec9a035",
+    "java-runtime-76c087fbdf95d5f7880b",
+    "java-runtime-c2f6f59e3e46c835a29e",
+    "java-runtime-e07133b5b6253e493ded",
+    "java-runtime-252daca2010790c61878",
+    "java-runtime-9d22340c3f0b36d2a3f7",
+    "java-runtime-3124b316394d884cf8f3",
+    "java-runtime-fbb5b1ed4cd702566ff1",
+    "java-runtime-be39f23e1ad826e99352"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByRowPerGroup.java"
+  ],
+  "javaExecutions": [
+    "ResultSetNoHavingNoJoin",
+    "ResultSetHavingNoJoin",
+    "ResultSetNoHavingJoin",
+    "ResultSetHavingJoin",
+    "ResultSetHavingJoinAlias",
+    "ResultSetLast",
+    "ResultSetLastJoin",
+    "ResultSetIteratorRowPerGroup",
+    "ResultSetOrderByLast"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-row-per-group",
+    "steps": [
+      {
+        "op": "case",
+        "case": "no-having-no-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-no-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "no-having-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-join-alias"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "last"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "last-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DOG",
+          "price": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "iterator-row-per-group"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 50
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 49
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "price": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 100
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "KGB",
+          "price": 75
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "order-by-last"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 14
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-row-per-group",
+    "records": [
+      {
+        "case": "no-having-no-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-having-no-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 0,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 0,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-no-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-no-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 0,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 0,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-join-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-join-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 50,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 49,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 65,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 149,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 65,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 149,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 75,
+              "symbol": "KGB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 65,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 149,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 75,
+              "symbol": "KGB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "order-by-last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 14,
+              "c1": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 13,
+              "c1": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 12,
+              "c1": "E3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-row-per-group",
+    "records": [
+      {
+        "case": "no-having-no-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-having-no-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 0,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 0,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-no-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-no-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 0,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 0,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-join-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-join-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 8,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 10,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 11,
+              "symbol": "CAT"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 1,
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 13,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 14,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": {
+                "state": "null"
+              },
+              "symbol": "DOG"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 7,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 50,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 49,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 65,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 149,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 65,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 149,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 75,
+              "symbol": "KGB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator-row-per-group",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 65,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 149,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 75,
+              "symbol": "KGB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "order-by-last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 14,
+              "c1": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 13,
+              "c1": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 12,
+              "c1": "E3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
