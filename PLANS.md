@@ -41,7 +41,23 @@ activity or a single coverage percentage.
   SortedEventsBy/WithTableAgg + into-table compile-time compatibility
   diagnostics; registered representation difference for pre-contribution
   unkeyed rows; review PASS after one P2 mapping fix.
-- Current work unit (Draft 4.255 candidate): `resultset.aggregate-having`
+- Previous unit outcome (closed; Draft 4.255, commit `b0a181387`):
+  resultset.aggregate-having capability registered and
+  resultset-query-type-having extended to 7 DV runtimes (14/14 records,
+  0 differences); ungrouped irstream null-prior old row gated by
+  prior-state having; join-family three executions remain unregistered.
+- Current work unit (Draft 4.256 candidate):
+  `resultset/querytype/ResultSetQueryTypeAggregateGrouped.java`, ALL 9
+  executions (all unreferenced): MultikeyWArray (`91048f4568185e6225f9`),
+  CriteriaByDotMethod (`de8f7d7c8aef4f94257f`), IterateUnbound
+  (`f158e09462cf81dcaed6`), UnaggregatedHaving (`53a0852371cfa557bb19`),
+  Wildcard (`40a398cbeadf315e6404`), AggregationOverGroupedProps
+  (`2b8ffb9e25212f96d12c`), SumOneView (`0dd2d8188c6705b7e352`), SumJoin
+  (`0b86c8778cda88c48804`), InsertInto (`f5ae7195e04ce1676ec4`). Same
+  querytype family as 4.255; grouped-aggregate Go surface mature.
+
+- Prior candidate (superseded by scope correction below):
+  `resultset.aggregate-having`
   extension via resultset/querytype/ResultSetQueryTypeHaving.java, ALL 10
   executions (all currently unreferenced): HavingWildcardSelect
   (`1dfe34a06e794032b5f6`), StatementOM (`8a05b3435dcc1ad1f414`),
