@@ -46,6 +46,15 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
+- Deferred unit (ResultSetOrderByRowForAll, NOT implemented):
+resultset/orderby/ResultSetOrderByRowForAll.java 3 executions. Go engine
+ignores SortKey.Descending in grouped batched irstream output (both
+Ascending/Descending produce ascending order); needs dedicated engine fix.
+- Current work unit (Draft 4.256): `resultset/orderby/`
+  ResultSetOrderByRowForAll.java 3 executions (all unreferenced):
+  NoOutputRateJoin (e6f5c075be4979efc531),
+  OutputDefault{join=false} (046ed3b9a90cf000c5c7),
+  OutputDefault{join=true} (7642ad83057714f39501).
 - Deferred unit (AggregateGrouped, NOT implemented):
   resultset/querytype/ResultSetQueryTypeAggregateGrouped.java (9 executions,
   all unreferenced). Three grouped-emit divergences documented with repros.
