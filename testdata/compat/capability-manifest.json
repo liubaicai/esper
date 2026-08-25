@@ -4652,6 +4652,36 @@
     "java-runtime-0e551e1e4b7e85c94b37",
     "java-runtime-77aeed87d8b7920a1bcf"
    ]
+  },
+  {
+   "id": "resultset.orderby-row-for-all",
+   "domain": "resultset",
+   "level": "S",
+   "summary": "Row-for-all order-by over batched windows: iterator-only join sum, and irstream output-every sum/last batches ordered by the frozen per-row aggregate snapshot with paired prior-state old rows ending in the null pair",
+   "javaRefs": [
+    "ResultSetOrderByRowForAll"
+   ],
+   "goRefs": [
+    "internal/app/parity/resultset_orderby_row_for_all.go",
+    "internal/app/parity/run_test.go",
+    "internal/esper/runtime.go"
+   ],
+   "phase": 3,
+   "status": "differential-verified",
+   "remaining": [
+    "wider output-rate matrix (time/first/snapshot policies) beyond output every 3 events",
+    "order-by expression forms beyond sum/alias descriptors"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-e6f5c075be4979efc531",
+    "java-runtime-7642ad83057714f39501",
+    "java-runtime-046ed3b9a90cf000c5c7"
+   ]
   }
  ],
  "cases": [
@@ -34245,6 +34275,56 @@
     "java-runtime-0e551e1e4b7e85c94b37",
     "java-runtime-77aeed87d8b7920a1bcf"
    ]
+  },
+  {
+   "id": "case.resultset-orderby-row-for-all",
+   "javaRuntimeIds": [
+    "java-runtime-e6f5c075be4979efc531",
+    "java-runtime-7642ad83057714f39501",
+    "java-runtime-046ed3b9a90cf000c5c7"
+   ],
+   "javaNames": [
+    "ResultSetNoOutputRateJoin",
+    "ResultSetOutputDefault{join=false}",
+    "ResultSetOutputDefault{join=true}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByRowForAll.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyRowForAllDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyRowForAllDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "order-by",
+    "row-for-all",
+    "output-rate",
+    "irstream",
+    "join",
+    "iterator",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-orderby-row-for-all.json",
+    "testdata/parity/resultset-orderby-row-for-all.trace.json",
+    "testdata/parity/resultset-orderby-row-for-all.evidence.json"
+   ],
+   "notes": [
+    "All three ResultSetOrderByRowForAll executions replayed through one shared scenario: the continuous MD x SBS join observed only through iterator snapshots (sumPrice 214 then 289), plus both output-default twins (no-join and keepall cross join) delivering one irstream batch at every 3 events whose new rows descend by each row's frozen sum snapshot and whose old rows pair the prior-state chain ending in the null pair.",
+    "Engine fix: orderResultsWithSelections resolves order-by keys against projected alias columns when the key expression matches a selection by canonical description; batched deliveries (finishOutput) pass aggregate selections so per-row snapshots sort instead of tying on the shared live group."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-e6f5c075be4979efc531",
+    "java-runtime-7642ad83057714f39501",
+    "java-runtime-046ed3b9a90cf000c5c7"
+   ]
   }
  ],
  "mappings": [
@@ -36787,29 +36867,33 @@
   {
    "capabilityId": "resultset.aggregate-having",
    "caseId": "case.resultset-query-type-having"
+  },
+  {
+   "capabilityId": "resultset.orderby-row-for-all",
+   "caseId": "case.resultset-orderby-row-for-all"
   }
  ],
  "summary": {
-  "inventoriedCases": 552,
-  "implementedCases": 550,
-  "differentialVerifiedCases": 163,
-  "differentialVerifiedRuntimeIds": 626,
+  "inventoriedCases": 553,
+  "implementedCases": 551,
+  "differentialVerifiedCases": 164,
+  "differentialVerifiedRuntimeIds": 629,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 113,
-  "implementedCapabilities": 112,
-  "differentialVerifiedCapabilities": 27,
+  "inventoriedCapabilities": 114,
+  "implementedCapabilities": 113,
+  "differentialVerifiedCapabilities": 28,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3251,
-  "referencedJavaRuntimeIds": 3047,
+  "runtimeAssociationCount": 3254,
+  "referencedJavaRuntimeIds": 3050,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1089,
+  "unreferencedJavaRuntimeIds": 1086,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 552,
-  "totalCapabilities": 113
+  "totalCases": 553,
+  "totalCapabilities": 114
  }
 }

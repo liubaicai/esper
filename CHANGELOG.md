@@ -1,3 +1,15 @@
+> 最新补充：Draft 4.256（2026-08-26），新增 `resultset.orderby-row-for-all`
+> differential-verified 能力：ResultSetOrderByRowForAll.java 全部 3 个
+> execution。NoOutputRateJoin 以 iterator snapshot 观测连续 join 求和；
+> OutputDefault 无 join/keepall 叉积孪生每 3 个事件投递一次 irstream
+> 批次，new 行按冻结 sum 快照降序、old 行为先前状态链加 null 收尾对。
+> 场景 Java/Go 各 4 条 records、0 differences。引擎修复：批处理投递的
+> order-by 键在匹配投影 alias 表达式时改读行投影列（快照语义），修复
+> row-for-all/join 聚合批次内共享活组重估导致的排序并列退化与
+> Descending 失效。manifest 更新为 553 cases、164 个 differential-verified
+> case、629 个 differential runtime IDs、3254 条 associations（referenced
+> 3050）；capability 114 个（28 DV）。
+>
 > 最新补充：Draft 4.255（2026-08-25），`resultset.aggregate-having` 能力
 > 登记与 `resultset-query-type-having` 场景扩展至全部 10 个 execution 中
 > 的 7 个可观测 runtime（WildcardSelect、StatementOM/Statement 孪生、

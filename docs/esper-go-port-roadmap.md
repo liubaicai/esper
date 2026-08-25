@@ -4,6 +4,22 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.256（2026-08-26），新增
+> `resultset.orderby-row-for-all` differential-verified 能力，对照固定
+> Java ResultSetOrderByRowForAll.java 全部 3 个 execution：
+> NoOutputRateJoin（MD×SBS 连续 join 仅 iterator snapshot 观测，
+> sumPrice 214→289）与 OutputDefault 无 join/keepall 叉积孪生（每 3
+> 个事件一次 irstream 批次，new 行按各自冻结的 sum 快照降序、old 行
+> 配先前状态链并以 null 对收尾）。场景 Java/Go 各 4 条 records、
+> 0 differences。引擎修复：order-by 键与投影 alias 表达式按规范描述
+> 一致时改读行自身投影列（orderResultsWithSelections +
+> resolveOrderByKeyColumns），finishOutput 批次投递传 aggregate
+> selections——此前 row-for-all/join 聚合在 output-rate 批次内对共享
+> 活组重估导致全部比较并列、排序退化为插入序且 Descending 失效。
+> manifest 更新为 553 cases、164 个 differential-verified case、
+> 629 个 differential runtime IDs、3254 条 associations（referenced
+> 3050）；capability 114 个（28 DV）。
+>
 > 最新补充：Draft 4.255（2026-08-25），登记 `resultset.aggregate-having`
 > 能力并扩展 `resultset-query-type-having` 场景至 7 个可观测 runtime：
 > length_batch 通配 select 的 where+count(*) 批次门控、text/OM avg-HAVING

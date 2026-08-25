@@ -1,0 +1,516 @@
+{
+ "version": "esper-differential/v1",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimeIds": [
+  "java-runtime-e6f5c075be4979efc531",
+  "java-runtime-7642ad83057714f39501",
+  "java-runtime-046ed3b9a90cf000c5c7"
+ ],
+ "javaSourceFiles": [
+  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByRowForAll.java"
+ ],
+ "javaExecutions": [
+  "ResultSetNoOutputRateJoin",
+  "ResultSetOutputDefault{join=false}",
+  "ResultSetOutputDefault{join=true}"
+ ],
+ "scenario": {
+  "version": "esper-parity/v1",
+  "id": "resultset-orderby-row-for-all",
+  "description": "ResultSetOrderByRowForAll ungrouped row-for-all order-by family replaying its three registered executions: no-output-rate-join joins SupportMarketDataBean#length(10) with SupportBeanString#length(100) on symbol=theString under select sum(price) as sumPrice order by price, observed exclusively through fifo iterator snapshots (the pinned listener stays attached but is never asserted) reading [{sumPrice:214.0}] after the CAT@50/IBM@49/CAT@15/IBM@100 market sequence and [{sumPrice:289.0}] after KGB@75; output-default-no-join and output-default-join share the A1,E1(10),E2(11),E3(12) send sequence against irstream sum(intPrimitive) as c0, last(theString) as c1 over SupportBean#length(2) (cross joined with SupportBean_A#keepall in the join variant) under output every 3 events order by sum(intPrimitive) desc, where the SupportBean_A seed neither reaches the filtered stream nor advances the event-count boundary so no callback fires through E2, and E3 delivers the single IR batch new=[{c0:23,c1:E3},{c0:21,c1:E2},{c0:10,c1:E1}] paired with the pre-state chain old=[{c0:21,c1:E2},{c0:10,c1:E1},{c0:null,c1:null}] whose remove rows snapshot buffered state instead of mirroring the sorted insert rows",
+  "javaRuntimes": [
+   "java-runtime-e6f5c075be4979efc531",
+   "java-runtime-7642ad83057714f39501",
+   "java-runtime-046ed3b9a90cf000c5c7"
+  ],
+  "cases": [
+   {
+    "case": "no-output-rate-join",
+    "runtimeId": "java-runtime-e6f5c075be4979efc531",
+    "observation": "iterator"
+   },
+   {
+    "case": "output-default-no-join",
+    "runtimeId": "java-runtime-7642ad83057714f39501",
+    "observation": "listener"
+   },
+   {
+    "case": "output-default-join",
+    "runtimeId": "java-runtime-046ed3b9a90cf000c5c7",
+    "observation": "listener"
+   }
+  ],
+  "steps": [
+   {
+    "op": "case",
+    "case": "no-output-rate-join"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBeanString",
+    "payload": {
+     "theString": "CAT"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBeanString",
+    "payload": {
+     "theString": "IBM"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBeanString",
+    "payload": {
+     "theString": "CMU"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBeanString",
+    "payload": {
+     "theString": "KGB"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBeanString",
+    "payload": {
+     "theString": "DOG"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportMarketDataBean",
+    "payload": {
+     "symbol": "CAT",
+     "price": 50,
+     "volume": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportMarketDataBean",
+    "payload": {
+     "symbol": "IBM",
+     "price": 49,
+     "volume": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportMarketDataBean",
+    "payload": {
+     "symbol": "CAT",
+     "price": 15,
+     "volume": 0
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportMarketDataBean",
+    "payload": {
+     "symbol": "IBM",
+     "price": 100,
+     "volume": 0
+    }
+   },
+   {
+    "op": "snapshot",
+    "statement": "s0",
+    "label": "s0-before-kgb",
+    "mode": "fifo"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportMarketDataBean",
+    "payload": {
+     "symbol": "KGB",
+     "price": 75,
+     "volume": 0
+    }
+   },
+   {
+    "op": "snapshot",
+    "statement": "s0",
+    "label": "s0-after-kgb",
+    "mode": "fifo"
+   },
+   {
+    "op": "case",
+    "case": "output-default-no-join"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_A",
+    "payload": {
+     "id": "A1"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E1",
+     "intPrimitive": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E2",
+     "intPrimitive": 11
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E3",
+     "intPrimitive": 12
+    }
+   },
+   {
+    "op": "case",
+    "case": "output-default-join"
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean_A",
+    "payload": {
+     "id": "A1"
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E1",
+     "intPrimitive": 10
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E2",
+     "intPrimitive": 11
+    }
+   },
+   {
+    "op": "send",
+    "eventType": "SupportBean",
+    "payload": {
+     "theString": "E3",
+     "intPrimitive": 12
+    }
+   }
+  ]
+ },
+ "javaTrace": {
+  "version": "esper-parity/v1",
+  "id": "resultset-orderby-row-for-all",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "java": "17.0.20",
+  "records": [
+   {
+    "case": "no-output-rate-join",
+    "operation": "snapshot",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "sumPrice": 214
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-output-rate-join",
+    "operation": "snapshot",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "sumPrice": 289
+      }
+     }
+    ]
+   },
+   {
+    "case": "output-default-no-join",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 23,
+       "c1": "E3"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 21,
+       "c1": "E2"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 10,
+       "c1": "E1"
+      }
+     }
+    ],
+    "old": [
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 21,
+       "c1": "E2"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 10,
+       "c1": "E1"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": {
+        "state": "null"
+       },
+       "c1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "output-default-join",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 23,
+       "c1": "E3"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 21,
+       "c1": "E2"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 10,
+       "c1": "E1"
+      }
+     }
+    ],
+    "old": [
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 21,
+       "c1": "E2"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 10,
+       "c1": "E1"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": {
+        "state": "null"
+       },
+       "c1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "goTrace": {
+  "version": "esper-parity/v1",
+  "id": "resultset-orderby-row-for-all",
+  "records": [
+   {
+    "case": "no-output-rate-join",
+    "operation": "snapshot",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "sumPrice": 214
+      }
+     }
+    ]
+   },
+   {
+    "case": "no-output-rate-join",
+    "operation": "snapshot",
+    "statement": "s0",
+    "sequence": 2,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "sumPrice": 289
+      }
+     }
+    ]
+   },
+   {
+    "case": "output-default-no-join",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 23,
+       "c1": "E3"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 21,
+       "c1": "E2"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 10,
+       "c1": "E1"
+      }
+     }
+    ],
+    "old": [
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 21,
+       "c1": "E2"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 10,
+       "c1": "E1"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": {
+        "state": "null"
+       },
+       "c1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   },
+   {
+    "case": "output-default-join",
+    "operation": "listener",
+    "statement": "s0",
+    "sequence": 1,
+    "time": "1970-01-01T00:00:00Z",
+    "new": [
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 23,
+       "c1": "E3"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 21,
+       "c1": "E2"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 10,
+       "c1": "E1"
+      }
+     }
+    ],
+    "old": [
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 21,
+       "c1": "E2"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": 10,
+       "c1": "E1"
+      }
+     },
+     {
+      "kind": "row",
+      "fields": {
+       "c0": {
+        "state": "null"
+       },
+       "c1": {
+        "state": "null"
+       }
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "status": "passing",
+ "differences": []
+}

@@ -1919,6 +1919,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-orderby-row-for-all" || *mode == "resultset-orderby-row-for-all-diff" {
+		trace, err := runResultSetOrderByRowForAllScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-orderby-row-for-all-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetOrderByRowForAllJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetOrderByRowForAllJavaSources),
+				splitMetadata(*javaExecutions, resultSetOrderByRowForAllJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-query-type-having" || *mode == "resultset-query-type-having-diff" {
 		trace, err := runResultSetQueryTypeHavingScenario(context.Background(), scenario)
 		if err != nil {

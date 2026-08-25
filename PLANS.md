@@ -31,10 +31,9 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-08-25
-- Baseline: `HEAD` == `origin/master` at Draft 4.254 (`20700fb35`),
-  pushed after full gates and independent review PASS. Worktree clean
-  apart from this checkpoint.
+- Updated: 2026-08-26
+- Baseline: `HEAD` == `origin/master` at Draft 4.255 (`4665f3330`),
+  pushed. Worktree carries the 4.256 implementation pending commit.
 - Previous unit outcome (closed; Draft 4.254, commit `20700fb35`):
   InfraTableIntoTable 9 executions (11 cases) differential-verified at
   59/59 records, 0 differences; runtime additions MaxEver/MinEver/
@@ -46,15 +45,14 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
-- Deferred unit (ResultSetOrderByRowForAll, NOT implemented):
-resultset/orderby/ResultSetOrderByRowForAll.java 3 executions. Go engine
-ignores SortKey.Descending in grouped batched irstream output (both
-Ascending/Descending produce ascending order); needs dedicated engine fix.
-- Current work unit (Draft 4.256): `resultset/orderby/`
-  ResultSetOrderByRowForAll.java 3 executions (all unreferenced):
-  NoOutputRateJoin (e6f5c075be4979efc531),
-  OutputDefault{join=false} (046ed3b9a90cf000c5c7),
-  OutputDefault{join=true} (7642ad83057714f39501).
+- Closed deferral: ResultSetOrderByRowForAll implemented in Draft 4.256
+  after fixing the engine divergence (order-by alias-column snapshot
+  resolution in batched deliveries). All 3 executions differential-verified:
+  NoOutputRateJoin (e6f5c075be4979efc531, iterator-only snapshots),
+  OutputDefault{join=false} (7642ad83057714f39501) and {join=true}
+  (046ed3b9a90cf000c5c7); Java/Go 4/4 records, 0 differences. Runtime-ID
+  mapping follows java-execution-inventory ordinals (join=false precedes
+  join=true in executions()).
 - Deferred unit (AggregateGrouped, NOT implemented):
   resultset/querytype/ResultSetQueryTypeAggregateGrouped.java (9 executions,
   all unreferenced). Three grouped-emit divergences documented with repros.
@@ -78,7 +76,19 @@ Ascending/Descending produce ascending order); needs dedicated engine fix.
   truth table plus constant write protection across four channels.
   Deferred until dedicated units can verify each surface against Java
   truth without rushing.
+
 ## Delegation checkpoint
+- Draft 4.256 unit agents: prefetch scouts `RFAJavaContract`
+  (java-oracle-scout) and `RFAGoSurface` (scout) ran concurrently in one
+  task batch before implementation; asset writer `RFA Assets`
+  (parity-asset-worker, isolated) authored the oracle/scenario/script trio
+  and corrected the swapped join=true/false runtime-ID mapping against
+  java-execution-inventory ordinals before delivery. Shared-core writer:
+  primary agent. `RFAReview` verdict PASS-with-findings: P2 runner
+  fallback ID list swapped (fixed + provenance assertion added), P3
+  manifest serialization hygiene (newline + 4 raw punctuation chars
+  restored).
+
 - Draft 4.254 unit agents: investigation scouts `InfraTTJavaContract`
   (java-oracle-scout) and `InfraTTGoSurface` (scout) ran concurrently in one
   task batch before implementation. Asset writer `ITTO Assets`

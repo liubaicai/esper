@@ -16424,6 +16424,120 @@ func TestRunResultsetOrderbyRowPerGroupDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunResultsetOrderbyRowForAllDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-orderby-row-for-all.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-orderby-row-for-all.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-orderby-row-for-all.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-orderby-row-for-all-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	// Provenance guard: the flag-less diff mode stamps the runner's fallback
+	// ID list; it must stay in java-execution-inventory ordinal order
+	// (NoOutputRateJoin, OutputDefault{join=false}, OutputDefault{join=true}).
+	wantIDs := []string{
+		"java-runtime-e6f5c075be4979efc531",
+		"java-runtime-7642ad83057714f39501",
+		"java-runtime-046ed3b9a90cf000c5c7",
+	}
+	if !reflect.DeepEqual(evidence.JavaRuntimeIDs, wantIDs) {
+		t.Fatalf("javaRuntimeIds = %v, want %v", evidence.JavaRuntimeIDs, wantIDs)
+	}
+}
+
+func TestRunResultsetOrderbyRowForAllDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "iterator-first-snapshot-sum-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["sumPrice"] = 999
+			},
+		},
+		{
+			name: "iterator-second-snapshot-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New = nil
+			},
+		},
+		{
+			name: "batched-new-descending-order-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0], trace.Records[2].New[2] = trace.Records[2].New[2], trace.Records[2].New[0]
+			},
+		},
+		{
+			name: "batched-old-null-prior-position-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Old[0], trace.Records[2].Old[2] = trace.Records[2].Old[2], trace.Records[2].Old[0]
+			},
+		},
+		{
+			name: "batched-old-prior-chain-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Old = trace.Records[2].Old[:1]
+			},
+		},
+		{
+			name: "join-batch-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New = trace.Records[3].New[:2]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-orderby-row-for-all.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-orderby-row-for-all.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-orderby-row-for-all.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-orderby-row-for-all-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunInfraTableIntoTableDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-into-table.evidence.json"),

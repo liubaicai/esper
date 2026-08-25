@@ -10812,8 +10812,12 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 		batch.Sequence = r.seq.Add(1)
 	}
 	if len(plans) > 0 && deferOutputResultWindow(plans[0].query.output) {
-		batch.New = orderResults(batch.New, plans[0].query.orderBy, now, r.variables)
-		batch.Old = orderResults(batch.Old, plans[0].query.orderBy, now, r.variables)
+		orderSelections := plans[0].query.selections
+		if plans[0].query.aggregate != nil && len(plans[0].query.aggregate.selections) > 0 {
+			orderSelections = plans[0].query.aggregate.selections
+		}
+		batch.New = orderResultsWithSelections(batch.New, plans[0].query.orderBy, orderSelections, now, r.variables)
+		batch.Old = orderResultsWithSelections(batch.Old, plans[0].query.orderBy, orderSelections, now, r.variables)
 		batch.New = applyResultWindow(batch.New, plans[0].query)
 		batch.Old = applyResultWindow(batch.Old, plans[0].query)
 	}
@@ -19339,15 +19343,36 @@ func deferOutputResultWindow(policy OutputPolicy) bool {
 }
 
 func orderResults(results []Result, keys []SortKey, now time.Time, variables map[string]Value) []Result {
+	return orderResultsWithSelections(results, keys, nil, now, variables)
+}
+
+// orderResultsWithSelections sorts delivered rows by the order-by keys. When
+// a key expression is structurally the expression behind a projected alias
+// (identical canonical description), the key reads that row's own projected
+// column instead of re-evaluating against ambient state. Java computes
+// order-by values per row at generation time (snapshot semantics), so for
+// row-for-all or join aggregate queries under an output rate limit every
+// row must sort by its own frozen aggregate value; re-evaluation would see
+// one shared live group and tie every comparison away.
+func orderResultsWithSelections(results []Result, keys []SortKey, selections []Selection, now time.Time, variables map[string]Value) []Result {
 	if len(results) < 2 || len(keys) == 0 {
 		return results
 	}
+	keyColumns := resolveOrderByKeyColumns(keys, selections)
 	ordered := append([]Result(nil), results...)
 	sort.SliceStable(ordered, func(left, right int) bool {
 		leftContext := resultOrderContext(ordered[left], now, variables)
 		rightContext := resultOrderContext(ordered[right], now, variables)
-		for _, key := range keys {
-			comparison, ok := compareOrderValues(key.Expr.eval(leftContext), key.Expr.eval(rightContext))
+		leftRow, leftHasRow := ordered[left].Row()
+		rightRow, rightHasRow := ordered[right].Row()
+		for index, key := range keys {
+			var comparison int
+			var ok bool
+			if index < len(keyColumns) && keyColumns[index] != "" && leftHasRow && rightHasRow {
+				comparison, ok = compareOrderValues(leftRow.Get(keyColumns[index]), rightRow.Get(keyColumns[index]))
+			} else {
+				comparison, ok = compareOrderValues(key.Expr.eval(leftContext), key.Expr.eval(rightContext))
+			}
 			if !ok || comparison == 0 {
 				continue
 			}
@@ -19359,6 +19384,42 @@ func orderResults(results []Result, keys []SortKey, now time.Time, variables map
 		return false
 	})
 	return ordered
+}
+
+// resolveOrderByKeyColumns maps each order-by key to a projected column name
+// when the key expression matches exactly one selection expression by
+// canonical description. Ambiguous matches fall back to expression
+// evaluation.
+func resolveOrderByKeyColumns(keys []SortKey, selections []Selection) []string {
+	if len(selections) == 0 || len(keys) == 0 {
+		return nil
+	}
+	columns := make([]string, len(keys))
+	for index, key := range keys {
+		if key.Expr == nil || key.Expr.node() == nil {
+			continue
+		}
+		description := key.Expr.Description()
+		match := ""
+		ambiguous := false
+		for _, selection := range selections {
+			if selection.Expr == nil || selection.Expr.node() == nil {
+				continue
+			}
+			if selection.Expr.Description() != description {
+				continue
+			}
+			if match != "" {
+				ambiguous = true
+				break
+			}
+			match = selection.Name
+		}
+		if !ambiguous {
+			columns[index] = match
+		}
+	}
+	return columns
 }
 
 func resultOrderContext(result Result, now time.Time, variables map[string]Value) EvalContext {
