@@ -49,6 +49,12 @@ activity or a single coverage percentage.
 - Deferred unit (AggregateGrouped, NOT implemented):
   resultset/querytype/ResultSetQueryTypeAggregateGrouped.java (9 executions,
   all unreferenced). Three grouped-emit divergences documented with repros.
+- Deferred unit (EventMapCore, NOT implemented):
+  event/map/EventMapCore.java 5 executions. Probe implementation exposed
+  Go-side complexity in nested Map event type registration (3-level
+  nesting), cross-type sender rejection (ObjectArray sender to Map type),
+  and Java-bean property navigation inside Map-typed values. These need a
+  dedicated unit focused on Map event representation parity.
 - Deferred unit (EPLVariablesUse, NOT implemented):
   epl/variable/EPLVariablesUse.java 8 unreferenced executions. Scout
   investigation revealed extensive API contract surfaces: EPRuntime alone
