@@ -46,130 +46,39 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
-- Current work unit (Draft 4.256 candidate):
-  `resultset/querytype/ResultSetQueryTypeAggregateGrouped.java`, ALL 9
-  executions (all unreferenced): MultikeyWArray (`91048f4568185e6225f9`),
-  CriteriaByDotMethod (`de8f7d7c8aef4f94257f`), IterateUnbound
-  (`f158e09462cf81dcaed6`), UnaggregatedHaving (`53a0852371cfa557bb19`),
-  Wildcard (`40a398cbeadf315e6404`), AggregationOverGroupedProps
-  (`2b8ffb9e25212f96d12c`), SumOneView (`0dd2d8188c6705b7e352`), SumJoin
-  (`0b86c8778cda88c48804`), InsertInto (`f5ae7195e04ce1676ec4`). Same
-  querytype family as 4.255; grouped-aggregate Go surface mature.
-
-- Prior candidate (superseded by scope correction below):
-  `resultset.aggregate-having`
-  extension via resultset/querytype/ResultSetQueryTypeHaving.java, ALL 10
-  executions (all currently unreferenced): HavingWildcardSelect
-  (`1dfe34a06e794032b5f6`), StatementOM (`8a05b3435dcc1ad1f414`),
-  Statement (`c33f49e879157f89fb62`), StatementJoin
-  (`c5e8204a0ec635e5ded3`), SumHavingNoAggregatedProp
-  (`2aa18c37135a5c99514b`), NoAggregationJoinHaving
-  (`0be8c1b9dd6f114b3919`), NoAggregationJoinWhere
-  (`3566968f29b3c05f40ee`), SubstreamSelectHaving
-  (`4fe38de65dec8bcdf586`), HavingSum (`0e551e1e4b7e85c94b37`),
-  HavingSumIStream (`77aeed87d8b7920a1bcf`). Distinct from the already-DV
-  case.resultset-query-type-having (4.241, different suite).
-- Java contract (primary read, pending scout confirmation):
-  wildcard length_batch(2)+where+having count(*)=2 batch gating; text/OM
-  twin `irstream symbol,price,avg(price) having price<avg(price)` over
-  MD#length(5) with old-row having re-evaluation vector (5/7.5, 8/9.5,
-  6/8.8 new-only, then old-only {5,10.2}); join twin primed by SING;
-  compile-acceptance SumHavingNoAggregatedProp (volume<avg(price));
-  non-aggregated join spread >= 1.4 having-vs-where twins with full
-  new/old/old-new vectors; insert-into select quote.* delivery gated by
-  avg(intPrimitive)>=3; pattern-source sum=2 with OLD delivery on leaving
-  satisfied state vs istream silent variant.
-- Scouts delivered and corrected the scope: 4.241 shipped runner/oracle/
-  scenario/evidence assets for this very suite (Statement text+OM twins,
-  compile-only SumHavingNoAggregatedProp, plus a StatementJoin branch that
-  never entered the committed scenario), but its manifest registration never
-  landed - no resultset.aggregate-having capability or case exists in
-  testdata/compat/capability-manifest.json. Draft 4.255 therefore extends the
-  EXISTING resultset-query-type-having assets to all 10 executions and closes
-  the registration gap in the same unit.
-- Frozen decisions: (a) extend existing scenario id/case, no parallel case;
-  (b) HavingSum/HavingSumIStream pattern source expressed as an equivalent
-  unbounded plain stream (registered representation choice; probe confirmed
-  Go delivers new{mysum=2} then old{mysum=2} with the old row carrying the
-  previous projection, matching Java); (c) wildcard-select's count(*)=2 is
-  tautological over a released length_batch(2) group so filter+batch window
-  alone reproduce the contract (registered note); (d) substream quote.*
-  spelled as explicit passthrough columns per the established typed-API
-  approved difference; (e) noagg join spread via MaxOf-MinOf Subtract with
-  Where vs JoinQuery.Having twins.
-- Runner: case branches implemented (join twins coded but excluded from the
-  committed loop); runtime-ID/executions tables in inventory order;
-  SupportBean payload decode added. Asset worker `RH Assets` extended
-  oracle/scenario to 10 executions; primary trimmed the three join-family
-  cases from the committed scenario after replay exposed the known
-  join-aggregate old/new classification divergence.
-- Engine fix: ungrouped irstream first-update null-prior old row is now
-  suppressed when the having clause rejects the empty-group prior state
-  (Java HavingSum delivers new{2} then old{2} with no null-prior pair).
-  Existing no-having RowForAll pairing unchanged; full suite green.
-- Differential: passing 14/14 records, 0 differences across 7 runtime IDs.
-  Manifest: capability resultset.aggregate-having + case.resultset-query-
-  type-having registered (closes the 4.241 registration gap); summary
-  recomputed by validator rules: 552 cases / 163 DV / 626 DV runtime IDs /
-  3251 associations / 113 capabilities (27 DV). Docs updated. Regression:
-  fixture + 7 mutation tests added.
-- Review: `RHParityReview` verdict PASS with two P3 documentation-precision
-  findings, both applied (oracle javadoc and scenario description scoped to
-  the seven executed runtimes with join branches marked dormant; runner
-  comment reworded to prior-state vs post-state having gating). Trace and
-  evidence regenerated after the prose fixes; differential re-verified
-  passing 0 differences; targeted gates green.
-- Next action: semantic commit and push.
-
-- Prior unit (Draft 4.254): `infra.tbl` InfraTableIntoTable.java nine
-  executions differential-verified (see previous outcome above); original
-  header retained below for delegation trail.
-  InfraIntoTableUnkeyedSimpleSameModule (`java-runtime-36615ff5ace54c29450b`),
-  InfraIntoTableUnkeyedSimpleTwoModule (`01df86362eaeba3bb58d`),
-  InfraBoundUnbound (`338e401bfe934ccd41f0`),
-  InfraIntoTableWindowSortedFromJoin (`a71e110710b112d908b0`),
-  InfraTableIntoTableNoKeys (`d2ce221ae91707742548`),
-  InfraTableIntoTableWithKeys (`ad72afcd0fe33a7b5598`),
-  InfraTableBigNumberAggregation (`fe0db4bb05cef63d525d`),
-  InfraIntoTableMultikeyWArraySingleArrayKeyed (`8e288e9ab881caa8ffb4`),
-  InfraIntoTableMultikeyWArrayTwoKeyed (`6bfb9dbe40659f113ce9`). Selection
-  reason: same infra/tbl subdomain as the pushed 4.252; this is the largest
-  fully-unreferenced natural suite (9/9 runtimes unassociated); Go already
-  has a broad IntoTable/Table-access surface to reuse.
-- Java contract (frozen from the pinned source read; scout reports pending
-  confirmation): unkeyed `count(*)` into-table iterator starts empty and
-  accumulates 1→2 across milestones; two-module variant resolves `@public`
-  create-table through RegressionPath; bound/unbound matrix asserts
-  length(2)-bound max/min/window/sorted vs ever-aggregations through a
-  whole-row `varagg` map reader on SupportBean_S0#lastevent, with exact
-  compile rejects ("Incompatible aggregation function for table 'varagg'
-  column 'maxb', expecting 'max(int)' and received 'max(intPrimitive)': The
-  table declares use with data windows and provided is unbound [",
-  "For into-table use 'window(*)' or 'window(stream.*)' instead",
-  "Incompatible aggregation function ... expecting 'window(*)' and received
-  'lastever(*)'", "Null-type is not allowed", "When specifying into-table a
-  sort expression cannot be provided [", "... expecting 'sorted(intPrimitive)'
-  and received 'maxbyever()'"); WindowSortedFromJoin feeds
-  window(sb.*)/sorted(sb.*) desc columns from SupportBean_S0#lastevent x
-  SupportBean#keepall and observes rows via FAF `select * from MyTable`;
-  NoKeys/WithKeys observe sum state via correlated `(select sumint from
-  MyTable [where pkey = s0.p00])` subquery listeners plus create-table
-  iterators; BigNumberAggregation shows #lastevent-bound
-  avg(BigInteger)/avg(BigDecimal)/sum(BigInteger)/sum(BigDecimal) columns are
-  replaced (not accumulated) when the window slides; both multikey suites use
-  int[] content-equality primary keys with assertPropsPerRowIteratorAnyOrder
-  value snapshots ({1,2}→10, {0,2}→24, {1,1}→27, {1}→14; two-key
-  {10}/{1,2}→100, {10}/{1,1}→206, {10,20}/{1,2}→204, {10,20}/{1,1}→105).
-- Allowed files: tools/java-oracle/InfraTableIntoTableScenarioOracle.java
-  (new), tools/java-oracle/run-infra-table-into-table.sh (new),
-  testdata/parity/infra-table-into-table.json (new), internal/app/parity/
-  infra_table_into_table.go (new), run.go dispatch registration, run_test.go
-  mutations; internal/esper/** only where differential replay proves a gap
-  (primary-owned). Primary additionally owns generated traces/evidence,
-  manifest, roadmap, CHANGELOG, and this file.
+- Deferred unit (AggregateGrouped, NOT implemented):
+  resultset/querytype/ResultSetQueryTypeAggregateGrouped.java (9 executions,
+  all unreferenced). Full probe implementation reached 57/57 records 0
+  differences only after three grouped-emit engine changes that rippled into
+  six legacy surfaces; deferred until each surface gets its own Java-truth
+  verification pass. Divergences recorded: (1) grouped-view istream emits an
+  eviction-echo new row for groups whose state changed only via window
+  expiry (Java generateOutputEventsView loops per input event only);
+  (2) length_batch flush collapses to one row per key while Java emits one
+  row per batch member when non-aggregated selections read the underlying
+  event (CriteriaByDotMethod [{100,30},{200,30}] vs
+  ContextKeySegmentedRowPerGroupBatchContextProp {200,2}); (3) grouped-JOIN
+  statement iterators collapse per group while Java enumerates per join
+  tuple (SumJoin snapshots).
+- Deferred unit (InfraNamedWindowOnUpdate, NOT implemented):
+  infra/namedwindow/InfraNamedWindowOnUpdate.java (8 executions, all
+  unreferenced). Full probe implementation exposed multiple unresolved
+  Go/Java mismatches: on-update IStream/RStream delivery semantics differ
+  (Java produces pre-update old rows via named-window consumers; Go's
+  FromNamedWindow consumers only emit post-update new rows), int[] multikey
+  window inserts produce null fields via CopyMatchingFields with typed
+  structs, and non-property set forms require representation mappings that
+  alter downstream observable state. Deferred until the on-update named-
+  window consumer path gets its own Java-truth verification pass.
+- Allowed files: tools/java-oracle/InfraNamedWindowOnUpdateScenarioOracle.java
+  (new), tools/java-oracle/run-infra-named-window-on-update.sh (new),
+  testdata/parity/infra-named-window-on-update.json (new), internal/app/
+  parity/infra_named_window_on_update.go (new), run.go dispatch registration,
+  run_test.go mutations; internal/esper/** only where differential replay
+  proves a gap (primary-owned). Primary additionally owns generated
+  traces/evidence, manifest, roadmap, CHANGELOG, and this file.
 - Forbidden: unrelated runner edits; oracle EPL strings drifting from the
-  pinned suite; weakening or skipping the six exact compile-reject messages;
-  manifest/evidence updates before the differential passes.
+  pinned suite; manifest/evidence updates before the differential passes.
 - Progress: scouts delivered; contract frozen. Asset worker `ITTO Assets`
   (parity-asset-worker, isolated) authored the oracle/scenario/script trio
   and validated the pinned Java trace twice byte-stable (59 records: 33
