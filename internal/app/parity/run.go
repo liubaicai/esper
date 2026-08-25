@@ -1855,6 +1855,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "infra-table-into-table" || *mode == "infra-table-into-table-diff" {
+		trace, err := runInfraTableIntoTableScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-into-table-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableIntoTableJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableIntoTableJavaSources),
+				splitMetadata(*javaExecutions, infraTableIntoTableJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-orderby-row-per-group" || *mode == "resultset-orderby-row-per-group-diff" {
 		trace, err := runResultsetOrderbyRowPerGroupScenario(context.Background(), scenario)
 		if err != nil {

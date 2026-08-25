@@ -32,99 +32,107 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-25
-- Baseline: `HEAD` == `origin/master`; the previous unit (Draft 4.252,
-  InfraTableInsertInto 5 runtimes, commit `8fa0ab8da`) is pushed. The three
-  untracked `resultset-orderby-row-per-group` files are prefetch assets and
-  remain outside commits until their units are selected.
-- Current work unit (Draft 4.253): `resultset.orderby-row-per-group`, ALL
-  NINE ResultSetOrderByRowPerGroup executions carried by the prefetched
-  oracle `tools/java-oracle/ResultSetOrderByRowPerGroupScenarioOracle.java`
-  + scenario `testdata/parity/resultset-orderby-row-per-group.json` + runner
-  script. Scope amended from the planned 5-case split: the nine executions
-  share one Java class, one scenario, one oracle and one runner surface, so
-  the unit ports them together (the ECSM multi-runtime precedent); a split
-  would have required scenario case-filtering machinery for no benefit.
-  Frozen from `ROJavaContract` + `ROGoSurface` reports: the prefetched
-  oracle/scenario are drift-free (EPL strings byte-match the pinned suite;
-  listener attachment is 1:1 — one statement s0 per case). Observable
-  contract: 22 records — output-every cases emit exactly 2 listener records
-  (ordered new+old arrays; having filters BOTH streams), output-last cases
-  consolidate per group (new = last state, old = first-appearance prior),
-  iterator-row-per-group emits 5 continuous rows + 2 snapshots, and
-  order-by-last is istream-only. Runtime IDs: 0378ad5f02530ec9a035,
-  76c087fbdf95d5f7880b, c2f6f59e3e46c835a29e, e07133b5b6253e493ded,
-  252daca2010790c61878, 9d22340c3f0b36d2a3f7, 3124b316394d884cf8f3,
-  fbb5b1ed4cd702566ff1, be39f23e1ad826e99352.
-- Go contract: new runner internal/app/parity/resultset_orderby_row_per_group.go
-  using the GENERIC replay (scenario carries only case/send steps): per-case
-  env + one Build + deployParityStatement + ReplayWithStatements. Plans:
-  From[md].Window(LengthWindow(20)).GroupBy(symbol)[.Having(Greater(sum,0))]
-  .Select(Alias("symbol",...), Alias("mysum", sum)).Query(StatementName("s0"),
-  WithOldStream(), WithOutput(OutputEvery(6)), OrderBy(...)); join cases via
-  Join(From[md].Window(20), From[sbs].Window(100), OnEqual(symbol, theString))
-  .GroupBy(JoinField(0,"symbol")) with JoinField selections. ONE parity-risk
-  resolution (asset-only, per ROGoSurface): ALL order keys are expressed as
-  ResultField projections (Ascending(ResultField[float64]("mysum")),
-  Ascending(ResultField[string]("symbol"))) because the boundary re-sort of
-  output-every batches evaluates keys via resultOrderContext where a direct
-  aggregate key is inert (empty group) — Java re-sorts the whole buffered
-  batch globally, and ResultField reproduces that order including null-first
-  old rows; alias vs expression spelling is observationally identical in the
-  pinned expectations. WithOldStream() except order-by-last (istream only).
-- Allowed files: internal/app/parity/resultset_orderby_row_per_group.go
-  (new), run.go, run_test.go, internal/esper/runtime.go, internal/esper/
-  rowrecog.go; primary owns generated trace/evidence, manifest, roadmap,
-  CHANGELOG, PLANS.
-- Forbidden: oracle/scenario/script changes (verified drift-free except the
-  primary-fixed latent compile defect: the SupportMarketDataBean mirror
-  never assigned its final id field), unrelated runner edits.
-- Delegation: `ROJavaContract` (java-oracle-scout) and `ROGoSurface`
-  (scout) reports frozen this contract; no asset writer needed (prefetched
-  assets drift-free — recorded serial exception).
-- Progress: primary implemented the nine-case runner, dispatch, and 12
-  mutations. The first differential surfaced three shared-runtime gaps,
-  all fixed and full-suite verified: (1) orderRowRecogResults re-sorted
-  ordered batches with compareValues, whose null-vs-value (0,false)
-  demoted null-first ordering to the next sort key — now uses
-  compareOrderValues; (2) grouped-aggregate creation null-prior old rows
-  bypassed the having gate — now gated via evaluateEmptyAggregateGroup
-  (only when a having exists: the evaluation instantiates plugin aggregate
-  states as a side effect); (3) grouped output-last delivered per-event
-  prior fragments — now consolidates per group (new = last state, old =
-  first-appearance prior) with the pending buffer keeping raw fragments.
-  The runner expresses order keys as ResultField projections (the boundary
-  re-sort evaluates keys against projected rows; direct aggregate keys are
-  inert in that context). Pinned Java trace regenerated: 22 records;
-  differential evidence passing 22/22 records, 0 differences. Manifest
-  extended with capability resultset.orderby-row-per-group +
-  case.resultset-orderby-row-per-group (161 DV cases, 610 DV runtime IDs,
-  3235 associations, referenced 3031, 112 capabilities / 26 DV).
-- Review: `ROParityReview` verdict: no P1/P2, five P3s — three applied
-  (dead unreachable IsNull block in compareOrderValues removed: Null()
-  carries IsPresent()==false so the pre-existing switch already ranks
-  null-first, and the live fix is solely the rowrecog comparator swap;
-  scratch probe file removed; iterator case builds the pinned #length(10)
-  directly instead of chaining onto the shared length(20) stream), two
-  documented latent limitations (creation null-prior having gate evaluates
-  without event context — identical for pure-aggregate having; removal-only
-  groups produce no consolidated NEW row under output-last — no eviction in
-  this lane). Post-fix differential re-verified passing 22/22, 0 differences.
+- Baseline: `HEAD` == `origin/master`; the pushed head is the Draft 4.253
+  resultset order-by-row-per-group pair (`f1d4e2e5e` + README `90820b963`),
+  committed only after full gates and `ROParityReview` PASS. Worktree clean.
+- Current work unit (Draft 4.254): `infra.tbl` InfraTableIntoTable.java, ALL
+  NINE executions in one scenario/oracle/runner surface:
+  InfraIntoTableUnkeyedSimpleSameModule (`java-runtime-36615ff5ace54c29450b`),
+  InfraIntoTableUnkeyedSimpleTwoModule (`01df86362eaeba3bb58d`),
+  InfraBoundUnbound (`338e401bfe934ccd41f0`),
+  InfraIntoTableWindowSortedFromJoin (`a71e110710b112d908b0`),
+  InfraTableIntoTableNoKeys (`d2ce221ae91707742548`),
+  InfraTableIntoTableWithKeys (`ad72afcd0fe33a7b5598`),
+  InfraTableBigNumberAggregation (`fe0db4bb05cef63d525d`),
+  InfraIntoTableMultikeyWArraySingleArrayKeyed (`8e288e9ab881caa8ffb4`),
+  InfraIntoTableMultikeyWArrayTwoKeyed (`6bfb9dbe40659f113ce9`). Selection
+  reason: same infra/tbl subdomain as the pushed 4.252; this is the largest
+  fully-unreferenced natural suite (9/9 runtimes unassociated); Go already
+  has a broad IntoTable/Table-access surface to reuse.
+- Java contract (frozen from the pinned source read; scout reports pending
+  confirmation): unkeyed `count(*)` into-table iterator starts empty and
+  accumulates 1→2 across milestones; two-module variant resolves `@public`
+  create-table through RegressionPath; bound/unbound matrix asserts
+  length(2)-bound max/min/window/sorted vs ever-aggregations through a
+  whole-row `varagg` map reader on SupportBean_S0#lastevent, with exact
+  compile rejects ("Incompatible aggregation function for table 'varagg'
+  column 'maxb', expecting 'max(int)' and received 'max(intPrimitive)': The
+  table declares use with data windows and provided is unbound [",
+  "For into-table use 'window(*)' or 'window(stream.*)' instead",
+  "Incompatible aggregation function ... expecting 'window(*)' and received
+  'lastever(*)'", "Null-type is not allowed", "When specifying into-table a
+  sort expression cannot be provided [", "... expecting 'sorted(intPrimitive)'
+  and received 'maxbyever()'"); WindowSortedFromJoin feeds
+  window(sb.*)/sorted(sb.*) desc columns from SupportBean_S0#lastevent x
+  SupportBean#keepall and observes rows via FAF `select * from MyTable`;
+  NoKeys/WithKeys observe sum state via correlated `(select sumint from
+  MyTable [where pkey = s0.p00])` subquery listeners plus create-table
+  iterators; BigNumberAggregation shows #lastevent-bound
+  avg(BigInteger)/avg(BigDecimal)/sum(BigInteger)/sum(BigDecimal) columns are
+  replaced (not accumulated) when the window slides; both multikey suites use
+  int[] content-equality primary keys with assertPropsPerRowIteratorAnyOrder
+  value snapshots ({1,2}→10, {0,2}→24, {1,1}→27, {1}→14; two-key
+  {10}/{1,2}→100, {10}/{1,1}→206, {10,20}/{1,2}→204, {10,20}/{1,1}→105).
+- Allowed files: tools/java-oracle/InfraTableIntoTableScenarioOracle.java
+  (new), tools/java-oracle/run-infra-table-into-table.sh (new),
+  testdata/parity/infra-table-into-table.json (new), internal/app/parity/
+  infra_table_into_table.go (new), run.go dispatch registration, run_test.go
+  mutations; internal/esper/** only where differential replay proves a gap
+  (primary-owned). Primary additionally owns generated traces/evidence,
+  manifest, roadmap, CHANGELOG, and this file.
+- Forbidden: unrelated runner edits; oracle EPL strings drifting from the
+  pinned suite; weakening or skipping the six exact compile-reject messages;
+  manifest/evidence updates before the differential passes.
+- Progress: scouts delivered; contract frozen. Asset worker `ITTO Assets`
+  (parity-asset-worker, isolated) authored the oracle/scenario/script trio
+  and validated the pinned Java trace twice byte-stable (59 records: 33
+  snapshot + 6 build-error + 20 listener); its structured return failed the
+  output schema and the isolated worktree was discarded, so the primary
+  recovered all three files from the session transcript and proved fidelity
+  by regenerating a byte-identical pinned trace. Shared core (primary):
+  scalar MaxEver/MinEver aggregations, TableColumn declared-aggregation
+  signatures via WithTableAgg, into-table compile-time compatibility
+  validation reproducing all six Java diagnostics verbatim, SortedEventsBy
+  for join-fed sorted columns, and a registered representation difference:
+  Go materializes the unkeyed logical row at deployment while Java defers it
+  to the first contribution, so the runner normalizes pre-contribution
+  snapshots to the Java-observable empty set (an engine-level suppression
+  was attempted first but broke three established table-reader behaviors and
+  was reverted in favor of the runner normalization).
+  internal/app/parity/infra_table_into_table.go handles 11 cases with
+  canonical any-order snapshots, listener mirroring, FAF reads, and
+  build-error probes appending the bracketed EPL source. Differential:
+  passing 59/59 records, 0 differences; 16 trace mutations rejected.
+  Manifest updated to case.infra-table-into-table under
+  trigger.table-named-window (162 DV cases, 619 DV runtime IDs, 3244
+  associations, referenced 3040). Engine regression tests in
+  internal/esper/into_table_agg_compatibility_test.go.
+- Review: `ITTOParityReview` first verdict fail with one P2 (runtime-ID
+  mapping function mismapped 8/11 cases) plus two P3s; fixes applied
+  (explicit per-case mapping + TestInfraTableIntoTableRuntimeIDMapping-
+  MatchesScenario guard, by-ever explicit-key representation registered in
+  runner comment and manifest notes, zero-key evaluation limitation
+  documented on aggregateByEverVariadic). Re-review verdict PASS with zero
+  remaining findings. Gates re-run green after fixes: go vet ./..., full
+  go test ./... -count=1, make check, git diff --check.
 - Next action: semantic commit and push.
-- Previous unit outcome (closed; Draft 4.252, commit `8fa0ab8da`):
-  InfraTableInsertInto 5 executions differential-verified at 20/20 records,
-  0 differences; unkeyed duplicate-insert message parity in
-  internal/esper/state.go; oracle listener-hook removal and rethrow-handler
-  mirror; review PASS after one P3 PLANS arithmetic fix.
-- Draft 4.251 unit agents: prefetch scouts `NWJ3JavaContract`
-  (java-oracle-scout) and `NWJ3GoSurface` (scout) ran concurrently before
-  implementation; asset writer `NWJ3AssetWriter` (parity-asset-worker)
-  authored the oracle/scenario extension (primary fixed its payload-coercion
-  defect and the pinned-compiler duplicate-class harness adaptations);
-  `NWJ3ParityReview` reviewed twice (initial P1 normalizer double-envelope
-  fixed, follow-up PASS). File ownership disjoint except primary-owned
-  review fixes.
+- Previous unit outcome (closed; Draft 4.253, commits `f1d4e2e5e`,
+  `90820b963`): ResultSetOrderByRowPerGroup 9 executions differential-verified
+  22/22 records, 0 differences; three runtime fixes (compareOrderValues
+  null-first ordering, having-gated creation null-prior rows, grouped
+  output-last per-group consolidation); independent review PASS.
 
 ## Delegation checkpoint
+- Draft 4.254 unit agents: investigation scouts `InfraTTJavaContract`
+  (java-oracle-scout) and `InfraTTGoSurface` (scout) ran concurrently in one
+  task batch before implementation. Asset writer `ITTO Assets`
+  (parity-asset-worker, isolated) authored the oracle/scenario/script trio on
+  the frozen contract; its structured return failed schema validation and the
+  isolated worktree was discarded, so the primary recovered all three files
+  from the session transcript and verified fidelity by regenerating a
+  byte-identical pinned trace (recovery recorded as the serial exception).
+  Shared-core writer: primary agent. Review pending.
+
 - Draft 4.252 unit agents: prefetch scouts `TIIJavaContract`
   (java-oracle-scout) and `TIIGoSurface` (scout) ran concurrently before
   implementation; no asset writer (prefetched assets verified drift-free —

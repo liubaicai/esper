@@ -1317,7 +1317,10 @@
     "internal/esper/table_mutation_parity_test.go",
     "internal/app/parity/table_mutation.go",
     "internal/esper/time_window_long_running_parity_test.go",
-    "internal/app/parity/time_window_long.go"
+    "internal/app/parity/time_window_long.go",
+    "internal/esper/expr.go",
+    "internal/app/parity/infra_table_into_table.go",
+    "internal/esper/into_table_agg_compatibility_test.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1327,7 +1330,7 @@
     "mapped/nested property assignment beyond direct Map/ObjectArray composite columns",
     "representation-specific conversion and metadata",
     "split-stream and complete on-trigger action ordering matrix",
-    "remaining Java on-trigger cases outside the mapped InfraNamedWindowOnMerge, selected InfraNWTableOnMerge and InfraTableInsertInto slices",
+    "remaining Java on-trigger cases outside the mapped InfraNamedWindowOnMerge, selected InfraNWTableOnMerge, InfraTableInsertInto and InfraTableIntoTable slices",
     "persistence"
    ],
    "verification": [
@@ -6099,7 +6102,7 @@
     "java-junit",
     "go-unit"
    ],
-   "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1\u21925/5/1, then 5\u21927/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text.",
+   "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1→5/5/1, then 5→7/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text.",
    "verification": [
     "inventoried",
     "implemented"
@@ -6528,7 +6531,7 @@
     "java-junit",
     "go-unit"
    ],
-   "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null\u2192B/source-inner, true\u2192source-inner, false\u2192A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open.",
+   "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null→B/source-inner, true→source-inner, false→A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open.",
    "verification": [
     "inventoried",
     "implemented"
@@ -9432,7 +9435,7 @@
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k\u2013100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open.",
+   "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k–100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open.",
    "verification": [
     "inventoried",
     "implemented",
@@ -23076,7 +23079,7 @@
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "Java fires a bare not-root at deploy time (begin-state true) and the listener loop is driven by that fire; the Go port rejects bare negative roots at Build (root negative pattern has no positive completion), so the replay drives the same listener-callback deploy/undeploy/redeploy cycles (ST1..ST10) from an explicit driver statement and asserts the bare not-root build rejection. The smoke property \u2014 reentrant lifecycle calls from a pattern listener neither deadlock nor corrupt the engine \u2014 is identical.",
+   "difference": "Java fires a bare not-root at deploy time (begin-state true) and the listener loop is driven by that fire; the Go port rejects bare negative roots at Build (root negative pattern has no positive completion), so the replay drives the same listener-callback deploy/undeploy/redeploy cycles (ST1..ST10) from an explicit driver statement and asserts the bare not-root build rejection. The smoke property — reentrant lifecycle calls from a pattern listener neither deadlock nor corrupt the engine — is identical.",
    "verification": [
     "inventoried",
     "implemented"
@@ -34012,6 +34015,77 @@
    ]
   },
   {
+   "id": "case.infra-table-into-table",
+   "javaRuntimeIds": [
+    "java-runtime-36615ff5ace54c29450b",
+    "java-runtime-01df86362eaeba3bb58d",
+    "java-runtime-338e401bfe934ccd41f0",
+    "java-runtime-a71e110710b112d908b0",
+    "java-runtime-d2ce221ae91707742548",
+    "java-runtime-ad72afcd0fe33a7b5598",
+    "java-runtime-fe0db4bb05cef63d525d",
+    "java-runtime-8e288e9ab881caa8ffb4",
+    "java-runtime-6bfb9dbe40659f113ce9"
+   ],
+   "javaNames": [
+    "InfraIntoTableUnkeyedSimpleSameModule",
+    "InfraIntoTableUnkeyedSimpleTwoModule",
+    "InfraBoundUnbound",
+    "InfraIntoTableWindowSortedFromJoin",
+    "InfraTableIntoTableNoKeys",
+    "InfraTableIntoTableWithKeys",
+    "InfraTableBigNumberAggregation",
+    "InfraIntoTableMultikeyWArraySingleArrayKeyed",
+    "InfraIntoTableMultikeyWArrayTwoKeyed"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableIntoTable.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraTableIntoTableDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "into-table",
+    "aggregate",
+    "bound-unbound",
+    "window",
+    "sorted",
+    "big-number",
+    "multikey-w-array",
+    "unkeyed",
+    "two-module",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-into-table.json",
+    "testdata/parity/infra-table-into-table.trace.json",
+    "testdata/parity/infra-table-into-table.evidence.json"
+   ],
+   "notes": [
+    "Nine InfraTableIntoTable executions replayed through one scenario (the BoundUnbound execution contributes three sub-phase cases sharing its single runtime ID): unkeyed count(*) accumulation within one and across two @public modules, the bound/unbound matrix with six exact compile-reject diagnostics and length(2)-bound max/min/window/sorted versus ever-aggregations observed through whole-row table snapshots, window(sb.*)/sorted(sb.*) columns fed from an S0#lastevent x SupportBean#keepall join and read by FAF select *, unkeyed and keyed sums observed through correlated table subqueries plus create-table snapshots, exact avg(BigInteger)/avg(BigDecimal)/sum(BigInteger)/sum(BigDecimal) over a #lastevent stream where each event replaces the materialized row, and int[] content-equality primary keys in single- and two-key forms with canonical any-order row sets.",
+    "Engine alignment proven by the zero-difference replay: into-table compile-time aggregation compatibility validation now reproduces Java's Incompatible-aggregation/select-clause diagnostic texts verbatim, scalar max-ever/min-ever aggregations and sorted-by-key event aggregation (SortedEventsBy) were added, and the pre-contribution snapshot of an unkeyed into-table table is normalized to the Java-observable empty set as a registered representation difference (Go materializes the logical row at deployment while Java defers it to the first contribution). The Go projections for the zero-argument maxbyever()/minbyever() statements spell the declared sort key explicitly under the frozen column declaration - an observationally identical, registered representation choice."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-36615ff5ace54c29450b",
+    "java-runtime-01df86362eaeba3bb58d",
+    "java-runtime-338e401bfe934ccd41f0",
+    "java-runtime-a71e110710b112d908b0",
+    "java-runtime-d2ce221ae91707742548",
+    "java-runtime-ad72afcd0fe33a7b5598",
+    "java-runtime-fe0db4bb05cef63d525d",
+    "java-runtime-8e288e9ab881caa8ffb4",
+    "java-runtime-6bfb9dbe40659f113ce9"
+   ]
+  },
+  {
    "id": "case.resultset-orderby-row-per-group",
    "javaRuntimeIds": [
     "java-runtime-0378ad5f02530ec9a035",
@@ -36608,13 +36682,17 @@
   {
    "capabilityId": "resultset.orderby-row-per-group",
    "caseId": "case.resultset-orderby-row-per-group"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-into-table"
   }
  ],
  "summary": {
-  "inventoriedCases": 550,
-  "implementedCases": 548,
-  "differentialVerifiedCases": 161,
-  "differentialVerifiedRuntimeIds": 610,
+  "inventoriedCases": 551,
+  "implementedCases": 549,
+  "differentialVerifiedCases": 162,
+  "differentialVerifiedRuntimeIds": 619,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -36624,13 +36702,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3235,
-  "referencedJavaRuntimeIds": 3031,
+  "runtimeAssociationCount": 3244,
+  "referencedJavaRuntimeIds": 3040,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1105,
+  "unreferencedJavaRuntimeIds": 1096,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 550,
+  "totalCases": 551,
   "totalCapabilities": 112
  }
 }

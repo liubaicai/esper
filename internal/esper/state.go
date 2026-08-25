@@ -22,6 +22,20 @@ type TableColumn struct {
 	// when Type is an array/slice. It preserves nested property metadata when
 	// a table row is materialized as an Event for fluent expressions.
 	Nested Schema
+	// Agg declares the aggregation signature of an into-table aggregation
+	// column. When present, every into-table projection feeding the column
+	// must provide a compatible aggregation function.
+	Agg *TableAggDecl
+}
+
+// TableAggDecl mirrors the declared aggregation signature of a table
+// column: the canonical function name, the exact declaration rendering used
+// in diagnostics, and whether the declaration binds the state to a data
+// window (false for ever-style declarations).
+type TableAggDecl struct {
+	Name        string
+	Description string
+	Bound       bool
 }
 
 // TableColumnOption changes the metadata of a table column declaration.
@@ -32,6 +46,15 @@ type TableColumnOption func(*TableColumn)
 // every element of an array/slice composite value.
 func WithTableColumnNestedSchema(nested Schema) TableColumnOption {
 	return func(column *TableColumn) { column.Nested = nested }
+}
+
+// WithTableAgg declares the aggregation signature of a table column, e.g.
+// WithTableAgg("max", "max(int)", true) or WithTableAgg("window",
+// "window(*)", false). The name uses the canonical engine spelling.
+func WithTableAgg(name, description string, bound bool) TableColumnOption {
+	return func(column *TableColumn) {
+		column.Agg = &TableAggDecl{Name: name, Description: description, Bound: bound}
+	}
 }
 
 func TableColumnOf[T any](name string, options ...TableColumnOption) TableColumn {

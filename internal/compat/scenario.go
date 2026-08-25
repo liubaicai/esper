@@ -42,6 +42,7 @@ type Step struct {
 	PropertyOrder  []string          `json:"propertyOrder,omitempty"`
 	PropertyTypes  map[string]string `json:"propertyTypes,omitempty"`
 	Payload        json.RawMessage   `json:"payload,omitempty"`
+	Epl            string            `json:"epl,omitempty"`
 }
 
 func LoadScenario(reader io.Reader) (Scenario, error) {
@@ -143,6 +144,13 @@ func (s Scenario) Validate() error {
 				default:
 					return fmt.Errorf("compat: step %d has unsupported selector %q", i, step.Selector)
 				}
+			}
+		case "build-error":
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d build-error has no statement", i)
+			}
+			if strings.TrimSpace(step.Epl) == "" {
+				return fmt.Errorf("compat: step %d build-error has no epl", i)
 			}
 		default:
 			return fmt.Errorf("compat: step %d has unsupported op %q", i, step.Op)

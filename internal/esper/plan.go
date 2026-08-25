@@ -4745,6 +4745,15 @@ func (e *Environment) validateIntoTable(query Query) error {
 	}
 	selected := make(map[string]struct{}, len(query.aggregate.selections))
 	for _, selection := range query.aggregate.selections {
+		// Stage one mirrors Java's per-expression select-clause validation:
+		// some aggregate forms are rejected outright inside into-table
+		// statements, independent of the target column.
+		info, aggregate := intoTableAggregateInfo(selection.Expr)
+		if aggregate {
+			if err := validateIntoTableExpressionForm(info); err != nil {
+				return err
+			}
+		}
 		column, exists := columnByName[selection.Name]
 		if !exists {
 			// An into-table aggregate may expose ordinary projections to its
@@ -4757,6 +4766,14 @@ func (e *Environment) validateIntoTable(query Query) error {
 		if column.Type != nil && column.Type != typeOf[any]() && selection.Expr.Type() != nil &&
 			!column.Type.AssignableTo(selection.Expr.Type()) && !selection.Expr.Type().AssignableTo(column.Type) && !numericTypes(column.Type, selection.Expr.Type()) {
 			return NewError(ErrorTypeMismatch, fmt.Sprintf("into-table column %q expects %s, aggregate returns %s", selection.Name, column.Type, selection.Expr.Type()))
+		}
+		// Stage two mirrors Java's table-column compatibility check between
+		// the declared column aggregation and the provided aggregate.
+		if column.Agg != nil && aggregate {
+			_, tableName := splitCatalogKey(query.tableTarget)
+			if err := validateIntoTableCompatible(tableName, column, info, intoTableProvidedBound(query)); err != nil {
+				return err
+			}
 		}
 	}
 	for _, column := range columns {
@@ -4794,6 +4811,217 @@ func (e *Environment) validateIntoTable(query Query) error {
 		return NewError(ErrorInvalidRule, "grouped into-table aggregation requires a primary-key column")
 	}
 	return nil
+}
+
+// intoTableAggInfo is the Java-visible classification of a provided
+// into-table aggregate expression. Field names follow the pinned Esper
+// diagnostics that the validation reproduces.
+type intoTableAggInfo struct {
+	kind     string // engine expression kind, e.g. "max", "last-ever"
+	javaName string // canonical function name used by Java diagnostics
+	render   string // Java-visible rendering, e.g. "max(intPrimitive)"
+	nullArg  bool   // the only argument is a null literal
+	zeroKey  bool   // by-ever form without an explicit sort key
+}
+
+var intoTableEngineNames = map[string]string{
+	"max": "max", "min": "min",
+	"max-ever": "maxever", "min-ever": "minever",
+	"first-ever": "firstever", "last-ever": "lastever",
+	"window": "window", "sorted": "sorted",
+	"first": "first", "last": "last",
+	"min-by": "minby", "max-by": "maxby",
+	"min-by-ever": "minbyever", "max-by-ever": "maxbyever",
+	"sum": "sum", "sum-exact": "sum", "avg": "avg", "avg-exact": "avg",
+	"count": "count", "count-distinct": "count",
+	"median": "median", "stddev": "stddev",
+}
+
+func intoTableAggregateInfo(expr Expr) (intoTableAggInfo, bool) {
+	node := expr.node()
+	if node == nil {
+		return intoTableAggInfo{}, false
+	}
+	javaName, ok := intoTableEngineNames[node.kind]
+	if !ok {
+		return intoTableAggInfo{}, false
+	}
+	info := intoTableAggInfo{kind: node.kind, javaName: javaName}
+	args := make([]string, 0, len(node.children))
+	for index, child := range node.children {
+		if child == nil {
+			continue
+		}
+		switch {
+		case child.kind == "event-value":
+			args = append(args, "*")
+		case child.kind == "literal" && child.literalValue == nil:
+			args = append(args, "null")
+			if index == 0 && len(node.children) == 1 {
+				info.nullArg = true
+			}
+		default:
+			args = append(args, child.description)
+		}
+	}
+	info.zeroKey = (node.kind == "min-by-ever" || node.kind == "max-by-ever") && len(node.children) == 1
+	if info.zeroKey || (node.kind == "window" && len(node.children) == 0) {
+		info.render = javaName + "()"
+		if node.kind == "window" {
+			info.render = "window(*)"
+		}
+		return info, true
+	}
+	// By-style aggregations carry an implicit underlying-event argument;
+	// Java renders only the explicit sort key.
+	if len(args) > 0 && args[0] == "*" &&
+		(node.kind == "min-by" || node.kind == "max-by" || node.kind == "min-by-ever" || node.kind == "max-by-ever") {
+		args = args[1:]
+	}
+	info.render = javaName + "(" + strings.Join(args, ",") + ")"
+	return info, true
+}
+
+// validateIntoTableExpressionForm rejects aggregate forms Java refuses
+// outright inside into-table statements. Messages mirror the pinned suite.
+func validateIntoTableExpressionForm(info intoTableAggInfo) error {
+	var message string
+	switch {
+	case info.kind == "first" || info.kind == "last":
+		message = "For into-table use 'window(*)' or 'window(stream.*)' instead"
+	case info.nullArg:
+		message = "Null-type is not allowed"
+	case info.kind == "min-by" || info.kind == "max-by":
+		message = "When specifying into-table a sort expression cannot be provided"
+	default:
+		return nil
+	}
+	return NewError(ErrorInvalidRule, fmt.Sprintf("Failed to validate select-clause expression '%s': %s", info.render, message))
+}
+
+func intoTableProvidedBound(query Query) bool {
+	if query.aggregate == nil {
+		return false
+	}
+	if query.aggregate.input != nil {
+		return query.aggregate.input.window != nil
+	}
+	if query.aggregate.join != nil {
+		return true
+	}
+	return false
+}
+
+// intoTableKindBound reports whether a provided aggregate of this kind can
+// ever count as data-window bound. Ever-style aggregations always report
+// unbound, mirroring Java's hasDataWindows=false for -ever nodes.
+func intoTableKindBound(info intoTableAggInfo, providedBound bool) bool {
+	switch info.kind {
+	case "max-ever", "min-ever", "first-ever", "last-ever", "min-by-ever", "max-by-ever":
+		return false
+	}
+	return providedBound
+}
+
+func intoTableDeclClass(name string) string {
+	switch name {
+	case "max", "min", "maxever", "minever":
+		return "minmax"
+	case "firstever", "lastever":
+		return "firstlast-ever"
+	case "window":
+		return "linear"
+	case "sorted", "minby", "maxby", "minbyever", "maxbyever":
+		return "sorted-minmaxby"
+	default:
+		return "decl:" + name
+	}
+}
+
+func intoTableKindClass(kind string) string {
+	switch kind {
+	case "max", "min", "max-ever", "min-ever":
+		return "minmax"
+	case "first-ever", "last-ever":
+		return "firstlast-ever"
+	case "window":
+		return "linear"
+	case "sorted", "min-by", "max-by", "min-by-ever", "max-by-ever":
+		return "sorted-minmaxby"
+	default:
+		return "decl:" + intoTableEngineNames[kind]
+	}
+}
+
+// validateIntoTableCompatible mirrors Java's AggregationServiceFactoryFactory
+// into-table check: class equality first, then family-specific rules, with
+// the wrapped "Incompatible aggregation function" diagnostic on failure.
+func validateIntoTableCompatible(tableName string, column TableColumn, info intoTableAggInfo, providedStreamBound bool) error {
+	declared := column.Agg
+	if declared == nil {
+		return nil
+	}
+	if intoTableKindClass(info.kind) != intoTableDeclClass(declared.Name) {
+		sub := fmt.Sprintf("The table declares '%s' and provided is '%s'", declared.Description, info.render)
+		return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+	}
+	switch intoTableDeclClass(declared.Name) {
+	case "minmax":
+		declaredMax := declared.Name == "max" || declared.Name == "maxever"
+		providedMax := info.kind == "max" || info.kind == "max-ever"
+		if declaredMax != providedMax {
+			declaredText := "min"
+			providedText := "min"
+			if declaredMax {
+				declaredText = "max"
+			}
+			if providedMax {
+				providedText = "max"
+			}
+			sub := fmt.Sprintf("The aggregation declares %s and provided is %s", declaredText, providedText)
+			return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+		}
+		providedBound := intoTableKindBound(info, providedStreamBound)
+		if declared.Bound != providedBound {
+			sub := "The table declares "
+			if declared.Bound {
+				sub += "use with data windows"
+			} else {
+				sub += "unbound"
+			}
+			sub += " and provided is "
+			if providedBound {
+				sub += "use with data windows"
+			} else {
+				sub += "unbound"
+			}
+			return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+		}
+	case "firstlast-ever":
+		declaredFirst := declared.Name == "firstever"
+		providedFirst := info.kind == "first-ever"
+		if declaredFirst != providedFirst {
+			declaredText, providedText := "lastever", "lastever"
+			if declaredFirst {
+				declaredText = "firstever"
+			}
+			if providedFirst {
+				providedText = "firstever"
+			}
+			sub := fmt.Sprintf("The aggregation declares %s and provided is %s", declaredText, providedText)
+			return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+		}
+	case "sorted-minmaxby":
+		if declared.Name != info.javaName {
+			sub := fmt.Sprintf("The required aggregation function name is '%s' and provided is '%s'", declared.Name, info.javaName)
+			return intoTableIncompatible(tableName, column.Name, declared.Description, info.render, sub)
+		}
+	}
+	return nil
+}
+
+func intoTableIncompatible(tableName, columnName, declaredRender, providedRender, sub string) error {
+	return NewError(ErrorInvalidRule, fmt.Sprintf("Incompatible aggregation function for table '%s' column '%s', expecting '%s' and received '%s': %s", tableName, columnName, declaredRender, providedRender, sub))
 }
 
 func (e *Environment) validateOnDemand(query Query) error {
@@ -5227,7 +5455,7 @@ func expressionNodeIsAggregate(node *exprNode) bool {
 		return true
 	}
 	switch node.kind {
-	case "aggregate-filter", "aggregate-local-group", "aggregate-distinct", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "aggregate-multi-plugin", "aggregate-multi-plugin-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "count-ever-invalid", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "correlation", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever":
+	case "aggregate-filter", "aggregate-local-group", "aggregate-distinct", "aggregate-plugin", "aggregate-plugin-ref", "aggregate-plugin-factory", "aggregate-plugin-factory-ref", "aggregate-plugin-access-ref", "aggregate-multi-plugin", "aggregate-multi-plugin-ref", "count-min-sketch", "count-min-frequency", "count-min-total", "rate-timestamp", "rate-quantity-timestamp", "leaving", "count", "count-ever-invalid", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "first", "last", "nth", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "correlation", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "set", "sorted", "count-ever", "first-ever", "last-ever", "max-ever", "min-ever":
 		return true
 	}
 	return false
@@ -5513,7 +5741,7 @@ func rowRecogIsRegularAggregateKind(kind string) bool {
 		return true
 	}
 	switch kind {
-	case "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "first-ever", "last-ever", "count-ever", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "correlation", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "sorted", "set", "count-min-frequency", "count-min-total":
+	case "count", "sum", "sum-exact", "avg", "avg-exact", "min", "min-exact", "max", "max-exact", "first", "last", "first-ever", "last-ever", "max-ever", "min-ever", "count-ever", "count-distinct", "median", "stddev", "stddev-pop", "variance", "avedev", "weighted-avg", "correlation", "rate", "min-by", "max-by", "min-by-ever", "max-by-ever", "window", "sorted", "set", "count-min-frequency", "count-min-total":
 		return true
 	default:
 		return false

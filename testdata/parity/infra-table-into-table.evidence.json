@@ -1,0 +1,3103 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-36615ff5ace54c29450b",
+    "java-runtime-01df86362eaeba3bb58d",
+    "java-runtime-338e401bfe934ccd41f0",
+    "java-runtime-a71e110710b112d908b0",
+    "java-runtime-d2ce221ae91707742548",
+    "java-runtime-ad72afcd0fe33a7b5598",
+    "java-runtime-fe0db4bb05cef63d525d",
+    "java-runtime-8e288e9ab881caa8ffb4",
+    "java-runtime-6bfb9dbe40659f113ce9"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableIntoTable.java"
+  ],
+  "javaExecutions": [
+    "InfraIntoTableUnkeyedSimpleSameModule",
+    "InfraIntoTableUnkeyedSimpleTwoModule",
+    "InfraBoundUnbound",
+    "InfraIntoTableWindowSortedFromJoin",
+    "InfraTableIntoTableNoKeys",
+    "InfraTableIntoTableWithKeys",
+    "InfraTableBigNumberAggregation",
+    "InfraIntoTableMultikeyWArraySingleArrayKeyed",
+    "InfraIntoTableMultikeyWArrayTwoKeyed"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-into-table",
+    "steps": [
+      {
+        "op": "case",
+        "case": "unkeyed-simple-same-module"
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "case",
+        "case": "unkeyed-simple-two-module"
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "case",
+        "case": "bound-unbound-minmax"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "varagg-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "varagg-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 25
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "varagg-state"
+      },
+      {
+        "op": "build-error",
+        "statement": "invalid-unbound-max-into-bound",
+        "epl": "into table varagg select max(intPrimitive) as maxb from SupportBean"
+      },
+      {
+        "op": "case",
+        "case": "bound-unbound-lastfirst-window"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "varagg-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "varagg-state"
+      },
+      {
+        "op": "build-error",
+        "statement": "invalid-last-into-table",
+        "epl": "into table varagg select last(*) as lasteveru from SupportBean#length(2)"
+      },
+      {
+        "op": "build-error",
+        "statement": "invalid-lastever-into-window",
+        "epl": "into table varagg select lastever(*) as windowb from SupportBean#length(2)"
+      },
+      {
+        "op": "build-error",
+        "statement": "invalid-lastever-null",
+        "epl": "into table varagg select lastever(null) as lasteveru from SupportBean#length(2)"
+      },
+      {
+        "op": "case",
+        "case": "bound-unbound-sorted-minmaxby"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "varagg-state"
+      },
+      {
+        "op": "build-error",
+        "statement": "invalid-maxby-sortexpr",
+        "epl": "into table varagg select maxby(intPrimitive) as maxbyeveru from SupportBean#length(2)"
+      },
+      {
+        "op": "build-error",
+        "statement": "invalid-maxbyever-into-sorted",
+        "epl": "into table varagg select maxbyever() as sortedb from SupportBean#length(2)"
+      },
+      {
+        "op": "case",
+        "case": "window-sorted-from-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "faf-table"
+      },
+      {
+        "op": "case",
+        "case": "no-keys"
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 201
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3001
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "case",
+        "case": "with-keys"
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 201
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3001
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "create-state"
+      },
+      {
+        "op": "case",
+        "case": "big-number-avg-sum"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanNumeric",
+        "payload": {
+          "bigint": "5",
+          "bigdec": "100"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanNumeric",
+        "payload": {
+          "bigint": "4",
+          "bigdec": "200"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "case",
+        "case": "multikey-warray-single"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E1",
+          "value": 10,
+          "intOne": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E2",
+          "value": 11,
+          "intOne": [
+            0,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E3",
+          "value": 12,
+          "intOne": [
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E4",
+          "value": 13,
+          "intOne": [
+            0,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E5",
+          "value": 14,
+          "intOne": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E6",
+          "value": 15,
+          "intOne": [
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      },
+      {
+        "op": "case",
+        "case": "multikey-warray-two"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E1",
+          "value": 100,
+          "intOne": [
+            10
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E2",
+          "value": 101,
+          "intOne": [
+            10,
+            20
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E3",
+          "value": 102,
+          "intOne": [
+            10
+          ],
+          "intTwo": [
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E4",
+          "value": 103,
+          "intOne": [
+            10,
+            20
+          ],
+          "intTwo": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E5",
+          "value": 104,
+          "intOne": [
+            10
+          ],
+          "intTwo": [
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E6",
+          "value": 105,
+          "intOne": [
+            10,
+            20
+          ],
+          "intTwo": [
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "tbl"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-into-table",
+    "records": [
+      {
+        "case": "unkeyed-simple-same-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "unkeyed-simple-same-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mycnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed-simple-same-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mycnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed-simple-two-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "unkeyed-simple-two-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mycnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed-simple-two-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mycnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-minmax",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxb": 15,
+              "maxu": 20,
+              "minb": 10,
+              "minu": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-minmax",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxb": 10,
+              "maxu": 20,
+              "minb": 5,
+              "minu": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-minmax",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxb": 25,
+              "maxu": 25,
+              "minb": 5,
+              "minu": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-minmax",
+        "operation": "build-error",
+        "statement": "invalid-unbound-max-into-bound",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Incompatible aggregation function for table 'varagg' column 'maxb', expecting 'max(int)' and received 'max(intPrimitive)': The table declares use with data windows and provided is unbound [into table varagg select max(intPrimitive) as maxb from SupportBean]"
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteveru": {
+                "fields": {
+                  "intPrimitive": 20,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "lasteveru": {
+                "fields": {
+                  "intPrimitive": 10,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "windowb": [
+                {
+                  "fields": {
+                    "intPrimitive": 15,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteveru": {
+                "fields": {
+                  "intPrimitive": 20,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "lasteveru": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "windowb": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 5,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "build-error",
+        "statement": "invalid-last-into-table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to validate select-clause expression 'last(*)': For into-table use 'window(*)' or 'window(stream.*)' instead [into table varagg select last(*) as lasteveru from SupportBean#length(2)]"
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "build-error",
+        "statement": "invalid-lastever-into-window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Incompatible aggregation function for table 'varagg' column 'windowb', expecting 'window(*)' and received 'lastever(*)': The table declares 'window(*)' and provided is 'lastever(*)' [into table varagg select lastever(*) as windowb from SupportBean#length(2)]"
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "build-error",
+        "statement": "invalid-lastever-null",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to validate select-clause expression 'lastever(null)': Null-type is not allowed [into table varagg select lastever(null) as lasteveru from SupportBean#length(2)]"
+      },
+      {
+        "case": "bound-unbound-sorted-minmaxby",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxbyeveru": {
+                "fields": {
+                  "intPrimitive": 20,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "minbyeveru": {
+                "fields": {
+                  "intPrimitive": 10,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "sortedb": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 15,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-sorted-minmaxby",
+        "operation": "build-error",
+        "statement": "invalid-maxby-sortexpr",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to validate select-clause expression 'maxby(intPrimitive)': When specifying into-table a sort expression cannot be provided [into table varagg select maxby(intPrimitive) as maxbyeveru from SupportBean#length(2)]"
+      },
+      {
+        "case": "bound-unbound-sorted-minmaxby",
+        "operation": "build-error",
+        "statement": "invalid-maxbyever-into-sorted",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Incompatible aggregation function for table 'varagg' column 'sortedb', expecting 'sorted(intPrimitive)' and received 'maxbyever()': The required aggregation function name is 'sorted' and provided is 'maxbyever' [into table varagg select maxbyever() as sortedb from SupportBean#length(2)]"
+      },
+      {
+        "case": "window-sorted-from-join",
+        "operation": "snapshot",
+        "statement": "faf-table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "thesort": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "thewin": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 210
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 210
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 221
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 221
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3221
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 3221
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 3422
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 6423
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 6435
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "sumint": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 401
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "sumint": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 401
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "sumint": 6001
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 33
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 401
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "sumint": 6001
+            }
+          }
+        ]
+      },
+      {
+        "case": "big-number-avg-sum",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "5",
+              "c1": "100",
+              "c2": "5",
+              "c3": "100"
+            }
+          }
+        ]
+      },
+      {
+        "case": "big-number-avg-sum",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "4",
+              "c1": "200",
+              "c2": "4",
+              "c3": "200"
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-warray-single",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k": [
+                0,
+                2
+              ],
+              "thesum": 24
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k": [
+                1,
+                1
+              ],
+              "thesum": 27
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k": [
+                1,
+                2
+              ],
+              "thesum": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k": [
+                1
+              ],
+              "thesum": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-warray-two",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k1": [
+                10,
+                20
+              ],
+              "k2": [
+                1,
+                1
+              ],
+              "thesum": 105
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": [
+                10,
+                20
+              ],
+              "k2": [
+                1,
+                2
+              ],
+              "thesum": 204
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": [
+                10
+              ],
+              "k2": [
+                1,
+                1
+              ],
+              "thesum": 206
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": [
+                10
+              ],
+              "k2": [
+                1,
+                2
+              ],
+              "thesum": 100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-into-table",
+    "records": [
+      {
+        "case": "unkeyed-simple-same-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "unkeyed-simple-same-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mycnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed-simple-same-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mycnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed-simple-two-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "unkeyed-simple-two-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mycnt": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed-simple-two-module",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mycnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-minmax",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxb": 15,
+              "maxu": 20,
+              "minb": 10,
+              "minu": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-minmax",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxb": 10,
+              "maxu": 20,
+              "minb": 5,
+              "minu": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-minmax",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxb": 25,
+              "maxu": 25,
+              "minb": 5,
+              "minu": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-minmax",
+        "operation": "build-error",
+        "statement": "invalid-unbound-max-into-bound",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Incompatible aggregation function for table 'varagg' column 'maxb', expecting 'max(int)' and received 'max(intPrimitive)': The table declares use with data windows and provided is unbound [into table varagg select max(intPrimitive) as maxb from SupportBean]"
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteveru": {
+                "fields": {
+                  "intPrimitive": 20,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "lasteveru": {
+                "fields": {
+                  "intPrimitive": 10,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "windowb": [
+                {
+                  "fields": {
+                    "intPrimitive": 15,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteveru": {
+                "fields": {
+                  "intPrimitive": 20,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "lasteveru": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "windowb": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 5,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "build-error",
+        "statement": "invalid-last-into-table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to validate select-clause expression 'last(*)': For into-table use 'window(*)' or 'window(stream.*)' instead [into table varagg select last(*) as lasteveru from SupportBean#length(2)]"
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "build-error",
+        "statement": "invalid-lastever-into-window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Incompatible aggregation function for table 'varagg' column 'windowb', expecting 'window(*)' and received 'lastever(*)': The table declares 'window(*)' and provided is 'lastever(*)' [into table varagg select lastever(*) as windowb from SupportBean#length(2)]"
+      },
+      {
+        "case": "bound-unbound-lastfirst-window",
+        "operation": "build-error",
+        "statement": "invalid-lastever-null",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to validate select-clause expression 'lastever(null)': Null-type is not allowed [into table varagg select lastever(null) as lasteveru from SupportBean#length(2)]"
+      },
+      {
+        "case": "bound-unbound-sorted-minmaxby",
+        "operation": "snapshot",
+        "statement": "varagg-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxbyeveru": {
+                "fields": {
+                  "intPrimitive": 20,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "minbyeveru": {
+                "fields": {
+                  "intPrimitive": 10,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "sortedb": [
+                {
+                  "fields": {
+                    "intPrimitive": 10,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 15,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-unbound-sorted-minmaxby",
+        "operation": "build-error",
+        "statement": "invalid-maxby-sortexpr",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to validate select-clause expression 'maxby(intPrimitive)': When specifying into-table a sort expression cannot be provided [into table varagg select maxby(intPrimitive) as maxbyeveru from SupportBean#length(2)]"
+      },
+      {
+        "case": "bound-unbound-sorted-minmaxby",
+        "operation": "build-error",
+        "statement": "invalid-maxbyever-into-sorted",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Incompatible aggregation function for table 'varagg' column 'sortedb', expecting 'sorted(intPrimitive)' and received 'maxbyever()': The required aggregation function name is 'sorted' and provided is 'maxbyever' [into table varagg select maxbyever() as sortedb from SupportBean#length(2)]"
+      },
+      {
+        "case": "window-sorted-from-join",
+        "operation": "snapshot",
+        "statement": "faf-table",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "thesort": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "thewin": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 210
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 210
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 221
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 221
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3221
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 3221
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 3422
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 6423
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 6435
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "sumint": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 401
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "sumint": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 21
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 401
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "sumint": 6001
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-keys",
+        "operation": "snapshot",
+        "statement": "create-state",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E1",
+              "sumint": 33
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E2",
+              "sumint": 401
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey": "E3",
+              "sumint": 6001
+            }
+          }
+        ]
+      },
+      {
+        "case": "big-number-avg-sum",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "5",
+              "c1": "100",
+              "c2": "5",
+              "c3": "100"
+            }
+          }
+        ]
+      },
+      {
+        "case": "big-number-avg-sum",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "4",
+              "c1": "200",
+              "c2": "4",
+              "c3": "200"
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-warray-single",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k": [
+                0,
+                2
+              ],
+              "thesum": 24
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k": [
+                1,
+                1
+              ],
+              "thesum": 27
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k": [
+                1,
+                2
+              ],
+              "thesum": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k": [
+                1
+              ],
+              "thesum": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-warray-two",
+        "operation": "snapshot",
+        "statement": "tbl",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "k1": [
+                10,
+                20
+              ],
+              "k2": [
+                1,
+                1
+              ],
+              "thesum": 105
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": [
+                10,
+                20
+              ],
+              "k2": [
+                1,
+                2
+              ],
+              "thesum": 204
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": [
+                10
+              ],
+              "k2": [
+                1,
+                1
+              ],
+              "thesum": 206
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "k1": [
+                10
+              ],
+              "k2": [
+                1,
+                2
+              ],
+              "thesum": 100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

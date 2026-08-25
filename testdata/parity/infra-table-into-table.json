@@ -1,0 +1,882 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-table-into-table",
+ "description": "InfraTableIntoTable into-table family replaying nine executions across eleven cases: unkeyed count tables filled by into table from SupportBean within one module and across two modules, the bound-versus-unbound aggregation family where a @public varagg table declared with max/maxever/min/minever or lastever/firstever/window or maxbyever/minbyever/sorted columns is fed through an iterate statement over SupportBean_S0#lastevent plus bound window and unbound ever into-table statements observed at pinned iterator positions with six rejected into-table compilations recorded verbatim, a window-plus-sorted table populated from a SupportBean keepall join observed through fire-and-forget select, unkeyed and keyed sum tables driven through a subquery-over-table s0 statement whose listener records c0 for each SupportBean_S0 probe alongside create-table snapshots, a BigInteger/BigDecimal average-and-sum table fed by SupportBeanNumeric#lastevent, and primitive int-array primary-key tables accumulating sum(value) grouped by one or two array keys",
+ "javaRuntimes": [
+  "java-runtime-36615ff5ace54c29450b",
+  "java-runtime-01df86362eaeba3bb58d",
+  "java-runtime-338e401bfe934ccd41f0",
+  "java-runtime-a71e110710b112d908b0",
+  "java-runtime-d2ce221ae91707742548",
+  "java-runtime-ad72afcd0fe33a7b5598",
+  "java-runtime-fe0db4bb05cef63d525d",
+  "java-runtime-8e288e9ab881caa8ffb4",
+  "java-runtime-6bfb9dbe40659f113ce9"
+ ],
+ "cases": [
+  {
+   "case": "unkeyed-simple-same-module",
+   "runtimeId": "java-runtime-36615ff5ace54c29450b"
+  },
+  {
+   "case": "unkeyed-simple-two-module",
+   "runtimeId": "java-runtime-01df86362eaeba3bb58d"
+  },
+  {
+   "case": "bound-unbound-minmax",
+   "runtimeId": "java-runtime-338e401bfe934ccd41f0"
+  },
+  {
+   "case": "bound-unbound-lastfirst-window",
+   "runtimeId": "java-runtime-338e401bfe934ccd41f0"
+  },
+  {
+   "case": "bound-unbound-sorted-minmaxby",
+   "runtimeId": "java-runtime-338e401bfe934ccd41f0"
+  },
+  {
+   "case": "window-sorted-from-join",
+   "runtimeId": "java-runtime-a71e110710b112d908b0"
+  },
+  {
+   "case": "no-keys",
+   "runtimeId": "java-runtime-d2ce221ae91707742548"
+  },
+  {
+   "case": "with-keys",
+   "runtimeId": "java-runtime-ad72afcd0fe33a7b5598"
+  },
+  {
+   "case": "big-number-avg-sum",
+   "runtimeId": "java-runtime-fe0db4bb05cef63d525d"
+  },
+  {
+   "case": "multikey-warray-single",
+   "runtimeId": "java-runtime-8e288e9ab881caa8ffb4"
+  },
+  {
+   "case": "multikey-warray-two",
+   "runtimeId": "java-runtime-6bfb9dbe40659f113ce9"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "unkeyed-simple-same-module"
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "case",
+   "case": "unkeyed-simple-two-module"
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "case",
+   "case": "bound-unbound-minmax"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "varagg-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "varagg-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 25
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "varagg-state"
+  },
+  {
+   "op": "build-error",
+   "statement": "invalid-unbound-max-into-bound",
+   "epl": "into table varagg select max(intPrimitive) as maxb from SupportBean"
+  },
+  {
+   "op": "case",
+   "case": "bound-unbound-lastfirst-window"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "varagg-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "varagg-state"
+  },
+  {
+   "op": "build-error",
+   "statement": "invalid-last-into-table",
+   "epl": "into table varagg select last(*) as lasteveru from SupportBean#length(2)"
+  },
+  {
+   "op": "build-error",
+   "statement": "invalid-lastever-into-window",
+   "epl": "into table varagg select lastever(*) as windowb from SupportBean#length(2)"
+  },
+  {
+   "op": "build-error",
+   "statement": "invalid-lastever-null",
+   "epl": "into table varagg select lastever(null) as lasteveru from SupportBean#length(2)"
+  },
+  {
+   "op": "case",
+   "case": "bound-unbound-sorted-minmaxby"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "varagg-state"
+  },
+  {
+   "op": "build-error",
+   "statement": "invalid-maxby-sortexpr",
+   "epl": "into table varagg select maxby(intPrimitive) as maxbyeveru from SupportBean#length(2)"
+  },
+  {
+   "op": "build-error",
+   "statement": "invalid-maxbyever-into-sorted",
+   "epl": "into table varagg select maxbyever() as sortedb from SupportBean#length(2)"
+  },
+  {
+   "op": "case",
+   "case": "window-sorted-from-join"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "faf-table"
+  },
+  {
+   "op": "case",
+   "case": "no-keys"
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3000
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 201
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3001
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "case",
+   "case": "with-keys"
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E3"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E3"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E3"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3000
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E3"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 201
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3001
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create-state"
+  },
+  {
+   "op": "case",
+   "case": "big-number-avg-sum"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanNumeric",
+   "payload": {
+    "bigint": "5",
+    "bigdec": "100"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanNumeric",
+   "payload": {
+    "bigint": "4",
+    "bigdec": "200"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "case",
+   "case": "multikey-warray-single"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E1",
+    "value": 10,
+    "intOne": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E2",
+    "value": 11,
+    "intOne": [
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E3",
+    "value": 12,
+    "intOne": [
+     1,
+     1
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E4",
+    "value": 13,
+    "intOne": [
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E5",
+    "value": 14,
+    "intOne": [
+     1
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E6",
+    "value": 15,
+    "intOne": [
+     1,
+     1
+    ]
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  },
+  {
+   "op": "case",
+   "case": "multikey-warray-two"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E1",
+    "value": 100,
+    "intOne": [
+     10
+    ],
+    "intTwo": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E2",
+    "value": 101,
+    "intOne": [
+     10,
+     20
+    ],
+    "intTwo": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E3",
+    "value": 102,
+    "intOne": [
+     10
+    ],
+    "intTwo": [
+     1,
+     1
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E4",
+    "value": 103,
+    "intOne": [
+     10,
+     20
+    ],
+    "intTwo": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E5",
+    "value": 104,
+    "intOne": [
+     10
+    ],
+    "intTwo": [
+     1,
+     1
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E6",
+    "value": 105,
+    "intOne": [
+     10,
+     20
+    ],
+    "intTwo": [
+     1,
+     1
+    ]
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "tbl"
+  }
+ ]
+}

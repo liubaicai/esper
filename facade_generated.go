@@ -3614,8 +3614,17 @@ func MaxBy[V any, K Ordered](value Expression[V], key Expression[K]) AggregateEx
 	return internalengine.MaxBy[V, K](value, key)
 }
 
-func MaxByEver[V any, K Ordered](value Expression[V], key Expression[K]) AggregateExpression[V] {
-	return internalengine.MaxByEver[V, K](value, key)
+// MaxByEver returns the value whose key maximized over every event ever
+// seen by the aggregate group. The zero-key form mirrors Esper's
+// zero-argument maxbyever() into-table reference.
+func MaxByEver[V any, K Ordered](value Expression[V], keys ...Expression[K]) AggregateExpression[V] {
+	return internalengine.MaxByEver[V, K](value, keys...)
+}
+
+// MaxEver returns the maximum non-null value ever seen by the aggregate
+// group, including events that have since left the current data window.
+func MaxEver[T Ordered](expression Expression[T]) AggregateExpression[T] {
+	return internalengine.MaxEver[T](expression)
 }
 
 // MaxExact returns the largest arbitrary-precision numeric value in the
@@ -3702,10 +3711,18 @@ func MinBy[V any, K Ordered](value Expression[V], key Expression[K]) AggregateEx
 	return internalengine.MinBy[V, K](value, key)
 }
 
-// MinByEver and MaxByEver keep the selected value over all events accepted by
-// the group, including events that have left the current data window.
-func MinByEver[V any, K Ordered](value Expression[V], key Expression[K]) AggregateExpression[V] {
-	return internalengine.MinByEver[V, K](value, key)
+// MinByEver returns the value whose key minimized over every event ever
+// seen by the aggregate group. The zero-key form mirrors Esper's
+// zero-argument minbyever() into-table reference, which inherits the sort
+// specification from the table column declaration.
+func MinByEver[V any, K Ordered](value Expression[V], keys ...Expression[K]) AggregateExpression[V] {
+	return internalengine.MinByEver[V, K](value, keys...)
+}
+
+// MinEver returns the minimum non-null value ever seen by the aggregate
+// group, including events that have since left the current data window.
+func MinEver[T Ordered](expression Expression[T]) AggregateExpression[T] {
+	return internalengine.MinEver[T](expression)
 }
 
 // MinExact returns the smallest arbitrary-precision numeric value in the
@@ -6018,6 +6035,14 @@ func SortedEvents(keys ...SortKey) AggregateExpression[[]Event] {
 	return internalengine.SortedEvents(keys...)
 }
 
+// SortedEventsBy returns the group's underlying events ordered by the given
+// key expression. It is the typed counterpart of a declared sorted()
+// into-table column: the values keep full event identity while the order
+// comes from an arbitrary key such as a join stream field.
+func SortedEventsBy[V any, K Ordered](value Expression[V], key Expression[K], descending bool) AggregateExpression[[]V] {
+	return internalengine.SortedEventsBy[V, K](value, key, descending)
+}
+
 // SortedMultiKey is an immutable lexicographic key for multi-criteria sorted
 // access aggregates. Each component keeps its Value state so a caller can
 // distinguish a present component from Null/Missing when inspecting a key;
@@ -6805,6 +6830,12 @@ func SuppressOverlappingMatches() QueryOption {
 // Table is a concurrency-safe in-memory table owned by an Engine. Reads use
 // a consistent snapshot and writes update all configured indexes atomically.
 type Table = internalengine.Table
+
+// TableAggDecl mirrors the declared aggregation signature of a table
+// column: the canonical function name, the exact declaration rendering used
+// in diagnostics, and whether the declaration binds the state to a data
+// window (false for ever-style declarations).
+type TableAggDecl = internalengine.TableAggDecl
 
 // TableAssignment maps an incoming event expression to one target table
 // column. It is the Go builder equivalent of an on-trigger column assignment.
@@ -8020,6 +8051,13 @@ func WithStatementUserObject(value any) QueryOption {
 // metadata after any statement-name resolver has run.
 func WithStatementUserObjectResolver(resolver StatementUserObjectResolver) CompileOption {
 	return internalengine.WithStatementUserObjectResolver(resolver)
+}
+
+// WithTableAgg declares the aggregation signature of a table column, e.g.
+// WithTableAgg("max", "max(int)", true) or WithTableAgg("window",
+// "window(*)", false). The name uses the canonical engine spelling.
+func WithTableAgg(name, description string, bound bool) TableColumnOption {
+	return internalengine.WithTableAgg(name, description, bound)
 }
 
 // WithTableColumnNestedSchema associates a composite column with its nested

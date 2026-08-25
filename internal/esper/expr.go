@@ -4285,6 +4285,45 @@ func LastEver[T any](expression Expression[T]) AggregateExpression[T] {
 	return aggregateEverPosition[T]("last-ever", expression, true)
 }
 
+// MaxEver returns the maximum non-null value ever seen by the aggregate
+// group, including events that have since left the current data window.
+func MaxEver[T Ordered](expression Expression[T]) AggregateExpression[T] {
+	return aggregateEverExtreme[T]("max-ever", expression, false)
+}
+
+// MinEver returns the minimum non-null value ever seen by the aggregate
+// group, including events that have since left the current data window.
+func MinEver[T Ordered](expression Expression[T]) AggregateExpression[T] {
+	return aggregateEverExtreme[T]("min-ever", expression, true)
+}
+
+func aggregateEverExtreme[T Ordered](kind string, expression Expression[T], minimum bool) AggregateExpression[T] {
+	if expression == nil {
+		return makeAggregateExpr[T](kind, kind+"(<nil>)", nil, func(EvalContext) Value { return Missing() })
+	}
+	return makeAggregateExpr[T](kind, kind+"("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		var result Value
+		for _, event := range ctx.EverGroup {
+			value := expression.eval(EvalContext{Event: event, Now: ctx.Now, Variables: ctx.Variables, Parameters: ctx.Parameters})
+			if !value.IsPresent() {
+				continue
+			}
+			if !result.IsPresent() {
+				result = value
+				continue
+			}
+			comparison, ok := compareValues(value, result)
+			if ok && ((minimum && comparison < 0) || (!minimum && comparison > 0)) {
+				result = value
+			}
+		}
+		if !result.IsPresent() {
+			return Null()
+		}
+		return result
+	})
+}
+
 func aggregateEverPosition[T any](kind string, expression Expression[T], last bool) AggregateExpression[T] {
 	if expression == nil {
 		return makeAggregateExpr[T](kind, kind+"(<nil>)", nil, func(EvalContext) Value { return Missing() })
@@ -5031,14 +5070,35 @@ func MaxBy[V any, K Ordered](value Expression[V], key Expression[K]) AggregateEx
 	return aggregateBy[V, K]("max-by", value, key, false)
 }
 
-// MinByEver and MaxByEver keep the selected value over all events accepted by
-// the group, including events that have left the current data window.
-func MinByEver[V any, K Ordered](value Expression[V], key Expression[K]) AggregateExpression[V] {
-	return aggregateByEver[V, K]("min-by-ever", value, key, true)
+// MinByEver returns the value whose key minimized over every event ever
+// seen by the aggregate group. The zero-key form mirrors Esper's
+// zero-argument minbyever() into-table reference, which inherits the sort
+// specification from the table column declaration.
+func MinByEver[V any, K Ordered](value Expression[V], keys ...Expression[K]) AggregateExpression[V] {
+	return aggregateByEverVariadic[V, K]("min-by-ever", value, keys, true)
 }
 
-func MaxByEver[V any, K Ordered](value Expression[V], key Expression[K]) AggregateExpression[V] {
-	return aggregateByEver[V, K]("max-by-ever", value, key, false)
+// MaxByEver returns the value whose key maximized over every event ever
+// seen by the aggregate group. The zero-key form mirrors Esper's
+// zero-argument maxbyever() into-table reference.
+func MaxByEver[V any, K Ordered](value Expression[V], keys ...Expression[K]) AggregateExpression[V] {
+	return aggregateByEverVariadic[V, K]("max-by-ever", value, keys, false)
+}
+
+// aggregateByEverVariadic backs the by-ever builders. The zero-key form
+// exists so plans can reference a table column's zero-argument maxbyever()/
+// minbyever() declaration for into-table compatibility diagnostics; its
+// evaluation yields Missing because the sort specification lives in the
+// column declaration, and such plans are rejected at Build time before any
+// evaluation when the target column is incompatible.
+func aggregateByEverVariadic[V any, K Ordered](kind string, value Expression[V], keys []Expression[K], minimum bool) AggregateExpression[V] {
+	if len(keys) == 0 {
+		if value == nil {
+			return invalidAggregate[V](kind, value, kind+"(<invalid>)")
+		}
+		return makeAggregateExpr[V](kind, intoTableEngineNames[kind]+"()", []*exprNode{value.node()}, func(EvalContext) Value { return Missing() })
+	}
+	return aggregateByEver[V, K](kind, value, keys[0], minimum)
 }
 
 func aggregateBy[V any, K Ordered](kind string, value Expression[V], key Expression[K], minimum bool) AggregateExpression[V] {
@@ -5155,6 +5215,48 @@ func SortedEvents(keys ...SortKey) AggregateExpression[[]Event] {
 			return false
 		})
 		return Present(events)
+	})
+}
+
+// SortedEventsBy returns the group's underlying events ordered by the given
+// key expression. It is the typed counterpart of a declared sorted()
+// into-table column: the values keep full event identity while the order
+// comes from an arbitrary key such as a join stream field.
+func SortedEventsBy[V any, K Ordered](value Expression[V], key Expression[K], descending bool) AggregateExpression[[]V] {
+	children := []*exprNode{value.node(), key.node()}
+	return makeAggregateExpr[[]V]("sorted", "sorted(*)", children, func(ctx EvalContext) Value {
+		if len(ctx.Group) == 0 {
+			return Null()
+		}
+		type entry struct {
+			value V
+			key   K
+		}
+		entries := make([]entry, 0, len(ctx.Group))
+		for index, event := range ctx.Group {
+			eventContext := ctx.groupEventContext(event, index)
+			convertedValue, valueErr := As[V](value.eval(eventContext))
+			convertedKey, keyErr := As[K](key.eval(eventContext))
+			if valueErr != nil || keyErr != nil {
+				continue
+			}
+			entries = append(entries, entry{value: convertedValue, key: convertedKey})
+		}
+		sort.SliceStable(entries, func(left, right int) bool {
+			comparison, ok := compareValues(Present(entries[left].key), Present(entries[right].key))
+			if !ok {
+				return false
+			}
+			if descending {
+				return comparison > 0
+			}
+			return comparison < 0
+		})
+		values := make([]V, 0, len(entries))
+		for _, item := range entries {
+			values = append(values, item.value)
+		}
+		return Present(values)
 	})
 }
 

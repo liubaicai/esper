@@ -18773,7 +18773,7 @@ func expressionTreeContainsEver(expression Expr) bool {
 			return false
 		}
 		switch node.kind {
-		case "count-ever", "first-ever", "last-ever", "min-by-ever", "max-by-ever":
+		case "count-ever", "first-ever", "last-ever", "min-by-ever", "max-by-ever", "max-ever", "min-ever":
 			return true
 		}
 		for _, child := range node.children {

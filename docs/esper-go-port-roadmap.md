@@ -4,6 +4,20 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.254（2026-08-25），新增 `infra-table-into-table`
+> differential-verified 场景，对照固定 Java InfraTableIntoTable.java
+> 全部 9 个 execution（BoundUnbound 三个子阶段共享单一 runtime ID，共
+> 11 个 case）。场景 Java/Go 各 59 条 records、0 differences。覆盖无键
+> count(*) 单/双模块累积、bound/unbound 绑定矩阵与六条精确编译拒绝文案、
+> join 喂养的 window/sorted 列 FAF 观察、相关子查询读取的无键/按键 sum、
+> #lastevent 流上 exact 大数 avg/sum 的逐事件替换语义，以及 int[] 内容
+> 等值主键任意序行集。运行时新增标量 MaxEver/MinEver 与
+> SortedEventsBy；into-table 编译期聚合兼容性校验逐字复现 Java 文案；
+> 无键 into-table 贡献前快照规范化为空集并登记为表示差异。manifest 更新为 551
+> cases、162 个 differential-verified case、619 个 differential runtime
+> IDs、3244 条 associations（referenced 3040）；capability 112 个
+> （26 DV）。
+>
 > 最新补充：Draft 4.253（2026-08-25），新增
 > `resultset.orderby-row-per-group` differential-verified 能力，对照固定
 > Java ResultSetOrderByRowPerGroup.java 全部 9 个 execution：no-having/
@@ -810,18 +824,18 @@
 
 > 最新补充：Draft 4.196（2026-08-20），新增 `expr-core-current-timestamp` differential-verified 场景，对照固定 Java `ExprCoreCurrentTimestamp` 的三个 execution（`ExprCoreCurrentTimestampGet` `java-runtime-c1c1fd3dc31af4864a50`、`ExprCoreCurrentTimestampOM` `java-runtime-96c8b8cb4cf36a523669`、`ExprCoreCurrentTimestampCompile` `java-runtime-5b126fe7fb865be8b293`），三个 isolated case、四条 listener records、0 differences。Go 侧复用类型化 `CurrentTimestamp()` 和虚拟时钟，覆盖未命名 `current_timestamp()` 字段、重复引用、加一运算，以及 100/999/777 毫秒绝对时间；Java boxed Long 元数据和文本编译诊断继续保持差异边界。Java oracle、固定 commit runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 122 个 differential-verified case、373 个 differential runtime IDs。
 
-截至 2026-08-23，manifest v2 的已校验摘要为：
+截至 2026-08-25，manifest v2 的已校验摘要为：
 
 | 维度 | 数值 |
 | --- | --- |
-| Capability | 110 |
-| Case | 542 |
-| Case differential-verified | 154 |
-| Differential-verified runtime | 537 / 4,136 |
-| Runtime 已关联 | 2,956 / 4,136（71.5%） |
-| Runtime 未关联 | 1,180 |
+| Capability | 112 |
+| Case | 551 |
+| Case differential-verified | 162 |
+| Differential-verified runtime | 619 / 4,136 |
+| Runtime 已关联 | 3,244 / 4,136（73.5%） |
+| Runtime 未关联 | 1,096 |
 | Representative scenario | 94 / 94 通过 |
-| Intentionally-different case | 21 |
+| Intentionally-different case | 23 |
 | NFR-verified case | 0 |
 | 质量摘要 | Docker passed；stress passed；race passed；performance pending |
 

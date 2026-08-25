@@ -16423,3 +16423,188 @@ func TestRunResultsetOrderbyRowPerGroupDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunInfraTableIntoTableDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-into-table.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "infra-table-into-table.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-into-table.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "infra-table-into-table-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunInfraTableIntoTableDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "unkeyed-count-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["mycnt"] = 999
+			},
+		},
+		{
+			name: "unkeyed-premature-empty-group-row",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New = []compat.ResultRecord{{
+					Kind:   "row",
+					Fields: map[string]any{"mycnt": 0},
+				}}
+			},
+		},
+		{
+			name: "two-module-count-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New = nil
+			},
+		},
+		{
+			name: "minmax-bound-window-slide-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0].Fields["maxb"] = 15
+			},
+		},
+		{
+			name: "maxever-history-lost-on-slide",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0].Fields["maxu"] = 10
+			},
+		},
+		{
+			name: "windowb-content-order-drift",
+			mutate: func(trace *compat.Trace) {
+				window := trace.Records[10].New[0].Fields["windowb"].([]any)
+				window[0], window[1] = window[1], window[0]
+			},
+		},
+		{
+			name: "lastever-into-window-diagnostic-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].Value = "Incompatible aggregation function for table 'varagg' column 'windowb', expecting 'window(*)' and received 'firstever(*)': The table declares 'window(*)' and provided is 'firstever(*)' [x]"
+			},
+		},
+		{
+			name: "build-error-suppressed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].Value = "<no-error>"
+			},
+		},
+		{
+			name: "sortedb-order-flip",
+			mutate: func(trace *compat.Trace) {
+				sorted := trace.Records[15].New[0].Fields["sortedb"].([]any)
+				sorted[0], sorted[1] = sorted[1], sorted[0]
+			},
+		},
+		{
+			name: "join-faf-thesort-direction-flip",
+			mutate: func(trace *compat.Trace) {
+				sorted := trace.Records[18].New[0].Fields["thesort"].([]any)
+				sorted[0], sorted[1] = sorted[1], sorted[0]
+			},
+		},
+		{
+			name: "no-keys-null-initial-rendered-as-zero",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[20].New[0].Fields["c0"] = 0
+			},
+		},
+		{
+			name: "with-keys-correlated-hit-became-miss",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[36].New[0].Fields["c0"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "bignumber-decimal-string-became-number",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[55].New[0].Fields["c0"] = 5
+			},
+		},
+		{
+			name: "multikey-single-array-key-content-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[57].New[0].Fields["k"] = []any{2, 0}
+			},
+		},
+		{
+			name: "multikey-two-composite-sum-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[58].New[0].Fields["thesum"] = 106
+			},
+		},
+		{
+			name: "create-state-time-boundary-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[19].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-into-table.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "infra-table-into-table.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "infra-table-into-table-diff",
+				"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-into-table.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				data, _ := os.ReadFile(evidencePath)
+				t.Fatalf("mutation %q accepted: %s", test.name, string(data))
+			}
+		})
+	}
+}
+
+// TestInfraTableIntoTableRuntimeIDMappingMatchesScenario pins the per-case
+// runtime-ID mapping: every scenario case's declared runtimeId must equal
+// the engine URI the runner derives, so evidence stays cross-referenceable.
+func TestInfraTableIntoTableRuntimeIDMappingMatchesScenario(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-into-table.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		Cases []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if len(scenario.Cases) == 0 {
+		t.Fatal("scenario declares no cases")
+	}
+	for _, entry := range scenario.Cases {
+		if got := infraTableIntoTableRuntimeID(entry.Case); got != entry.RuntimeID {
+			t.Fatalf("case %q maps to %q, scenario declares %q", entry.Case, got, entry.RuntimeID)
+		}
+	}
+}

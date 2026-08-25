@@ -1,3 +1,23 @@
+> 最新补充：Draft 4.254（2026-08-25），新增 `infra-table-into-table`
+> differential-verified 场景：InfraTableIntoTable.java 全部 9 个
+> execution（BoundUnbound 的三个子阶段共享单一 runtime ID，共 11 个
+> case）。场景 Java/Go 各 59 条 records、0 differences。覆盖无键 count(*)
+> 聚合在单模块与跨 @public 双模块的累积、bound/unbound 绑定矩阵
+> （length(2) 窗口内 max/min/window/sorted 与 maxever/minever/
+> lastever/firstever/maxbyever/minbyever 的兼容矩阵及六条精确编译拒绝
+> 文案）、S0#lastevent × SupportBean#keepall join 喂养的 window(sb.*)/
+> sorted(intPrimitive desc) 列经 FAF select * 观察、无键与按键 sum 经相关
+> 表子查询监听器观察、#lastevent 流上的 exact avg(BigInteger)/
+> avg(BigDecimal)/sum(BigInteger)/sum(BigDecimal)（每事件替换物化行）、
+> 以及 int[] 内容等值单键/双键主键的任意序行集。运行时新增与修复：
+> 标量 MaxEver/MinEver 聚合；into-table 编译期聚合兼容性校验逐字复现
+> Java 的 Incompatible-aggregation 与 select-clause 诊断文案；
+> SortedEventsBy 支持按任意键排序事件列；无键 into-table 部署期即物化
+> 逻辑行而 Java 延迟至首个贡献事件，场景将贡献前快照规范化为空集并登记
+> 为表示差异。manifest 更新为 551 cases、162 个
+> differential-verified case、619 个 differential runtime IDs、3244 条
+> associations（referenced 3040）；capability 112 个（26 DV）。
+>
 > 最新补充：Draft 4.253（2026-08-25），新增 `resultset.orderby-row-per-group`
 > differential-verified 能力：ResultSetOrderByRowPerGroup.java 全部 9 个
 > execution。场景 Java/Go 各 22 条 records、0 differences。覆盖 irstream
