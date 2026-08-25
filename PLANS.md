@@ -32,11 +32,82 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-25
-- Baseline: `HEAD` == `origin/master`; the pushed head is the Draft 4.253
-  resultset order-by-row-per-group pair (`f1d4e2e5e` + README `90820b963`),
-  committed only after full gates and `ROParityReview` PASS. Worktree clean.
-- Current work unit (Draft 4.254): `infra.tbl` InfraTableIntoTable.java, ALL
-  NINE executions in one scenario/oracle/runner surface:
+- Baseline: `HEAD` == `origin/master` at Draft 4.254 (`20700fb35`),
+  pushed after full gates and independent review PASS. Worktree clean
+  apart from this checkpoint.
+- Previous unit outcome (closed; Draft 4.254, commit `20700fb35`):
+  InfraTableIntoTable 9 executions (11 cases) differential-verified at
+  59/59 records, 0 differences; runtime additions MaxEver/MinEver/
+  SortedEventsBy/WithTableAgg + into-table compile-time compatibility
+  diagnostics; registered representation difference for pre-contribution
+  unkeyed rows; review PASS after one P2 mapping fix.
+- Current work unit (Draft 4.255 candidate): `resultset.aggregate-having`
+  extension via resultset/querytype/ResultSetQueryTypeHaving.java, ALL 10
+  executions (all currently unreferenced): HavingWildcardSelect
+  (`1dfe34a06e794032b5f6`), StatementOM (`8a05b3435dcc1ad1f414`),
+  Statement (`c33f49e879157f89fb62`), StatementJoin
+  (`c5e8204a0ec635e5ded3`), SumHavingNoAggregatedProp
+  (`2aa18c37135a5c99514b`), NoAggregationJoinHaving
+  (`0be8c1b9dd6f114b3919`), NoAggregationJoinWhere
+  (`3566968f29b3c05f40ee`), SubstreamSelectHaving
+  (`4fe38de65dec8bcdf586`), HavingSum (`0e551e1e4b7e85c94b37`),
+  HavingSumIStream (`77aeed87d8b7920a1bcf`). Distinct from the already-DV
+  case.resultset-query-type-having (4.241, different suite).
+- Java contract (primary read, pending scout confirmation):
+  wildcard length_batch(2)+where+having count(*)=2 batch gating; text/OM
+  twin `irstream symbol,price,avg(price) having price<avg(price)` over
+  MD#length(5) with old-row having re-evaluation vector (5/7.5, 8/9.5,
+  6/8.8 new-only, then old-only {5,10.2}); join twin primed by SING;
+  compile-acceptance SumHavingNoAggregatedProp (volume<avg(price));
+  non-aggregated join spread >= 1.4 having-vs-where twins with full
+  new/old/old-new vectors; insert-into select quote.* delivery gated by
+  avg(intPrimitive)>=3; pattern-source sum=2 with OLD delivery on leaving
+  satisfied state vs istream silent variant.
+- Scouts delivered and corrected the scope: 4.241 shipped runner/oracle/
+  scenario/evidence assets for this very suite (Statement text+OM twins,
+  compile-only SumHavingNoAggregatedProp, plus a StatementJoin branch that
+  never entered the committed scenario), but its manifest registration never
+  landed - no resultset.aggregate-having capability or case exists in
+  testdata/compat/capability-manifest.json. Draft 4.255 therefore extends the
+  EXISTING resultset-query-type-having assets to all 10 executions and closes
+  the registration gap in the same unit.
+- Frozen decisions: (a) extend existing scenario id/case, no parallel case;
+  (b) HavingSum/HavingSumIStream pattern source expressed as an equivalent
+  unbounded plain stream (registered representation choice; probe confirmed
+  Go delivers new{mysum=2} then old{mysum=2} with the old row carrying the
+  previous projection, matching Java); (c) wildcard-select's count(*)=2 is
+  tautological over a released length_batch(2) group so filter+batch window
+  alone reproduce the contract (registered note); (d) substream quote.*
+  spelled as explicit passthrough columns per the established typed-API
+  approved difference; (e) noagg join spread via MaxOf-MinOf Subtract with
+  Where vs JoinQuery.Having twins.
+- Runner: case branches implemented (join twins coded but excluded from the
+  committed loop); runtime-ID/executions tables in inventory order;
+  SupportBean payload decode added. Asset worker `RH Assets` extended
+  oracle/scenario to 10 executions; primary trimmed the three join-family
+  cases from the committed scenario after replay exposed the known
+  join-aggregate old/new classification divergence.
+- Engine fix: ungrouped irstream first-update null-prior old row is now
+  suppressed when the having clause rejects the empty-group prior state
+  (Java HavingSum delivers new{2} then old{2} with no null-prior pair).
+  Existing no-having RowForAll pairing unchanged; full suite green.
+- Differential: passing 14/14 records, 0 differences across 7 runtime IDs.
+  Manifest: capability resultset.aggregate-having + case.resultset-query-
+  type-having registered (closes the 4.241 registration gap); summary
+  recomputed by validator rules: 552 cases / 163 DV / 626 DV runtime IDs /
+  3251 associations / 113 capabilities (27 DV). Docs updated. Regression:
+  fixture + 7 mutation tests added.
+- Review: `RHParityReview` verdict PASS with two P3 documentation-precision
+  findings, both applied (oracle javadoc and scenario description scoped to
+  the seven executed runtimes with join branches marked dormant; runner
+  comment reworded to prior-state vs post-state having gating). Trace and
+  evidence regenerated after the prose fixes; differential re-verified
+  passing 0 differences; targeted gates green.
+- Next action: semantic commit and push.
+
+- Prior unit (Draft 4.254): `infra.tbl` InfraTableIntoTable.java nine
+  executions differential-verified (see previous outcome above); original
+  header retained below for delegation trail.
   InfraIntoTableUnkeyedSimpleSameModule (`java-runtime-36615ff5ace54c29450b`),
   InfraIntoTableUnkeyedSimpleTwoModule (`01df86362eaeba3bb58d`),
   InfraBoundUnbound (`338e401bfe934ccd41f0`),

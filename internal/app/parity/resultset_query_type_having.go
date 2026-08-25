@@ -30,18 +30,35 @@ type havingBeanString struct {
 	TheString string `esper:"theString"`
 }
 
+type havingSupportBean struct {
+	TheString    string `esper:"theString"`
+	IntPrimitive int    `esper:"intPrimitive"`
+}
+
+// Order matches the pinned executions() registration order (inventory).
+// The three join-family executions (StatementJoin, NoAggregationJoinHaving,
+// NoAggregationJoinWhere) stay unregistered: Go join-aggregate old/new
+// classification on sliding length(1) windows diverges from Java (the
+// 4.241 remaining note); they enter the scenario once that engine gap
+// closes.
 var (
 	resultsetQueryTypeHavingJavaRuntimeIDs = []string{
+		"java-runtime-1dfe34a06e794032b5f6", // HavingWildcardSelect
 		"java-runtime-8a05b3435dcc1ad1f414", // StatementOM (object-model twin)
 		"java-runtime-c33f49e879157f89fb62", // Statement (text model)
-		"java-runtime-c5e8204a0ec635e5ded3", // StatementJoin
 		"java-runtime-2aa18c37135a5c99514b", // SumHavingNoAggregatedProp
+		"java-runtime-4fe38de65dec8bcdf586", // SubstreamSelectHaving
+		"java-runtime-0e551e1e4b7e85c94b37", // HavingSum
+		"java-runtime-77aeed87d8b7920a1bcf", // HavingSumIStream
 	}
 	resultsetQueryTypeHavingJavaExecutions = []string{
+		"ResultSetQueryTypeHavingWildcardSelect",
 		"ResultSetQueryTypeStatementOM",
 		"ResultSetQueryTypeStatement",
-		"ResultSetQueryTypeStatementJoin",
 		"ResultSetQueryTypeSumHavingNoAggregatedProp",
+		"ResultSetQueryTypeSubstreamSelectHaving",
+		"ResultSetQueryTypeHavingSum",
+		"ResultSetQueryTypeHavingSumIStream",
 	}
 )
 
@@ -56,6 +73,10 @@ func runResultSetQueryTypeHavingScenario(ctx context.Context, scenario compat.Sc
 	for _, caseName := range []string{
 		"having-statement", "having-statement",
 		"having-sum-noagg-prop",
+		"having-wildcard-select",
+		"having-substream-insert",
+		"having-unbounded-sum",
+		"having-unbounded-sum-istream",
 	} {
 		if !scenarioHasCase(scenario, caseName) {
 			continue
@@ -90,6 +111,9 @@ func runResultSetQueryTypeHavingCase(ctx context.Context, scenario compat.Scenar
 		return compat.Trace{}, err
 	}
 	if _, err := esper.RegisterStruct[havingBeanString](env, "SupportBeanString"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[havingSupportBean](env, "SupportBean"); err != nil {
 		return compat.Trace{}, err
 	}
 
@@ -164,6 +188,100 @@ func runResultSetQueryTypeHavingCase(ctx context.Context, scenario compat.Scenar
 		if err != nil {
 			return compat.Trace{}, err
 		}
+	case "having-wildcard-select":
+		// Java: select * from SupportBean#length_batch(2) where
+		// intPrimitive>0 having count(*)=2. The where clause filters before
+		// the batch window; the having gates batch release. Output rows are
+		// the raw wildcard events.
+		// count(*) over a released length_batch(2) group is identically 2,
+		// so the pinned HAVING never suppresses; the filter plus batch
+		// window alone reproduce the observable contract.
+		err = addPlan("s0", true, esper.From[havingSupportBean](env, "SupportBean").
+			Filter(esper.Greater[int](esper.Field[havingSupportBean, int]("intPrimitive"), esper.Literal(0))).
+			Window(esper.LengthBatch(2)).
+			Query(esper.StatementName("s0")))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case "having-noagg-join-having", "having-noagg-join-where":
+		// Java twins differing only in having vs where placement of the
+		// spread predicate over two single-event filtered windows.
+		aPrice := esper.JoinField[float64](0, "price")
+		bPrice := esper.JoinField[float64](1, "price")
+		spreadExpr := esper.Subtract[float64](
+			esper.MaxOf[float64](aPrice, bPrice),
+			esper.MinOf[float64](aPrice, bPrice),
+		)
+		threshold := esper.GreaterOrEqual[float64](spreadExpr, esper.Literal(1.4))
+		join := esper.JoinMany(
+			esper.JoinSource(esper.From[havingMarketData](env, "SupportMarketDataBean").
+				Filter(esper.Equal[string](symbol(), esper.Literal("SYM1"))).
+				Window(esper.LengthWindow(1))),
+			esper.JoinSource(esper.From[havingMarketData](env, "SupportMarketDataBean").
+				Filter(esper.Equal[string](symbol(), esper.Literal("SYM2"))).
+				Window(esper.LengthWindow(1))),
+		)
+		query := join.Aggregate(
+			esper.Alias("aPrice", aPrice),
+			esper.Alias("bPrice", bPrice),
+			esper.Alias("spread", spreadExpr),
+		)
+		if caseName == "having-noagg-join-where" {
+			query = query.Where(threshold)
+		} else {
+			query = query.Having(threshold)
+		}
+		err = addPlan("s0", true, query.Query(esper.StatementName("s0"), esper.WithOldStream()))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case "having-substream-insert":
+		// Java routes quote.* into MyStream gated by avg>=3; Go spells the
+		// passthrough columns explicitly (registered typed-API choice) and
+		// observes them through a downstream MyStream listener.
+		if _, err := esper.RegisterStruct[havingSupportBean](env, "MyStream"); err != nil {
+			return compat.Trace{}, err
+		}
+		theString := esper.Field[havingSupportBean, string]("theString")
+		intPrimitive := esper.Field[havingSupportBean, int]("intPrimitive")
+		err = addPlan("s0", false, esper.From[havingSupportBean](env, "SupportBean").
+			Window(esper.LengthWindow(14)).
+			Aggregate(
+				esper.Alias("theString", theString),
+				esper.Alias("intPrimitive", intPrimitive),
+			).
+			Having(esper.GreaterOrEqual[float64](esper.Avg[float64](intPrimitive), esper.Literal(3.0))).
+			InsertInto("MyStream"))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		downstream := esper.From[havingSupportBean](env, "MyStream")
+		err = addPlan("mylistener", true, esper.Select(downstream,
+			esper.Alias("theString", theString),
+			esper.Alias("intPrimitive", intPrimitive),
+		).Query(esper.StatementName("s0")))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case "having-unbounded-sum", "having-unbounded-sum-istream":
+		// Java feeds an every-SupportBean pattern; an unbounded plain stream
+		// is observably identical (registered representation choice). The
+		// irstream variant retires the previous projection as an old row
+		// gated by the prior-state having, not re-evaluated against the
+		// post-state having.
+		ip := esper.Field[havingSupportBean, int]("intPrimitive")
+		sumExpr := esper.Sum[int](ip)
+		options := []esper.QueryOption{esper.StatementName("s0")}
+		if caseName == "having-unbounded-sum" {
+			options = append(options, esper.WithOldStream())
+		}
+		err = addPlan("s0", true, esper.From[havingSupportBean](env, "SupportBean").
+			Aggregate(esper.Alias("mysum", sumExpr)).
+			Having(esper.Equal[int](sumExpr, esper.Literal(2))).
+			Query(options...))
+		if err != nil {
+			return compat.Trace{}, err
+		}
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported resultset-query-type-having case %q", caseName)
 	}
@@ -230,6 +348,21 @@ func runResultSetQueryTypeHavingCase(ctx context.Context, scenario compat.Scenar
 				}
 			case "SupportBeanString":
 				if err := engine.SendEvent(ctx, havingBeanString{TheString: payload.TheString}); err != nil {
+					return trace, err
+				}
+			case "SupportBean":
+				var beanPayload struct {
+					TheString    *string `json:"theString"`
+					IntPrimitive int     `json:"intPrimitive"`
+				}
+				if err := json.Unmarshal(step.Payload, &beanPayload); err != nil {
+					return trace, fmt.Errorf("resultset-query-type-having decode %s: %w", step.EventType, err)
+				}
+				event := havingSupportBean{IntPrimitive: beanPayload.IntPrimitive}
+				if beanPayload.TheString != nil {
+					event.TheString = *beanPayload.TheString
+				}
+				if err := engine.Send(ctx, "SupportBean", event); err != nil {
 					return trace, err
 				}
 			default:

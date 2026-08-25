@@ -16608,3 +16608,132 @@ func TestInfraTableIntoTableRuntimeIDMappingMatchesScenario(t *testing.T) {
 		}
 	}
 }
+
+func TestRunResultSetQueryTypeHavingDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-query-type-having.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-query-type-having.evidence.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-query-type-having-diff",
+		"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "resultset-query-type-having.json"),
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunResultSetQueryTypeHavingDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "wildcard-batch-release-lost",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "having-wildcard-select" {
+						trace.Records[i].New = nil
+						break
+					}
+				}
+			},
+		},
+		{
+			name: "avg-having-new-price-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					r := trace.Records[i]
+					if r.Case == "having-statement" && r.New != nil {
+						r.New[0].Fields["price"] = 99.0
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "old-row-suppression-lost",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					r := trace.Records[i]
+					if r.Case == "having-statement" && len(r.Old) > 0 {
+						r.Old[0].Fields["avgPrice"] = 1.0
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "compile-acceptance-marker-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "having-sum-noagg-prop" {
+						trace.Records[i].Operation = "build-error"
+						trace.Records[i].Value = "rejected"
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "unbounded-retired-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					r := trace.Records[i]
+					if r.Case == "having-unbounded-sum" && len(r.Old) > 0 {
+						r.Old[0].Fields["mysum"] = 3
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "substream-gating-boundary-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "having-substream-insert" {
+						trace.Records[i].New = nil
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "listener-time-boundary-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-query-type-having.evidence.json"),
+				test.mutate)
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-query-type-having-diff",
+				"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "resultset-query-type-having.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", filepath.Join(t.TempDir(), "e.json"),
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q accepted", test.name)
+			}
+		})
+	}
+}

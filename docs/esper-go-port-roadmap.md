@@ -4,6 +4,17 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.255（2026-08-25），登记 `resultset.aggregate-having`
+> 能力并扩展 `resultset-query-type-having` 场景至 7 个可观测 runtime：
+> length_batch 通配 select 的 where+count(*) 批次门控、text/OM avg-HAVING
+> 孪生全 irstream 向量、volume<avg(price) 编译接受、insert-into 子流
+> avg>=3 门控、以及无界 sum=2 的退役行携带先前投影。引擎修复：无分组
+> irstream 首更新 null-prior old 行在 having 拒绝空组先验态时不再投递。
+> join 家族三 execution 因滑动窗口 old/new 分类分歧保持未登记；4.241 的
+> manifest 登记缺口同轮闭合。manifest 更新为 552 cases、163 个
+> differential-verified case、626 个 differential runtime IDs、3251 条
+> associations（referenced 3047）；capability 113 个（27 DV）。
+>
 > 最新补充：Draft 4.254（2026-08-25），新增 `infra-table-into-table`
 > differential-verified 场景，对照固定 Java InfraTableIntoTable.java
 > 全部 9 个 execution（BoundUnbound 三个子阶段共享单一 runtime ID，共
@@ -828,12 +839,12 @@
 
 | 维度 | 数值 |
 | --- | --- |
-| Capability | 112 |
-| Case | 551 |
-| Case differential-verified | 162 |
-| Differential-verified runtime | 619 / 4,136 |
-| Runtime 已关联 | 3,244 / 4,136（73.5%） |
-| Runtime 未关联 | 1,096 |
+| Capability | 113 |
+| Case | 552 |
+| Case differential-verified | 163 |
+| Differential-verified runtime | 626 / 4,136 |
+| Runtime 已关联 | 3,251 / 4,136（78.6%） |
+| Runtime 未关联 | 1,089 |
 | Representative scenario | 94 / 94 通过 |
 | Intentionally-different case | 23 |
 | NFR-verified case | 0 |

@@ -4617,6 +4617,41 @@
     "java-runtime-e9aa163116193bbd7106"
    ],
    "difference": "InvalidRepeatedProperties compile-only: message text differs. SingleOM SODA has no Go counterpart."
+  },
+  {
+   "id": "resultset.aggregate-having",
+   "domain": "resultset",
+   "level": "G",
+   "summary": "Non-grouped aggregate and non-aggregate HAVING over windows, joins, batch releases, insert-into substreams and unbounded streams, including old-row re-evaluation semantics",
+   "javaRefs": [
+    "ResultSetQueryTypeHaving"
+   ],
+   "goRefs": [
+    "internal/esper/stream.go",
+    "internal/esper/runtime.go",
+    "internal/esper/plan.go",
+    "internal/app/parity/resultset_query_type_having.go"
+   ],
+   "phase": 1,
+   "status": "differential-verified",
+   "remaining": [
+    "StatementJoin plus NoAggregationJoinHaving/Where stay unregistered until Go join-aggregate old/new classification on sliding length(1) windows matches Java (4.241 remaining note)",
+    "grouped HAVING variants live in the dedicated aggregate-dimensional/output-limit suites"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1dfe34a06e794032b5f6",
+    "java-runtime-8a05b3435dcc1ad1f414",
+    "java-runtime-c33f49e879157f89fb62",
+    "java-runtime-2aa18c37135a5c99514b",
+    "java-runtime-4fe38de65dec8bcdf586",
+    "java-runtime-0e551e1e4b7e85c94b37",
+    "java-runtime-77aeed87d8b7920a1bcf"
+   ]
   }
  ],
  "cases": [
@@ -34148,6 +34183,68 @@
     "java-runtime-fbb5b1ed4cd702566ff1",
     "java-runtime-be39f23e1ad826e99352"
    ]
+  },
+  {
+   "id": "case.resultset-query-type-having",
+   "javaRuntimeIds": [
+    "java-runtime-1dfe34a06e794032b5f6",
+    "java-runtime-8a05b3435dcc1ad1f414",
+    "java-runtime-c33f49e879157f89fb62",
+    "java-runtime-2aa18c37135a5c99514b",
+    "java-runtime-4fe38de65dec8bcdf586",
+    "java-runtime-0e551e1e4b7e85c94b37",
+    "java-runtime-77aeed87d8b7920a1bcf"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeHavingWildcardSelect",
+    "ResultSetQueryTypeStatementOM",
+    "ResultSetQueryTypeStatement",
+    "ResultSetQueryTypeSumHavingNoAggregatedProp",
+    "ResultSetQueryTypeSubstreamSelectHaving",
+    "ResultSetQueryTypeHavingSum",
+    "ResultSetQueryTypeHavingSumIStream"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeHaving.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeHavingDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "resultset",
+    "having",
+    "aggregate",
+    "join",
+    "length-batch",
+    "insert-into",
+    "unbounded",
+    "irstream",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-query-type-having.json",
+    "testdata/parity/resultset-query-type-having.trace.json",
+    "testdata/parity/resultset-query-type-having.evidence.json"
+   ],
+   "notes": [
+    "Seven ResultSetQueryTypeHaving executions replayed through the extended shared scenario: length_batch(2) wildcard select where intPrimitive>0 having count(*)=2 batch gating, text/object-model avg-HAVING twins with the full irstream vector including leaving-bound old rows and suppressed old deliveries, compile-only volume<avg(price) acceptance marker, insert-into quote passthrough gated by avg(intPrimitive)>=3 observed downstream, and unbounded-stream sum=2 whose retired row carries the previous projection without post-state having re-gating.",
+    "Registered representation choices: the every-SupportBean pattern source is expressed as an equivalent unbounded plain stream; substream quote.* spells explicit passthrough columns per the typed-API approved difference; count(*)=2 is tautological over a released length_batch(2) group. The first-update null-prior old row of ungrouped irstream aggregates is now suppressed when the having clause rejects the empty-group prior state (Java HavingSum behavior). StatementJoin and both NoAggregationJoin twins remain unregistered pending Go join-aggregate old/new classification parity."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1dfe34a06e794032b5f6",
+    "java-runtime-8a05b3435dcc1ad1f414",
+    "java-runtime-c33f49e879157f89fb62",
+    "java-runtime-2aa18c37135a5c99514b",
+    "java-runtime-4fe38de65dec8bcdf586",
+    "java-runtime-0e551e1e4b7e85c94b37",
+    "java-runtime-77aeed87d8b7920a1bcf"
+   ]
   }
  ],
  "mappings": [
@@ -36686,29 +36783,33 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-table-into-table"
+  },
+  {
+   "capabilityId": "resultset.aggregate-having",
+   "caseId": "case.resultset-query-type-having"
   }
  ],
  "summary": {
-  "inventoriedCases": 551,
-  "implementedCases": 549,
-  "differentialVerifiedCases": 162,
-  "differentialVerifiedRuntimeIds": 619,
+  "inventoriedCases": 552,
+  "implementedCases": 550,
+  "differentialVerifiedCases": 163,
+  "differentialVerifiedRuntimeIds": 626,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 112,
-  "implementedCapabilities": 111,
-  "differentialVerifiedCapabilities": 26,
+  "inventoriedCapabilities": 113,
+  "implementedCapabilities": 112,
+  "differentialVerifiedCapabilities": 27,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3244,
-  "referencedJavaRuntimeIds": 3040,
+  "runtimeAssociationCount": 3251,
+  "referencedJavaRuntimeIds": 3047,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1096,
+  "unreferencedJavaRuntimeIds": 1089,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 551,
-  "totalCapabilities": 112
+  "totalCases": 552,
+  "totalCapabilities": 113
  }
 }

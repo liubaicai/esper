@@ -17728,22 +17728,31 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		if visible && !emittedBefore && len(definition.groupBy) == 0 && plan.query.selector == SelectIRStream && !aggregateDefinitionReadsNonKeyEvent(definition) {
 			// Ungrouped irstream aggregates pair the first new row with an
 			// old row whose aggregate columns evaluate over the empty group
-			// (Java ResultSetProcessorRowForAll: sum/avg/min/max are null and
-			// count(*) is 0 on the first update).
-			nullPrior := make([]Value, len(newValues))
-			emptyCtx := aggregateGroupContext(definition, nil, nil, nil, false, nil, group.current, nil, nil, now, r.variables, group.pluginStates, group.multiPluginStates)
-			for index, selection := range definition.selections {
-				if isAggregateExpression(selection.Expr) {
-					nullPrior[index] = evaluateAggregateExpression(selection.Expr, emptyCtx)
-				} else {
-					nullPrior[index] = newValues[index]
-				}
+			// (Java ResultSetProcessorRowForAll: sum/avg/min/max are null
+			// and count(*) is 0 on the first update). When a having clause
+			// rejects that empty-group prior state - exactly the pinned
+			// HavingSum flow whose first contribution never delivers -
+			// Java emits no such paired old row.
+			priorVisible := true
+			if definition.having != nil {
+				_, priorVisible = evaluateEmptyAggregateGroup(definition, now, r.variables)
 			}
-			oldEntries = append(oldEntries, aggregateResultEntry{
-				result: resultRow(newRow(plan.resultSchema, nullPrior)),
-				group:  group,
-				key:    key,
-			})
+			if priorVisible {
+				nullPrior := make([]Value, len(newValues))
+				emptyCtx := aggregateGroupContext(definition, nil, nil, nil, false, nil, group.current, nil, nil, now, r.variables, group.pluginStates, group.multiPluginStates)
+				for index, selection := range definition.selections {
+					if isAggregateExpression(selection.Expr) {
+						nullPrior[index] = evaluateAggregateExpression(selection.Expr, emptyCtx)
+					} else {
+						nullPrior[index] = newValues[index]
+					}
+				}
+				oldEntries = append(oldEntries, aggregateResultEntry{
+					result: resultRow(newRow(plan.resultSchema, nullPrior)),
+					group:  group,
+					key:    key,
+				})
+			}
 		}
 		if visible {
 			group.previous = append([]Value(nil), newValues...)

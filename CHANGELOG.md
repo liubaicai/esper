@@ -1,3 +1,18 @@
+> 最新补充：Draft 4.255（2026-08-25），`resultset.aggregate-having` 能力
+> 登记与 `resultset-query-type-having` 场景扩展至全部 10 个 execution 中
+> 的 7 个可观测 runtime（WildcardSelect、StatementOM/Statement 孪生、
+> SumHavingNoAggregatedProp 编译接受标记、SubstreamSelectHaving、无界
+> HavingSum/HavingSumIStream）。场景 Java/Go 各 14 条 records、0
+> differences。修复：无分组 irstream 聚合首更新的 null-prior old 行在
+> having 拒绝空组先验态时不再投递（Java HavingSum 行为）；join 家族三
+> execution（StatementJoin、NoAggregationJoinHaving/Where）因 Go
+> join-aggregate 滑动窗口 old/new 分类分歧保持未登记。同时闭合 4.241 的
+> manifest 登记缺口（当时资产/evidence 已交付但 capability/case 从未落
+> 盘）。表示选择登记：pattern 源以等价无界流表达、substream quote.* 显式
+> 列、length_batch(2) 下 count(*)=2 恒真。manifest 更新为 552 cases、163
+> 个 differential-verified case、626 个 differential runtime IDs、3251 条
+> associations（referenced 3047）；capability 113 个（27 DV）。
+>
 > 最新补充：Draft 4.254（2026-08-25），新增 `infra-table-into-table`
 > differential-verified 场景：InfraTableIntoTable.java 全部 9 个
 > execution（BoundUnbound 的三个子阶段共享单一 runtime ID，共 11 个

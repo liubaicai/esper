@@ -2,19 +2,25 @@
   "version": "esper-differential/v1",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaRuntimeIds": [
+    "java-runtime-1dfe34a06e794032b5f6",
     "java-runtime-8a05b3435dcc1ad1f414",
     "java-runtime-c33f49e879157f89fb62",
-    "java-runtime-c5e8204a0ec635e5ded3",
-    "java-runtime-2aa18c37135a5c99514b"
+    "java-runtime-2aa18c37135a5c99514b",
+    "java-runtime-4fe38de65dec8bcdf586",
+    "java-runtime-0e551e1e4b7e85c94b37",
+    "java-runtime-77aeed87d8b7920a1bcf"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeHaving.java"
   ],
   "javaExecutions": [
+    "ResultSetQueryTypeHavingWildcardSelect",
     "ResultSetQueryTypeStatementOM",
     "ResultSetQueryTypeStatement",
-    "ResultSetQueryTypeStatementJoin",
-    "ResultSetQueryTypeSumHavingNoAggregatedProp"
+    "ResultSetQueryTypeSumHavingNoAggregatedProp",
+    "ResultSetQueryTypeSubstreamSelectHaving",
+    "ResultSetQueryTypeHavingSum",
+    "ResultSetQueryTypeHavingSumIStream"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -87,6 +93,144 @@
       {
         "op": "deployed",
         "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "having-wildcard-select"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-substream-insert"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "abc",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "abc",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "abc",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "abc",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-unbounded-sum"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-unbounded-sum-istream"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1
+        }
       }
     ]
   },
@@ -235,6 +379,90 @@
         "operation": "deployed",
         "statement": "s0",
         "sequence": 0
+      },
+      {
+        "case": "having-wildcard-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-substream-insert",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 5,
+              "theString": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-unbounded-sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-unbounded-sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-unbounded-sum-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 2
+            }
+          }
+        ]
       }
     ]
   },
@@ -383,6 +611,90 @@
         "operation": "deployed",
         "statement": "s0",
         "sequence": 0
+      },
+      {
+        "case": "having-wildcard-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-substream-insert",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 5,
+              "theString": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-unbounded-sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-unbounded-sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-unbounded-sum-istream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 2
+            }
+          }
+        ]
       }
     ]
   },

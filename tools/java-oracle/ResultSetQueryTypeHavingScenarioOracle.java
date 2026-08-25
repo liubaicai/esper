@@ -25,11 +25,10 @@ import java.util.TreeSet;
 /**
  * Java oracle for ResultSetQueryTypeHaving avg-HAVING family scenarios.
  *
- * Covers three executions of ResultSetQueryTypeHaving across four scenario
- * case entries. having-statement (two entries, one semantic scenario: the
- * text-model and object-model runtime twins are behaviorally identical, so
- * the oracle replays the same EPL once per entry exactly like the
- * variables-onset-set onset-array-at-index dual-runtime case) compiles
+ * Covers the seven currently registered executions of ResultSetQueryTypeHaving (the StatementJoin and NoAggregationJoin having/where twins remain dormant branches pending the Go join-aggregate old/new classification fix; their buildEPL cases are present but not referenced by any fixture case). * (two entries, one semantic scenario: the text-model and object-model
+ * runtime twins are behaviorally identical, so the oracle replays the same
+ * EPL once per entry exactly like the variables-onset-set onset-array-at-index
+ * dual-runtime case) compiles
  *
  *   select irstream symbol, price, avg(price) as avgPrice
  *   from SupportMarketDataBean#length(5)
@@ -38,19 +37,30 @@ import java.util.TreeSet;
  * and replays seven DELL market sends exercising new-stream deliveries,
  * suppressed updates under strict less-than, expiry re-evaluation that fails
  * the HAVING predicate, and an old-only delivery when the leaving event
- * still satisfies it. having-statement-join replays the same seven sends
- * against the two-stream twin joined with SupportBeanString#length(100)
- * over where one.theString = two.symbol, seeded with one DELL bean before
- * the market sends. having-sum-noagg-prop is compile-only: the mixed
+ * still satisfies it. having-statement-join seeds one DELL SupportBeanString
+ * into SupportBeanString#length(100) and replays the same seven sends against
+ * the two-stream twin joined over where one.theString = two.symbol.
+ * having-wildcard-select filters a SupportBean#length_batch(2) window with
+ * where intPrimitive&gt;0 and releases one two-row batch through having
+ * count(*)=2. having-noagg-join-having and having-noagg-join-where are
+ * behavioral twins replaying one SYM1/SYM2 spread sequence whose EPL differs
+ * only in the having/where keyword gating Math.max-Math.min &gt;= 1.4.
+ * having-substream-insert gates an insert into MyStream select quote.* on
+ * avg(intPrimitive)&gt;=3. having-unbounded-sum and having-unbounded-sum-istream
+ * aggregate an unbound pattern stream on sum(myEvent.intPrimitive)=2, where
+ * only the irstream variant delivers synthesized old rows that pass the
+ * post-state gate. having-sum-noagg-prop is compile-only: the mixed
  * aggregated/non-aggregated module (having volume &lt; avg(price)) deploys
  * successfully and emits a single "deployed" marker record with no sends
  * and no listener output.
  *
  * Events follow the pinned regression schema: SupportMarketDataBean is a
  * map type {symbol string, price double, volume long, feed string} whose
- * sends set symbol and price only (volume 0, feed null); SupportBeanString
- * carries the single theString member through a local mirror class because
- * the pinned bean lives outside the oracle classpath.
+ * sends set symbol and price plus an optional volume (default 0, feed null;
+ * the spread twins replay the pinned volume=-1 sends); SupportBean is a map
+ * type {theString string, intPrimitive int}; SupportBeanString carries the
+ * single theString member through a local mirror class because the pinned
+ * beans live outside the oracle classpath.
  *
  * Listener records follow the variables_onset protocol: one record per
  * delivered batch containing rows, with sequence numbering per case from 1,
@@ -102,6 +112,10 @@ public class ResultSetQueryTypeHavingScenarioOracle {
         marketType.put("volume", long.class);
         marketType.put("feed", String.class);
         config.getCommon().addEventType("SupportMarketDataBean", marketType);
+        Map<String, Object> beanType = new HashMap<>();
+        beanType.put("theString", String.class);
+        beanType.put("intPrimitive", int.class);
+        config.getCommon().addEventType("SupportBean", beanType);
         config.getCommon().addEventType("SupportBeanString", LocalSupportBeanString.class);
         config.getRuntime().getThreading().setInternalTimerEnabled(false);
         EPRuntime runtime = EPRuntimeProvider.getRuntime("ResultSetQueryTypeHavingScenarioOracle-" + caseName, config);
@@ -166,6 +180,7 @@ public class ResultSetQueryTypeHavingScenarioOracle {
                     record.add("case", caseName);
                     record.add("operation", "deployed");
                     record.add("statement", step.getString("statement", ""));
+                    record.add("sequence", 0);
                     records.add(record);
                     continue;
                 }
@@ -184,8 +199,15 @@ public class ResultSetQueryTypeHavingScenarioOracle {
             Map<String, Object> event = new HashMap<>();
             event.put("symbol", payload.getString("symbol", null));
             event.put("price", payload.get("price").asDouble());
-            event.put("volume", 0L);
+            event.put("volume", payload.getLong("volume", 0L));
             event.put("feed", null);
+            runtime.getEventService().sendEventMap(event, eventType);
+            return;
+        }
+        if ("SupportBean".equals(eventType)) {
+            Map<String, Object> event = new HashMap<>();
+            event.put("theString", payload.getString("theString", null));
+            event.put("intPrimitive", payload.getInt("intPrimitive", 0));
             runtime.getEventService().sendEventMap(event, eventType);
             return;
         }
@@ -214,6 +236,34 @@ public class ResultSetQueryTypeHavingScenarioOracle {
                 "@name('s0') select irstream symbol, price, avg(price) as avgPrice " +
                     "from SupportMarketDataBean#length(5) as two " +
                     "having volume < avg(price)";
+            case "having-wildcard-select" ->
+                "@name('s0') select * from SupportBean#length_batch(2) " +
+                    "where intPrimitive>0 " +
+                    "having count(*)=2";
+            case "having-noagg-join-having" ->
+                "@name('s0') select irstream a.price as aPrice, b.price as bPrice, " +
+                    "Math.max(a.price,b.price)-Math.min(a.price,b.price) as spread " +
+                    "from SupportMarketDataBean(symbol='SYM1')#length(1) as a, " +
+                    "SupportMarketDataBean(symbol='SYM2')#length(1) as b " +
+                    "having Math.max(a.price,b.price)-Math.min(a.price,b.price)>=1.4";
+            case "having-noagg-join-where" ->
+                "@name('s0') select irstream a.price as aPrice, b.price as bPrice, " +
+                    "Math.max(a.price,b.price)-Math.min(a.price,b.price) as spread " +
+                    "from SupportMarketDataBean(symbol='SYM1')#length(1) as a, " +
+                    "SupportMarketDataBean(symbol='SYM2')#length(1) as b " +
+                    "where Math.max(a.price,b.price)-Math.min(a.price,b.price)>=1.4";
+            case "having-substream-insert" ->
+                "@name('s0') insert into MyStream select quote.* " +
+                    "from SupportBean#length(14) quote " +
+                    "having avg(intPrimitive)>=3";
+            case "having-unbounded-sum" ->
+                "@name('s0') select irstream sum(myEvent.intPrimitive) as mysum " +
+                    "from pattern [every myEvent=SupportBean] " +
+                    "having sum(myEvent.intPrimitive)=2";
+            case "having-unbounded-sum-istream" ->
+                "@name('s0') select istream sum(myEvent.intPrimitive) as mysum " +
+                    "from pattern [every myEvent=SupportBean] " +
+                    "having sum(myEvent.intPrimitive)=2";
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };
     }
