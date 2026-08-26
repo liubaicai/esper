@@ -45,6 +45,19 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
+- Prefetched unit (Draft 4.259, contract frozen, NOT implemented):
+  expr/datetime/ExprDTRound.java 4 executions: Input
+  (9838679b35a6a3507332), Ceil (8a02976a0c5c4eb03030), Floor
+  (95d240ad18c89abe6e99), Half (be79bf345b96e2ccc206). `DTRJavaContract` adjudicated
+  the earlier roundHalf('month') "oracle self-inconsistency" as WRONG: the
+  2002-05-30→2002-06-01 assertion follows Apache Commons
+  DateUtils.modify(MODIFY_ROUND) with month-length-dependent carry
+  (31d→day≥17, 30d→day≥16, Feb28→≥15, Feb29→≥16); msec roundHalf is
+  identity; exact ties round up; roundHalf supports Date/Long/Calendar only.
+  `DTRGoSurface`: minimal surface = 3 builders (RoundCeiling/RoundFloor/
+  RoundHalf) + shared kernel in internal/esper/expr_dt_round.go, runner
+  internal/app/parity/expr_dt_round.go reusing expr_dt_between templates;
+  representation preserved per input property (Date/Long/Calendar/LDT/ZDT).
 - Current work unit (Draft 4.258, implemented pending review):
   event/map/EventMapCore.java 4 of 5 executions differential-verified at
   6/6 records, 0 differences (nested three-level MyMap with verbatim
@@ -54,7 +67,8 @@ activity or a single coverage percentage.
   rejects its three shapes at language compile time; documented under
   capability remaining. Engine fix: SendObjectArray wrong-kind message.
   Assets from the earlier prefetch worker, re-scoped by the primary after
-  `EMCJavaContract`/`EMCGoSurface` scouts. `EMCReview`
+  `EMCJavaContract`/`EMCGoSurface` scouts. Shipped as `e5f07221d`.
+  `EMCReview`
   verdict PASS-with-findings (3xP2 3xP3, all fixed): association count
   corrected to 3267, scenario/evidence stale invalid-statement metadata
   purged, SendObjectArray unregistered-name clause completed per
