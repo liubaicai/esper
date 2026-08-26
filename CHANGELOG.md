@@ -1,3 +1,12 @@
+> 最新补充：Draft 4.262（2026-08-26），`EPLInsertIntoPopulateUndStreamSelect`
+> 3/4 个 execution differential-verified（47 条 records、0 differences，
+> 六表示矩阵）：on-merge 子类型填充超类型列 + cast 链匹配；wildcard
+> transpose 插入的宽化/子集/覆盖语义。非 map 表示以 Alias 等价表达
+> transpose+额外列；Invalid execution implemented-not-DV。manifest 更新
+> 为 557 cases、168 个 differential-verified case、655 个 differential
+> runtime IDs、3280 条 associations（referenced 3076）；capability 117
+> 个（31 DV）。
+>
 > 最新补充：Draft 4.261（2026-08-26），`case.variables-use` 收口
 > EPLVariablesUse 全部可表示 execution（+2 DV runtime IDs，共 9/11；
 > 101 条 records、0 differences）：EPVariableService 运行时 API 全表面

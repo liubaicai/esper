@@ -17381,3 +17381,108 @@ func TestRunResultSetQueryTypeHavingDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunEplInsertIntoPopulateUndStreamSelectDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-populate-und-stream-select.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-populate-und-stream-select.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-populate-und-stream-select.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-insert-into-populate-und-stream-select-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplInsertIntoPopulateUndStreamSelectDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "merge-window-row-name-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["name"] = "ChildIncident2"
+			},
+		},
+		{
+			name: "merge-nested-fragment-field-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["event"] = map[string]any{
+					"kind":   "row",
+					"fields": map[string]any{"id": "ID9", "action": "INSERT"},
+				}
+			},
+		},
+		{
+			name: "rep-matrix-phase-a-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New = nil
+			},
+		},
+		{
+			name: "rep-matrix-phase-b-addprop-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["addprop"] = 2
+			},
+		},
+		{
+			name: "widen-double-literal-rendering-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].New[0].Fields["addprop"] = int64(1)
+			},
+		},
+		{
+			name: "override-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[15].New[0].Fields["myint"] = int64(998)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-populate-und-stream-select.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "e.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-insert-into-populate-und-stream-select-diff",
+				"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-populate-und-stream-select.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q accepted; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, output)
+			}
+		})
+	}
+}

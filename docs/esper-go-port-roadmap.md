@@ -4,6 +4,20 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.262（2026-08-26），`EPLInsertIntoPopulateUndStreamSelect`
+> 3/4 个 execution differential-verified（47 条 records、0 differences）：
+> on-merge insert-select 以子类型实例填充超类型 objectarray 列
+> （match 链 cast(w.event.id? as string)）；objectarray/map/avro/json/
+> json-provided/default 六表示矩阵的 wildcard transpose 插入，覆盖
+> int→long / int→double 宽化、多余投影丢弃、纯透传与位置无关的显式
+> 覆盖 wildcard。表示登记：非 map 表示的 transpose+额外列以显式 Alias
+> 等价表达（Build gate 维持）；exec1 phase 拆分采用每次调用独立 JVM
+> （undeployAll 不释放 @public path 类型）；Invalid execution
+> implemented-not-DV（go-unit route-validation pins + Java 原文保留）。
+> manifest 更新为 557 cases、168 个 differential-verified case、655 个
+> differential runtime IDs、3280 条 associations（referenced 3076）；
+> capability 117 个（31 DV）。
+>
 > 最新补充：Draft 4.261（2026-08-26），`case.variables-use` 收口
 > `EPLVariablesUse` 全部可表示 execution（新增 2 个 DV runtime IDs，
 > 共 9/11）：EPVariableService 运行时 API 全表面（类型内省引擎级断言、

@@ -4272,7 +4272,7 @@
    "id": "epl.insertinto-pattern",
    "domain": "insert-into",
    "level": "G",
-   "summary": "Insert pattern match results into a derived stream, consuming from the derived stream. OR pattern with every matches S0 or S1 events, projects tagged fields (es0id/es1id) into a new stream via InsertInto.",
+   "summary": "Insert pattern match results into a derived stream, consuming from the derived stream. OR pattern with every matches S0 or S1 events, projects tagged fields (es0id/es1id) into a new stream via InsertInto. EPLInsertIntoPopulateUndStreamSelect closed at 3/4 executions differential-verified (47 records, 0 differences): on-merge supertype-column population with subtype fragments, per-rep wildcard transpose matrices with widening/subset/override across six representations; Invalid execution implemented-not-DV with go-unit route-validation pins and verbatim Java diagnostics preserved.",
    "javaRefs": [
     "EPLInsertIntoPropsWildcard"
    ],
@@ -4290,9 +4290,9 @@
     "EPLInsertIntoIRStreamFunc",
     "EPLInsertIntoPopulateCreateStream suite",
     "EPLInsertIntoPopulateSingleColByMethodCall",
-    "EPLInsertIntoPopulateUndStreamSelect suite",
     "EPLInsertIntoTransposePattern suite",
-    "EPLInsertIntoWrapper suite"
+    "EPLInsertIntoWrapper suite",
+    "EPLInsertIntoPopulateUndStreamSelect Invalid execution (java-runtime-9c96c9930655f732930a): implemented-not-DV — Go-unit route-validation pins only ('route projection \"otherprop\" is not a field of target schema', transpose-to-typed-target rejection); verbatim Java diagnostics preserved in test header."
    ],
    "verification": [
     "inventoried",
@@ -34634,6 +34634,55 @@
     "java-runtime-95d240ad18c89abe6e99",
     "java-runtime-be79bf345b96e2ccc206"
    ]
+  },
+  {
+   "id": "case.epl-insert-into-populate-und-stream-select",
+   "javaRuntimeIds": [
+    "java-runtime-854310513054197751bb",
+    "java-runtime-9231859e3d46ac11c84e",
+    "java-runtime-b6c30a857600ff444a40"
+   ],
+   "javaNames": [
+    "EPLInsertIntoNamedWindowInheritsMap",
+    "EPLInsertIntoNamedWindowRep",
+    "EPLInsertIntoStreamInsertWWidenOA"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateUndStreamSelect.java"
+   ],
+   "goTests": [
+    "internal/esper/epl_insert_into_populate_und_stream_select_parity_test.go:TestEPLInsertIntoNamedWindowInheritsMapParity",
+    "internal/esper/epl_insert_into_populate_und_stream_select_parity_test.go:TestEPLInsertIntoNamedWindowRepParity",
+    "internal/esper/epl_insert_into_populate_und_stream_select_parity_test.go:TestEPLInsertIntoStreamInsertWWidenOAParity",
+    "internal/app/parity/run_test.go:TestRunEplInsertIntoPopulateUndStreamSelectDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplInsertIntoPopulateUndStreamSelectDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-insert-into-populate-und-stream-select.json",
+    "testdata/parity/epl-insert-into-populate-und-stream-select.trace.json",
+    "testdata/parity/epl-insert-into-populate-und-stream-select.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-854310513054197751bb",
+    "java-runtime-9231859e3d46ac11c84e",
+    "java-runtime-b6c30a857600ff444a40"
+   ],
+   "notes": [
+    "Three of four EPLInsertIntoPopulateUndStreamSelect executions replayed through one shared scenario (47 records, 0 differences): on-merge insert-select populating a supertype-typed objectarray column with a subtype instance (dynamic cast(w.event.id? as string) match chain); per-representation matrix of wildcard transpose inserts into named-window and stream targets with int->long / int->double widening, surplus-projection drop, pure passthrough, and position-independent explicit-overrides-wildcard in both orders.",
+    "Representation registrations: non-map representations express transpose+extra-column inserts as explicit-Alias equivalents (the transpose+additional-columns Build gate to untyped Map targets stands; runtime buildTransposeUnderlying branches already match Java); exec1 phase split is JVM-per-invocation because a live runtime cannot re-register same-name @public path schemas after undeployAll; one compile per phase; child fragment renders {kind:row,fields}; doubles render javaDoubleString both sides; addprop null normalization.",
+    "Exec3 Invalid registered implemented-not-DV via Go-unit build-error pins (route validation ErrorInvalidRule for unknown extra column and unsupported transpose-to-typed-target), preserving verbatim Java texts ('Type by name 'E1' in property 'myint' expected Long but receives Integer', avro schema-quote variant, 'Failed to find column 'otherprop' in target type 'E2''); numeric int->long widening acceptance at Build is pinned as an approved API difference for future tightening."
+   ]
   }
  ],
  "mappings": [
@@ -37195,10 +37244,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 556,
-  "implementedCases": 554,
-  "differentialVerifiedCases": 167,
-  "differentialVerifiedRuntimeIds": 652,
+  "inventoriedCases": 557,
+  "implementedCases": 555,
+  "differentialVerifiedCases": 168,
+  "differentialVerifiedRuntimeIds": 655,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -37208,13 +37257,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3277,
-  "referencedJavaRuntimeIds": 3073,
+  "runtimeAssociationCount": 3280,
+  "referencedJavaRuntimeIds": 3076,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1063,
+  "unreferencedJavaRuntimeIds": 1060,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 556,
+  "totalCases": 557,
   "totalCapabilities": 117
  }
 }

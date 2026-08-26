@@ -77,10 +77,21 @@ activity or a single coverage percentage.
   DotSeparateThread (e1511c9dbe279de2adfe) and WVarargs
   (dd6fdf5b57faa2ba2600) remain permanently deferred with rationale in
   capability remaining.
-- Prefetched unit (Draft 4.262, investigation running): epl/insertinto/
-  EPLInsertIntoPopulateUndStreamSelect.java 4 executions; parallel scouts
-  `IUPJavaContract`/`IUPGoSurface` launched per batch contract. Contract
-  freeze pending scout delivery.
+- Closed work unit (Draft 4.262, review PASS, pending commit):
+  EPLInsertIntoPopulateUndStreamSelect 3/4 executions differential-verified
+  (47/47 records, 0 differences). Batch: `IUPJavaContract`+`IUPGoSurface`
+  scouts; `IUPCoreWriter` (engine parity tests; zero engine changes needed —
+  merge conditional insert, subtype→supertype column, cast chain all confirmed
+  working) and `IUPAssets` (parity-asset-worker, isolated: oracle/script/
+  scenario/runner/wiring). Key semantic pinned: non-map reps use explicit-
+  Alias equivalents for transpose+extra columns (Build gate freeze stands);
+  exec1 phase split runs JVM-per-invocation (undeployAll does not release
+  @public path types). Exec3 Invalid registered implemented-not-DV with
+  go-unit pins + verbatim Java texts preserved in capability remaining.
+  `IUPReview` verdict PASS (2xP3: script isolation comment reworded to the
+  accurate path-type mechanism; TraceWriter double-bump noted — final
+  numbering assigned by merge-step renumber).
+- Prefetched unit (none): next selection returns to roadmap-driven pick.
 - Current work unit (Draft 4.259, implemented pending review):
   expr/datetime/ExprDTRound.java all 4 executions differential-verified at
   7/7 records, 0 differences. Engine addition:

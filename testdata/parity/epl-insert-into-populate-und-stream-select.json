@@ -1,0 +1,73 @@
+{
+  "version": "esper-parity/v1",
+  "id": "epl-insert-into-populate-und-stream-select",
+  "cases": [
+    {"case": "named-window-inherits-map", "runtimeId": "java-runtime-854310513054197751bb"},
+    {"case": "named-window-rep", "runtimeId": "java-runtime-9231859e3d46ac11c84e"},
+    {"case": "stream-insert-w-widen", "runtimeId": "java-runtime-b6c30a857600ff444a40"}
+  ],
+  "steps": [
+    {"op": "case", "case": "named-window-inherits-map"},
+    {"op": "send", "eventType": "ChildEvent", "payload": {"id": "ID1", "action": "INSERT"}},
+    {"op": "snapshot", "statement": "window"},
+
+    {"op": "case", "case": "named-window-rep"},
+    {"op": "send", "eventType": "A", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "A", "payload": {"myint": 456, "mystr": "def"}},
+
+    {"op": "send", "eventType": "A", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "A", "payload": {"myint": 456, "mystr": "def"}},
+
+    {"op": "send", "eventType": "A", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "A", "payload": {"myint": 456, "mystr": "def"}},
+
+    {"op": "send", "eventType": "A", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "A", "payload": {"myint": 456, "mystr": "def"}},
+
+    {"op": "send", "eventType": "A", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "A", "payload": {"myint": 456, "mystr": "def"}},
+
+    {"op": "case", "case": "stream-insert-w-widen"},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}},
+    {"op": "send", "eventType": "Src", "payload": {"myint": 123, "mystr": "abc"}}
+  ]
+}
