@@ -51,7 +51,11 @@ activity or a single coverage percentage.
   records, 0 differences; legacy 3 cases byte-identical. Assets extended by
   `VARAssets` (parity-asset-worker, isolated) on the
   `VARJavaContract`/`VARGoSurface` frozen contract; runner extended by the
-  primary (disjoint files). Remaining EPLVariablesUse executions
+  primary (disjoint files). `VARReview` verdict PASS-with-findings (4xP3,
+  all fixed): two-module comment aligned to the environment-registration
+  mechanism, dot-call diagnosability note added, legacy engine parity test
+  references restored in goTests, trace artifact provenance keys restored.
+  Remaining EPLVariablesUse executions
   (EPRuntime API, ConstantVariable truth tables, DotSeparateThread,
   WVarargs) stay queued for follow-up units.
 - Prefetched unit (Draft 4.260, contract frozen, NOT implemented):
