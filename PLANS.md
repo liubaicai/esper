@@ -77,6 +77,10 @@ activity or a single coverage percentage.
   DotSeparateThread (e1511c9dbe279de2adfe) and WVarargs
   (dd6fdf5b57faa2ba2600) remain permanently deferred with rationale in
   capability remaining.
+- Prefetched unit (Draft 4.262, investigation running): epl/insertinto/
+  EPLInsertIntoPopulateUndStreamSelect.java 4 executions; parallel scouts
+  `IUPJavaContract`/`IUPGoSurface` launched per batch contract. Contract
+  freeze pending scout delivery.
 - Current work unit (Draft 4.259, implemented pending review):
   expr/datetime/ExprDTRound.java all 4 executions differential-verified at
   7/7 records, 0 differences. Engine addition:
