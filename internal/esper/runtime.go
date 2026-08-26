@@ -3888,9 +3888,23 @@ func (e *Engine) SendObjectArray(ctx context.Context, eventType string, values [
 	if e == nil || e.env == nil {
 		return NewError(ErrorDependency, "engine has no environment")
 	}
+	// Mirrors EventTypeUtility.getMessageExpecting: the second clause names
+	// the conflicting underlying type, or states the name is undefined.
 	schema, ok := e.env.Schema(eventType)
-	if !ok || schema.Kind() != SchemaObjectArray {
-		return NewError(ErrorUnknownName, fmt.Sprintf("object-array event type %q is not registered", eventType))
+	if !ok {
+		return NewError(ErrorUnknownName, fmt.Sprintf("Event type named '%s' has not been defined or is not a Object-array event type, the name '%s' has not been defined as an event type", eventType, eventType))
+	}
+	if schema.Kind() != SchemaObjectArray {
+		kindText := ""
+		if schema.Kind() == SchemaMap {
+			// Java Map event types carry a java.util.Map underlying.
+			kindText = "java.util.Map"
+		} else if underlying := schema.GoType(); underlying != nil {
+			kindText = underlying.String()
+		} else {
+			kindText = "event type"
+		}
+		return NewError(ErrorUnknownName, fmt.Sprintf("Event type named '%s' has not been defined or is not a Object-array event type, the name '%s' refers to a %s event type", eventType, eventType, kindText))
 	}
 	return e.Send(ctx, eventType, values)
 }

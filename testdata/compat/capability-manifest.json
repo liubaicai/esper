@@ -4720,6 +4720,37 @@
     "java-runtime-f5ae7195e04ce1676ec4",
     "java-runtime-91048f4568185e6225f9"
    ]
+  },
+  {
+   "id": "event.map-core",
+   "domain": "event",
+   "level": "S",
+   "summary": "Preconfigured Map event types: three-level map-of-maps navigation into a bean payload, type metadata introspection, bean fragment navigation (nested/indexed/nestednested) over a Map window, and raw extra-key-free HashMap sends against the declared type",
+   "javaRefs": [
+    "EventMapCore"
+   ],
+   "goRefs": [
+    "internal/app/parity/event_map_core.go",
+    "internal/app/parity/run_test.go",
+    "internal/esper/runtime.go"
+   ],
+   "phase": 3,
+   "status": "differential-verified",
+   "remaining": [
+    "InvalidStatement execution (java-runtime-da04541dce5715cf9129) stays unrepresented: the Go chained API resolves unknown map properties to Missing at evaluation and performs no build-time operand typing, so none of the three Java compile-rejection shapes (unresolved property, String arithmetic, static misuse) has an equivalent engine build error to differentiate",
+    "sender-kind rejection text for non-Map conflicting kinds beyond the pinned java.util.Map collision"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b9ad55d94a0fae4f6aef",
+    "java-runtime-cec11239155e518fa819",
+    "java-runtime-69cbc6c78f1b84546092",
+    "java-runtime-baefe25be71d54724d17"
+   ]
   }
  ],
  "cases": [
@@ -34435,6 +34466,58 @@
     "java-runtime-f5ae7195e04ce1676ec4",
     "java-runtime-91048f4568185e6225f9"
    ]
+  },
+  {
+   "id": "case.event-map-core",
+   "javaRuntimeIds": [
+    "java-runtime-b9ad55d94a0fae4f6aef",
+    "java-runtime-cec11239155e518fa819",
+    "java-runtime-69cbc6c78f1b84546092",
+    "java-runtime-baefe25be71d54724d17"
+   ],
+   "javaNames": [
+    "EventMapCoreMapNestedEventType",
+    "EventMapCoreMetadata",
+    "EventMapCoreNestedObjects",
+    "EventMapCoreQueryFields"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapCore.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEventMapCoreDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEventMapCoreDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "event",
+    "map",
+    "nested",
+    "fragment",
+    "metadata",
+    "sender-rejection",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/event-map-core.json",
+    "testdata/parity/event-map-core.trace.json",
+    "testdata/parity/event-map-core.evidence.json"
+   ],
+   "notes": [
+    "Four of five EventMapCore executions replayed through one shared scenario (6 records, 0 differences): the three-level MyMap navigation with the pinned ObjectArray-sender rejection text, myMapEvent metadata introspection (marker-only record), beanA fragment navigation incl. nested.nestedNested and indexed[1], and the raw HashMap re-send against the declared Properties type.",
+    "Engine fix: SendObjectArray wrong-kind rejection now mirrors Java EventSenderObjectArray verbatim ('...refers to a java.util.Map event type'). The InvalidStatement execution is documented under capability remaining: the Go fluent API's compile-time type safety makes its three invalid shapes inexpressible, so no build-error differential surface exists."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b9ad55d94a0fae4f6aef",
+    "java-runtime-cec11239155e518fa819",
+    "java-runtime-69cbc6c78f1b84546092",
+    "java-runtime-baefe25be71d54724d17"
+   ]
   }
  ],
  "mappings": [
@@ -36985,29 +37068,33 @@
   {
    "capabilityId": "resultset.querytype-aggregate-grouped",
    "caseId": "case.resultset-querytype-aggregate-grouped"
+  },
+  {
+   "capabilityId": "event.map-core",
+   "caseId": "case.event-map-core"
   }
  ],
  "summary": {
-  "inventoriedCases": 554,
-  "implementedCases": 552,
-  "differentialVerifiedCases": 165,
-  "differentialVerifiedRuntimeIds": 638,
+  "inventoriedCases": 555,
+  "implementedCases": 553,
+  "differentialVerifiedCases": 166,
+  "differentialVerifiedRuntimeIds": 642,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 115,
-  "implementedCapabilities": 114,
-  "differentialVerifiedCapabilities": 29,
+  "inventoriedCapabilities": 116,
+  "implementedCapabilities": 115,
+  "differentialVerifiedCapabilities": 30,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3263,
-  "referencedJavaRuntimeIds": 3059,
+  "runtimeAssociationCount": 3267,
+  "referencedJavaRuntimeIds": 3063,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1077,
+  "unreferencedJavaRuntimeIds": 1073,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 554,
-  "totalCapabilities": 115
+  "totalCases": 555,
+  "totalCapabilities": 116
  }
 }

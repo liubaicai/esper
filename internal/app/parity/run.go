@@ -1919,6 +1919,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "event-map-core" || *mode == "event-map-core-diff" {
+		trace, err := runEventMapCoreScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-map-core-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eventMapCoreJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventMapCoreJavaSources),
+				splitMetadata(*javaExecutions, eventMapCoreJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-query-type-aggregate-grouped" || *mode == "resultset-query-type-aggregate-grouped-diff" {
 		trace, err := runResultSetQueryTypeAggregateGroupedScenario(context.Background(), scenario)
 		if err != nil {

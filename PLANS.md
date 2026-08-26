@@ -45,18 +45,23 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
-- Current work unit (Draft 4.257, implemented pending review):
-  resultset/querytype/ResultSetQueryTypeAggregateGrouped.java all 9
-  executions differential-verified at 53/53 records, 0 differences.
-  Engine fixes shipped in internal/esper/runtime.go (grouped per-event vs
-  per-group processor split, grouped join per-tuple iterators, context
-  dimension as group key) and internal/compat/differential.go (mode=any
-  snapshot canonicalization). Assets from `AGGAssets` (parity-asset-worker,
-  isolated) after `AGGJavaContract`/`AGGGoSurface` prefetch scouts. `AGGReview`
-  verdict PASS-with-findings (5xP3): two mutation index/name mismatches
-  fixed, differ comment corrected, context-folding scope documented in
-  code and manifest notes (hash/multi-stream contexts and output-limit
-  dispatch deferred to their own units).
+- Current work unit (Draft 4.258, implemented pending review):
+  event/map/EventMapCore.java 4 of 5 executions differential-verified at
+  6/6 records, 0 differences (nested three-level MyMap with verbatim
+  sender-rejection text, metadata introspection marker, beanA fragment
+  navigation, raw HashMap re-send). InvalidStatement execution
+  (da04541dce5715cf9129) unrepresented: the Go type-safe chained API
+  rejects its three shapes at language compile time; documented under
+  capability remaining. Engine fix: SendObjectArray wrong-kind message.
+  Assets from the earlier prefetch worker, re-scoped by the primary after
+  `EMCJavaContract`/`EMCGoSurface` scouts. `EMCReview`
+  verdict PASS-with-findings (3xP2 3xP3, all fixed): association count
+  corrected to 3267, scenario/evidence stale invalid-statement metadata
+  purged, SendObjectArray unregistered-name clause completed per
+  EventTypeUtility.getMessageExpecting, metadata SchemaMap-kind check
+  added, remaining-rationale wording made accurate.
+- Closed unit (Draft 4.257, commit `706d5bd76`):
+  resultset.querytype-aggregate-grouped all 9 executions.
 - Closed deferral: ResultSetOrderByRowForAll implemented in Draft 4.256
   after fixing the engine divergence (order-by alias-column snapshot
   resolution in batched deliveries). All 3 executions differential-verified:

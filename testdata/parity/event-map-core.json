@@ -1,0 +1,159 @@
+{
+ "version": "esper-parity/v1",
+ "id": "event-map-core",
+ "description": "EventMapCore map-event family replaying its four representable executions under the TestSuiteEventMap preconfigured types (SupportBean class type, myMapEvent Properties map of myInt/myString/beanA/myStringArray and the nested MyMap map-of-maps terminating in a SupportBean leaf): the map-nested-event-type case selects lev0name.lev1name.sb.theString through three map levels, delivers one nested-map send yielding val E1 and records the pinned send-time rejection when the object-array sender targets the Map-typed name; metadata introspects myMapEvent without events (MAP application type, name, exactly four descriptors with beanA fragment and myStringArray indexed String component) acknowledged by a deployed marker; nested-objects navigates beanA.simpleProperty, beanA.nested.nestedValue, beanA.indexed[1] and beanA.nested.nestedNested.nestedNestedValue over a length(5) window; query-fields receives the typed payload then a raw HashMap against the same declared type; the InvalidStatement execution stays unrepresented (Go type-safe chained API)",
+ "javaRuntimes": [
+  "java-runtime-b9ad55d94a0fae4f6aef",
+  "java-runtime-cec11239155e518fa819",
+  "java-runtime-69cbc6c78f1b84546092",
+  "java-runtime-baefe25be71d54724d17"
+ ],
+ "cases": [
+  {
+   "case": "map-nested-event-type",
+   "runtimeId": "java-runtime-b9ad55d94a0fae4f6aef"
+  },
+  {
+   "case": "metadata",
+   "runtimeId": "java-runtime-cec11239155e518fa819"
+  },
+  {
+   "case": "nested-objects",
+   "runtimeId": "java-runtime-69cbc6c78f1b84546092"
+  },
+  {
+   "case": "query-fields",
+   "runtimeId": "java-runtime-baefe25be71d54724d17"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "map-nested-event-type"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMap",
+   "payload": {
+    "lev0name": {
+     "lev1name": {
+      "sb": {
+       "theString": "E1",
+       "intPrimitive": 0
+      }
+     }
+    }
+   }
+  },
+  {
+   "op": "send-error",
+   "eventType": "MyMap",
+   "sender": "object-array",
+   "payload": []
+  },
+  {
+   "op": "case",
+   "case": "metadata"
+  },
+  {
+   "op": "deployed",
+   "statement": "metadata"
+  },
+  {
+   "op": "case",
+   "case": "nested-objects"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "myMapEvent",
+   "payload": {
+    "myInt": 3,
+    "myString": "some string",
+    "beanA": {
+     "simpleProperty": "simple",
+     "mappedProps": {
+      "keyOne": "valueOne",
+      "keyTwo": "valueTwo"
+     },
+     "indexedProps": [
+      1,
+      2
+     ],
+     "mapProperty": {
+      "xOne": "yOne",
+      "xTwo": "yTwo"
+     },
+     "arrayProperty": [
+      10,
+      20,
+      30
+     ],
+     "nested": {
+      "nestedValue": "nestedValue",
+      "nestedNested": {
+       "nestedNestedValue": "nestedNestedValue"
+      }
+     }
+    }
+   }
+  },
+  {
+   "op": "case",
+   "case": "query-fields"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "myMapEvent",
+   "payload": {
+    "myInt": 3,
+    "myString": "some string",
+    "beanA": {
+     "simpleProperty": "simple",
+     "mappedProps": {
+      "keyOne": "valueOne",
+      "keyTwo": "valueTwo"
+     },
+     "indexedProps": [
+      1,
+      2
+     ],
+     "mapProperty": {
+      "xOne": "yOne",
+      "xTwo": "yTwo"
+     },
+     "arrayProperty": [
+      10,
+      20,
+      30
+     ],
+     "nested": {
+      "nestedValue": "nestedValue",
+      "nestedNested": {
+       "nestedNestedValue": "nestedNestedValue"
+      }
+     }
+    }
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "myMapEvent",
+   "payload": {
+    "myInt": 4,
+    "myString": "string2"
+   }
+  }
+ ]
+}

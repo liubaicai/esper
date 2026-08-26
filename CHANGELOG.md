@@ -1,3 +1,12 @@
+> 最新补充：Draft 4.258（2026-08-26），新增 `event.map-core`
+> differential-verified 能力：EventMapCore.java 5 个 execution 中的 4 个。
+> 场景 Java/Go 各 6 条 records、0 differences。引擎修复：SendObjectArray
+> sender 类别拒收文本逐字对齐 Java。InvalidStatement execution 因 Go
+> 类型安全 API 无法表达其非法形态而登记于 remaining。manifest 更新为
+> 555 cases、166 个 differential-verified case、642 个 differential
+> runtime IDs、3267 条 associations（referenced 3063）；capability 116 个
+> （30 DV）。
+>
 > 最新补充：Draft 4.257（2026-08-26），新增 `resultset.querytype-aggregate-grouped`
 > differential-verified 能力：ResultSetQueryTypeAggregateGrouped.java 全部
 > 9 个 execution。场景 Java/Go 各 53 条 records、0 differences。引擎修复：

@@ -4,6 +4,21 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.258（2026-08-26），新增 `event.map-core`
+> differential-verified 能力，对照固定 Java EventMapCore.java 5 个
+> execution 中的 4 个：三层 map-of-maps 导航至 bean 叶子（含逐字对齐的
+> ObjectArray sender 拒收文本）、myMapEvent 元数据内省（marker 记录）、
+> beanA fragment 导航（nested.nestedNested 与 indexed[1]）、以及裸
+> HashMap 对声明类型的再发送。场景 Java/Go 各 6 条 records、0
+> differences。引擎修复：SendObjectArray 错误类别拒收文本逐字镜像
+> Java EventSenderObjectArray。InvalidStatement execution
+> （da04541dce5715cf9129）保持未表示：Go 链式 API 对未解析属性求值为 Missing 且无构建期操作数类型检查，
+> 三种非法形态（未解析属性、String 算术、静态误用）均无等价 engine
+> build-error 表面，登记于 capability remaining。
+> manifest 更新为 555 cases、166 个 differential-verified case、642 个
+> differential runtime IDs、3267 条 associations（referenced 3063）；
+> capability 116 个（30 DV）。
+>
 > 最新补充：Draft 4.257（2026-08-26），新增
 > `resultset.querytype-aggregate-grouped` differential-verified 能力，对照固定
 > Java ResultSetQueryTypeAggregateGrouped.java 全部 9 个 execution：dot-method

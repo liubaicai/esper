@@ -1,0 +1,322 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-b9ad55d94a0fae4f6aef",
+    "java-runtime-cec11239155e518fa819",
+    "java-runtime-69cbc6c78f1b84546092",
+    "java-runtime-baefe25be71d54724d17"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/map/EventMapCore.java"
+  ],
+  "javaExecutions": [
+    "EventMapCoreMapNestedEventType",
+    "EventMapCoreMetadata",
+    "EventMapCoreNestedObjects",
+    "EventMapCoreQueryFields"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "event-map-core",
+    "steps": [
+      {
+        "op": "case",
+        "case": "map-nested-event-type"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "MyMap",
+        "payload": {
+          "lev0name": {
+            "lev1name": {
+              "sb": {
+                "theString": "E1",
+                "intPrimitive": 0
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "send-error",
+        "eventType": "MyMap",
+        "payload": []
+      },
+      {
+        "op": "case",
+        "case": "metadata"
+      },
+      {
+        "op": "deployed",
+        "statement": "metadata"
+      },
+      {
+        "op": "case",
+        "case": "nested-objects"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "myMapEvent",
+        "payload": {
+          "myInt": 3,
+          "myString": "some string",
+          "beanA": {
+            "simpleProperty": "simple",
+            "mappedProps": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexedProps": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "nested": {
+              "nestedValue": "nestedValue",
+              "nestedNested": {
+                "nestedNestedValue": "nestedNestedValue"
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "case",
+        "case": "query-fields"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "myMapEvent",
+        "payload": {
+          "myInt": 3,
+          "myString": "some string",
+          "beanA": {
+            "simpleProperty": "simple",
+            "mappedProps": {
+              "keyOne": "valueOne",
+              "keyTwo": "valueTwo"
+            },
+            "indexedProps": [
+              1,
+              2
+            ],
+            "mapProperty": {
+              "xOne": "yOne",
+              "xTwo": "yTwo"
+            },
+            "arrayProperty": [
+              10,
+              20,
+              30
+            ],
+            "nested": {
+              "nestedValue": "nestedValue",
+              "nestedNested": {
+                "nestedNestedValue": "nestedNestedValue"
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "myMapEvent",
+        "payload": {
+          "myInt": 4,
+          "myString": "string2"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-map-core",
+    "records": [
+      {
+        "case": "map-nested-event-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-nested-event-type",
+        "operation": "send-error",
+        "statement": "MyMap",
+        "sequence": 0,
+        "value": "Event type named 'MyMap' has not been defined or is not a Object-array event type, the name 'MyMap' refers to a java.util.Map event type"
+      },
+      {
+        "case": "metadata",
+        "operation": "deployed",
+        "statement": "metadata",
+        "sequence": 0
+      },
+      {
+        "case": "nested-objects",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "indexed": 2,
+              "nested": "nestedValue",
+              "nestednested": "nestedNestedValue",
+              "simple": "simple"
+            }
+          }
+        ]
+      },
+      {
+        "case": "query-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intVal": 3,
+              "stringVal": "some string"
+            }
+          }
+        ]
+      },
+      {
+        "case": "query-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intVal": 4,
+              "stringVal": "string2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-map-core",
+    "records": [
+      {
+        "case": "map-nested-event-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-nested-event-type",
+        "operation": "send-error",
+        "statement": "MyMap",
+        "sequence": 0,
+        "value": "Event type named 'MyMap' has not been defined or is not a Object-array event type, the name 'MyMap' refers to a java.util.Map event type"
+      },
+      {
+        "case": "metadata",
+        "operation": "deployed",
+        "statement": "metadata",
+        "sequence": 0
+      },
+      {
+        "case": "nested-objects",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "indexed": 2,
+              "nested": "nestedValue",
+              "nestednested": "nestedNestedValue",
+              "simple": "simple"
+            }
+          }
+        ]
+      },
+      {
+        "case": "query-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intVal": 3,
+              "stringVal": "some string"
+            }
+          }
+        ]
+      },
+      {
+        "case": "query-fields",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intVal": 4,
+              "stringVal": "string2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

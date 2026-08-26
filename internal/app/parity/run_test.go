@@ -16424,6 +16424,118 @@ func TestRunResultsetOrderbyRowPerGroupDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunEventMapCoreDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "event-map-core.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "event-map-core.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-map-core.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "event-map-core-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	wantIDs := []string{
+		"java-runtime-b9ad55d94a0fae4f6aef",
+		"java-runtime-cec11239155e518fa819",
+		"java-runtime-69cbc6c78f1b84546092",
+		"java-runtime-baefe25be71d54724d17",
+	}
+	if !reflect.DeepEqual(evidence.JavaRuntimeIDs, wantIDs) {
+		t.Fatalf("javaRuntimeIds = %v", evidence.JavaRuntimeIDs)
+	}
+}
+
+func TestRunEventMapCoreDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "nested-three-level-navigation-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["val"] = "WRONG"
+			},
+		},
+		{
+			name: "sender-kind-rejection-text-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Value = "esper: object-array event type \"MyMap\" is not registered"
+			},
+		},
+		{
+			name: "sender-kind-rejection-absent",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Value = "<no-error>"
+			},
+		},
+		{
+			name: "bean-fragment-navigation-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New = nil
+			},
+		},
+		{
+			name: "indexed-property-access-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["indexed"] = 999
+			},
+		},
+		{
+			name: "raw-map-second-send-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New = nil
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "event-map-core.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "event-map-core.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-map-core.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "event-map-core-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunResultsetQueryTypeAggregateGroupedDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-aggregate-grouped.evidence.json"),
