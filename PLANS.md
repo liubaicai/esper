@@ -77,7 +77,7 @@ activity or a single coverage percentage.
   DotSeparateThread (e1511c9dbe279de2adfe) and WVarargs
   (dd6fdf5b57faa2ba2600) remain permanently deferred with rationale in
   capability remaining.
-- Closed work unit (Draft 4.262, review PASS, pending commit):
+- Closed work unit (Draft 4.262, shipped):
   EPLInsertIntoPopulateUndStreamSelect 3/4 executions differential-verified
   (47/47 records, 0 differences). Batch: `IUPJavaContract`+`IUPGoSurface`
   scouts; `IUPCoreWriter` (engine parity tests; zero engine changes needed —
