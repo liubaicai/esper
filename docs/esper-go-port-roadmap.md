@@ -4,6 +4,18 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.260（2026-08-26），扩展 `epl.variable-onset` 的
+> `case.variables-use` 差分场景至 7 个 execution（新增 4 个 DV runtime
+> IDs）：preconfigured CONSTANT boolean 读取、@public 跨 module 可见性、
+> 常量工厂 + preconfigured 实例的点调用（'hello'）、自定义类型常量的
+> equals filter（canonical struct-object 渲染）。场景 Java/Go 各 11 条
+> records、0 differences，既有 3 cases 逐字节保持。表示登记：Go 变量为
+> environment 作用域（two-module 以环境注册建模 @public+path）；变量
+> 宿主对象的点调用以读取求值上下文变量的函数表达式表示。manifest 更新
+> 为 556 cases、167 个 differential-verified case、650 个 differential
+> runtime IDs、3275 条 associations（referenced 3071）；capability 117
+> 个（31 DV）。
+>
 > 最新补充：Draft 4.259（2026-08-26），新增 `expr.datetime-round`
 > differential-verified 能力，对照固定 Java ExprDTRound.java 全部 4 个
 > execution：五表示 roundCeiling('hour')、七单位 ceiling/floor 向量、

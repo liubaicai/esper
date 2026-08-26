@@ -1,3 +1,9 @@
+> 最新补充：Draft 4.260（2026-08-26），`case.variables-use` 扩展至 7 个
+> execution（+4 DV runtime IDs，11 条 records、0 differences）：preconfigured
+> 常量读取、跨 module 可见性、工厂/实例点调用、自定义类型常量 filter。
+> manifest 更新为 556 cases、167 个 differential-verified case、650 个
+> differential runtime IDs、3275 条 associations（referenced 3071）。
+>
 > 最新补充：Draft 4.259（2026-08-26），新增 `expr.datetime-round`
 > differential-verified 能力：ExprDTRound.java 全部 4 个 execution。场景
 > Java/Go 各 7 条 records、0 differences。引擎新增三个 datetime rounding

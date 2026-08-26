@@ -29,11 +29,19 @@ var (
 		"java-runtime-5a38cfa84dadd7dd6f61",
 		"java-runtime-849ebec4996c28823d57",
 		"java-runtime-5a91cdbc149502c6fb7a",
+		"java-runtime-eb01093e6db83f057d77",
+		"java-runtime-8457cbd989256d935b22",
+		"java-runtime-4373a1c6d8c903357942",
+		"java-runtime-80cb4763680bc91e38ce",
 	}
 	variablesUseJavaExecutions = []string{
 		"EPLVariableUseVariableInFilter",
 		"EPLVariableUseVariableInFilterBoolean",
 		"EPLVariableUseSimpleSameModule",
+		"EPLVariableUseSimplePreconfigured",
+		"EPLVariableUseSimpleTwoModules",
+		"EPLVariableUseInvokeMethod",
+		"EPLVariableUseFilterConstantCustomTypePreconfigured",
 	}
 )
 
@@ -43,7 +51,7 @@ func runVariablesUseScenario(ctx context.Context, scenario compat.Scenario) (com
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
 	}
-	caseOrder := []string{"variable-in-filter", "variable-in-filter-boolean", "simple-same-module"}
+	caseOrder := []string{"variable-in-filter", "variable-in-filter-boolean", "simple-same-module", "simple-preconfigured", "simple-two-modules", "invoke-method", "filter-constant-custom-type"}
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
 	found := false
 	for _, caseName := range caseOrder {
@@ -134,9 +142,108 @@ func runVariablesUseCase(ctx context.Context, caseScenario compat.Scenario, case
 			esper.Alias("c0", esper.VariableRef[bool]("var_simple_module_const")),
 		).Query(esper.StatementName("s0"))
 		return replayVariablesUse(ctx, env, []esper.Query{query}, caseScenario, caseName)
+	case "simple-preconfigured":
+		if err := env.RegisterVariable("var_simple_preconfig_const", true, esper.ConstantVariable()); err != nil {
+			return compat.Trace{}, err
+		}
+		query = esper.Select(
+			esper.From[variablesUseBean](env, "SupportBean"),
+			esper.Alias("c0", esper.VariableRef[bool]("var_simple_preconfig_const")),
+		).Query(esper.StatementName("s0"))
+		return replayVariablesUse(ctx, env, []esper.Query{query}, caseScenario, caseName)
+	case "simple-two-modules":
+		// Module A's @public create-variable is modeled as the environment
+		// registration (the established representation of `create variable`),
+		// which module B's deployment then reads; Java pins @public + path.
+		if err := env.RegisterVariable("var_simple_twomodule_const", true); err != nil {
+			return compat.Trace{}, err
+		}
+		query = esper.Select(
+			esper.From[variablesUseBean](env, "SupportBean"),
+			esper.Alias("c0", esper.VariableRef[bool]("var_simple_twomodule_const")),
+		).Query(esper.StatementName("s0"))
+		return replayVariablesUse(ctx, env, []esper.Query{query}, caseScenario, caseName)
+	case "invoke-method":
+		// Constant variable initialized from the factory plus the
+		// preconfigured instance variable; dot-invocation is represented by
+		// function expressions over the variable-hosted values.
+		if err := env.RegisterVariable("myService", variablesUseServiceFactory().makeService(), esper.ConstantVariable()); err != nil {
+			return compat.Trace{}, err
+		}
+		if err := env.RegisterVariable("myInitService", variablesUseServiceFactory().makeService()); err != nil {
+			return compat.Trace{}, err
+		}
+		query = esper.Select(
+			esper.From[variablesUseBean](env, "SupportBean"),
+			esper.Alias("c0", variablesUseDoSomething("myService")),
+			esper.Alias("c1", variablesUseDoSomething("myInitService")),
+		).Query(esper.StatementName("s0"))
+		return replayVariablesUse(ctx, env, []esper.Query{query}, caseScenario, caseName)
+	case "filter-constant-custom-type":
+		if _, err := esper.RegisterStruct[variablesUseCustomEvent](env, "MyVariableCustomEvent"); err != nil {
+			return compat.Trace{}, err
+		}
+		if err := env.RegisterVariable("my_variable_custom_typed", variablesUseCustomType{Value: "abc"}, esper.ConstantVariable()); err != nil {
+			return compat.Trace{}, err
+		}
+		query = esper.Select(
+			esper.From[variablesUseCustomEvent](env, "MyVariableCustomEvent").Filter(
+				esper.Equal[variablesUseCustomType](
+					esper.Field[variablesUseCustomEvent, variablesUseCustomType]("name"),
+					esper.VariableRef[variablesUseCustomType]("my_variable_custom_typed"),
+				),
+			),
+		).Query(esper.StatementName("s0"))
+		return replayVariablesUse(ctx, env, []esper.Query{query}, caseScenario, caseName)
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported variables-use case %q", caseName)
 	}
+}
+
+// variablesUseService mirrors MySimpleVariableService: the dot-call surface
+// hosts a hello responder on a variable.
+type variablesUseService struct{}
+
+func (variablesUseService) doSomething() string { return "hello" }
+
+type variablesUseServiceFactoryType struct{}
+
+func (variablesUseServiceFactoryType) makeService() variablesUseService {
+	return variablesUseService{}
+}
+
+func variablesUseServiceFactory() variablesUseServiceFactoryType {
+	return variablesUseServiceFactoryType{}
+}
+
+// variablesUseDoSomething reads the variable-hosted service inside the
+// evaluation context and invokes it, mirroring the Java dot-call. A missing
+// or mistyped variable degrades to the empty string here (Java fails at
+// deploy); registration drift surfaces as a trace mismatch.
+func variablesUseDoSomething(variableName string) esper.Expression[string] {
+	return esper.Func1Ctx[esper.Event, string]("variable-dot-"+variableName,
+		func(event esper.Event, ctx esper.EvalContext) string {
+			if ctx.Variables == nil {
+				return ""
+			}
+			value, ok := ctx.Variables[variableName]
+			if !ok {
+				return ""
+			}
+			if service, ok := value.Any().(variablesUseService); ok {
+				return service.doSomething()
+			}
+			return ""
+		}, esper.EventValue[esper.Event]())
+}
+
+// variablesUseCustomType mirrors MyVariableCustomType's value equality.
+type variablesUseCustomType struct {
+	Value string `esper:"value"`
+}
+
+type variablesUseCustomEvent struct {
+	Name variablesUseCustomType `esper:"name"`
 }
 
 func replayVariablesUse(ctx context.Context, env *esper.Environment, queries []esper.Query, caseScenario compat.Scenario, caseName string) (compat.Trace, error) {
@@ -170,11 +277,11 @@ func replayVariablesUse(ctx context.Context, env *esper.Environment, queries []e
 			fields := map[string]any{}
 			if event, ok := row.Event(); ok {
 				for _, field := range event.Schema().Fields() {
-					fields[field.Name] = streamSelectorRender(event.Get(field.Name).Any())
+					fields[field.Name] = variablesUseRender(event.Get(field.Name).Any())
 				}
 			} else if r, ok := row.Row(); ok {
 				for _, field := range r.Schema().Fields() {
-					fields[field.Name] = streamSelectorRender(r.Get(field.Name).Any())
+					fields[field.Name] = variablesUseRender(r.Get(field.Name).Any())
 				}
 			}
 			trace.Records = append(trace.Records, compat.TraceRecord{
@@ -222,7 +329,25 @@ func decodeVariablesUsePayload(step compat.Step) (any, error) {
 			return nil, fmt.Errorf("variables-use SupportBean_S0: %w", err)
 		}
 		return event, nil
+	case "MyVariableCustomEvent":
+		// The payload carries the raw value; MyVariableCustomType.of wraps it.
+		var shim struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal(step.Payload, &shim); err != nil {
+			return nil, fmt.Errorf("variables-use MyVariableCustomEvent: %w", err)
+		}
+		return variablesUseCustomEvent{Name: variablesUseCustomType{Value: shim.Name}}, nil
 	default:
 		return nil, fmt.Errorf("variables-use: unsupported event type %q", step.EventType)
 	}
+}
+
+// variablesUseRender mirrors the oracle's value conventions: the custom
+// variable-hosted type renders as the canonical sorted-public-field object.
+func variablesUseRender(value any) any {
+	if custom, ok := value.(variablesUseCustomType); ok {
+		return map[string]any{"name": custom.Value}
+	}
+	return streamSelectorRender(value)
 }

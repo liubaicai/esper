@@ -45,6 +45,15 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
+- Current work unit (Draft 4.260, implemented pending review):
+  case.variables-use extended with 4 executions (simple-preconfigured,
+  simple-two-modules, invoke-method, filter-constant-custom-type) at 11/11
+  records, 0 differences; legacy 3 cases byte-identical. Assets extended by
+  `VARAssets` (parity-asset-worker, isolated) on the
+  `VARJavaContract`/`VARGoSurface` frozen contract; runner extended by the
+  primary (disjoint files). Remaining EPLVariablesUse executions
+  (EPRuntime API, ConstantVariable truth tables, DotSeparateThread,
+  WVarargs) stay queued for follow-up units.
 - Prefetched unit (Draft 4.260, contract frozen, NOT implemented):
   epl/variable/EPLVariablesUse.java 10 executions (inventory IDs
   eb01093e6db83f057d77, 5a91cdbc149502c6fb7a, 8457cbd989256d935b22,
