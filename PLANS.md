@@ -45,6 +45,19 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
+- Prefetched unit (Draft 4.260, contract frozen, NOT implemented):
+  epl/variable/EPLVariablesUse.java 10 executions (inventory IDs
+  eb01093e6db83f057d77, 5a91cdbc149502c6fb7a, 8457cbd989256d935b22,
+  826b551e883c9398df67, e1511c9dbe279de2adfe, 4373a1c6d8c903357942,
+  d273a38f6415e6c3ee62, 849ebec4996c28823d57, 5a38cfa84dadd7dd6f61,
+  80cb4763680bc91e38ce). `VARJavaContract` delivered the full per-execution
+  contract (agent://VARJavaContract); `VARGoSurface` audited the Go side:
+  the variable engine, runtime get/set API and on-set trigger paths exist,
+  and internal/app/parity/variables_use.go already replays 3 cases; the
+  remaining seven executions split into three groups (preconfigured/same/
+  two-module deployment shapes, EPRuntime typed get/set/rollback/errors,
+  ConstantVariable truth table + four-channel write protection +
+  custom-type filter). WVarargs and DotSeparateThread RUNTIMEOPS deferred.
 - Current work unit (Draft 4.259, implemented pending review):
   expr/datetime/ExprDTRound.java all 4 executions differential-verified at
   7/7 records, 0 differences. Engine addition:
@@ -62,6 +75,7 @@ activity or a single coverage percentage.
   sub-second zero. The reviewer's midnight-crossing repro arithmetic was
   itself incorrect (00:00:05 - 5s stays on the same day, day offset 16
   still carries); corrected vector pins the Java-faithful June carry.
+  Shipped as `657d33d2c`.
 - Closed prefetch (Draft 4.259, superseded by the implemented unit above):
   expr/datetime/ExprDTRound.java 4 executions: Input
   (9838679b35a6a3507332), Ceil (8a02976a0c5c4eb03030), Floor
