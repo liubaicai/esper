@@ -1,626 +1,4513 @@
 {
- "version": "esper-differential/v1",
- "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
- "javaRuntimeIds": [
-  "java-runtime-5a38cfa84dadd7dd6f61",
-  "java-runtime-849ebec4996c28823d57",
-  "java-runtime-5a91cdbc149502c6fb7a",
-  "java-runtime-eb01093e6db83f057d77",
-  "java-runtime-8457cbd989256d935b22",
-  "java-runtime-4373a1c6d8c903357942",
-  "java-runtime-80cb4763680bc91e38ce"
- ],
- "javaSourceFiles": [
-  "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesUse.java"
- ],
- "javaExecutions": [
-  "EPLVariableUseVariableInFilter",
-  "EPLVariableUseVariableInFilterBoolean",
-  "EPLVariableUseSimpleSameModule",
-  "EPLVariableUseSimplePreconfigured",
-  "EPLVariableUseSimpleTwoModules",
-  "EPLVariableUseInvokeMethod",
-  "EPLVariableUseFilterConstantCustomTypePreconfigured"
- ],
- "scenario": {
-  "id": "variables-use",
-  "description": "Variable-use scenarios: variables referenced in equality/or filters driven by on-set assignments over SupportBean and SupportBean_S0",
-  "javaRuntimes": [
-   "java-runtime-5a38cfa84dadd7dd6f61",
-   "java-runtime-849ebec4996c28823d57",
-   "java-runtime-5a91cdbc149502c6fb7a",
-   "java-runtime-eb01093e6db83f057d77",
-   "java-runtime-8457cbd989256d935b22",
-   "java-runtime-4373a1c6d8c903357942",
-   "java-runtime-80cb4763680bc91e38ce"
-  ],
-  "cases": [
-   {
-    "case": "variable-in-filter",
-    "runtimeId": "java-runtime-5a38cfa84dadd7dd6f61"
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "runtimeId": "java-runtime-849ebec4996c28823d57"
-   },
-   {
-    "case": "simple-same-module",
-    "runtimeId": "java-runtime-5a91cdbc149502c6fb7a"
-   },
-   {
-    "case": "simple-preconfigured",
-    "runtimeId": "java-runtime-eb01093e6db83f057d77"
-   },
-   {
-    "case": "simple-two-modules",
-    "runtimeId": "java-runtime-8457cbd989256d935b22"
-   },
-   {
-    "case": "invoke-method",
-    "runtimeId": "java-runtime-4373a1c6d8c903357942"
-   },
-   {
-    "case": "filter-constant-custom-type",
-    "runtimeId": "java-runtime-80cb4763680bc91e38ce"
-   }
-  ],
-  "steps": [
-   {
-    "op": "case",
-    "case": "variable-in-filter"
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "",
-     "intPrimitive": 1
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean_S0",
-    "payload": {
-     "id": 100,
-     "p00": "a",
-     "p01": "b"
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "a",
-     "intPrimitive": 2
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "b",
-     "intPrimitive": 3
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean_S0",
-    "payload": {
-     "id": 100,
-     "p00": "e",
-     "p01": "c"
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "e",
-     "intPrimitive": 6
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "c",
-     "intPrimitive": 5
-    }
-   },
-   {
-    "op": "case",
-    "case": "variable-in-filter-boolean"
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "x",
-     "intPrimitive": 1
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean_S0",
-    "payload": {
-     "id": 100,
-     "p00": "a",
-     "p01": "b"
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "a",
-     "intPrimitive": 2
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "b",
-     "intPrimitive": 3
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "c",
-     "intPrimitive": 4
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean_S0",
-    "payload": {
-     "id": 100,
-     "p00": "e",
-     "p01": "c"
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "c",
-     "intPrimitive": 5
-    }
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "e",
-     "intPrimitive": 6
-    }
-   },
-   {
-    "op": "case",
-    "case": "simple-same-module"
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "E1",
-     "intPrimitive": 0
-    }
-   },
-   {
-    "op": "case",
-    "case": "simple-preconfigured"
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "E1",
-     "intPrimitive": 0
-    }
-   },
-   {
-    "op": "case",
-    "case": "simple-two-modules"
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "E1",
-     "intPrimitive": 0
-    }
-   },
-   {
-    "op": "case",
-    "case": "invoke-method"
-   },
-   {
-    "op": "send",
-    "eventType": "SupportBean",
-    "payload": {
-     "theString": "E1",
-     "intPrimitive": 1
-    }
-   },
-   {
-    "op": "case",
-    "case": "filter-constant-custom-type"
-   },
-   {
-    "op": "send",
-    "eventType": "MyVariableCustomEvent",
-    "payload": {
-     "name": "abc"
-    }
-   }
-  ],
-  "version": "esper-parity/v1"
- },
- "javaTrace": {
-  "version": "esper-parity/v1",
-  "id": "variables-use",
+  "version": "esper-differential/v1",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
-  "java": "17.0.20",
-  "records": [
-   {
-    "case": "variable-in-filter",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 1,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "theString": "a",
-       "intPrimitive": "2"
+  "javaRuntimeIds": [
+    "java-runtime-5a38cfa84dadd7dd6f61",
+    "java-runtime-849ebec4996c28823d57",
+    "java-runtime-5a91cdbc149502c6fb7a",
+    "java-runtime-eb01093e6db83f057d77",
+    "java-runtime-8457cbd989256d935b22",
+    "java-runtime-4373a1c6d8c903357942",
+    "java-runtime-80cb4763680bc91e38ce",
+    "java-runtime-826b551e883c9398df67",
+    "java-runtime-d273a38f6415e6c3ee62"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesUse.java"
+  ],
+  "javaExecutions": [
+    "EPLVariableUseVariableInFilter",
+    "EPLVariableUseVariableInFilterBoolean",
+    "EPLVariableUseSimpleSameModule",
+    "EPLVariableUseSimplePreconfigured",
+    "EPLVariableUseSimpleTwoModules",
+    "EPLVariableUseInvokeMethod",
+    "EPLVariableUseFilterConstantCustomTypePreconfigured",
+    "EPLVariableUseEPRuntime",
+    "EPLVariableUseConstantVariable"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "variables-use",
+    "steps": [
+      {
+        "op": "case",
+        "case": "variable-in-filter"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 100,
+          "p00": "a",
+          "p01": "b"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 100,
+          "p00": "e",
+          "p01": "c"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "e",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "case",
+        "case": "variable-in-filter-boolean"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "x",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 100,
+          "p00": "a",
+          "p01": "b"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 100,
+          "p00": "e",
+          "p01": "c"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "e",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "case",
+        "case": "simple-same-module"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "simple-preconfigured"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "simple-two-modules"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "invoke-method"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "filter-constant-custom-type"
+      },
+      {
+        "op": "send",
+        "eventType": "MyVariableCustomEvent",
+        "payload": {
+          "name": "abc"
+        }
+      },
+      {
+        "op": "case",
+        "case": "ep-runtime"
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 99
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "set-variable",
+        "name": "var2",
+        "payload": "def"
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "set-variable",
+        "name": "var1",
+        "payload": 123
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "set-variable",
+        "name": "var1",
+        "payload": [
+          {
+            "name": "var1",
+            "value": 20
+          }
+        ]
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "set-variable",
+        "name": "var1",
+        "payload": [
+          {
+            "name": "var1",
+            "value": {
+              "type": "byte",
+              "value": 21
+            }
+          },
+          {
+            "name": "var2",
+            "value": "test"
+          }
+        ]
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "set-variable",
+        "name": "var1",
+        "payload": [
+          {
+            "name": "var1",
+            "value": null
+          },
+          {
+            "name": "var2",
+            "value": null
+          }
+        ]
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable by name 'dummy' has not been declared",
+        "name": "dummy",
+        "payload": null
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable by name 'dummy2' has not been declared",
+        "name": "var1",
+        "payload": [
+          {
+            "name": "var1",
+            "value": 0
+          },
+          {
+            "name": "dummy2",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "op": "deploy",
+        "statement": "create-dummy",
+        "epl": "@name('create') create variable int dummy = 20 + 20"
+      },
+      {
+        "op": "read-variable",
+        "statement": "create-dummy",
+        "name": "dummy"
+      },
+      {
+        "op": "set-variable",
+        "statement": "create-dummy",
+        "expectError": "Variable 'dummy' of declared type Integer cannot be assigned a value of type String",
+        "name": "dummy",
+        "payload": "x"
+      },
+      {
+        "op": "set-variable",
+        "statement": "create-dummy",
+        "expectError": "Variable 'dummy' of declared type Integer cannot be assigned a value of type Long",
+        "name": "dummy",
+        "payload": {
+          "type": "long",
+          "value": 1
+        }
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable 'var2' of declared type String cannot be assigned a value of type Integer",
+        "name": "var2",
+        "payload": {
+          "type": "integer",
+          "value": 1
+        }
+      },
+      {
+        "op": "set-variable",
+        "name": "var1",
+        "payload": {
+          "type": "short",
+          "value": -1
+        }
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable 'var1' of declared type Integer cannot be assigned a value of type Double",
+        "name": "var2",
+        "payload": [
+          {
+            "name": "var2",
+            "value": "xyz"
+          },
+          {
+            "name": "var1",
+            "value": {
+              "type": "double",
+              "value": 4.4
+            }
+          }
+        ]
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable by name 'notfoundvariable' has not been declared",
+        "name": "var2",
+        "payload": [
+          {
+            "name": "var2",
+            "value": "xyz"
+          },
+          {
+            "name": "var1",
+            "value": 1
+          },
+          {
+            "name": "notfoundvariable",
+            "value": null
+          }
+        ]
+      },
+      {
+        "op": "read-variable",
+        "name": "var1"
+      },
+      {
+        "op": "read-variable",
+        "name": "var2"
+      },
+      {
+        "op": "case",
+        "case": "constant-variable"
+      },
+      {
+        "op": "deploy",
+        "statement": "create-myconst",
+        "epl": "@public create const variable int MYCONST = 10"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-eq-int",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST = intBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-eq-int"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-gt-int",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST \u003e intBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-gt-int"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-ge-int",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST \u003e= intBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-ge-int"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-lt-int",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST \u003c intBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-lt-int"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-le-int",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST \u003c= intBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-le-int"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-lt-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed \u003c MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-lt-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-le-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed \u003c= MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-le-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-gt-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed \u003e MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-gt-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-ge-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed \u003e= MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-ge-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-in-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed in (MYCONST))"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-in-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-between-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed between MYCONST and MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-between-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-ne-int",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST != intBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-ne-int"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-ne-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed != MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-ne-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-notin-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed not in (MYCONST))"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-notin-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-notbetween-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed not between MYCONST and MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-notbetween-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-is-int",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST is intBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-is-int"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-is-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed is MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-is-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-isnot-int",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST is not intBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-isnot-int"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-isnot-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed is not MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-isnot-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-eq-short",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST = shortBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-eq-short"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-short-eq-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(shortBoxed = MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-short-eq-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-const-gt-short",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST \u003e shortBoxed)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-const-gt-short"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-short-lt-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(shortBoxed \u003c MYCONST)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-short-lt-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-short-in-const",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(shortBoxed in (MYCONST))"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "shortBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-short-in-const"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-in-literals",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed in (10, 8))"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "deploy",
+        "statement": "recreate-myconst",
+        "epl": "@name('variable') create constant variable int MYCONST = 10"
+      },
+      {
+        "op": "build-error",
+        "statement": "on-set-const",
+        "expectError": "Variable by name 'MYCONST' is declared constant and may not be set",
+        "epl": "on SupportBean set MYCONST = 10"
+      },
+      {
+        "op": "build-error",
+        "statement": "output-rate-const",
+        "expectError": "Variable by name 'MYCONST' is declared constant and may not be set",
+        "epl": "select * from SupportBean output when true then set MYCONST = 1"
+      },
+      {
+        "op": "set-variable",
+        "statement": "recreate-myconst",
+        "expectError": "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value",
+        "name": "MYCONST",
+        "payload": 1
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value",
+        "name": "MYCONST",
+        "payload": [
+          {
+            "name": "MYCONST",
+            "value": 1,
+            "statement": "recreate-myconst"
+          }
+        ]
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable by name 'MYCONST_TWO' is declared as constant and may not be assigned a new value",
+        "name": "MYCONST_TWO",
+        "payload": "dummy"
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable by name 'MYCONST_TWO' is declared as constant and may not be assigned a new value",
+        "name": "MYCONST_TWO",
+        "payload": [
+          {
+            "name": "MYCONST_TWO",
+            "value": "dummy"
+          }
+        ]
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable by name 'MYCONST_THREE' is declared as constant and may not be assigned a new value",
+        "name": "MYCONST_THREE",
+        "payload": false
+      },
+      {
+        "op": "set-variable",
+        "expectError": "Variable by name 'MYCONST_THREE' is declared as constant and may not be assigned a new value",
+        "name": "MYCONST_THREE",
+        "payload": [
+          {
+            "name": "MYCONST_THREE",
+            "value": false
+          }
+        ]
+      },
+      {
+        "op": "deploy",
+        "statement": "start-time-create",
+        "epl": "@name('s0') @public create constant variable java.util.Date START_TIME = java.util.Calendar.getInstance().getTime()"
+      },
+      {
+        "op": "read-variable",
+        "statement": "start-time-create",
+        "name": "START_TIME"
+      },
+      {
+        "op": "undeploy",
+        "statement": "start-time-create"
+      },
+      {
+        "op": "deploy",
+        "statement": "create-var-strings",
+        "epl": "@public create constant variable string[] var_strings = {'E1', 'E2'}"
+      },
+      {
+        "op": "deploy",
+        "statement": "select-var-strings",
+        "epl": "@name('s0') select var_strings from SupportBean"
+      },
+      {
+        "op": "undeploy",
+        "statement": "select-var-strings"
+      },
+      {
+        "op": "deploy",
+        "statement": "strings-in-arrayvar",
+        "epl": "@name('s0') select * from SupportBean(theString in (var_strings))"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "deploy",
+        "statement": "create-var-ints",
+        "epl": "@public create constant variable int [ ] var_ints = {8, 10}"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-in-varints",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed in (var_ints))"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-in-varints"
+      },
+      {
+        "op": "deploy",
+        "statement": "create-var-intstwo",
+        "epl": "@public create constant variable int[] var_intstwo = {9}"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-int-in-varints-two",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed in (var_ints, var_intstwo))"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-int-in-varints-two"
+      },
+      {
+        "op": "deploy",
+        "statement": "create-var-enumone",
+        "epl": "@public create constant variable SupportEnum var_enumone = SupportEnum.ENUM_VALUE_2"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-enum-const-eq-field",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(var_enumone = enumValue)"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "enumValue": "ENUM_VALUE_3"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "enumValue": "ENUM_VALUE_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "enumValue": "ENUM_VALUE_1"
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-enum-const-eq-field"
+      },
+      {
+        "op": "deploy",
+        "statement": "create-var-enumarr",
+        "epl": "@public create constant variable SupportEnum[] var_enumarr = {SupportEnum.ENUM_VALUE_2, SupportEnum.ENUM_VALUE_1}"
+      },
+      {
+        "op": "deploy",
+        "statement": "op-enum-in-arrayconst",
+        "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(enumValue in (var_enumarr, var_enumone))"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "S01"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "enumValue": "ENUM_VALUE_3"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "enumValue": "ENUM_VALUE_2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "enumValue": "ENUM_VALUE_1"
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "op-enum-in-arrayconst"
+      },
+      {
+        "op": "deploy",
+        "statement": "create-var-enumtwo",
+        "epl": "@public create variable SupportEnum var_enumtwo = SupportEnum.ENUM_VALUE_2"
+      },
+      {
+        "op": "deploy",
+        "statement": "on-set-enumtwo",
+        "epl": "on SupportBean set var_enumtwo = enumValue"
       }
-     }
     ]
-   },
-   {
-    "case": "variable-in-filter",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 2,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "theString": "e",
-       "intPrimitive": "6"
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "variables-use",
+    "records": [
+      {
+        "case": "variable-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "6",
+              "theString": "e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "3",
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "5",
+              "theString": "c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "6",
+              "theString": "e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-same-module",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-preconfigured",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-two-modules",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "invoke-method",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "hello",
+              "c1": "hello"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-constant-custom-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "name": {
+                "name": "abc"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": -1
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "abc"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 99
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 99
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "def"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 123
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "def"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 20
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "def"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 21
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "test"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'dummy' has not been declared"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'dummy2' has not been declared"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "dummy",
+        "value": 40
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'dummy' of declared type Integer cannot be assigned a value of type String"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'dummy' of declared type Integer cannot be assigned a value of type Long"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'var2' of declared type String cannot be assigned a value of type Integer"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": -1
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'var1' of declared type Integer cannot be assigned a value of type Double"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": -1
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'notfoundvariable' has not been declared"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": -1
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 33,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 34,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 35,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 36,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 37,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 38,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 39,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 40,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 41,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 42,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "compile-error",
+        "statement": "on-set-const",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST' is declared constant and may not be set"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "compile-error",
+        "statement": "output-rate-const",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST' is declared constant and may not be set"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST_TWO' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST_TWO' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST_THREE' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST_THREE' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "START_TIME",
+        "value": "\u003cdate\u003e"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 43,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": null,
+              "bigInteger": null,
+              "boolBoxed": null,
+              "boolPrimitive": "false",
+              "byteBoxed": null,
+              "bytePrimitive": "0",
+              "charBoxed": null,
+              "charPrimitive": "\u0000",
+              "doubleBoxed": null,
+              "doublePrimitive": "0.0",
+              "enumValue": null,
+              "floatBoxed": null,
+              "floatPrimitive": "0.0",
+              "intBoxed": null,
+              "intPrimitive": "1",
+              "longBoxed": null,
+              "longPrimitive": "0",
+              "shortBoxed": null,
+              "shortPrimitive": "0",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 44,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": null,
+              "bigInteger": null,
+              "boolBoxed": null,
+              "boolPrimitive": "false",
+              "byteBoxed": null,
+              "bytePrimitive": "0",
+              "charBoxed": null,
+              "charPrimitive": "\u0000",
+              "doubleBoxed": null,
+              "doublePrimitive": "0.0",
+              "enumValue": null,
+              "floatBoxed": null,
+              "floatPrimitive": "0.0",
+              "intBoxed": null,
+              "intPrimitive": "1",
+              "longBoxed": null,
+              "longPrimitive": "0",
+              "shortBoxed": null,
+              "shortPrimitive": "0",
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 45,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 46,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 47,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 48,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 49,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 50,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 51,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 52,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 53,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
       }
-     }
     ]
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 1,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "theString": "a",
-       "intPrimitive": "2"
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "variables-use",
+    "records": [
+      {
+        "case": "variable-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "6",
+              "theString": "e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "2",
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "3",
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "5",
+              "theString": "c"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-in-filter-boolean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": "6",
+              "theString": "e"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-same-module",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-preconfigured",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-two-modules",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "true"
+            }
+          }
+        ]
+      },
+      {
+        "case": "invoke-method",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "hello",
+              "c1": "hello"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-constant-custom-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "name": {
+                "name": "abc"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": -1
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "abc"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 99
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 99
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "def"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 123
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "def"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 20
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "def"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": 21
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": "test"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'dummy' has not been declared"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'dummy2' has not been declared"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "dummy",
+        "value": 40
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'dummy' of declared type Integer cannot be assigned a value of type String"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'dummy' of declared type Integer cannot be assigned a value of type Long"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'var2' of declared type String cannot be assigned a value of type Integer"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": -1
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'var1' of declared type Integer cannot be assigned a value of type Double"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": -1
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'notfoundvariable' has not been declared"
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1",
+        "value": -1
+      },
+      {
+        "case": "ep-runtime",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 33,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 34,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 35,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 36,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 37,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 38,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 39,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 40,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 41,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 42,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "compile-error",
+        "statement": "on-set-const",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST' is declared constant and may not be set"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "compile-error",
+        "statement": "output-rate-const",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST' is declared constant and may not be set"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST_TWO' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST_TWO' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST_THREE' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable by name 'MYCONST_THREE' is declared as constant and may not be assigned a new value"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "START_TIME",
+        "value": "\u003cdate\u003e"
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 43,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": null,
+              "bigInteger": null,
+              "boolBoxed": null,
+              "boolPrimitive": "false",
+              "byteBoxed": null,
+              "bytePrimitive": "0",
+              "charBoxed": null,
+              "charPrimitive": "\u0000",
+              "doubleBoxed": null,
+              "doublePrimitive": "0.0",
+              "enumValue": null,
+              "floatBoxed": null,
+              "floatPrimitive": "0.0",
+              "intBoxed": null,
+              "intPrimitive": "1",
+              "longBoxed": null,
+              "longPrimitive": "0",
+              "shortBoxed": null,
+              "shortPrimitive": "0",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 44,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": null,
+              "bigInteger": null,
+              "boolBoxed": null,
+              "boolPrimitive": "false",
+              "byteBoxed": null,
+              "bytePrimitive": "0",
+              "charBoxed": null,
+              "charPrimitive": "\u0000",
+              "doubleBoxed": null,
+              "doublePrimitive": "0.0",
+              "enumValue": null,
+              "floatBoxed": null,
+              "floatPrimitive": "0.0",
+              "intBoxed": null,
+              "intPrimitive": "1",
+              "longBoxed": null,
+              "longPrimitive": "0",
+              "shortBoxed": null,
+              "shortPrimitive": "0",
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 45,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 46,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 47,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 48,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 49,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 50,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 51,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 52,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 53,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": null,
+              "c1": "0"
+            }
+          }
+        ]
       }
-     }
     ]
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 2,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "theString": "b",
-       "intPrimitive": "3"
-      }
-     }
-    ]
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 3,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "theString": "c",
-       "intPrimitive": "5"
-      }
-     }
-    ]
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 4,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "theString": "e",
-       "intPrimitive": "6"
-      }
-     }
-    ]
-   },
-   {
-    "case": "simple-same-module",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 1,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "c0": "true"
-      }
-     }
-    ]
-   },
-   {
-    "case": "simple-preconfigured",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 1,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "c0": "true"
-      }
-     }
-    ]
-   },
-   {
-    "case": "simple-two-modules",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 1,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "c0": "true"
-      }
-     }
-    ]
-   },
-   {
-    "case": "invoke-method",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 1,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "c0": "hello",
-       "c1": "hello"
-      }
-     }
-    ]
-   },
-   {
-    "case": "filter-constant-custom-type",
-    "operation": "listener",
-    "statement": "s0",
-    "time": "1970-01-01T00:00:00Z",
-    "sequence": 1,
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "name": {
-        "name": "abc"
-       }
-      }
-     }
-    ]
-   }
-  ]
- },
- "goTrace": {
-  "version": "esper-parity/v1",
-  "id": "variables-use",
-  "records": [
-   {
-    "case": "variable-in-filter",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 1,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "intPrimitive": "2",
-       "theString": "a"
-      }
-     }
-    ]
-   },
-   {
-    "case": "variable-in-filter",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 2,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "intPrimitive": "6",
-       "theString": "e"
-      }
-     }
-    ]
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 1,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "intPrimitive": "2",
-       "theString": "a"
-      }
-     }
-    ]
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 2,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "intPrimitive": "3",
-       "theString": "b"
-      }
-     }
-    ]
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 3,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "intPrimitive": "5",
-       "theString": "c"
-      }
-     }
-    ]
-   },
-   {
-    "case": "variable-in-filter-boolean",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 4,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "intPrimitive": "6",
-       "theString": "e"
-      }
-     }
-    ]
-   },
-   {
-    "case": "simple-same-module",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 1,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "c0": "true"
-      }
-     }
-    ]
-   },
-   {
-    "case": "simple-preconfigured",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 1,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "c0": "true"
-      }
-     }
-    ]
-   },
-   {
-    "case": "simple-two-modules",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 1,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "c0": "true"
-      }
-     }
-    ]
-   },
-   {
-    "case": "invoke-method",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 1,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "c0": "hello",
-       "c1": "hello"
-      }
-     }
-    ]
-   },
-   {
-    "case": "filter-constant-custom-type",
-    "operation": "listener",
-    "statement": "s0",
-    "sequence": 1,
-    "time": "1970-01-01T00:00:00Z",
-    "new": [
-     {
-      "kind": "row",
-      "fields": {
-       "name": {
-        "name": "abc"
-       }
-      }
-     }
-    ]
-   }
-  ]
- },
- "status": "passing",
- "differences": []
+  },
+  "status": "passing",
+  "differences": []
 }

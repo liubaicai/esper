@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -211,5 +212,128 @@ func TestSourceLessSelectOnceUsesVariables(t *testing.T) {
 	row, ok := result.Results()[0].Row()
 	if !ok || row.Get("value").Any() != 7 {
 		t.Fatalf("source-less row = %#v", result.Results()[0])
+	}
+}
+
+// variableCoerceNamedEnum is a named comparable type used to prove the
+// AssignableTo fast path keeps enum-like variable types working even though
+// their underlying kind is string.
+type variableCoerceNamedEnum string
+
+// TestVariableCoerceWideningMatrix locks the family-widening rule of
+// VariableDefinition.coerce: a value is accepted when its Java primitive
+// family (Byte < Short < Integer < Long < Float < Double) equals the
+// declared type's family or sits strictly later in the widening chain.
+// Narrowing and incomparable conversions are rejected with the existing
+// `variable %q expects %s, got %s` text.
+func TestVariableCoerceWideningMatrix(t *testing.T) {
+	cases := []struct {
+		name    string
+		initial any
+		value   any
+		want    any    // stored value on success
+		wantErr string // exact coerce error on rejection, empty when accepted
+	}{
+		{"short-to-int", -1, int16(-1), -1, ""},
+		{"short-to-int32", int32(-1), int16(-1), int32(-1), ""},
+		{"byte-to-int", -1, byte(21), 21, ""},
+		{"long-to-int-rejected", -1, int64(100), nil, `variable "v" expects int, got int64`},
+		{"long-to-int32-rejected", int32(-1), int64(100), nil, `variable "v" expects int32, got int64`},
+		{"double-to-int-rejected", -1, 4.4, nil, `variable "v" expects int, got float64`},
+		{"double-to-float32-rejected", float32(1), 2.5, nil, `variable "v" expects float32, got float64`},
+		{"float-to-int-rejected", -1, float32(2.5), nil, `variable "v" expects int, got float32`},
+		{"int-to-float32", float32(1), 2, float32(2), ""},
+		{"int-to-float64", 1.0, 2, float64(2), ""},
+		{"int-to-long", int64(1), 2, int64(2), ""},
+		{"string-to-string", "abc", "def", "def", ""},
+		{"string-into-named-type-rejected", variableCoerceNamedEnum("A"), "B", nil,
+			`variable "v" expects esper.variableCoerceNamedEnum, got string`},
+		{"same-named-type-ok", variableCoerceNamedEnum("A"), variableCoerceNamedEnum("B"), variableCoerceNamedEnum("B"), ""},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			definition, err := newVariableDefinition("v", testCase.initial)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := definition.coerce(testCase.value)
+			if testCase.wantErr != "" {
+				if err == nil || err.Error() != testCase.wantErr {
+					t.Fatalf("coerce(%#v) error = %v, want %q", testCase.value, err, testCase.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("coerce(%#v) unexpected error = %v", testCase.value, err)
+			}
+			if !reflect.DeepEqual(got, testCase.want) {
+				t.Fatalf("coerce(%#v) = %#v (%T), want %#v", testCase.value, got, got, testCase.want)
+			}
+		})
+	}
+}
+
+// assertVariableRuntimeError requires err to carry the given ErrorCode and
+// the exact bare Message; the parity contract compares Error.Message against
+// the Java exception text byte-for-byte.
+func assertVariableRuntimeError(t *testing.T, err error, code ErrorCode, message string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected %s error %q, got nil", code, message)
+	}
+	var esperErr *Error
+	if !errors.As(err, &esperErr) {
+		t.Fatalf("error %v is not an *Error", err)
+	}
+	if esperErr.Code != code || esperErr.Message != message {
+		t.Fatalf("error = %s/%q, want %s/%q", esperErr.Code, esperErr.Message, code, message)
+	}
+}
+
+// TestVariableRuntimeSetErrorMessagesMatchJava pins the three runtime-set
+// failure messages to the EPLVariablesUse oracle texts: unknown name,
+// constant protection, and declared-type mismatch.
+func TestVariableRuntimeSetErrorMessagesMatchJava(t *testing.T) {
+	env := NewEnvironment()
+	if err := env.RegisterVariable("var1", -1); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterVariable("var2", "abc"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.RegisterVariable("MYCONST", int32(10), ConstantVariable()); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	ctx := context.Background()
+
+	assertVariableRuntimeError(t,
+		engine.SetVariable(ctx, "dummy", nil),
+		ErrorUnknownName, "Variable by name 'dummy' has not been declared")
+	assertVariableRuntimeError(t,
+		engine.SetVariables(ctx, VariableAssignment{Name: "dummy2", Value: 20}),
+		ErrorUnknownName, "Variable by name 'dummy2' has not been declared")
+	assertVariableRuntimeError(t,
+		engine.SetVariable(ctx, "MYCONST", 11),
+		ErrorState, "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value")
+	assertVariableRuntimeError(t,
+		engine.SetVariables(ctx, VariableAssignment{Name: "MYCONST", Value: 12}),
+		ErrorState, "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value")
+	assertVariableRuntimeError(t,
+		engine.SetVariable(ctx, "var1", int64(100)),
+		ErrorTypeMismatch, "Variable 'var1' of declared type Integer cannot be assigned a value of type Long")
+	double := 4.4
+	assertVariableRuntimeError(t,
+		engine.SetVariable(ctx, "var1", &double),
+		ErrorTypeMismatch, "Variable 'var1' of declared type Integer cannot be assigned a value of type Double")
+	assertVariableRuntimeError(t,
+		engine.SetVariable(ctx, "var2", 0),
+		ErrorTypeMismatch, "Variable 'var2' of declared type String cannot be assigned a value of type Integer")
+
+	// Failed sets leave both values untouched.
+	var1, _ := engine.GetVariable("var1")
+	var2, _ := engine.GetVariable("var2")
+	if !var1.Equal(Present(-1)) || !var2.Equal(Present("abc")) {
+		t.Fatalf("failed sets changed state: var1=%#v var2=%#v", var1, var2)
 	}
 }

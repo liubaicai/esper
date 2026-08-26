@@ -4,6 +4,26 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.261（2026-08-26），`case.variables-use` 收口
+> `EPLVariablesUse` 全部可表示 execution（新增 2 个 DV runtime IDs，
+> 共 9/11）：EPVariableService 运行时 API 全表面（类型内省引擎级断言、
+> 单/批量有序 set、byte/short 宽化接受、Long/String/Double 拒绝驱动
+> LinkedHashMap 序回滚证明、create-on-the-fly dummy=40、逐字镜像 Java
+> 的 unknown/type-mismatch/constant 三类诊断）与 constant-variable 全表
+> （int/short/null 算子真值表、字面量/数组/enum 成员 filter、SODA 重建、
+> 编译期 const 拒绝句、三目标 API 写保护、ESPER-653 date 标记、末段非
+> 常量 enum on-set）。关键语义钉死：含集合 candidate 的 IN 按"每匹配
+> slot 一行"投递——`enumValue in (var_enumarr, var_enumone)` 对 V2 双发
+> （flattened slots [V2,V1,V2]）；runtime set 强制转换遵循 Java
+> Byte<Short<Integer<Long<Float<Double 宽化链。场景 Java/Go 各 101 条
+> records、0 differences；12 个 mutation 用例拒绝篡改。表示登记：
+> byte[] boxed/primitive 单一 Go 数组形态、SupportBean[] 声明拒绝无
+> Go 构建错误等价物、SODA 双路径单编译路径化、FilterItem 断言为引擎
+> 内部。manifest 更新为 556 cases、167 个 differential-verified case、
+> 652 个 differential runtime IDs、3277 条 associations（referenced
+> 3073）；capability 117 个（31 DV）。DotSeparateThread 与 WVarargs
+> 保持未表示并登记于 capability remaining。
+>
 > 最新补充：Draft 4.260（2026-08-26），扩展 `epl.variable-onset` 的
 > `case.variables-use` 差分场景至 7 个 execution（新增 4 个 DV runtime
 > IDs）：preconfigured CONSTANT boolean 读取、@public 跨 module 可见性、

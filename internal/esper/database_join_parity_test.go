@@ -877,8 +877,8 @@ func TestDatabaseNoJoinVariablesPollMatchesJava(t *testing.T) {
 
 	if err := engine.SetVariables(context.Background(),
 		VariableAssignment{Name: "queryvar_bool", Value: true},
-		VariableAssignment{Name: "lower", Value: int64(10)},
-		VariableAssignment{Name: "upper", Value: int64(40)},
+		VariableAssignment{Name: "lower", Value: 10},
+		VariableAssignment{Name: "upper", Value: 40},
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -904,8 +904,8 @@ func TestDatabaseNoJoinVariablesPollMatchesJava(t *testing.T) {
 
 	if err := engine.SetVariables(context.Background(),
 		VariableAssignment{Name: "queryvar_bool", Value: false},
-		VariableAssignment{Name: "lower", Value: int64(30)},
-		VariableAssignment{Name: "upper", Value: int64(80)},
+		VariableAssignment{Name: "lower", Value: 30},
+		VariableAssignment{Name: "upper", Value: 80},
 	); err != nil {
 		t.Fatal(err)
 	}

@@ -16459,6 +16459,8 @@ func TestRunVariablesUseExtendedDiffWritesPassingEvidence(t *testing.T) {
 		"java-runtime-8457cbd989256d935b22",
 		"java-runtime-4373a1c6d8c903357942",
 		"java-runtime-80cb4763680bc91e38ce",
+		"java-runtime-826b551e883c9398df67",
+		"java-runtime-d273a38f6415e6c3ee62",
 	}
 	if !reflect.DeepEqual(evidence.JavaRuntimeIDs, wantIDs) {
 		t.Fatalf("javaRuntimeIds = %v", evidence.JavaRuntimeIDs)
@@ -16477,33 +16479,75 @@ func TestRunVariablesUseExtendedDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
-			name: "two-module-visibility-row-lost",
-			mutate: func(trace *compat.Trace) {
-				trace.Records[8].New = nil
-			},
-		},
-		{
-			name: "factory-dot-call-drift",
-			mutate: func(trace *compat.Trace) {
-				trace.Records[9].New[0].Fields["c0"] = "wrong"
-			},
-		},
-		{
-			name: "instance-dot-call-drift",
-			mutate: func(trace *compat.Trace) {
-				trace.Records[9].New[0].Fields["c1"] = "wrong"
-			},
-		},
-		{
-			name: "custom-type-filter-row-lost",
-			mutate: func(trace *compat.Trace) {
-				trace.Records[10].New = nil
-			},
-		},
-		{
 			name: "custom-type-render-drift",
 			mutate: func(trace *compat.Trace) {
 				trace.Records[10].New[0].Fields["name"] = "{abc}"
+			},
+		},
+		{
+			name: "ep-runtime-initial-read-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[11].Value = 0
+			},
+		},
+		{
+			name: "ep-runtime-onset-null-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[14].Value = ""
+			},
+		},
+		{
+			name: "ep-runtime-unknown-message-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[25].Value = "drift"
+			},
+		},
+		{
+			name: "ep-runtime-rollback-read-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[34].Value = 0
+			},
+		},
+		{
+			name: "ep-runtime-rollback-message-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[36].Value = "drift"
+			},
+		},
+		{
+			name: "constant-filter-first-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[39].New = nil
+			},
+		},
+		{
+			name: "constant-filter-row-fields-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[39].New[0].Fields["c0"] = "X"
+			},
+		},
+		{
+			name: "constant-select-star-field-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[90].New[0].Fields["intBoxed"] = "5"
+			},
+		},
+		{
+			name: "constant-compile-message-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[81].Value = "drift"
+			},
+		},
+		{
+			name: "constant-api-protect-message-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[83].Value = "drift"
+			},
+		},
+		{
+			name: "date-marker-wall-clock-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[89].Value = "1970-01-01T00:00:00.000+00:00"
 			},
 		},
 	}

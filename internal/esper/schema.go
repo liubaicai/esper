@@ -2835,7 +2835,24 @@ func newEvent(schema Schema, underlying any, receivedAt time.Time) (Event, error
 	if schema.goType != nil {
 		got := reflect.TypeOf(underlying)
 		if !got.AssignableTo(schema.goType) && !(got.Kind() == reflect.Pointer && got.Elem().AssignableTo(schema.goType)) {
-			return Event{}, fmt.Errorf("esper: event %q expects %s, got %s", schema.name, schema.goType, got)
+			// A map payload materializes through the same representation
+			// boundary as InsertInto and the historical providers: field
+			// names resolve against the declared struct and values coerce
+			// per assignReflectValue (including strings into named string
+			// kinds such as enum-like fields).
+			if got.Kind() == reflect.Map {
+				values, ok := underlying.(map[string]any)
+				if !ok {
+					return Event{}, fmt.Errorf("esper: event %q expects %s, got %s", schema.name, schema.goType, got)
+				}
+				materialized, err := mergeSchemaUnderlying(schema, nil, values)
+				if err != nil {
+					return Event{}, err
+				}
+				underlying = materialized
+			} else {
+				return Event{}, fmt.Errorf("esper: event %q expects %s, got %s", schema.name, schema.goType, got)
+			}
 		}
 	}
 	return Event{identity: &eventIdentityToken{marker: 1}, typeName: schema.name, schema: schema, underlying: underlying, receivedAt: receivedAt}, nil
@@ -3269,6 +3286,12 @@ func assignReflectValue(target reflect.Type, update any) (reflect.Value, error) 
 		}
 	}
 	if value.Type().ConvertibleTo(target) && numericTypes(value.Type(), target) {
+		return value.Convert(target), nil
+	}
+	// Plain and named string kinds convert into each other so enum-like
+	// struct fields accept raw string payloads from Map sends, mirroring
+	// Java's enum name parsing; other kind pairs stay strict.
+	if value.Kind() == reflect.String && target.Kind() == reflect.String {
 		return value.Convert(target), nil
 	}
 	if target.Kind() == reflect.Pointer && value.Type().AssignableTo(target.Elem()) {

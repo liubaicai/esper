@@ -1,3 +1,15 @@
+> 最新补充：Draft 4.261（2026-08-26），`case.variables-use` 收口
+> EPLVariablesUse 全部可表示 execution（+2 DV runtime IDs，共 9/11；
+> 101 条 records、0 differences）：EPVariableService 运行时 API 全表面
+> （单/批量有序 set、byte/short 宽化、Long/String/Double 拒绝驱动回滚
+> 证明、逐字 Java 诊断）与 constant-variable 全表（算子真值表、字面量/
+> 数组/enum 成员 filter、SODA 重建、编译期 const 拒绝、API 写保护、
+> ESPER-653 date 标记）。关键语义：含集合 candidate 的 IN 按"每匹配
+> slot 一行"投递（V2 对 flattened slots [V2,V1,V2] 双发）；set 强制
+> 转换遵循 Java 宽化链。manifest 更新为 556 cases、167 个 differential-
+> verified case、652 个 differential runtime IDs、3277 条 associations
+> （referenced 3073）；capability 117 个（31 DV）。
+>
 > 最新补充：Draft 4.260（2026-08-26），`case.variables-use` 扩展至 7 个
 > execution（+4 DV runtime IDs，11 条 records、0 differences）：preconfigured
 > 常量读取、跨 module 可见性、工厂/实例点调用、自定义类型常量 filter。

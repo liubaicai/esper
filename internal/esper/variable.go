@@ -89,8 +89,43 @@ func (v VariableDefinition) coerce(value any) (any, error) {
 	if got.AssignableTo(v.typ) {
 		return value, nil
 	}
-	if isNumericType(got) && isNumericType(v.typ) && reflect.ValueOf(value).Type().ConvertibleTo(v.typ) {
+	if numericFamilyWidening(got, v.typ) {
 		return reflect.ValueOf(value).Convert(v.typ).Interface(), nil
 	}
 	return nil, fmt.Errorf("variable %q expects %s, got %s", v.name, v.typ, got)
+}
+
+// javaNumericRank ranks a Go numeric type along Java's widening chain
+// Byte < Short < Integer < Long < Float < Double. Unsigned kinds map onto
+// their same-width signed family member (uint8 behaves as Java byte,
+// uint32 as Java int, and so on) because the port represents Java unsigned
+// quantities with the corresponding signed Go kinds.
+func javaNumericRank(t reflect.Type) (int, bool) {
+	switch t.Kind() {
+	case reflect.Int8, reflect.Uint8:
+		return 0, true // Byte
+	case reflect.Int16, reflect.Uint16:
+		return 1, true // Short
+	case reflect.Int32, reflect.Int, reflect.Uint32, reflect.Uint, reflect.Uintptr:
+		return 2, true // Integer
+	case reflect.Int64, reflect.Uint64:
+		return 3, true // Long
+	case reflect.Float32:
+		return 4, true // Float
+	case reflect.Float64:
+		return 5, true // Double
+	default:
+		return 0, false
+	}
+}
+
+// numericFamilyWidening reports whether a value of type from may be stored
+// in a variable of type to under Java's widening primitive conversion: the
+// same family or strictly later in the Byte<Short<Integer<Long<Float<Double
+// chain. Narrowing (long to int) and incomparable moves (double to float,
+// any float to an integer family) are rejected, matching the engine oracle.
+func numericFamilyWidening(from, to reflect.Type) bool {
+	fromRank, fromOK := javaNumericRank(from)
+	toRank, toOK := javaNumericRank(to)
+	return fromOK && toOK && toRank >= fromRank
 }

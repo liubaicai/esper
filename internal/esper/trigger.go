@@ -1507,7 +1507,7 @@ func (e *Environment) validateVariableTriggerAssignments(definition *triggerDefi
 			return NewError(ErrorUnknownName, fmt.Sprintf("variable trigger references unknown variable %q", assignment.Name))
 		}
 		if variableDefinition.constant {
-			return NewError(ErrorState, fmt.Sprintf("variable trigger cannot assign constant variable %q", assignment.Name))
+			return NewError(ErrorState, fmt.Sprintf("Variable by name '%s' is declared constant and may not be set", assignment.Name))
 		}
 		if assignment.Apply == nil {
 			if err := e.validateExprFields(definition.input, assignment.Expr); err != nil {

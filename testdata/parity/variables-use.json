@@ -38,6 +38,14 @@
   {
    "case": "filter-constant-custom-type",
    "runtimeId": "java-runtime-80cb4763680bc91e38ce"
+  },
+  {
+   "case": "ep-runtime",
+   "runtimeId": "java-runtime-826b551e883c9398df67"
+  },
+  {
+   "case": "constant-variable",
+   "runtimeId": "java-runtime-d273a38f6415e6c3ee62"
   }
  ],
  "steps": [
@@ -231,6 +239,1648 @@
    "payload": {
     "name": "abc"
    }
+  },
+  {
+   "op": "case",
+   "case": "ep-runtime"
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 99
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "set-variable",
+   "name": "var2",
+   "payload": "def"
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "set-variable",
+   "name": "var1",
+   "payload": 123
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "set-variable",
+   "name": "var1",
+   "payload": [
+    {
+     "name": "var1",
+     "value": 20
+    }
+   ]
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "set-variable",
+   "name": "var1",
+   "payload": [
+    {
+     "name": "var1",
+     "value": {
+      "type": "byte",
+      "value": 21
+     }
+    },
+    {
+     "name": "var2",
+     "value": "test"
+    }
+   ]
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "set-variable",
+   "name": "var1",
+   "payload": [
+    {
+     "name": "var1",
+     "value": null
+    },
+    {
+     "name": "var2",
+     "value": null
+    }
+   ]
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "set-variable",
+   "name": "dummy",
+   "expectError": "Variable by name 'dummy' has not been declared",
+   "payload": null
+  },
+  {
+   "op": "set-variable",
+   "name": "var1",
+   "expectError": "Variable by name 'dummy2' has not been declared",
+   "payload": [
+    {
+     "name": "var1",
+     "value": 0
+    },
+    {
+     "name": "dummy2",
+     "value": 1
+    }
+   ]
+  },
+  {
+   "op": "deploy",
+   "statement": "create-dummy",
+   "epl": "@name('create') create variable int dummy = 20 + 20"
+  },
+  {
+   "op": "read-variable",
+   "name": "dummy",
+   "statement": "create-dummy"
+  },
+  {
+   "op": "set-variable",
+   "name": "dummy",
+   "statement": "create-dummy",
+   "expectError": "Variable 'dummy' of declared type Integer cannot be assigned a value of type String",
+   "payload": "x"
+  },
+  {
+   "op": "set-variable",
+   "name": "dummy",
+   "statement": "create-dummy",
+   "expectError": "Variable 'dummy' of declared type Integer cannot be assigned a value of type Long",
+   "payload": {
+    "type": "long",
+    "value": 1
+   }
+  },
+  {
+   "op": "set-variable",
+   "name": "var2",
+   "expectError": "Variable 'var2' of declared type String cannot be assigned a value of type Integer",
+   "payload": {
+    "type": "integer",
+    "value": 1
+   }
+  },
+  {
+   "op": "set-variable",
+   "name": "var1",
+   "payload": {
+    "type": "short",
+    "value": -1
+   }
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "set-variable",
+   "name": "var2",
+   "expectError": "Variable 'var1' of declared type Integer cannot be assigned a value of type Double",
+   "payload": [
+    {
+     "name": "var2",
+     "value": "xyz"
+    },
+    {
+     "name": "var1",
+     "value": {
+      "type": "double",
+      "value": 4.4
+     }
+    }
+   ]
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "set-variable",
+   "name": "var2",
+   "expectError": "Variable by name 'notfoundvariable' has not been declared",
+   "payload": [
+    {
+     "name": "var2",
+     "value": "xyz"
+    },
+    {
+     "name": "var1",
+     "value": 1
+    },
+    {
+     "name": "notfoundvariable",
+     "value": null
+    }
+   ]
+  },
+  {
+   "op": "read-variable",
+   "name": "var1"
+  },
+  {
+   "op": "read-variable",
+   "name": "var2"
+  },
+  {
+   "op": "case",
+   "case": "constant-variable"
+  },
+  {
+   "op": "deploy",
+   "statement": "create-myconst",
+   "epl": "@public create const variable int MYCONST = 10"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-eq-int",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST = intBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-eq-int"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-gt-int",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST > intBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-gt-int"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-ge-int",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST >= intBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-ge-int"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-lt-int",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST < intBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-lt-int"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-le-int",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST <= intBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-le-int"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-lt-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed < MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-lt-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-le-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed <= MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-le-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-gt-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed > MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-gt-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-ge-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed >= MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-ge-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-in-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed in (MYCONST))"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-in-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-between-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed between MYCONST and MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-between-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-ne-int",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST != intBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-ne-int"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-ne-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed != MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-ne-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-notin-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed not in (MYCONST))"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-notin-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-notbetween-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed not between MYCONST and MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-notbetween-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-is-int",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST is intBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-is-int"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-is-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed is MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-is-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-isnot-int",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST is not intBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-isnot-int"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-isnot-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed is not MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-isnot-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-eq-short",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST = shortBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-eq-short"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-short-eq-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(shortBoxed = MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": null
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-short-eq-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-const-gt-short",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(MYCONST > shortBoxed)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-const-gt-short"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-short-lt-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(shortBoxed < MYCONST)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-short-lt-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-short-in-const",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(shortBoxed in (MYCONST))"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "shortBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-short-in-const"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-in-literals",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed in (10, 8))"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "deploy",
+   "statement": "recreate-myconst",
+   "epl": "@name('variable') create constant variable int MYCONST = 10",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "statement": "on-set-const",
+   "epl": "on SupportBean set MYCONST = 10",
+   "expectError": "Variable by name 'MYCONST' is declared constant and may not be set"
+  },
+  {
+   "op": "build-error",
+   "statement": "output-rate-const",
+   "epl": "select * from SupportBean output when true then set MYCONST = 1",
+   "expectError": "Variable by name 'MYCONST' is declared constant and may not be set"
+  },
+  {
+   "op": "set-variable",
+   "name": "MYCONST",
+   "expectError": "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value",
+   "payload": 1,
+   "statement": "recreate-myconst"
+  },
+  {
+   "op": "set-variable",
+   "name": "MYCONST",
+   "expectError": "Variable by name 'MYCONST' is declared as constant and may not be assigned a new value",
+   "payload": [
+    {
+     "name": "MYCONST",
+     "value": 1,
+     "statement": "recreate-myconst"
+    }
+   ]
+  },
+  {
+   "op": "set-variable",
+   "name": "MYCONST_TWO",
+   "expectError": "Variable by name 'MYCONST_TWO' is declared as constant and may not be assigned a new value",
+   "payload": "dummy"
+  },
+  {
+   "op": "set-variable",
+   "name": "MYCONST_TWO",
+   "expectError": "Variable by name 'MYCONST_TWO' is declared as constant and may not be assigned a new value",
+   "payload": [
+    {
+     "name": "MYCONST_TWO",
+     "value": "dummy"
+    }
+   ]
+  },
+  {
+   "op": "set-variable",
+   "name": "MYCONST_THREE",
+   "expectError": "Variable by name 'MYCONST_THREE' is declared as constant and may not be assigned a new value",
+   "payload": false
+  },
+  {
+   "op": "set-variable",
+   "name": "MYCONST_THREE",
+   "expectError": "Variable by name 'MYCONST_THREE' is declared as constant and may not be assigned a new value",
+   "payload": [
+    {
+     "name": "MYCONST_THREE",
+     "value": false
+    }
+   ]
+  },
+  {
+   "op": "deploy",
+   "statement": "start-time-create",
+   "epl": "@name('s0') @public create constant variable java.util.Date START_TIME = java.util.Calendar.getInstance().getTime()"
+  },
+  {
+   "op": "read-variable",
+   "name": "START_TIME",
+   "statement": "start-time-create"
+  },
+  {
+   "op": "undeploy",
+   "statement": "start-time-create"
+  },
+  {
+   "op": "deploy",
+   "statement": "create-var-strings",
+   "epl": "@public create constant variable string[] var_strings = {'E1', 'E2'}"
+  },
+  {
+   "op": "deploy",
+   "statement": "select-var-strings",
+   "epl": "@name('s0') select var_strings from SupportBean"
+  },
+  {
+   "op": "undeploy",
+   "statement": "select-var-strings"
+  },
+  {
+   "op": "deploy",
+   "statement": "strings-in-arrayvar",
+   "epl": "@name('s0') select * from SupportBean(theString in (var_strings))"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "deploy",
+   "statement": "create-var-ints",
+   "epl": "@public create constant variable int [ ] var_ints = {8, 10}"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-in-varints",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed in (var_ints))"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-in-varints"
+  },
+  {
+   "op": "deploy",
+   "statement": "create-var-intstwo",
+   "epl": "@public create constant variable int[] var_intstwo = {9}"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-int-in-varints-two",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(intBoxed in (var_ints, var_intstwo))"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 9
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 8
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-int-in-varints-two"
+  },
+  {
+   "op": "deploy",
+   "statement": "create-var-enumone",
+   "epl": "@public create constant variable SupportEnum var_enumone = SupportEnum.ENUM_VALUE_2"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-enum-const-eq-field",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(var_enumone = enumValue)"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "enumValue": "ENUM_VALUE_3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "enumValue": "ENUM_VALUE_2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-enum-const-eq-field"
+  },
+  {
+   "op": "deploy",
+   "statement": "create-var-enumarr",
+   "epl": "@public create constant variable SupportEnum[] var_enumarr = {SupportEnum.ENUM_VALUE_2, SupportEnum.ENUM_VALUE_1}"
+  },
+  {
+   "op": "deploy",
+   "statement": "op-enum-in-arrayconst",
+   "epl": "@name('s0') select theString as c0,intPrimitive as c1 from SupportBean(enumValue in (var_enumarr, var_enumone))"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "S01"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "enumValue": "ENUM_VALUE_3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "enumValue": "ENUM_VALUE_2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "op-enum-in-arrayconst"
+  },
+  {
+   "op": "deploy",
+   "statement": "create-var-enumtwo",
+   "epl": "@public create variable SupportEnum var_enumtwo = SupportEnum.ENUM_VALUE_2"
+  },
+  {
+   "op": "deploy",
+   "statement": "on-set-enumtwo",
+   "epl": "on SupportBean set var_enumtwo = enumValue"
   }
  ],
  "version": "esper-parity/v1"

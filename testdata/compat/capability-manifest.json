@@ -4469,7 +4469,7 @@
    "id": "epl.variable-onset",
    "domain": "variable",
    "level": "G",
-   "summary": "All 17 executions of EPLVariablesOnSet are covered: 16 differentially verified across three scenarios plus the compile-only Invalid approved difference.; variables-use extended with preconfigured/two-module visibility, factory dot-invocation and custom-typed constant filters",
+   "summary": "All 17 executions of EPLVariablesOnSet are covered: 16 differentially verified across three scenarios plus the compile-only Invalid approved difference. EPLVariablesUse fully closed at 9 of 11 executions differentially verified (DotSeparateThread threading and WVarargs varargs-UDF stay unrepresented): runtime get/set API with Java-widening coercion and rollback, constant-variable truth tables with per-slot IN delivery, verbatim set-path diagnostics.",
    "javaRefs": [
     "EPLVariablesOnSet"
    ],
@@ -4484,7 +4484,9 @@
    "phase": 1,
    "status": "implemented",
    "remaining": [
-    "EPLVariableOnSetInvalid (java-runtime-c2b1d3116ed43d68d679): compile-time error-only, 5 asserted diagnostics plus 3 skip-only compiles (approved difference)"
+    "EPLVariableOnSetInvalid (java-runtime-c2b1d3116ed43d68d679): compile-time error-only, 5 asserted diagnostics plus 3 skip-only compiles (approved difference)",
+    "EPLVariablesUse ConstantVariable sub-aspects (java-runtime-d273a38f6415e6c3ee62): byte[] boxed (Byte[]) vs byte[primitive] property types are one Go array kind — distinction unrepresentable; `create constant variable SupportBean[] var_beans` event-type-array rejection has no Go build-error equivalent.",
+    "EPLVariablesUse DotSeparateThread (java-runtime-e1511c9dbe279de2adfe): CountDownLatch executor threading is RUNTIMEOPS-only and unrepresented; WVarargs (java-runtime-dd6fdf5b57faa2ba2600) needs varargs UDF support."
    ],
    "verification": [
     "inventoried",
@@ -6272,7 +6274,7 @@
     "java-junit",
     "go-unit"
    ],
-   "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1\u21925/5/1, then 5\u21927/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text.",
+   "difference": "Go compares the same ordered scalar assignment through Table and Named Window Merge and Update builders: the second assignment reads the working intPrimitive value, while the third reads the pre-assignment initial value and converts it to double. The test covers E1 1→5/5/1, then 5→7/7/5 across all four target/entry-point combinations. Java EPL alias syntax and exact compiler diagnostics remain represented by the fluent API rather than copied text.",
    "verification": [
     "inventoried",
     "implemented"
@@ -6701,7 +6703,7 @@
     "java-junit",
     "go-unit"
    ],
-   "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null\u2192B/source-inner, true\u2192source-inner, false\u2192A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open.",
+   "difference": "Go models the Java variable tri-state branches with typed VariableRef/IsNull expressions and preserves nested event values through struct, Map and ObjectArray source/target schemas. The test covers null→B/source-inner, true→source-inner, false→A/null, matched delete, Table/Named Window new/old output, target representation and merge undeploy/redeploy. Avro/JSON representations are outside this Java execution set; exact Java variable service, representation conversion, transaction/persistence and shared trace remain open.",
    "verification": [
     "inventoried",
     "implemented"
@@ -9605,7 +9607,7 @@
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k\u2013100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open.",
+   "difference": "The Go baseline exercises the corresponding semantic paths with bounded samples: two-stream high/low selectivity, range and numeric coercion, three-stream inner/outer coercion, five-stream readiness and unidirectional range probing. Java's JVM-specific millisecond thresholds, merge/nested/index selection hints, 10k–100k load sizes, static UDF/variable expression path and exact physical plan are not treated as cross-language equalities; Go records timings for regression visibility and leaves those contracts open.",
    "verification": [
     "inventoried",
     "implemented",
@@ -23249,7 +23251,7 @@
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "Java fires a bare not-root at deploy time (begin-state true) and the listener loop is driven by that fire; the Go port rejects bare negative roots at Build (root negative pattern has no positive completion), so the replay drives the same listener-callback deploy/undeploy/redeploy cycles (ST1..ST10) from an explicit driver statement and asserts the bare not-root build rejection. The smoke property \u2014 reentrant lifecycle calls from a pattern listener neither deadlock nor corrupt the engine \u2014 is identical.",
+   "difference": "Java fires a bare not-root at deploy time (begin-state true) and the listener loop is driven by that fire; the Go port rejects bare negative roots at Build (root negative pattern has no positive completion), so the replay drives the same listener-callback deploy/undeploy/redeploy cycles (ST1..ST10) from an explicit driver statement and asserts the bare not-root build rejection. The smoke property — reentrant lifecycle calls from a pattern listener neither deadlock nor corrupt the engine — is identical.",
    "verification": [
     "inventoried",
     "implemented"
@@ -31986,7 +31988,9 @@
     "java-runtime-eb01093e6db83f057d77",
     "java-runtime-8457cbd989256d935b22",
     "java-runtime-4373a1c6d8c903357942",
-    "java-runtime-80cb4763680bc91e38ce"
+    "java-runtime-80cb4763680bc91e38ce",
+    "java-runtime-826b551e883c9398df67",
+    "java-runtime-d273a38f6415e6c3ee62"
    ],
    "javaNames": [
     "EPLVariableUseVariableInFilter",
@@ -31995,7 +31999,9 @@
     "EPLVariableUseSimplePreconfigured",
     "EPLVariableUseSimpleTwoModules",
     "EPLVariableUseInvokeMethod",
-    "EPLVariableUseFilterConstantCustomTypePreconfigured"
+    "EPLVariableUseFilterConstantCustomTypePreconfigured",
+    "EPLVariableUseEPRuntime",
+    "EPLVariableUseConstantVariable"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesUse.java"
@@ -32005,7 +32011,9 @@
     "internal/esper/epl_variables_use_parity_test.go:TestEPLVariableUseVariableInFilterBooleanParity",
     "internal/esper/epl_variables_use_parity_test.go:TestEPLVariableUseSimpleSameModuleParity",
     "internal/app/parity/run_test.go:TestRunVariablesUseExtendedDiffWritesPassingEvidence",
-    "internal/app/parity/run_test.go:TestRunVariablesUseExtendedDiffRejectsTraceMutations"
+    "internal/app/parity/run_test.go:TestRunVariablesUseExtendedDiffRejectsTraceMutations",
+    "internal/esper/epl_variables_use_parity_test.go:TestEPLVariableUseEPRuntimeParity",
+    "internal/esper/epl_variables_use_parity_test.go:TestEPLVariableUseConstantVariableParity"
    ],
    "tags": [],
    "status": "differential-verified",
@@ -32027,11 +32035,14 @@
     "java-runtime-eb01093e6db83f057d77",
     "java-runtime-8457cbd989256d935b22",
     "java-runtime-4373a1c6d8c903357942",
-    "java-runtime-80cb4763680bc91e38ce"
+    "java-runtime-80cb4763680bc91e38ce",
+    "java-runtime-826b551e883c9398df67",
+    "java-runtime-d273a38f6415e6c3ee62"
    ],
    "notes": [
-    "Seven EPLVariablesUse executions replayed through one shared scenario (11 records, 0 differences): on-set variable filters (single and OR-of-two, live re-arm without redeploy, null-equality no-match), same-module create-variable visibility, preconfigured constant boolean read, two-module @public visibility, constant-via-factory and preconfigured-instance dot-invocations returning 'hello', and the custom-typed constant in an equals filter with canonical struct-object rendering.",
-    "Representation registrations: Go variables are environment-scoped, so the two-module case models module A's create-variable as the environment registration consumed by module B's deployment (Java pins @public + path); dot-invocation on variable-hosted objects is represented by function expressions reading the evaluation-context variable."
+    "All nine in-scope EPLVariablesUse executions replayed through one shared scenario (101 records, 0 differences): on-set variable filters with live re-arm, same-module/preconfigured/two-module visibility, factory dot-invocation, custom-typed constant filter, the EPVariableService runtime API surface (typed introspection asserted at engine level, single/bulk ordered sets with byte/short widening, Long/String/Double rejections driving LinkedHashMap-order rollback proofs, create-on-the-fly dummy=40), and the constant-variable surface (operator truth tables incl null and short-coercion rows, literal/array/enum membership filters, SODA re-create, compile-time const rejections, three-target API write protection, ESPER-653 date presence marker, final non-constant enum on-set).",
+    "Java semantics pinned this unit: IN memberships with collection candidates deliver ONE ROW PER MATCHING SLOT (flattened [V2,V1,V2] slots double-deliver ENUM_VALUE_2 for `enumValue in (var_enumarr, var_enumone)`), implemented as root-predicate multi-match counting on the stream-filter path; runtime set coercion follows Java's Byte<Short<Integer<Long<Float<Double widening (byte/short->Integer accepted, Long/Double rejected driving rollback); runtime set-path error texts mirror Java verbatim ('has not been declared', 'of declared type T cannot be assigned a value of type U' with Java simple names, 'declared as constant and may not be assigned a new value'); compile-time const rejection mirrors the inner sentence 'declared constant and may not be set'.",
+    "Representation registrations: variables are environment-scoped so preconfigured fixtures register the TestSuiteEPLVariable.configure subset; deployment-scoped reads collapse to label-keyed owners and the three observation channels collapse to read-variable records; START_TIME uses a fixed '<date>' marker (wall clock nondeterministic); oracle accumulates deployed modules as a persistent compile path with compileWithoutPath bypass for the SODA re-create; assertVariableValuesPreconfigured's FilterItem shape assertion is engine-internal (intentionally-different precedent). Unrepresented sub-aspects registered under the capability: byte[] boxed-vs-primitive property types (single Go array kind) and SupportBean[] event-type-array declaration rejection (no Go build-error equivalent)."
    ]
   },
   {
@@ -37187,7 +37198,7 @@
   "inventoriedCases": 556,
   "implementedCases": 554,
   "differentialVerifiedCases": 167,
-  "differentialVerifiedRuntimeIds": 650,
+  "differentialVerifiedRuntimeIds": 652,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -37197,10 +37208,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3275,
-  "referencedJavaRuntimeIds": 3071,
+  "runtimeAssociationCount": 3277,
+  "referencedJavaRuntimeIds": 3073,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1065,
+  "unreferencedJavaRuntimeIds": 1063,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
   "totalCases": 556,

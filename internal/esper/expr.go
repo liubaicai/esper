@@ -92,6 +92,12 @@ type exprNode struct {
 	expressionBody      *exprNode
 	children            []*exprNode
 	subquery            *subqueryDefinition
+	// multiMatch evaluates Java's per-slot filter delivery for membership
+	// predicates whose candidates include slice-valued expressions: every
+	// matching array element and every matching scalar candidate contributes
+	// one result slot. Only the In/InSlice builders set it, and only when at
+	// least one candidate is slice-valued; nil keeps single-boolean delivery.
+	multiMatch func(EvalContext) int
 }
 
 type typedExpr[T any] struct {
@@ -2080,6 +2086,17 @@ func Between[T Ordered](value, lower, upper Expression[T]) Expression[bool] {
 	return BetweenOf(value, lower, upper)
 }
 
+// equalValuesUnwrapped reports two values equal under the expression
+// comparison contract. Nullable boxed properties surface from struct schemas
+// as pointers even when the expression declares the unboxed type, so
+// membership checks must dereference like Equal/NotEqual instead of
+// comparing Go interface identity through Value.Equal.
+func equalValuesUnwrapped(left, right Value) bool {
+	result := EqualValues(left, right)
+	equal, ok := result.Any().(bool)
+	return result.IsPresent() && ok && equal
+}
+
 func In[T comparable](value Expression[T], candidates ...Expression[T]) Expression[bool] {
 	descriptionParts := make([]string, 0, len(candidates))
 	children := []*exprNode{value.node()}
@@ -2088,7 +2105,7 @@ func In[T comparable](value Expression[T], candidates ...Expression[T]) Expressi
 		children = append(children, candidate.node())
 	}
 	description := value.Description() + " in (" + strings.Join(descriptionParts, ",") + ")"
-	return makeExpr[bool]("in", description, children, func(ctx EvalContext) Value {
+	expression := makeExpr[bool]("in", description, children, func(ctx EvalContext) Value {
 		current := value.eval(ctx)
 		if !current.IsPresent() {
 			return Null()
@@ -2100,7 +2117,7 @@ func In[T comparable](value Expression[T], candidates ...Expression[T]) Expressi
 				hasNull = true
 				continue
 			}
-			if current.Equal(other) {
+			if equalValuesUnwrapped(current, other) {
 				return Present(true)
 			}
 		}
@@ -2109,6 +2126,92 @@ func In[T comparable](value Expression[T], candidates ...Expression[T]) Expressi
 		}
 		return Present(false)
 	})
+	if hasSliceCandidate(candidates) {
+		node := expression.node()
+		node.multiMatch = func(ctx EvalContext) int {
+			current := value.eval(ctx)
+			if !current.IsPresent() {
+				return 0
+			}
+			count := 0
+			for _, candidate := range candidates {
+				other := candidate.eval(ctx)
+				if !other.IsPresent() {
+					continue
+				}
+				count += membershipSlotMatches(current, other)
+			}
+			return count
+		}
+	}
+	return expression
+}
+
+// hasSliceCandidate reports whether any candidate expression declares a
+// slice or array type, the trigger for Java's per-slot IN delivery.
+func hasSliceCandidate[T any](candidates []Expression[T]) bool {
+	for _, candidate := range candidates {
+		if candidate == nil {
+			continue
+		}
+		if typ := candidate.Type(); typ != nil && (typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array) {
+			return true
+		}
+	}
+	return false
+}
+
+// membershipSlotMatches counts how many slots one candidate value
+// contributes for the current scalar: slice and array candidates expand to
+// one slot per equal element, scalar candidates contribute at most one.
+func membershipSlotMatches(current Value, candidate Value) int {
+	value := candidate.Any()
+	items := reflect.ValueOf(value)
+	if items.IsValid() && (items.Kind() == reflect.Slice || items.Kind() == reflect.Array) {
+		count := 0
+		for index := range items.Len() {
+			if equalValuesUnwrapped(current, Present(items.Index(index).Interface())) {
+				count++
+			}
+		}
+		return count
+	}
+	if equalValuesUnwrapped(current, candidate) {
+		return 1
+	}
+	return 0
+}
+
+// predicateMatchSlots returns how many result slots a stream-filter
+// predicate produces for one event. Membership predicates with slice-valued
+// candidates deliver once per matching candidate slot (Java's per-element
+// IN delivery); every other predicate is a single boolean slot.
+func predicateMatchSlots(predicate Expr, ctx EvalContext) int {
+	if predicate == nil {
+		return 0
+	}
+	if node := predicate.node(); node != nil && node.multiMatch != nil {
+		return node.multiMatch(ctx)
+	}
+	value := predicate.eval(ctx)
+	if matched, ok := boolValue(value); ok && matched {
+		return 1
+	}
+	return 0
+}
+
+// hasSliceCandidateExprs is the untyped-candidate variant of
+// hasSliceCandidate used by the InOf builder family.
+func hasSliceCandidateExprs(candidates []Expr) bool {
+	for _, candidate := range candidates {
+		if candidate == nil {
+			continue
+		}
+		if typ := candidate.Type(); typ != nil && (typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array) {
+			return true
+		}
+	}
+	return false
 }
 
 // InSlice checks whether a scalar expression is contained in a slice-valued
@@ -2117,7 +2220,7 @@ func In[T comparable](value Expression[T], candidates ...Expression[T]) Expressi
 // for the duration of one evaluation.
 func InSlice[T comparable](value Expression[T], candidates Expression[[]T]) Expression[bool] {
 	description := value.Description() + " in " + candidates.Description()
-	return makeExpr[bool]("in-slice", description, []*exprNode{value.node(), candidates.node()}, func(ctx EvalContext) Value {
+	expression := makeExpr[bool]("in-slice", description, []*exprNode{value.node(), candidates.node()}, func(ctx EvalContext) Value {
 		current := value.eval(ctx)
 		if !current.IsPresent() {
 			return Null()
@@ -2131,12 +2234,35 @@ func InSlice[T comparable](value Expression[T], candidates Expression[[]T]) Expr
 			return Null()
 		}
 		for _, candidate := range values {
-			if current.Equal(Present(candidate)) {
+			if equalValuesUnwrapped(current, Present(candidate)) {
 				return Present(true)
 			}
 		}
 		return Present(false)
 	})
+	node := expression.node()
+	node.multiMatch = func(ctx EvalContext) int {
+		current := value.eval(ctx)
+		if !current.IsPresent() {
+			return 0
+		}
+		candidateValue := candidates.eval(ctx)
+		if !candidateValue.IsPresent() {
+			return 0
+		}
+		values, err := As[[]T](candidateValue)
+		if err != nil {
+			return 0
+		}
+		count := 0
+		for _, candidate := range values {
+			if equalValuesUnwrapped(current, Present(candidate)) {
+				count++
+			}
+		}
+		return count
+	}
+	return expression
 }
 
 func Coalesce[T any](values ...Expression[T]) Expression[T] {

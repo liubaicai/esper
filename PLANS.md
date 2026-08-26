@@ -45,32 +45,38 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
-- Current work unit (Draft 4.260, implemented pending review):
-  case.variables-use extended with 4 executions (simple-preconfigured,
-  simple-two-modules, invoke-method, filter-constant-custom-type) at 11/11
-  records, 0 differences; legacy 3 cases byte-identical. Assets extended by
-  `VARAssets` (parity-asset-worker, isolated) on the
-  `VARJavaContract`/`VARGoSurface` frozen contract; runner extended by the
-  primary (disjoint files). `VARReview` verdict PASS-with-findings (4xP3,
-  all fixed): two-module comment aligned to the environment-registration
-  mechanism, dot-call diagnosability note added, legacy engine parity test
-  references restored in goTests, trace artifact provenance keys restored.
-  Remaining EPLVariablesUse executions
-  (EPRuntime API, ConstantVariable truth tables, DotSeparateThread,
-  WVarargs) stay queued for follow-up units.
-- Prefetched unit (Draft 4.260, contract frozen, NOT implemented):
-  epl/variable/EPLVariablesUse.java 10 executions (inventory IDs
-  eb01093e6db83f057d77, 5a91cdbc149502c6fb7a, 8457cbd989256d935b22,
-  826b551e883c9398df67, e1511c9dbe279de2adfe, 4373a1c6d8c903357942,
-  d273a38f6415e6c3ee62, 849ebec4996c28823d57, 5a38cfa84dadd7dd6f61,
-  80cb4763680bc91e38ce). `VARJavaContract` delivered the full per-execution
-  contract (agent://VARJavaContract); `VARGoSurface` audited the Go side:
-  the variable engine, runtime get/set API and on-set trigger paths exist,
-  and internal/app/parity/variables_use.go already replays 3 cases; the
-  remaining seven executions split into three groups (preconfigured/same/
-  two-module deployment shapes, EPRuntime typed get/set/rollback/errors,
-  ConstantVariable truth table + four-channel write protection +
-  custom-type filter). WVarargs and DotSeparateThread RUNTIMEOPS deferred.
+- Current work unit (Draft 4.261, implemented, review PASS, pending commit):
+  case.variables-use closed EPLVariablesUse at 9/11 executions (101/101
+  records, 0 differences; legacy 11 records byte-identical). Batch:
+  `VURJavaContract`+`VURGoSurface` read-only scouts; frozen contract in
+  local vur-contract.md; `VURCoreWriter` (internal/esper) and `VURAssets`
+  (parity-asset-worker, isolated: oracle/scenario/runner/run_test) wrote
+  concurrently on disjoint files. Engine changes: Java-widening coercion
+  matrix (Byte<Short<Integer<Long<Float<Double), verbatim runtime set-path
+  diagnostics with javaTypeName rendering, compile-time const inner
+  sentences, equalValuesUnwrapped membership matching, map-payload
+  materialization + string->named-kind coercion, per-slot multi-match IN
+  delivery (Java FilterParamIndexIn flattened slots [V2,V1,V2] double-
+  deliver ENUM_VALUE_2). Runner/oracle: label-keyed deployments, targeted
+  undeploy op mirroring undeployModuleContaining, persistent compiled-
+  module path with compileWithoutPath SODA re-create bypass, nullable
+  FullBean rendering, bare-message error-chain walk. `VURReview` verdict
+  PASS (1xP2 scratch-file hygiene — fixed; 4xP3 documentation notes —
+  comments added at both Or-shape pins and the runtime.go per-slot
+  boundary; plan.go compile-time unknown-variable sentence registered as
+  future parity item; evidence scenario normalization is convention-
+  consistent). Registered unrepresented: DotSeparateThread, WVarargs,
+  byte[] boxed/primitive distinction, SupportBean[] declaration rejection.
+- Prefetch queue: EMPTY. Next unit selection returns to roadmap-driven
+  pick; no contract frozen yet.
+- Closed prefetch (Draft 4.260): epl/variable/EPLVariablesUse.java 10
+  executions were prefetched by `VARJavaContract`/`VARGoSurface`; four
+  shipped as Draft 4.260, the final two in-scope (EPRuntime API
+  java-runtime-826b551e883c9398df67, ConstantVariable
+  java-runtime-d273a38f6415e6c3ee62) shipped as Draft 4.261 above;
+  DotSeparateThread (e1511c9dbe279de2adfe) and WVarargs
+  (dd6fdf5b57faa2ba2600) remain permanently deferred with rationale in
+  capability remaining.
 - Current work unit (Draft 4.259, implemented pending review):
   expr/datetime/ExprDTRound.java all 4 executions differential-verified at
   7/7 records, 0 differences. Engine addition:

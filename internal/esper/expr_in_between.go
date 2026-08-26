@@ -78,7 +78,7 @@ func inExpression(kind string, value Expr, negate bool, candidates ...Expr) Expr
 			}
 		}
 	}
-	return typedExpr[bool]{n: node, fn: func(ctx EvalContext) Value {
+	expression := typedExpr[bool]{n: node, fn: func(ctx EvalContext) Value {
 		if value == nil {
 			return Null()
 		}
@@ -131,6 +131,30 @@ func inExpression(kind string, value Expr, negate bool, candidates ...Expr) Expr
 		}
 		return Present(false)
 	}}
+	if !negate && kind == "in-of" && hasSliceCandidateExprs(candidates) {
+		node.multiMatch = func(ctx EvalContext) int {
+			if value == nil {
+				return 0
+			}
+			left := value.eval(ctx)
+			if !left.IsPresent() || inValueIsNil(left) {
+				return 0
+			}
+			count := 0
+			for _, candidate := range candidates {
+				if candidate == nil {
+					continue
+				}
+				candidateValue := candidate.eval(ctx)
+				if !candidateValue.IsPresent() {
+					continue
+				}
+				count += membershipSlotMatches(left, candidateValue)
+			}
+			return count
+		}
+	}
+	return expression
 }
 
 func betweenExpression(kind string, value, lower, upper Expr, negate bool) Expression[bool] {

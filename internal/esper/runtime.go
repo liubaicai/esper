@@ -625,6 +625,52 @@ func (e *Engine) SetVariables(ctx context.Context, assignments ...VariableAssign
 	return err
 }
 
+// javaTypeName renders a Go type the way Esper's Java engine names it in
+// variable mismatch messages (Byte, Short, Integer, Long, Float, Double,
+// String, Boolean). Predeclared scalars map through their kind; named and
+// composite Go types keep their own rendering because they have no Java
+// primitive counterpart.
+func javaTypeName(t reflect.Type) string {
+	if t == nil {
+		return "Object"
+	}
+	if t.PkgPath() == "" && t.Name() != "" {
+		switch t.Kind() {
+		case reflect.Int8, reflect.Uint8:
+			return "Byte"
+		case reflect.Int16, reflect.Uint16:
+			return "Short"
+		case reflect.Int32, reflect.Int, reflect.Uint32, reflect.Uint, reflect.Uintptr:
+			return "Integer"
+		case reflect.Int64, reflect.Uint64:
+			return "Long"
+		case reflect.Float32:
+			return "Float"
+		case reflect.Float64:
+			return "Double"
+		case reflect.String:
+			return "String"
+		case reflect.Bool:
+			return "Boolean"
+		}
+	}
+	return t.String()
+}
+
+// variableTypeMismatchError reports a rejected runtime variable assignment
+// with the Java-parity message `Variable 'x' of declared type Integer cannot
+// be assigned a value of type String`. Pointer values report the boxed
+// element type, mirroring the dereference coerce applies before validation.
+func variableTypeMismatchError(definition VariableDefinition, value any) error {
+	got := reflect.TypeOf(value)
+	for got != nil && got.Kind() == reflect.Pointer {
+		got = got.Elem()
+	}
+	return NewError(ErrorTypeMismatch, fmt.Sprintf(
+		"Variable '%s' of declared type %s cannot be assigned a value of type %s",
+		definition.Name(), javaTypeName(definition.Type()), javaTypeName(got)))
+}
+
 // setVariablesLocked applies a validated variable batch while the engine lock
 // is already held. Event-triggered on-set actions use this path so they do not
 // re-enter Engine.mu while Send is dispatching statements.
@@ -644,7 +690,7 @@ func (e *Engine) setVariablesLocked(ctx context.Context, assignments []VariableA
 	for _, assignment := range assignments {
 		definition, ok := e.env.Variable(assignment.Name)
 		if !ok {
-			return NewError(ErrorUnknownName, fmt.Sprintf("variable %q is not registered", assignment.Name))
+			return NewError(ErrorUnknownName, fmt.Sprintf("Variable by name '%s' has not been declared", assignment.Name))
 		}
 		if moduleName, protected := func() (string, bool) {
 			e.env.mu.RLock()
@@ -659,11 +705,11 @@ func (e *Engine) setVariablesLocked(ctx context.Context, assignments []VariableA
 			return NewError(ErrorState, fmt.Sprintf("variable %q is context-partitioned; use SetContextVariable", assignment.Name))
 		}
 		if definition.constant {
-			return NewError(ErrorState, fmt.Sprintf("variable %q is constant", assignment.Name))
+			return NewError(ErrorState, fmt.Sprintf("Variable by name '%s' is declared as constant and may not be assigned a new value", assignment.Name))
 		}
 		coerced, err := definition.coerce(assignment.Value)
 		if err != nil {
-			return WrapError(ErrorTypeMismatch, "variable."+assignment.Name, err)
+			return variableTypeMismatchError(definition, assignment.Value)
 		}
 		validated = append(validated, VariableAssignment{Name: assignment.Name, Value: coerced})
 	}
@@ -1272,14 +1318,14 @@ func (e *Engine) validateContextVariableAssignmentsLocked(contextName string, as
 		seen[assignment.Name] = struct{}{}
 		definition, ok := e.env.Variable(assignment.Name)
 		if !ok || definition.context != contextName {
-			return nil, NewError(ErrorUnknownName, fmt.Sprintf("context variable %q is not registered for context %q", assignment.Name, contextName))
+			return nil, NewError(ErrorUnknownName, fmt.Sprintf("Variable by name '%s' has not been declared", assignment.Name))
 		}
 		if definition.constant {
-			return nil, NewError(ErrorState, fmt.Sprintf("context variable %q is constant", assignment.Name))
+			return nil, NewError(ErrorState, fmt.Sprintf("Variable by name '%s' is declared as constant and may not be assigned a new value", assignment.Name))
 		}
 		coerced, err := definition.coerce(assignment.Value)
 		if err != nil {
-			return nil, WrapError(ErrorTypeMismatch, "context-variable."+assignment.Name, err)
+			return nil, variableTypeMismatchError(definition, assignment.Value)
 		}
 		validated = append(validated, VariableAssignment{Name: assignment.Name, Value: coerced})
 	}
@@ -12847,7 +12893,7 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			hadInput:        inputDelta.hadInput,
 		}
 		for _, candidate := range inputDelta.newEvents {
-			value := node.predicate.eval(EvalContext{
+			evalContext := EvalContext{
 				Event:                candidate,
 				OuterEvent:           candidate,
 				ContainedParentEvent: containedParentEvent(candidate),
@@ -12855,8 +12901,16 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 				History:              historyForEvent(inputDelta, candidate),
 				Now:                  now,
 				Variables:            r.variables,
-			})
-			if ok, isBool := boolValue(value); isBool && ok {
+			}
+			// Membership predicates with slice-valued candidates deliver one
+			// pipeline copy per matching candidate slot (Java's per-element
+			// IN delivery); every other predicate is a single boolean slot.
+			// Boundary: honored on this primary stream-filter insertion path
+			// only — pattern guards, split-stream branches and named-window/
+			// context creation filters still evaluate memberships as single
+			// booleans until a verified scenario requires per-slot there too.
+			slots := predicateMatchSlots(node.predicate, evalContext)
+			for range slots {
 				filtered.newEvents = append(filtered.newEvents, candidate)
 			}
 		}

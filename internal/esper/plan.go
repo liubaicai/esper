@@ -6225,7 +6225,7 @@ func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
 			return NewError(ErrorUnknownName, fmt.Sprintf("output assignment references unknown variable %q", name))
 		}
 		if definition.constant {
-			return NewError(ErrorState, fmt.Sprintf("output assignment cannot update constant variable %q", name))
+			return NewError(ErrorState, fmt.Sprintf("Variable by name '%s' is declared constant and may not be set", name))
 		}
 		if err := e.validateExprVariables(assignment.Expr); err != nil {
 			return err
@@ -6275,7 +6275,7 @@ func (e *Environment) validateOutputExpressions(policy OutputPolicy) error {
 			return NewError(ErrorUnknownName, fmt.Sprintf("termination output assignment references unknown variable %q", name))
 		}
 		if definition.constant {
-			return NewError(ErrorState, fmt.Sprintf("termination output assignment cannot update constant variable %q", name))
+			return NewError(ErrorState, fmt.Sprintf("Variable by name '%s' is declared constant and may not be set", name))
 		}
 		if err := e.validateExprVariables(assignment.Expr); err != nil {
 			return err
