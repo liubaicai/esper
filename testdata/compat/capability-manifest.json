@@ -4751,6 +4751,38 @@
     "java-runtime-69cbc6c78f1b84546092",
     "java-runtime-baefe25be71d54724d17"
    ]
+  },
+  {
+   "id": "expr.datetime-round",
+   "domain": "expr",
+   "level": "S",
+   "summary": "Datetime rounding expressions over five representations: roundCeiling/roundFloor/roundHalf across msec..year with month-length-dependent half carry, exact-tie-up, msec identity, per-representation output preservation, and mid-case statement redeploy",
+   "javaRefs": [
+    "ExprDTRound"
+   ],
+   "goRefs": [
+    "internal/esper/expr_dt_round.go",
+    "internal/app/parity/expr_dt_round.go",
+    "internal/app/parity/run_test.go",
+    "facade_generated.go"
+   ],
+   "phase": 3,
+   "status": "differential-verified",
+   "remaining": [
+    "roundHalf on LocalDateTime/ZonedDateTime throws in Java but the suite never exercises it; the Go builders accept all representations",
+    "week unit and non-UTC harness timezones beyond the pinned -Duser.timezone=UTC run"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9838679b35a6a3507332",
+    "java-runtime-8a02976a0c5c4eb03030",
+    "java-runtime-95d240ad18c89abe6e99",
+    "java-runtime-be79bf345b96e2ccc206"
+   ]
   }
  ],
  "cases": [
@@ -34518,6 +34550,61 @@
     "java-runtime-69cbc6c78f1b84546092",
     "java-runtime-baefe25be71d54724d17"
    ]
+  },
+  {
+   "id": "case.expr-dt-round",
+   "javaRuntimeIds": [
+    "java-runtime-9838679b35a6a3507332",
+    "java-runtime-8a02976a0c5c4eb03030",
+    "java-runtime-95d240ad18c89abe6e99",
+    "java-runtime-be79bf345b96e2ccc206"
+   ],
+   "javaNames": [
+    "ExprDTRoundInput",
+    "ExprDTRoundCeil",
+    "ExprDTRoundFloor",
+    "ExprDTRoundHalf"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/datetime/ExprDTRound.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunExprDTRoundDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunExprDTRoundDiffRejectsTraceMutations",
+    "internal/esper/expr_dt_round_parity_test.go:TestDateTimeRoundVectorsParity"
+   ],
+   "tags": [
+    "expr",
+    "datetime",
+    "round",
+    "ceiling",
+    "floor",
+    "half",
+    "representation",
+    "redeploy",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dt-round.json",
+    "testdata/parity/dt-round.trace.json",
+    "testdata/parity/dt-round.evidence.json"
+   ],
+   "notes": [
+    "All four ExprDTRound executions replayed through one shared scenario (7 records, 0 differences): five-representation roundCeiling('hour'), seven-unit ceiling/floor vectors on utildate, seven-unit roundHalf with the Apache Commons month-length carry (2002-05-30 -> 2002-06-01, day offset 29 > (31-1)/2), msec identity, exact-tie-up at :30.000, and the mid-case undeploy+recompile of round-half-min with a surviving per-case sequence counter.",
+    "Engine addition: DateTimeRoundCeiling/Floor/Half builders (internal/esper/expr_dt_round.go + facade re-exports) preserving int64/time.Time representations; calendar-aware rounding in the value's zone for time.Time and UTC for epoch-millis, matching the pinned -Duser.timezone=UTC harness. Review fixes: the Commons FIELDS walk includes the MILLISECOND row (roundHalf sec/min carries), MODIFY_CEILING adds one target unit unconditionally (on-boundary advance), week errors at evaluation ('The field 3 is not supported'), and unit aliases edge-trim only. Regression vectors cover on-boundary ceilings and the midnight-crossing month carry."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9838679b35a6a3507332",
+    "java-runtime-8a02976a0c5c4eb03030",
+    "java-runtime-95d240ad18c89abe6e99",
+    "java-runtime-be79bf345b96e2ccc206"
+   ]
   }
  ],
  "mappings": [
@@ -37072,29 +37159,33 @@
   {
    "capabilityId": "event.map-core",
    "caseId": "case.event-map-core"
+  },
+  {
+   "capabilityId": "expr.datetime-round",
+   "caseId": "case.expr-dt-round"
   }
  ],
  "summary": {
-  "inventoriedCases": 555,
-  "implementedCases": 553,
-  "differentialVerifiedCases": 166,
-  "differentialVerifiedRuntimeIds": 642,
+  "inventoriedCases": 556,
+  "implementedCases": 554,
+  "differentialVerifiedCases": 167,
+  "differentialVerifiedRuntimeIds": 646,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 116,
-  "implementedCapabilities": 115,
-  "differentialVerifiedCapabilities": 30,
+  "inventoriedCapabilities": 117,
+  "implementedCapabilities": 116,
+  "differentialVerifiedCapabilities": 31,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3267,
-  "referencedJavaRuntimeIds": 3063,
+  "runtimeAssociationCount": 3271,
+  "referencedJavaRuntimeIds": 3067,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1073,
+  "unreferencedJavaRuntimeIds": 1069,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 555,
-  "totalCapabilities": 116
+  "totalCases": 556,
+  "totalCapabilities": 117
  }
 }

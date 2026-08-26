@@ -16424,6 +16424,124 @@ func TestRunResultsetOrderbyRowPerGroupDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunExprDTRoundDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dt-round.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dt-round.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dt-round.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dt-round-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	wantIDs := []string{
+		"java-runtime-9838679b35a6a3507332",
+		"java-runtime-8a02976a0c5c4eb03030",
+		"java-runtime-95d240ad18c89abe6e99",
+		"java-runtime-be79bf345b96e2ccc206",
+	}
+	if !reflect.DeepEqual(evidence.JavaRuntimeIDs, wantIDs) {
+		t.Fatalf("javaRuntimeIds = %v", evidence.JavaRuntimeIDs)
+	}
+}
+
+func TestRunExprDTRoundDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "five-rep-ceiling-column-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["val2"] = 999
+			},
+		},
+		{
+			name: "ceiling-identity-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["val0"] = 1022749263000
+			},
+		},
+		{
+			name: "floor-month-truncation-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["val5"] = 1022716800000
+			},
+		},
+		{
+			name: "half-msec-identity-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["val0"] = 1022772602551
+			},
+		},
+		{
+			name: "half-month-carry-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["val5"] = 1020211200000
+			},
+		},
+		{
+			name: "half-min-tie-up-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["val0"] = 1022772600000
+			},
+		},
+		{
+			name: "redeploy-sequence-counter-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].Sequence = 1
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dt-round.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dt-round.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dt-round.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dt-round-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunEventMapCoreDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "event-map-core.evidence.json"),

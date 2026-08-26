@@ -4,6 +4,21 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.259（2026-08-26），新增 `expr.datetime-round`
+> differential-verified 能力，对照固定 Java ExprDTRound.java 全部 4 个
+> execution：五表示 roundCeiling('hour')、七单位 ceiling/floor 向量、
+> roundHalf 含 Apache Commons 月长依赖进位（2002-05-30→2002-06-01，日
+> 偏移 29 > (31-1)/2）、msec 恒等、:30.000 平局进位、以及 mid-case
+> undeploy+recompile round-half-min（per-case 序列计数器存活）。场景
+> Java/Go 各 7 条 records、0 differences。引擎新增：
+> DateTimeRoundCeiling/Floor/Half 构建器（int64/time.Time 表示保持；
+> time.Time 按值自身时区、epoch-millis 按 UTC 求值，对齐 pinned
+> -Duser.timezone=UTC harness）。此前 PLANS 记录的 roundHalf('month')
+> "oracle 自不一致"经源码裁决为误判：断言与 Apache Commons
+> DateUtils.modify(MODIFY_ROUND) 语义自洽。manifest 更新为 556 cases、
+> 167 个 differential-verified case、646 个 differential runtime IDs、
+> 3271 条 associations（referenced 3067）；capability 117 个（31 DV）。
+>
 > 最新补充：Draft 4.258（2026-08-26），新增 `event.map-core`
 > differential-verified 能力，对照固定 Java EventMapCore.java 5 个
 > execution 中的 4 个：三层 map-of-maps 导航至 bean 叶子（含逐字对齐的

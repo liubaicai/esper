@@ -1,3 +1,11 @@
+> 最新补充：Draft 4.259（2026-08-26），新增 `expr.datetime-round`
+> differential-verified 能力：ExprDTRound.java 全部 4 个 execution。场景
+> Java/Go 各 7 条 records、0 differences。引擎新增三个 datetime rounding
+> 构建器（表示保持、月长依赖半进位、平局进位）。roundHalf('month') 早期
+> "自不一致"疑点经源码裁决为误判。manifest 更新为 556 cases、167 个
+> differential-verified case、646 个 differential runtime IDs、3271 条
+> associations（referenced 3067）；capability 117 个（31 DV）。
+>
 > 最新补充：Draft 4.258（2026-08-26），新增 `event.map-core`
 > differential-verified 能力：EventMapCore.java 5 个 execution 中的 4 个。
 > 场景 Java/Go 各 6 条 records、0 differences。引擎修复：SendObjectArray

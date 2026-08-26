@@ -1613,6 +1613,24 @@ func DateTimeBetween(value, lower, upper Expr) Expression[bool] {
 	return internalengine.DateTimeBetween(value, lower, upper)
 }
 
+// DateTimeRoundCeiling rounds a date-time expression up to the next unit
+// boundary, preserving the int64 or time.Time representation.
+func DateTimeRoundCeiling[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
+	return internalengine.DateTimeRoundCeiling[T](value, unit)
+}
+
+// DateTimeRoundFloor truncates a date-time expression down to the unit
+// boundary, preserving the int64 or time.Time representation.
+func DateTimeRoundFloor[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
+	return internalengine.DateTimeRoundFloor[T](value, unit)
+}
+
+// DateTimeRoundHalf rounds to the nearest unit boundary with exact ties
+// rounding up and month-length-dependent month carry.
+func DateTimeRoundHalf[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
+	return internalengine.DateTimeRoundHalf[T](value, unit)
+}
+
 // DateTimeBetweenRangeOf is the static-flag counterpart of
 // DateTimeBetweenWithEndpoints. It is useful when the endpoint policy is part
 // of a reusable rule definition rather than a runtime variable.

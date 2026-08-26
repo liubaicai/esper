@@ -1,0 +1,46 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-dt-round",
+ "description": "ExprDTRound datetime-rounding family replaying all four executions against a five-representation SupportDateTime map type rebuilt from one ISO instant string exactly as SupportDateTime.make derives them under the system default timezone (longdate epoch-millis Long and utildate Date keep full precision, caldate forces MILLISECOND to 0, localdate/zoneddate carry the local view): input applies roundCeiling('hour') to all five representations of 2002-05-30T09:01:02.003 yielding 2002-05-30T10:00:00.000 in val0..val4; ceil and floor apply roundCeiling/roundFloor over msec,sec,minutes,hour,day,month,year on utildate producing identity plus 09:01:03.000, 09:02:00.000, 10:00:00.000, 2002-05-31, 2002-06-01, 2003-01-01 upward and identity plus 09:01:02.000, 09:01:00.000, 09:00:00.000, 2002-05-30, 2002-05-01, 2002-01-01 downward for 09:01:02.003; half applies roundHalf over the same seven units at 15:30:02.550 where msec is the identity, seconds round up past the .500 tie, minutes stay down, the hour rounds up at the exact 30-minute tie, the day crosses to May 31st past noon, the month carries to June 1st following Apache Commons DateUtils MODIFY_ROUND month-length-dependent rounding and the year stays at January 1st, then redeploys utildate.roundHalf('min') via the round-half-min marker proving 29.999 rounds down to the current minute while the exact 30.000 tie and 30.001 round up",
+ "javaRuntimes": [
+  "java-runtime-9838679b35a6a3507332",
+  "java-runtime-8a02976a0c5c4eb03030",
+  "java-runtime-95d240ad18c89abe6e99",
+  "java-runtime-be79bf345b96e2ccc206"
+ ],
+ "cases": [
+  {
+   "case": "input",
+   "runtimeId": "java-runtime-9838679b35a6a3507332"
+  },
+  {
+   "case": "ceil",
+   "runtimeId": "java-runtime-8a02976a0c5c4eb03030"
+  },
+  {
+   "case": "floor",
+   "runtimeId": "java-runtime-95d240ad18c89abe6e99"
+  },
+  {
+   "case": "half",
+   "runtimeId": "java-runtime-be79bf345b96e2ccc206"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "input"},
+  {"op": "send", "eventType": "SupportDateTime", "payload": {"date": "2002-05-30T09:01:02.003Z"}},
+
+  {"op": "case", "case": "ceil"},
+  {"op": "send", "eventType": "SupportDateTime", "payload": {"date": "2002-05-30T09:01:02.003Z"}},
+
+  {"op": "case", "case": "floor"},
+  {"op": "send", "eventType": "SupportDateTime", "payload": {"date": "2002-05-30T09:01:02.003Z"}},
+
+  {"op": "case", "case": "half"},
+  {"op": "send", "eventType": "SupportDateTime", "payload": {"date": "2002-05-30T15:30:02.550Z"}},
+  {"op": "deploy", "statement": "round-half-min"},
+  {"op": "send", "eventType": "SupportDateTime", "payload": {"date": "2002-05-30T15:30:29.999Z"}},
+  {"op": "send", "eventType": "SupportDateTime", "payload": {"date": "2002-05-30T15:30:30.000Z"}},
+  {"op": "send", "eventType": "SupportDateTime", "payload": {"date": "2002-05-30T15:30:30.001Z"}}
+ ]
+}

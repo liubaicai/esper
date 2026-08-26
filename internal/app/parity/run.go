@@ -1919,6 +1919,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "dt-round" || *mode == "dt-round-diff" {
+		trace, err := runExprDTRoundScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "dt-round-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, exprDTRoundJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, exprDTRoundJavaSources),
+				splitMetadata(*javaExecutions, exprDTRoundJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "event-map-core" || *mode == "event-map-core-diff" {
 		trace, err := runEventMapCoreScenario(context.Background(), scenario)
 		if err != nil {

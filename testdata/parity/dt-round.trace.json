@@ -1,0 +1,133 @@
+{
+ "version": "esper-parity/v1",
+ "id": "expr-dt-round",
+ "records": [
+  {
+   "case": "input",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "val0": 1022752800000,
+      "val1": 1022752800000,
+      "val2": 1022752800000,
+      "val3": 1022752800000,
+      "val4": 1022752800000
+     }
+    }
+   ]
+  },
+  {
+   "case": "ceil",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "val0": 1022749262003,
+      "val1": 1022749263000,
+      "val2": 1022749320000,
+      "val3": 1022752800000,
+      "val4": 1022803200000,
+      "val5": 1022889600000,
+      "val6": 1041379200000
+     }
+    }
+   ]
+  },
+  {
+   "case": "floor",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "val0": 1022749262003,
+      "val1": 1022749262000,
+      "val2": 1022749260000,
+      "val3": 1022749200000,
+      "val4": 1022716800000,
+      "val5": 1020211200000,
+      "val6": 1009843200000
+     }
+    }
+   ]
+  },
+  {
+   "case": "half",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 1,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "val0": 1022772602550,
+      "val1": 1022772603000,
+      "val2": 1022772600000,
+      "val3": 1022774400000,
+      "val4": 1022803200000,
+      "val5": 1022889600000,
+      "val6": 1009843200000
+     }
+    }
+   ]
+  },
+  {
+   "case": "half",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 2,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "val0": 1022772600000
+     }
+    }
+   ]
+  },
+  {
+   "case": "half",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 3,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "val0": 1022772660000
+     }
+    }
+   ]
+  },
+  {
+   "case": "half",
+   "operation": "listener",
+   "statement": "s0",
+   "sequence": 4,
+   "time": "1970-01-01T00:00:00Z",
+   "new": [
+    {
+     "kind": "row",
+     "fields": {
+      "val0": 1022772660000
+     }
+    }
+   ]
+  }
+ ]
+}

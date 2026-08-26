@@ -45,7 +45,24 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
-- Prefetched unit (Draft 4.259, contract frozen, NOT implemented):
+- Current work unit (Draft 4.259, implemented pending review):
+  expr/datetime/ExprDTRound.java all 4 executions differential-verified at
+  7/7 records, 0 differences. Engine addition:
+  internal/esper/expr_dt_round.go (DateTimeRoundCeiling/Floor/Half with
+  representation preservation, value-zone calendar rounding, Apache Commons
+  month-length carry) + facade re-exports; runner internal/app/parity/
+  expr_dt_round.go with mid-case redeploy. Assets from `DTRAssets`
+  (parity-asset-worker, isolated) on the `DTRJavaContract`/`DTRGoSurface`
+  frozen contract. `DTRReview` verdict FAIL (1xP1 2xP2 2xP3), all fixed
+  and re-verified: Commons MODIFY_CEILING adds one target unit
+  unconditionally (on-boundary inputs advance; P1 repro vectors added),
+  the FIELDS walk includes the MILLISECOND row so roundHalf sec/min
+  carries reproduce, week errors at evaluation like Java's unsupported
+  field path, unit normalization edge-trims only, caldate forces
+  sub-second zero. The reviewer's midnight-crossing repro arithmetic was
+  itself incorrect (00:00:05 - 5s stays on the same day, day offset 16
+  still carries); corrected vector pins the Java-faithful June carry.
+- Closed prefetch (Draft 4.259, superseded by the implemented unit above):
   expr/datetime/ExprDTRound.java 4 executions: Input
   (9838679b35a6a3507332), Ceil (8a02976a0c5c4eb03030), Floor
   (95d240ad18c89abe6e99), Half (be79bf345b96e2ccc206). `DTRJavaContract` adjudicated
