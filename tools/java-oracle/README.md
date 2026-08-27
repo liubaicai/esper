@@ -494,7 +494,7 @@ checked-in 场景与 evidence：`testdata/parity/resultset-row-per-group-simple.
 
 ## Resultset-aggregate-count-sum oracle
 
-第二十四个代表性场景使用 `ResultSetAggregateCountSumScenarioOracle.java`（runner：`run-resultset-aggregate-count-sum.sh`）。它注册 Map 事件类型 `SupportMarketDataBean(symbol, volume, price, feed)`、`SupportBeanString(theString)`、`SupportBean(theString, intPrimitive, longBoxed, longPrimitive)`、`SupportBean_A(id)` 与 `SupportBean_B(id)`，双跑四个 case：`count-one-view`（irstream 分组 `count(*)/count(distinct volume)/count(all volume)` over `#length(3)`，DELL 50/null/25/25/25 + IBM 1/null/null/null 序列，覆盖 null volume、重复值与窗口淘汰 distinct 重算）、`count-join`（同一语句的 SupportBeanString#length(100) join 变体）、`count-simple`（`count(*)` over `#time(1)` 逐事件 1/2/3）与 `sum-named-window-remove-group`（keepall named window + insert + 按 id on-delete + delete-all 触发下的分组 sum：组删除输出 null 行、iterator 按 order by theString 逐组快照）。Go 用 `Count/CountAll/CountDistinct` + `GroupBy` + named-window/trigger 链式 API 复现同一语义。
+第二十四个代表性场景使用 `ResultSetAggregateCountSumScenarioOracle.java`（runner：`run-resultset-aggregate-count-sum.sh`）。它注册 Map 事件类型 `SupportMarketDataBean(symbol, volume, price, feed)`、`SupportBeanString(theString)`、`SupportBean(theString, intPrimitive, longBoxed, longPrimitive)`、`SupportBean_A(id)` 与 `SupportBean_B(id)`，双跑 `ResultSetAggregateCountSum.java` 的 9 个 execution：原有 `count-one-view`（irstream 分组 `count(*)/count(distinct volume)/count(all volume)` over `#length(3)`，DELL 50/null/25/25/25 + IBM 1/null/null/null 序列，覆盖 null volume、重复值与窗口淘汰 distinct 重算）、`count-join`（同一语句的 SupportBeanString#length(100) join 变体）、`count-simple`（`count(*)` over `#time(1)` 逐事件 1/2/3）与 `sum-named-window-remove-group`（keepall named window + insert + 按 id on-delete 触发下的分组 sum：组删除输出 null 行、iterator 按 order by theString 逐组快照），以及新增 `count-plus-star`（`select *` 加累积 count）、`count-having`/`sum-having`（无窗口 sum/count 的进入退出）、`count-one-view-om`（SODA model round-trip 与 grouped count 矩阵）和 `nested-avg`（length(3) 分组 `avg(count(*))` 历史前缀）。
 
 ```sh
 ./tools/java-oracle/run-resultset-aggregate-count-sum.sh \
@@ -510,7 +510,7 @@ go run ./cmd/parity \
   -evidence /tmp/resultset-aggregate-count-sum.evidence.json
 ```
 
-checked-in 场景与 evidence：`testdata/parity/resultset-aggregate-count-sum.json`、`testdata/parity/resultset-aggregate-count-sum.evidence.json`；当前差异数为 0，覆盖 `ResultSetAggregateCountOneView`、`ResultSetAggregateCountJoin`、`ResultSetAggregateCountSimple` 与 `ResultSetAggregateSumNamedWindowRemoveGroup`。
+checked-in 场景与 evidence：`testdata/parity/resultset-aggregate-count-sum.json`、`testdata/parity/resultset-aggregate-count-sum.evidence.json`；当前差异数为 0，覆盖 `ResultSetAggregateCountSimple`、`ResultSetAggregateCountPlusStar`、`ResultSetAggregateCountHaving`、`ResultSetAggregateSumHaving`、`ResultSetAggregateCountOneViewOM`、`ResultSetAggregateGroupByCountNestedAggregationAvg`、`ResultSetAggregateCountOneView`、`ResultSetAggregateCountJoin` 与 `ResultSetAggregateSumNamedWindowRemoveGroup`，共 55 条 records。
 
 ## Subselect-aggregated-in-exists-any-all oracle
 

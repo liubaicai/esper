@@ -14,6 +14,7 @@ type countSumMarket struct {
 	Symbol string  `esper:"symbol"`
 	Volume *int64  `esper:"volume"`
 	Price  float64 `esper:"price"`
+	Feed   string  `esper:"feed"`
 }
 
 type countSumStringBean struct {
@@ -50,15 +51,25 @@ var resultsetAggregateCountSumJavaSources = []string{
 
 var (
 	resultsetAggregateCountSumJavaRuntimeIDs = []string{
-		"java-runtime-ef1afacfc1fb429a8bef",
-		"java-runtime-5fd3d359929d94deba32",
-		"java-runtime-d915c88b8d910c953420",
-		"java-runtime-d2a92c1b89214be184e4",
+		"java-runtime-d915c88b8d910c953420", // ResultSetAggregateCountSimple
+		"java-runtime-7887bb0df9aaf7e99c89", // ResultSetAggregateCountPlusStar
+		"java-runtime-5f8ee37abdc1302b4598", // ResultSetAggregateCountHaving
+		"java-runtime-6fe8e1bd138b1ee81944", // ResultSetAggregateSumHaving
+		"java-runtime-f24aa8d884bd556d2023", // ResultSetAggregateCountOneViewOM
+		"java-runtime-9ca872971349f850d32e", // ResultSetAggregateGroupByCountNestedAggregationAvg
+		"java-runtime-ef1afacfc1fb429a8bef", // ResultSetAggregateCountOneView
+		"java-runtime-5fd3d359929d94deba32", // ResultSetAggregateCountJoin
+		"java-runtime-d2a92c1b89214be184e4", // ResultSetAggregateSumNamedWindowRemoveGroup
 	}
 	resultsetAggregateCountSumJavaExecutions = []string{
+		"ResultSetAggregateCountSimple",
+		"ResultSetAggregateCountPlusStar",
+		"ResultSetAggregateCountHaving",
+		"ResultSetAggregateSumHaving",
+		"ResultSetAggregateCountOneViewOM",
+		"ResultSetAggregateGroupByCountNestedAggregationAvg",
 		"ResultSetAggregateCountOneView",
 		"ResultSetAggregateCountJoin",
-		"ResultSetAggregateCountSimple",
 		"ResultSetAggregateSumNamedWindowRemoveGroup",
 	}
 )
@@ -74,17 +85,30 @@ func runResultSetAggregateCountSumScenario(ctx context.Context, scenario compat.
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
 	}
-	caseOrder := []string{"count-one-view", "count-join", "count-simple", "sum-named-window-remove-group"}
-	if !scenarioHasCase(scenario, caseOrder[0]) {
-		return compat.Trace{}, fmt.Errorf("resultset-aggregate-count-sum scenario %q has no supported cases", scenario.ID)
+	caseOrder := []string{
+		"count-one-view",
+		"count-join",
+		"count-simple",
+		"sum-named-window-remove-group",
+		"count-plus-star",
+		"count-having",
+		"sum-having",
+		"count-one-view-om",
+		"nested-avg",
 	}
 	traces := make([]compat.Trace, 0, len(caseOrder))
 	for _, caseName := range caseOrder {
+		if !scenarioHasCase(scenario, caseName) {
+			continue
+		}
 		trace, err := runResultSetAggregateCountSumCase(ctx, scenario, caseName)
 		if err != nil {
 			return compat.Trace{}, fmt.Errorf("resultset-aggregate-count-sum case %q: %w", caseName, err)
 		}
 		traces = append(traces, trace)
+	}
+	if len(traces) == 0 {
+		return compat.Trace{}, fmt.Errorf("resultset-aggregate-count-sum scenario %q has no supported cases", scenario.ID)
 	}
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
 	for _, caseTrace := range traces {
@@ -117,79 +141,82 @@ func runResultSetAggregateCountSumCase(ctx context.Context, scenario compat.Scen
 
 	var engine *esper.Engine
 	var statement *esper.Statement
-	cleanup := true
 	defer func() {
-		if cleanup {
+		if engine != nil {
 			_ = engine.Close(context.Background())
 		}
 	}()
 	deploy := func(plan esper.Plan) (*esper.Statement, error) {
+		if engine == nil {
+			return nil, fmt.Errorf("resultset-aggregate-count-sum engine is not initialized")
+		}
 		deployment, err := engine.Deploy(ctx, plan)
 		if err != nil {
 			return nil, err
 		}
-		if len(deployment.Statements()) != 1 {
-			return nil, fmt.Errorf("expected one statement, got %d", len(deployment.Statements()))
+		statements := deployment.Statements()
+		if len(statements) != 1 {
+			return nil, fmt.Errorf("expected one statement, got %d", len(statements))
 		}
-		return deployment.Statements()[0], nil
+		return statements[0], nil
+	}
+	buildAndDeploy := func(query esper.Query) error {
+		plan, err := env.Build(query)
+		if err != nil {
+			return err
+		}
+		engine, statement, err = deployParityStatement(ctx, env, plan)
+		return err
 	}
 
 	switch caseName {
-	case "count-one-view", "count-simple":
+	case "count-one-view", "count-one-view-om":
 		symbol := esper.Field[countSumMarket, string]("symbol")
 		volume := esper.Field[countSumMarket, *int64]("volume")
-		var query esper.Query
-		if caseName == "count-one-view" {
-			grouped := esper.From[countSumMarket](env, "SupportMarketDataBean").
-				Window(esper.LengthWindow(3)).
-				Filter(esper.Or(esper.Or(
-					esper.Equal[string](symbol, esper.Literal("DELL")),
-					esper.Equal[string](symbol, esper.Literal("IBM")),
-				), esper.Equal[string](symbol, esper.Literal("GE")))).
-				GroupBy(symbol)
-			query = grouped.Select(
-				esper.Alias("symbol", symbol),
-				esper.Alias("countAll", esper.CountAll()),
-				esper.Alias("countDistVol", esper.CountDistinct[any](volume)),
-				esper.Alias("countVol", esper.Count[*int64](volume)),
-			).Query(esper.StatementName("s0"), esper.WithOldStream())
-		} else {
-			query = esper.From[countSumMarket](env, "SupportMarketDataBean").
-				Window(esper.TimeWindow(time.Second)).
-				Aggregate(
-					esper.Alias("cnt", esper.CountAll()),
-				).Query(esper.StatementName("s0"))
-		}
-		plan, err := env.Build(query)
-		if err != nil {
-			return compat.Trace{}, err
-		}
-		engine, statement, err = deployParityStatement(ctx, env, plan)
-		if err != nil {
+		grouped := esper.From[countSumMarket](env, "SupportMarketDataBean").
+			Window(esper.LengthWindow(3)).
+			Filter(esper.Or(esper.Or(
+				esper.Equal[string](symbol, esper.Literal("DELL")),
+				esper.Equal[string](symbol, esper.Literal("IBM")),
+			), esper.Equal[string](symbol, esper.Literal("GE")))).
+			GroupBy(symbol)
+		query := grouped.Select(
+			esper.Alias("symbol", symbol),
+			esper.Alias("countAll", esper.CountAll()),
+			esper.Alias("countDistVol", esper.CountDistinct[any](volume)),
+			esper.Alias("countVol", esper.Count[*int64](volume)),
+		).Query(esper.StatementName("s0"), esper.WithOldStream())
+		if err := buildAndDeploy(query); err != nil {
 			return compat.Trace{}, err
 		}
 	case "count-join":
 		theString := esper.Field[countSumStringBean, string]("theString")
 		symbol := esper.Field[countSumMarket, string]("symbol")
-		grouped := esper.Join(
-			esper.From[countSumStringBean](env, "SupportBeanString").
-				Window(esper.LengthWindow(100)),
-			esper.From[countSumMarket](env, "SupportMarketDataBean").
-				Window(esper.LengthWindow(3)),
-			esper.OnEqual(theString, symbol),
-		).GroupBy(esper.JoinField[string](1, "symbol"))
+		left := esper.From[countSumStringBean](env, "SupportBeanString").
+			Window(esper.LengthWindow(100))
+		right := esper.From[countSumMarket](env, "SupportMarketDataBean").
+			Window(esper.LengthWindow(3)).
+			Filter(esper.Or(esper.Or(
+				esper.Equal[string](symbol, esper.Literal("DELL")),
+				esper.Equal[string](symbol, esper.Literal("IBM")),
+			), esper.Equal[string](symbol, esper.Literal("GE"))))
+		joined := esper.Join(left, right, esper.OnEqual(theString, symbol))
+		grouped := joined.GroupBy(esper.JoinField[string](1, "symbol"))
 		query := grouped.Select(
 			esper.Alias("symbol", esper.JoinField[string](1, "symbol")),
 			esper.Alias("countAll", esper.CountAll()),
 			esper.Alias("countDistVol", esper.CountDistinct[any](esper.JoinField[*int64](1, "volume"))),
 			esper.Alias("countVol", esper.Count[*int64](esper.JoinField[*int64](1, "volume"))),
 		).Query(esper.StatementName("s0"), esper.WithOldStream())
-		plan, err := env.Build(query)
-		if err != nil {
+		if err := buildAndDeploy(query); err != nil {
 			return compat.Trace{}, err
 		}
-		engine, statement, err = deployParityStatement(ctx, env, plan)
-		if err != nil {
+	case "count-simple":
+		query := esper.From[countSumMarket](env, "SupportMarketDataBean").
+			Window(esper.TimeWindow(time.Second)).
+			Aggregate(esper.Alias("cnt", esper.CountAll())).
+			Query(esper.StatementName("s0"))
+		if err := buildAndDeploy(query); err != nil {
 			return compat.Trace{}, err
 		}
 	case "sum-named-window-remove-group":
@@ -212,48 +239,101 @@ func runResultSetAggregateCountSumCase(ctx context.Context, scenario compat.Scen
 		if err != nil {
 			return compat.Trace{}, err
 		}
-		deleteAPlan, err := env.Build(esper.OnEvent(esper.From[countSumTriggerA](env, "SupportBean_A")).DeleteFromNamedWindow(
+		deleteAPlan, err := env.Build(esper.OnEvent(
+			esper.From[countSumTriggerA](env, "SupportBean_A"),
+		).DeleteFromNamedWindow(
 			"MyWindow",
 			esper.Equal[string](esper.NamedWindowField[string]("theString"), esper.Field[countSumTriggerA, string]("id")),
 		).Query(esper.StatementName("delete1")))
 		if err != nil {
 			return compat.Trace{}, err
 		}
-		deleteBPlan, err := env.Build(esper.OnEvent(esper.From[countSumTriggerB](env, "SupportBean_B")).DeleteAllFromNamedWindow(
-			"MyWindow",
-		).Query(esper.StatementName("delete2")))
+		deleteBPlan, err := env.Build(esper.OnEvent(
+			esper.From[countSumTriggerB](env, "SupportBean_B"),
+		).DeleteAllFromNamedWindow("MyWindow").Query(esper.StatementName("delete2")))
 		if err != nil {
 			return compat.Trace{}, err
 		}
 		theString := esper.Field[any, string]("theString")
-		query := esper.FromNamedWindow(env, "MyWindow").GroupBy(theString).Select(
-			esper.Alias("theString", theString),
-			esper.Alias("mysum", esper.Sum[int](esper.Field[any, int]("intPrimitive"))),
-		).Query(esper.StatementName("s0"),
-			esper.OrderBy(esper.Ascending(esper.ResultField[string]("theString"))))
-		consumerPlan, err := env.Build(query)
+		consumerPlan, err := env.Build(esper.FromNamedWindow(env, "MyWindow").
+			GroupBy(theString).
+			Select(
+				esper.Alias("theString", theString),
+				esper.Alias("mysum", esper.Sum[int](esper.Field[any, int]("intPrimitive"))),
+			).
+			Query(esper.StatementName("s0"),
+				esper.OrderBy(esper.Ascending(esper.ResultField[string]("theString")))))
 		if err != nil {
 			return compat.Trace{}, err
 		}
 		engine = esper.NewEngine(env)
-		if _, err := deploy(insertPlan); err != nil {
-			return compat.Trace{}, err
-		}
-		if _, err := deploy(deleteAPlan); err != nil {
-			return compat.Trace{}, err
-		}
-		if _, err := deploy(deleteBPlan); err != nil {
-			return compat.Trace{}, err
+		for _, plan := range []esper.Plan{insertPlan, deleteAPlan, deleteBPlan} {
+			if _, err := deploy(plan); err != nil {
+				return compat.Trace{}, err
+			}
 		}
 		statement, err = deploy(consumerPlan)
 		if err != nil {
 			return compat.Trace{}, err
 		}
+	case "count-plus-star":
+		symbol := esper.Field[countSumMarket, string]("symbol")
+		volume := esper.Field[countSumMarket, *int64]("volume")
+		price := esper.Field[countSumMarket, float64]("price")
+		feed := esper.Field[countSumMarket, string]("feed")
+		query := esper.From[countSumMarket](env, "SupportMarketDataBean").
+			Aggregate(
+				esper.Alias("symbol", symbol),
+				esper.Alias("volume", volume),
+				esper.Alias("price", price),
+				esper.Alias("feed", feed),
+				esper.Alias("cnt", esper.CountAll()),
+			).
+			Query(esper.StatementName("s0"))
+		if err := buildAndDeploy(query); err != nil {
+			return compat.Trace{}, err
+		}
+	case "count-having":
+		intPrimitive := esper.Field[countSumBean, int]("intPrimitive")
+		sumExpr := esper.Sum[int](intPrimitive)
+		query := esper.From[countSumBean](env, "SupportBean").
+			Aggregate(esper.Alias("mysum", sumExpr)).
+			Having(esper.Equal[int](sumExpr, esper.Literal(2))).
+			Query(esper.StatementName("s0"), esper.WithOldStream())
+		if err := buildAndDeploy(query); err != nil {
+			return compat.Trace{}, err
+		}
+	case "sum-having":
+		countExpr := esper.CountAll()
+		query := esper.From[countSumBean](env, "SupportBean").
+			Aggregate(esper.Alias("mysum", countExpr)).
+			Having(esper.Equal[int64](countExpr, esper.Literal(int64(2)))).
+			Query(esper.StatementName("s0"), esper.WithOldStream())
+		if err := buildAndDeploy(query); err != nil {
+			return compat.Trace{}, err
+		}
+	case "nested-avg":
+		symbol := esper.Field[countSumMarket, string]("symbol")
+		countExpr := esper.CountAll()
+		query := esper.From[countSumMarket](env, "SupportMarketDataBean").
+			Window(esper.LengthWindow(3)).
+			GroupBy(symbol).
+			Select(
+				esper.Alias("symbol", symbol),
+				esper.Alias("cnt", countExpr),
+				esper.Alias("val", esper.Avg[int64](countExpr)),
+			).
+			Query(esper.StatementName("s0"),
+				esper.OrderBy(esper.Ascending(esper.ResultField[string]("symbol"))))
+		if err := buildAndDeploy(query); err != nil {
+			return compat.Trace{}, err
+		}
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported resultset-aggregate-count-sum case %q", caseName)
 	}
-	cleanup = false
-	defer func() { _ = engine.Close(context.Background()) }()
+	if engine == nil || statement == nil {
+		return compat.Trace{}, fmt.Errorf("resultset-aggregate-count-sum case %q did not deploy a listener statement", caseName)
+	}
 
 	return compat.ReplayWithStatements(ctx, engine, statement, caseScenario, decodeResultSetAggregateCountSumPayload, func(name string) (*esper.Statement, error) {
 		if name != statement.Name() {
@@ -270,6 +350,7 @@ func decodeResultSetAggregateCountSumPayload(step compat.Step) (any, error) {
 		if err := json.Unmarshal(step.Payload, &value); err != nil {
 			return nil, fmt.Errorf("decode SupportMarketDataBean: %w", err)
 		}
+		value.Feed = "f1"
 		return value, nil
 	case "SupportBeanString":
 		var value countSumStringBean

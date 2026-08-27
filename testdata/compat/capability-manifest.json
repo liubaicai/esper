@@ -4196,7 +4196,16 @@
     "java-runtime-1e0ad81982656cd82bcd",
     "java-runtime-bd4672ec90862ee08790",
     "java-runtime-e54e4c73c8eec446581f",
-    "java-runtime-3e89e6297511b7dfe531"
+    "java-runtime-3e89e6297511b7dfe531",
+    "java-runtime-d915c88b8d910c953420",
+    "java-runtime-7887bb0df9aaf7e99c89",
+    "java-runtime-5f8ee37abdc1302b4598",
+    "java-runtime-6fe8e1bd138b1ee81944",
+    "java-runtime-f24aa8d884bd556d2023",
+    "java-runtime-9ca872971349f850d32e",
+    "java-runtime-ef1afacfc1fb429a8bef",
+    "java-runtime-5fd3d359929d94deba32",
+    "java-runtime-d2a92c1b89214be184e4"
    ],
    "representativeScenarioIds": [
     "output-policy-iterator",
@@ -27271,15 +27280,25 @@
   {
    "id": "case.resultset-aggregate-count-sum",
    "javaRuntimeIds": [
+    "java-runtime-d915c88b8d910c953420",
+    "java-runtime-7887bb0df9aaf7e99c89",
+    "java-runtime-5f8ee37abdc1302b4598",
+    "java-runtime-6fe8e1bd138b1ee81944",
+    "java-runtime-f24aa8d884bd556d2023",
+    "java-runtime-9ca872971349f850d32e",
     "java-runtime-ef1afacfc1fb429a8bef",
     "java-runtime-5fd3d359929d94deba32",
-    "java-runtime-d915c88b8d910c953420",
     "java-runtime-d2a92c1b89214be184e4"
    ],
    "javaNames": [
+    "ResultSetAggregateCountSimple",
+    "ResultSetAggregateCountPlusStar",
+    "ResultSetAggregateCountHaving",
+    "ResultSetAggregateSumHaving",
+    "ResultSetAggregateCountOneViewOM",
+    "ResultSetAggregateGroupByCountNestedAggregationAvg",
     "ResultSetAggregateCountOneView",
     "ResultSetAggregateCountJoin",
-    "ResultSetAggregateCountSimple",
     "ResultSetAggregateSumNamedWindowRemoveGroup"
    ],
    "javaSourceFiles": [
@@ -27320,9 +27339,14 @@
     "representative-verified"
    ],
    "differentialVerifiedRuntimeIds": [
+    "java-runtime-d915c88b8d910c953420",
+    "java-runtime-7887bb0df9aaf7e99c89",
+    "java-runtime-5f8ee37abdc1302b4598",
+    "java-runtime-6fe8e1bd138b1ee81944",
+    "java-runtime-f24aa8d884bd556d2023",
+    "java-runtime-9ca872971349f850d32e",
     "java-runtime-ef1afacfc1fb429a8bef",
     "java-runtime-5fd3d359929d94deba32",
-    "java-runtime-d915c88b8d910c953420",
     "java-runtime-d2a92c1b89214be184e4"
    ],
    "representativeScenarioIds": [
@@ -37407,6 +37431,10 @@
    "caseId": "case.resultset-query-type-having"
   },
   {
+   "capabilityId": "resultset.aggregate-having",
+   "caseId": "case.resultset-aggregate-count-sum"
+  },
+  {
    "capabilityId": "resultset.orderby-row-for-all",
    "caseId": "case.resultset-orderby-row-for-all"
   },
@@ -37439,7 +37467,7 @@
   "inventoriedCases": 559,
   "implementedCases": 557,
   "differentialVerifiedCases": 170,
-  "differentialVerifiedRuntimeIds": 675,
+  "differentialVerifiedRuntimeIds": 680,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
@@ -37449,14 +37477,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3300,
-  "referencedJavaRuntimeIds": 3096,
+  "runtimeAssociationCount": 3305,
+  "referencedJavaRuntimeIds": 3101,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1040,
-  "representativeScenarioTotal": 94,
-  "representativeScenarioPassing": 94,
+  "unreferencedJavaRuntimeIds": 1035,
+  "representativeScenarioTotal": 97,
+  "representativeScenarioPassing": 97,
   "totalCases": 559,
   "totalCapabilities": 118,
-  "differentialVerifiedRuntimeIDs": 675
+  "differentialVerifiedRuntimeIDs": 680
  }
 }

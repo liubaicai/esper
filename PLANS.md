@@ -32,7 +32,7 @@ Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
 - Updated: 2026-08-27
-- Baseline: `HEAD` == `origin/master` at Draft 4.263 (`07448452e`), pushed. Worktree carries the Draft 4.264 ResultSetQueryTypeWTimeBatch implementation and project facts pending final gates, commit, and push.
+- Baseline: `HEAD` == `origin/master` at Draft 4.264 (`1fe33f4cb`), pushed. The ResultSetQueryTypeWTimeBatch unit is committed and the worktree is clean.
 - Previous unit outcome (closed; Draft 4.254, commit `20700fb35`):
   InfraTableIntoTable 9 executions (11 cases) differential-verified at
   59/59 records, 0 differences; runtime additions MaxEver/MinEver/
@@ -44,28 +44,41 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
-- Current work unit (Draft 4.264, implemented, review PASS, project facts updated; final gates pending):
-  `ResultSetQueryTypeWTimeBatch.java` all 8 executions are differential-verified
-  (16/16 Java and Go records, 0 differences). Batch: `JavaTB`+`GoTB`
-  read-only scouts; `ParityAssetsTB` authored the oracle/script/scenario assets;
-  `TimeBatchCoreRepair` and `JoinBatchLifecycle` investigated the shared runtime
-  boundary. Engine changes split per-window expiry deltas for join sides,
-  preserve event lineage through time-batch expiry, and route aggregate join
-  definitions through the corrected expiry path; `AnyModeCompatTests` added
-  explicit mode=any listener-row canonicalization with strict record/batch/value
-  mutation coverage. `WTBParityReview-2` strict verdict PASS with no findings.
-  Targeted package tests, manifest/evidence checks, and `git diff --check` pass;
-  full vet/test gates, commit, and push remain. Scratch probe removed.
-- Prefetch queue: CountSum ordinals 1–5 are frozen read-only for Draft 4.265:
-  fixed Java `ResultSetAggregateCountSum.java`, runtime IDs
-  `7887bb0df9aaf7e99c89`, `5f8ee37abdc1302b4598`,
-  `6fe8e1bd138b1ee81944`, `f24aa8d884bd556d2023`,
-  `9ca872971349f850d32e5`; executions `ResultSetAggregateCountPlusStar`,
-  `ResultSetAggregateCountHaving`, `ResultSetAggregateSumHaving`,
-  `ResultSetAggregateCountOneViewOM`, and
-  `ResultSetAggregateGroupByCountNestedAggregationAvg`. `CountSumJavaContract`
-  and `CountSumGoSurface` completed read-only scouting. No Draft 4.265 writes
-  may start until Draft 4.264 final gates, commit, and push are complete.
+- Closed unit (Draft 4.264, commit `1fe33f4cb`):
+  `ResultSetQueryTypeWTimeBatch.java` all 8 executions are
+  differential-verified (16/16 Java and Go records, 0 differences).
+  Engine changes split per-window expiry deltas for join sides, preserve
+  event lineage through time-batch expiry, and route aggregate joins through
+  the corrected expiry path. `WTBParityReview-2` strict verdict PASS with no
+  findings; targeted and final gates passed before commit/push.
+- Current work unit (Draft 4.265, ready to commit): `ResultSetAggregateCountSum.java` ordinals 1-5 are `ResultSetAggregateCountPlusStar`, `ResultSetAggregateCountHaving`, `ResultSetAggregateSumHaving`, `ResultSetAggregateCountOneViewOM`, and `ResultSetAggregateGroupByCountNestedAggregationAvg` with runtime IDs `java-runtime-7887bb0df9aaf7e99c89`, `java-runtime-5f8ee37abdc1302b4598`, `java-runtime-6fe8e1bd138b1ee81944`, `java-runtime-f24aa8d884bd556d2023`, and `java-runtime-9ca872971349f850d32e5`. `CountSumJavaContract-2` and `CountSumGoSurface-2` completed concurrent read-only scouting. The unit covers cumulative wildcard count, ungrouped sum/count HAVING transitions, OM grouped count/distinct/null behavior over length(3), and grouped `avg(count(*))` over length(3); no compile-invalid target is in scope.
+- CountSum implementation boundary: reuse the existing typed aggregate, Having, length-window, join, and named-window runtime. Extend only the CountSum parity scenario/oracle/runner/test assets and shared semantics if a differential replay proves a missing behavior. Primary agent owns generated traces/evidence, manifest, roadmap, CHANGELOG, validation, review, commit, and push.
+- CountSum verification: Java and Go replay generated 55 records each with zero differences; evidence retains the fixed Java commit and 9 inventory-ordered runtime IDs/names. The independent `CountSumParityReview` independently reviewed the integrated tree and returned strict PASS after metadata corrections; manifest, roadmap, CHANGELOG, and oracle README were updated. Manifest validation now reports 559 cases, 118 capabilities, 3,305 runtime associations, 3,101 referenced runtime IDs, and 680 differential runtime IDs. Required targeted tests, full Go tests/vet, `make check`, formatting, JSON/schema, and diff checks pass.
+- CountSum shared semantic repair: `Avg` now evaluates nested aggregate inputs over historical group prefixes needed by Esper's `avg(count(*))` with a bounded length window; ordinary aggregate inputs retain current retained-group behavior.
+- Delegation checkpoint: `CountSumJavaContract-2` and `CountSumGoSurface-2` completed before writes; `CountSumParityReview` independently reviewed the integrated tree and returned strict PASS after metadata corrections (one bounded P2 note about a defensive GroupTags length guard was not required by the current producer invariant).
+- Final validation after metadata correction: pinned Java runner regenerated 55 records; `go run ./cmd/parity -mode resultset-aggregate-count-sum-diff` produced passing evidence with Java/Go 55/55 records, 9 IDs/names, and 0 differences. Focused CountSum/manifest tests, focused race tests, `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, layout, JSON/schema, shell syntax, and `git diff --check` passed.
+- Previous unit (Draft 4.261, implemented, review PASS, pending commit):
+  case.variables-use closed EPLVariablesUse at 9/11 executions (101/101
+  records, 0 differences; legacy 11 records byte-identical). Batch:
+  `VURJavaContract`+`VURGoSurface` read-only scouts; frozen contract in
+  local vur-contract.md; `VURCoreWriter` (internal/esper) and `VURAssets`
+  (parity-asset-worker, isolated: oracle/scenario/runner/run_test) wrote
+  concurrently on disjoint files. Engine changes: Java-widening coercion
+  matrix (Byte<Short<Integer<Long<Float<Double), verbatim runtime set-path
+  diagnostics with javaTypeName rendering, compile-time const inner
+  sentences, equalValuesUnwrapped membership matching, map-payload
+  materialization + string->named-kind coercion, per-slot multi-match IN
+  delivery (Java FilterParamIndexIn flattened slots [V2,V1,V2] double-
+  deliver ENUM_VALUE_2). Runner/oracle: label-keyed deployments, targeted
+  undeploy op mirroring undeployModuleContaining, persistent compiled-
+  module path with compileWithoutPath SODA re-create bypass, nullable
+  FullBean rendering, bare-message error-chain walk. `VURReview` verdict
+  PASS (1xP2 scratch-file hygiene — fixed; 4xP3 documentation notes —
+  comments added at both Or-shape pins and the runtime.go per-slot
+  boundary; plan.go compile-time unknown-variable sentence registered as
+  future parity item; evidence scenario normalization is convention-
+  consistent). Registered unrepresented: DotSeparateThread, WVarargs,
+  byte[] boxed/primitive distinction, SupportBean[] declaration rejection.
 - Prefetch queue: CountSum ordinals 1–5 are frozen read-only for Draft 4.265:
   fixed Java `ResultSetAggregateCountSum.java`, runtime IDs
   `7887bb0df9aaf7e99c89`, `5f8ee37abdc1302b4598`,
