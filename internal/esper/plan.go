@@ -1456,11 +1456,153 @@ func (e *Environment) validateRoute(query Query) error {
 				continue
 			}
 		}
+		// A single-valued expression routed into a slice-typed column wraps
+		// into a length-1 array at runtime, mirroring Java's
+		// SelectExprProcessorHelper insert-into wrap of an aggregate value
+		// (for example maxby(...) as sbarr) into an array-typed target
+		// column. An []Event column accepts any single value: the runtime
+		// materializes the element as a fragment carrying the source
+		// representation. Other slice elements require the expression type
+		// to be compatible with the declared element type.
+		// Anonymous-struct member check (Java's typable-new population): a
+		// projected new{...} struct routed into a declared member column must
+		// satisfy the column's nested schema field-for-field, otherwise the
+		// mismatched member or unknown member is rejected at compile time
+		// (SelectExprInsertEventBeanFactory / SelectExprProcessorHelper).
+		if node := selection.Expr.node(); node != nil && node.kind == "struct" {
+			if nested, ok := target.nested[field.Name]; ok && len(nested.fields) > 0 {
+				members := structMembersFromDescription(node.description)
+				for index, member := range members {
+					name := member.name
+					child := (*exprNode)(nil)
+					if index < len(node.children) {
+						child = node.children[index]
+					}
+					nestedField, memberExists := nested.Field(name)
+					if !memberExists {
+						return fmt.Errorf("Failed to find property %q among properties for target event type %q", name, nested.Name())
+					}
+					if child != nil && nestedField.Type != nil && child.typ != nil &&
+						!fieldExpressionTypesCompatible(nestedField.Type, child.typ) {
+						return fmt.Errorf("Invalid assignment of column '%s' of type '%s' to event property '%s' typed as '%s', column and parameter types mismatch",
+							name, goTypeName(child.typ), name, goTypeName(nestedField.Type))
+					}
+				}
+			}
+		}
+		// Member identity check: a column declared with a nested event schema
+		// only accepts projections of that same representation (Java's
+		// "Incompatible type detected attempting to insert into column"
+		// diagnostic; SelectExprProcessorHelper). The subquery AST carries the
+		// inner source stream node; its registered schema name is the selected
+		// member type.
+		if nested, ok := target.nested[field.Name]; ok && nested.Name() != "" {
+			node := selection.Expr.node()
+			if node == nil || node.subquery == nil {
+				continue
+			}
+			// Named-column forms are validated per member at population time;
+			// only the whole-event `(select * ...)` form pins the selected
+			// representation to the declared member schema (Java compares the
+			// SELECTED TYPE, which for select * — projected either as the
+			// raw inner event or via an event() wrapper — is the inner event
+			// type itself).
+			projectionIsWholeEvent := node.subquery.projection != nil &&
+				node.subquery.projection.node() != nil &&
+				node.subquery.projection.node().kind == "event-value"
+			isWholeEvent := node.subquery.wholeEvent ||
+				(len(node.subquery.columns) == 0 && projectionIsWholeEvent)
+			if !isWholeEvent {
+				continue
+			}
+			sourceName := ""
+			if node.subquery != nil && node.subquery.source != nil {
+				sourceNode, err := sourceNode(node.subquery.source)
+				if err == nil {
+					if schema, schemaErr := e.sourceSchema(sourceNode); schemaErr == nil {
+						sourceName = schema.Name()
+					}
+				}
+			}
+			if sourceName != "" && sourceName != nested.Name() {
+				return fmt.Errorf("Incompatible type detected attempting to insert into column '%s' type '%s' compared to selected type '%s'",
+					field.Name, nested.Name(), sourceName)
+			}
+		}
+		if field.Type != nil && field.Type.Kind() == reflect.Slice &&
+			exprType != nil && exprType.Kind() != reflect.Slice {
+			elem := field.Type.Elem()
+			exprElem := exprType
+			if exprElem.Kind() == reflect.Pointer {
+				exprElem = exprElem.Elem()
+			}
+			if elem == typeOf[Event]() || fieldExpressionTypesCompatible(elem, exprElem) {
+				continue
+			}
+		}
+		// A projected event fragment routes into any typed member column of
+		// a Map target when the projection carries its own representation
+		// (new{}-shaped case results; Java's typable-new insert population).
+		if exprType == typeOf[Event]() && target.goType == nil && field.Type != typeOf[any]() {
+			continue
+		}
 		if !fieldExpressionTypesCompatible(field.Type, exprType) {
 			return fmt.Errorf("route projection %q has type %s, target expects %s", selection.Name, exprType, field.Type)
 		}
 	}
 	return nil
+}
+
+// goTypeName renders a reflect.Type using the kind vocabulary Java's typable-
+// new diagnostics use (String/Integer/Long/...), so pinned texts stay stable.
+func goTypeName(typ reflect.Type) string {
+	if typ == nil {
+		return "null"
+	}
+	switch typ.Kind() {
+	case reflect.String:
+		return "String"
+	case reflect.Int:
+		return "Integer"
+	case reflect.Int64:
+		return "Long"
+	case reflect.Float64, reflect.Float32:
+		return "Double"
+	case reflect.Bool:
+		return "Boolean"
+	default:
+		return typ.String()
+	}
+}
+
+// structMemberName is one new{...} member parsed from the struct expression
+// description: the quoted name precedes '='.
+type structMemberName struct {
+	name string
+}
+
+// structMembersFromDescription extracts declared member names from a struct
+// expression description of the form struct{"a"=..., "b"=...}.
+func structMembersFromDescription(description string) []structMemberName {
+	open := strings.Index(description, `struct{"`)
+	if open < 0 {
+		return nil
+	}
+	body := description[open+len(`struct{"`):]
+	var members []structMemberName
+	for len(body) > 0 {
+		close := strings.IndexByte(body, '"')
+		if close < 0 {
+			break
+		}
+		members = append(members, structMemberName{name: body[:close]})
+		next := strings.Index(body[close:], `,`)
+		if next < 0 {
+			break
+		}
+		body = body[close+next+1:]
+	}
+	return members
 }
 
 // isTransposeExpression reports whether a selection is an insert-into
@@ -2632,7 +2774,7 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 			return WrapError(ErrorInvalidRule, "subquery having", err)
 		}
 	}
-	if definition.multiColumn && len(definition.columns) == 0 {
+	if definition.multiColumn && len(definition.columns) == 0 && !definition.wholeEvent {
 		return NewError(ErrorInvalidRule, "multi-column subquery requires at least one column")
 	}
 	if len(definition.columns) > 0 {

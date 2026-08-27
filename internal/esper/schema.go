@@ -3829,7 +3829,13 @@ func normalizeObjectArray(schema Schema, underlying any) ([]any, error) {
 			return nil, fmt.Errorf("esper: object-array event %q value %d is not accessible", schema.name, index)
 		}
 		candidate := item.Interface()
-		if field.Type != nil && field.Type != typeOf[any]() {
+		if event, ok := candidate.(Event); ok && field.Type != nil &&
+			field.Type != typeOf[Event]() && field.Type != typeOf[any]() {
+			// A routed event fragment nested inside a non-event member keeps
+			// only its underlying representation; an Event-typed member keeps
+			// the full envelope so member identity survives routing.
+			candidate = event.Underlying()
+		} else if field.Type != nil && field.Type != typeOf[any]() {
 			converted, err := assignReflectValue(field.Type, candidate)
 			if err != nil {
 				return nil, fmt.Errorf("esper: object-array event %q field %q: %w", schema.name, field.Name, err)

@@ -400,7 +400,7 @@ func (s *Statement) splitStreamEvent(branch SplitStreamBranch, source Event, eva
 		value := selection.Expr.eval(evaluation)
 		values[selection.Name] = value.Any()
 	}
-	underlying, err := projectMapToSchema(target, values)
+	underlying, err := projectMapToSchemaWithSource(target, values, source.Schema())
 	if err != nil {
 		return Event{}, err
 	}

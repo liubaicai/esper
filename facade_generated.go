@@ -1613,24 +1613,6 @@ func DateTimeBetween(value, lower, upper Expr) Expression[bool] {
 	return internalengine.DateTimeBetween(value, lower, upper)
 }
 
-// DateTimeRoundCeiling rounds a date-time expression up to the next unit
-// boundary, preserving the int64 or time.Time representation.
-func DateTimeRoundCeiling[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
-	return internalengine.DateTimeRoundCeiling[T](value, unit)
-}
-
-// DateTimeRoundFloor truncates a date-time expression down to the unit
-// boundary, preserving the int64 or time.Time representation.
-func DateTimeRoundFloor[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
-	return internalengine.DateTimeRoundFloor[T](value, unit)
-}
-
-// DateTimeRoundHalf rounds to the nearest unit boundary with exact ties
-// rounding up and month-length-dependent month carry.
-func DateTimeRoundHalf[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
-	return internalengine.DateTimeRoundHalf[T](value, unit)
-}
-
 // DateTimeBetweenRangeOf is the static-flag counterpart of
 // DateTimeBetweenWithEndpoints. It is useful when the endpoint policy is part
 // of a reusable rule definition rather than a runtime variable.
@@ -1721,6 +1703,33 @@ type DateTimePluginOpsFunc = internalengine.DateTimePluginOpsFunc
 // epoch-millisecond and dynamically typed values with one Go entry point.
 func DateTimePluginRef[R any](env *Environment, name string, input Expr, arguments ...DateTimePluginArgument) Expression[R] {
 	return internalengine.DateTimePluginRef[R](env, name, input, arguments...)
+}
+
+// DateTimeRoundCeiling advances a date-time expression to the next unit
+// boundary (Commons MODIFY_CEILING adds one target unit unconditionally, so
+// an on-boundary input advances). The input representation is preserved:
+// int64 epoch-millis stays int64, time.Time stays time.Time. Accepted units
+// follow CalendarFieldEnum aliases: msec, sec, minutes, min, hour, day,
+// month, year; msec is the identity and week errors at evaluation like
+// Java's unsupported-field path.
+func DateTimeRoundCeiling[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
+	return internalengine.DateTimeRoundCeiling[T](value, unit)
+}
+
+// DateTimeRoundFloor truncates a date-time expression down to the unit
+// boundary, preserving the input representation.
+func DateTimeRoundFloor[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
+	return internalengine.DateTimeRoundFloor[T](value, unit)
+}
+
+// DateTimeRoundHalf rounds a date-time expression to the nearest unit
+// boundary with exact ties rounding up. Semantics mirror Apache Commons
+// DateUtils.modify(MODIFY_ROUND): msec is the identity, sub-second
+// pre-passes keep millis >= 500, seconds < 30 and minutes < 30 drop, and
+// the month carry compares the day offset against the actual month length
+// (31d: day >= 17, 30d: >= 16, Feb28: >= 15, Feb29: >= 16).
+func DateTimeRoundHalf[T int64 | time.Time](value Expression[T], unit string) Expression[T] {
+	return internalengine.DateTimeRoundHalf[T](value, unit)
 }
 
 func DayOfMonth(value Expression[time.Time]) Expression[int64] {
@@ -2529,6 +2538,15 @@ const EventBusSinkKind = internalengine.EventBusSinkKind
 
 const EventBusSourceKind = internalengine.EventBusSourceKind
 
+// EventFromAggregate materializes a single aggregate result value (for
+// example MaxBy's winning row) as an Event of the named source schema so an
+// insert-into route can populate an event/[]event-typed column while keeping
+// the member representation and identity readable downstream. Zero rows or a
+// null aggregate result yields null.
+func EventFromAggregate[T any](env *Environment, schemaName string, aggregate AggregateExpression[T]) Expression[Event] {
+	return internalengine.EventFromAggregate[T](env, schemaName, aggregate)
+}
+
 // EventIdentityEquals compares the runtime identity of two Event envelopes.
 // It deliberately does not compare underlying field values: two separately
 // ingested events with identical payloads are still different events.
@@ -2548,6 +2566,24 @@ func EventPrecedence(precedence Expr) QueryOption {
 // the Go counterpart of Esper's EventPropertyGetter, while exposing Value so
 // callers retain the Missing/Null/Present distinction.
 type EventPropertyGetter = internalengine.EventPropertyGetter
+
+// EventRowOf materializes a single row value of the wrapped expression as an
+// Event of the named schema type — the single-value counterpart of
+// EventRowsOf used by insert-into routes whose target column holds one
+// event-typed member. Null/missing input yields null.
+func EventRowOf(env *Environment, schemaName string, row Expression[any]) Expression[Event] {
+	return internalengine.EventRowOf(env, schemaName, row)
+}
+
+// EventRowsOf materializes each row value of the wrapped expression as an
+// Event of the named schema type, mirroring Java's insert-into population of
+// an array-typed event column from anonymous struct members
+// (new{...} as items). A single struct value wraps into a one-element
+// slice; nil values route as null. The named schema must resolve at
+// evaluation time (register it before building queries that use this).
+func EventRowsOf(env *Environment, schemaName string, rows Expression[any]) Expression[[]Event] {
+	return internalengine.EventRowsOf(env, schemaName, rows)
+}
 
 // EventTypeAutoNameRegistry is an application-owned catalog for resolving
 // named Go event types by their short type name. It is safe for concurrent use

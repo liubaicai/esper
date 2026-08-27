@@ -4980,16 +4980,49 @@ func projectEventUnderlying(target Schema, source Event) (any, error) {
 
 func projectRowUnderlying(target Schema, row Row) (any, error) {
 	values := row.AsMap()
-	return projectMapToSchema(target, values)
+	return projectMapToSchemaWithSource(target, values, row.Schema())
 }
 
 func projectMapToSchema(target Schema, values map[string]any) (any, error) {
+	return projectMapToSchemaWithSource(target, values, Schema{})
+}
+
+// projectMapToSchemaWithSource coerces a projected row into the target
+// schema's underlying representation. When non-nil, source is the schema of
+// the row/stream the values were read from; it types the fragment events
+// that a single-value-into-slice-column wrap materializes so an
+// event-typed array column keeps carrying the member representation.
+func projectMapToSchemaWithSource(target Schema, values map[string]any, source Schema) (any, error) {
 	if target.kind == SchemaObjectArray {
 		ordered := make([]any, len(target.fields))
 		for index, field := range target.fields {
-			if value, ok := values[field.Name]; ok {
-				ordered[index] = value
+			value, ok := values[field.Name]
+			if !ok {
+				continue
 			}
+			// Single values into event/[]event-typed columns of an
+			// object-array target materialize as fragments before positional
+			// normalization: a scalar into an array column wraps into a
+			// length-1 slice (Java's maxby(...)-into-array-column wrap) and a
+			// plain value into a single-event column becomes the member event.
+			if field.Type != nil && value != nil {
+				valueType := reflect.TypeOf(value)
+				switch {
+				case field.Type == typeOf[[]Event]() && valueType != typeOf[[]Event]():
+					fragment, fragErr := wrapRouteElementAsEvent(target, value, source)
+					if fragErr != nil {
+						return nil, fragErr
+					}
+					value = []Event{fragment.(Event)}
+				case field.Type == typeOf[Event]() && valueType != typeOf[Event]():
+					fragment, fragErr := wrapRouteElementAsEvent(target, value, source)
+					if fragErr != nil {
+						return nil, fragErr
+					}
+					value = fragment.(Event)
+				}
+			}
+			ordered[index] = value
 		}
 		return normalizeObjectArray(target, ordered)
 	}
@@ -5002,10 +5035,50 @@ func projectMapToSchema(target Schema, values map[string]any) (any, error) {
 	result := make(map[string]any, len(target.fields)+len(values))
 	for _, field := range target.fields {
 		if value, ok := values[field.Name]; ok {
+			// Event-typed member columns of a map target materialize their
+			// single routed value as a fragment (Java's event-typed column
+			// population from anonymous/aggregate members).
+			if field.Type == typeOf[Event]() && value != nil &&
+				reflect.TypeOf(value) != typeOf[Event]() {
+				fragment, fragErr := wrapEventMember(target, field, value, source)
+				if fragErr != nil {
+					return nil, fragErr
+				}
+				result[field.Name] = fragment.(Event)
+				continue
+			}
 			if field.Type != nil && field.Type != typeOf[any]() && value != nil {
 				valueType := reflect.TypeOf(value)
 				if valueType != nil && !valueType.AssignableTo(field.Type) {
-					if converted, err := assignReflectValue(field.Type, value); err == nil {
+					// A scalar/aggregate value destined for a slice-typed
+					// column wraps into a length-1 slice, mirroring Java's
+					// insert-into single-value-into-array wrap (maxby(...) as
+					// a SupportBean[] column yields one element).
+					if field.Type.Kind() == reflect.Slice &&
+						valueType.Kind() != reflect.Slice {
+						elem := field.Type.Elem()
+						var appendable any
+						if elem == typeOf[Event]() {
+							fragment, fragErr := wrapRouteElementAsEvent(target, value, source)
+							if fragErr != nil {
+								return nil, fragErr
+							}
+							appendable = fragment
+						} else if valueType.AssignableTo(elem) {
+							appendable = value
+						} else if converted, err := assignReflectValue(elem, value); err == nil {
+							appendable = converted.Interface()
+						} else {
+							// Not representable as the declared element: keep
+							// prior behavior of storing the raw value in the
+							// result rather than wrapping into an unwritable
+							// slice slot.
+							result[field.Name] = value
+							continue
+						}
+						value = reflect.Append(reflect.MakeSlice(field.Type, 0, 1),
+							reflect.ValueOf(appendable)).Interface()
+					} else if converted, err := assignReflectValue(field.Type, value); err == nil {
 						value = converted.Interface()
 					}
 				}
@@ -5021,6 +5094,83 @@ func projectMapToSchema(target Schema, values map[string]any) (any, error) {
 		}
 	}
 	return result, nil
+}
+
+// wrapEventMember materializes one routed value for an Event-typed map-target
+// column. When the routed value already carries a registered representation,
+// reuse it directly; otherwise flatten structs into the producing row schema
+// or a derived property map so downstream property reads keep working.
+func wrapEventMember(target Schema, field FieldSpec, value any, source Schema) (any, error) {
+	if event, ok := value.(Event); ok {
+		return event, nil
+	}
+	// A projected row (map) carries its own properties: materialize the
+	// member as an event of the target's registered representation for that
+	// member name when available, else derive one from the map keys so every
+	// projected property stays readable downstream.
+	if row, ok := value.(map[string]any); ok && len(row) > 0 {
+		keys := make([]string, 0, len(row))
+		for key := range row {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		fields := make([]FieldSpec, 0, len(keys))
+		for _, key := range keys {
+			fields = append(fields, FieldSpec{Name: key, Type: goTypeOf(row[key])})
+		}
+		schema, err := NewMapSchema(fmt.Sprintf("%s.%s", target.Name(), field.Name), fields, AllowDynamicFields())
+		if err == nil {
+			event, mkErr := newEvent(schema, row, time.Time{})
+			if mkErr == nil {
+				return event, nil
+			}
+		}
+	}
+	return wrapRouteElementAsEvent(target, value, source)
+}
+
+func goTypeOf(value any) reflect.Type {
+	if value == nil {
+		return nil
+	}
+	return reflect.TypeOf(value)
+}
+
+// wrapRouteElementAsEvent materializes a single routed value as an Event
+// for an event/[]event-typed insert-into column. Priority: an already-wrapped
+// Event passes through unchanged (identity preserved); otherwise the value's
+// own projected row defines the member properties so downstream reads keep
+// working, and the producing row schema is used when its representation
+// accepts the value directly.
+func wrapRouteElementAsEvent(target Schema, value any, source Schema) (any, error) {
+	if event, ok := value.(Event); ok {
+		return event, nil
+	}
+	if source.Name() != "" {
+		event, err := newEvent(source, value, time.Time{})
+		if err == nil {
+			return event, nil
+		}
+	}
+	if row, ok := toProjectionRow(value); ok && len(row) > 0 {
+		keys := make([]string, 0, len(row))
+		for key := range row {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		fields := make([]FieldSpec, 0, len(keys))
+		for _, key := range keys {
+			fields = append(fields, FieldSpec{Name: key, Type: goTypeOf(row[key])})
+		}
+		schema, err := NewMapSchema(fmt.Sprintf("%s.%s", target.Name(), "member"), fields, AllowDynamicFields())
+		if err == nil {
+			event, mkErr := newEvent(schema, row, time.Time{})
+			if mkErr == nil {
+				return event, nil
+			}
+		}
+	}
+	return nil, NewError(ErrorTypeMismatch, fmt.Sprintf("route member %q cannot represent %T", target.Name(), value))
 }
 
 func dispatchAll(ctx context.Context, dispatches []statementDispatch) error {

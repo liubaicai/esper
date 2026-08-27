@@ -31697,6 +31697,85 @@
    ]
   },
   {
+   "id": "case.insertinto-eventcol-col-rest",
+   "javaNames": [
+    "EPLInsertIntoColBeanSingleToMulti",
+    "EPLInsertIntoColBeanMultiToSingle",
+    "EPLInsertIntoColBeanInvalid",
+    "EPLInsertIntoColBeanContextProp",
+    "EPLInsertIntoColNonBeanNewOperatorDocSample{typeType='objectarray'}",
+    "EPLInsertIntoColNonBeanNewOperatorDocSample{typeType='map'}",
+    "EPLInsertIntoColNonBeanCaseNew{representation=MAP}",
+    "EPLInsertIntoColNonBeanCaseNew{representation=OBJECTARRAY}",
+    "EPLInsertIntoColNonBeanCaseNew{representation=JSON}",
+    "EPLInsertIntoColNonBeanSingleColNamedWindow",
+    "EPLInsertIntoColNonBeanSingleToMulti",
+    "EPLInsertIntoColNonBeanBeanInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateEventTypeColumnBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateEventTypeColumnNonBean.java"
+   ],
+   "goTests": [
+    "TestRunEplInsertIntoEventColRestDiffWritesPassingEvidence",
+    "TestEPLInsertIntoColBeanInvalidBuild",
+    "TestEPLInsertIntoColNonBeanBeanInvalidBuild"
+   ],
+   "tags": [
+    "correctness",
+    "insert-into",
+    "event-type-column",
+    "maxby",
+    "new-struct",
+    "context-partition",
+    "named-window"
+   ],
+   "status": "differential-verified",
+   "javaStaticIds": [],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5a7dbebf11b467444d22",
+    "java-runtime-d9b52924796472db83cb",
+    "java-runtime-10c2cd110438e2422b62",
+    "java-runtime-63b9e9149d6ec7890aba",
+    "java-runtime-6883c88a8250fd587c89",
+    "java-runtime-7f2273f9d9a40f6c3dc2",
+    "java-runtime-2ea417f6f55b2d3543ad",
+    "java-runtime-ba3f88c4715292f3432e",
+    "java-runtime-b121584c40a08d48229d",
+    "java-runtime-97ac55e0199723988adc",
+    "java-runtime-f8d3d61670e7dae24003",
+    "java-runtime-05f38146a2f28887769c"
+   ],
+   "evidence": [
+    "testdata/parity/insertinto-eventcol-col-rest.json",
+    "testdata/parity/insertinto-eventcol-col-rest.trace.java.json",
+    "testdata/parity/insertinto-eventcol-col-rest.evidence.json",
+    "tools/java-oracle/EPLInsertIntoPopulateEventTypeColRestScenarioOracle.java",
+    "tools/java-oracle/run-epl-insert-into-eventcol-rest.sh",
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "javaRuntimeIds": [
+    "java-runtime-5a7dbebf11b467444d22",
+    "java-runtime-d9b52924796472db83cb",
+    "java-runtime-10c2cd110438e2422b62",
+    "java-runtime-63b9e9149d6ec7890aba",
+    "java-runtime-6883c88a8250fd587c89",
+    "java-runtime-7f2273f9d9a40f6c3dc2",
+    "java-runtime-2ea417f6f55b2d3543ad",
+    "java-runtime-ba3f88c4715292f3432e",
+    "java-runtime-b121584c40a08d48229d",
+    "java-runtime-97ac55e0199723988adc",
+    "java-runtime-f8d3d61670e7dae24003",
+    "java-runtime-05f38146a2f28887769c"
+   ]
+  },
+  {
    "id": "case.insertinto-event-precedence",
    "javaRuntimeIds": [
     "java-runtime-b06231c928bc854b7b09",
@@ -37241,12 +37320,20 @@
   {
    "capabilityId": "expr.datetime-round",
    "caseId": "case.expr-dt-round"
+  },
+  {
+   "capabilityId": "query.insert-into-route",
+   "caseId": "case.insertinto-eventcol-col-rest"
+  },
+  {
+   "capabilityId": "query.insert-into-route",
+   "caseId": "case.epl-insert-into-populate-und-stream-select"
   }
  ],
  "summary": {
-  "inventoriedCases": 557,
-  "implementedCases": 555,
-  "differentialVerifiedCases": 168,
+  "inventoriedCases": 558,
+  "implementedCases": 556,
+  "differentialVerifiedCases": 169,
   "differentialVerifiedRuntimeIds": 655,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
@@ -37257,13 +37344,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3280,
-  "referencedJavaRuntimeIds": 3076,
+  "runtimeAssociationCount": 3292,
+  "referencedJavaRuntimeIds": 3088,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1060,
+  "unreferencedJavaRuntimeIds": 1048,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 557,
-  "totalCapabilities": 117
+  "totalCases": 558,
+  "totalCapabilities": 117,
+  "differentialVerifiedRuntimeIDs": 667
  }
 }

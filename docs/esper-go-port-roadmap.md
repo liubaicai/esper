@@ -4,6 +4,16 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.263（2026-08-27），`case.insertinto-eventcol-col-rest`
+> differential-verified：EPLInsertIntoPopulateEventTypeColumnBean/NonBean
+> 剩余 12 个 execution 全部闭环（22 条 records、0 differences）。maxby
+> 聚合值→事件数组列包裹、keepall 子查询→单事件列、initiated-by context.sb
+> split 路由、new{} 匿名结构 EventRowsOf 物化（objectarray/map/json 三表示）、
+> named-window 单列二次投影；两个 compile-invalid 族以 Build 拒绝 + Java
+> pinned 文本登记。引擎新增 EventRowsOf/EventRowOf/EventFromAggregate 与
+> route 成员身份诊断。manifest 更新为 558 cases、169 DV cases、667 DV
+> runtime IDs、3292 associations（referenced 3088）；capability 117（31 DV）。
+>
 > 最新补充：Draft 4.262（2026-08-26），`EPLInsertIntoPopulateUndStreamSelect`
 > 3/4 个 execution differential-verified（47 条 records、0 differences）：
 > on-merge insert-select 以子类型实例填充超类型 objectarray 列

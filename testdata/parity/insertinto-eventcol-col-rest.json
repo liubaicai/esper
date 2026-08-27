@@ -1,0 +1,205 @@
+{
+ "version": "esper-parity/v1",
+ "id": "insertinto-eventcol-col-rest",
+ "steps": [
+  {
+   "op": "case",
+   "case": "bean-singletomulti"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "bean-multitosingle"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "bean-context-prop"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "bean-invalid"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "nonbean-new-doc-objectarray"
+  },
+  {
+   "op": "send",
+   "eventType": "TriggerEvent",
+   "payload": {}
+  },
+  {
+   "op": "send",
+   "eventType": "TriggerEvent",
+   "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "nonbean-new-doc-map"
+  },
+  {
+   "op": "send",
+   "eventType": "TriggerEvent",
+   "payload": {}
+  },
+  {
+   "op": "send",
+   "eventType": "TriggerEvent",
+   "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "nonbean-case-new-map"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "nonbean-case-new-objectarray"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "nonbean-case-new-json"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "nonbean-singlecol-named-window"
+  },
+  {
+   "op": "send",
+   "eventType": "AEvent",
+   "payload": {
+    "symbol": "GE"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "case",
+   "case": "nonbean-single-to-multi"
+  },
+  {
+   "op": "send",
+   "eventType": "EventA",
+   "payload": {
+    "id": "x1"
+   }
+  },
+  {
+   "op": "case",
+   "case": "nonbean-invalid"
+  }
+ ]
+}

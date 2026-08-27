@@ -1,3 +1,25 @@
+> 最新补充：Draft 4.263（2026-08-27），`case.insertinto-eventcol-col-rest`
+> differential-verified，对照固定 Java
+> EPLInsertIntoPopulateEventTypeColumnBean.java ordinals 8-11 与
+> EPLInsertIntoPopulateEventTypeColumnNonBean.java ordinals 8-15 全部 12 个
+> execution（22 条 records、0 differences）：maxby(intPrimitive)/maxby(id)
+> 聚合值路由入事件数组列（长度 1 包裹、成员标识保持）、keepall 子查询填充
+> 单事件列、initiated-by 捕获的 context.sb 经 split 路由进入 OutStream 列、
+> new{name,price} 匿名结构经 EventRowsOf 物化为 Item[] 片段列（objectarray/
+> map 双表示）、computeNested 声明表达式 case+new{} 填充 OuterType(n0)
+> （map/objectarray/json-provided 三表示一致输出 b2→a1）、named-window 单列
+> 包装二次投影（AEvent fragment name+symbol）、两个 compile-invalid 族以
+> Go Build 拒绝 + Java pinned 文本登记（TestECRInvalidTexts：Incompatible
+> type detected... / Invalid assignment of column... / Failed to find
+> property...，startsWith 断言四条诊断全文）。引擎新增：
+> EventRowsOf/EventRowOf/EventFromAggregate 公共物化构造器；route 验证新增
+> 成员身份诊断（嵌套 schema 不匹配按 Java 文本拒绝）与 struct 成员类型/
+> 未知属性检查；normalizeObjectArray 对非 Event 成员中的 event fragment 扁平
+> 化保留 Event-typed 列信封。manifest 更新为 558 cases、169 个
+> differential-verified case、667 个 differential runtime IDs、3292 条
+> associations（referenced 3088）；capability 117 个（31 DV）；同轮回填
+> Draft 4.262 缺失的 query.insert-into-route mapping。
+>
 > 最新补充：Draft 4.262（2026-08-26），`EPLInsertIntoPopulateUndStreamSelect`
 > 3/4 个 execution differential-verified（47 条 records、0 differences，
 > 六表示矩阵）：on-merge 子类型填充超类型列 + cast 链匹配；wildcard

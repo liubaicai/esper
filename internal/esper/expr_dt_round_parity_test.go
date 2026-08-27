@@ -1,12 +1,10 @@
-package esper_test
+package esper
 
 import (
 	"context"
 	"reflect"
 	"testing"
 	"time"
-
-	"github.com/liubaicai/esper/internal/esper"
 )
 
 func TestDateTimeRoundVectorsParity(t *testing.T) {
@@ -54,29 +52,29 @@ func TestDateTimeRoundVectorsParity(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			env := esper.NewEnvironment()
-			if _, err := esper.RegisterMap(env, "DT", []esper.FieldSpec{
+			env := NewEnvironment()
+			if _, err := RegisterMap(env, "DT", []FieldSpec{
 				{Name: "d", Type: reflect.TypeOf(time.Time{})},
 				{Name: "l", Type: reflect.TypeOf(int64(0))},
 			}); err != nil {
 				t.Fatal(err)
 			}
-			var expr esper.Expression[time.Time]
+			var expr Expression[time.Time]
 			switch c.mode {
 			case "ceil":
-				expr = esper.DateTimeRoundCeiling[time.Time](esper.Field[map[string]any, time.Time]("d"), c.unit)
+				expr = DateTimeRoundCeiling[time.Time](Field[map[string]any, time.Time]("d"), c.unit)
 			case "floor":
-				expr = esper.DateTimeRoundFloor[time.Time](esper.Field[map[string]any, time.Time]("d"), c.unit)
+				expr = DateTimeRoundFloor[time.Time](Field[map[string]any, time.Time]("d"), c.unit)
 			default:
-				expr = esper.DateTimeRoundHalf[time.Time](esper.Field[map[string]any, time.Time]("d"), c.unit)
+				expr = DateTimeRoundHalf[time.Time](Field[map[string]any, time.Time]("d"), c.unit)
 			}
-			plan, err := env.Build(esper.FromAny(env, "DT").Select(
-				esper.Alias("v", expr),
-			).Query(esper.StatementName("s0")))
+			plan, err := env.Build(FromAny(env, "DT").Select(
+				Alias("v", expr),
+			).Query(StatementName("s0")))
 			if err != nil {
 				t.Fatal(err)
 			}
-			engine := esper.NewEngine(env)
+			engine := NewEngine(env)
 			defer engine.Close(context.Background())
 			deployment, err := engine.Deploy(context.Background(), plan)
 			if err != nil {
@@ -85,7 +83,7 @@ func TestDateTimeRoundVectorsParity(t *testing.T) {
 			statement := deployment.Statements()[0]
 			var got time.Time
 			has := false
-			if _, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+			if _, err := statement.Subscribe(func(_ context.Context, batch ResultBatch) error {
 				for _, result := range batch.New {
 					if row, ok := result.Row(); ok {
 						if v := row.Get("v"); v.IsPresent() {
@@ -110,26 +108,26 @@ func TestDateTimeRoundVectorsParity(t *testing.T) {
 		})
 	}
 	// Representation preservation: int64 in, int64 out.
-	env := esper.NewEnvironment()
-	if _, err := esper.RegisterMap(env, "DT", []esper.FieldSpec{
+	env := NewEnvironment()
+	if _, err := RegisterMap(env, "DT", []FieldSpec{
 		{Name: "l", Type: reflect.TypeOf(int64(0))},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	plan, err := env.Build(esper.FromAny(env, "DT").Select(
-		esper.Alias("v", esper.DateTimeRoundCeiling[time.Time](esper.Field[map[string]any, int64]("l"), "hour")),
-	).Query(esper.StatementName("s0")))
+	plan, err := env.Build(FromAny(env, "DT").Select(
+		Alias("v", DateTimeRoundCeiling[time.Time](Field[map[string]any, int64]("l"), "hour")),
+	).Query(StatementName("s0")))
 	if err != nil {
 		t.Fatal(err)
 	}
-	engine := esper.NewEngine(env)
+	engine := NewEngine(env)
 	defer engine.Close(context.Background())
 	deployment, err := engine.Deploy(context.Background(), plan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var got int64
-	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
 		for _, result := range batch.New {
 			if row, ok := result.Row(); ok {
 				got = row.Get("v").Any().(int64)

@@ -799,6 +799,7 @@ type subqueryDefinition struct {
 	projection           Expr
 	columns              []Selection
 	multiColumn          bool
+	wholeEvent           bool
 	groupBy              Expr
 	having               Expr
 	grouped              bool
@@ -1189,10 +1190,12 @@ func SubqueryValueWithOptions[T any](source RecordStream, projection Expression[
 		}
 	}
 	definition := &subqueryDefinition{
-		source:              source.node,
-		predicate:           config.Predicate,
-		having:              config.Having,
-		projection:          projection,
+		source:     source.node,
+		predicate:  config.Predicate,
+		having:     config.Having,
+		projection: projection,
+		// An event() projection selects the inner event itself (select * form).
+		wholeEvent:          projection != nil && projection.node() != nil && projection.node().kind == "event-value",
 		aggregateProjection: isAggregateExpression(projection),
 		groupBy:             config.GroupBy,
 		grouped:             config.GroupBy != nil,
@@ -1230,10 +1233,12 @@ func SubqueryValues[T any](source RecordStream, projection Expression[T], option
 		}
 	}
 	definition := &subqueryDefinition{
-		source:              source.node,
-		predicate:           config.Predicate,
-		having:              config.Having,
-		projection:          projection,
+		source:     source.node,
+		predicate:  config.Predicate,
+		having:     config.Having,
+		projection: projection,
+		// An event() projection selects the inner event itself (select * form).
+		wholeEvent:          projection != nil && projection.node() != nil && projection.node().kind == "event-value",
 		aggregateProjection: isAggregateExpression(projection),
 		orderBy:             append([]SubqueryOrderKey(nil), config.OrderBy...),
 		offset:              config.Offset,
@@ -1336,10 +1341,25 @@ func SubqueryRowAsEvent(env *Environment, schemaName string, source RecordStream
 // options before materializing the single-row subquery result as an Event.
 func SubqueryRowAsEventWithOptions(env *Environment, schemaName string, source RecordStream, selections []Selection, options ...SubqueryOption) Expression[Event] {
 	definition := newSubqueryColumnsDefinition(source, selections, options...)
+	if len(selections) == 0 {
+		// Zero selections model Esper's `(select * from ...)` whole-event
+		// form: the fragment materializes from the inner event itself rather
+		// than a named-column row projection.
+		definition.wholeEvent = true
+	}
 	return makeSubqueryExpr[Event]("subquery-row-as-event", "rowAsEvent("+schemaName+","+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
 		if len(values) == 0 {
 			return Null()
+		}
+		if definition.wholeEvent {
+			// Whole-event form (`select * from ...`): the inner value is the
+			// full source event; reuse it when the representations already
+			// match instead of forcing a row projection.
+			source, ok := values[0].Any().(Event)
+			if ok && (source.TypeName() == schemaName || source.Schema().Name() == schemaName) {
+				return Present(source)
+			}
 		}
 		row, ok := values[0].Any().(map[string]any)
 		if !ok {
@@ -1376,6 +1396,9 @@ func SubqueryRowsAsEvent(env *Environment, schemaName string, source RecordStrea
 // limit options before materializing the multi-row subquery result as Events.
 func SubqueryRowsAsEventWithOptions(env *Environment, schemaName string, source RecordStream, selections []Selection, options ...SubqueryOption) Expression[[]Event] {
 	definition := newSubqueryColumnsDefinition(source, selections, options...)
+	if len(selections) == 0 {
+		definition.wholeEvent = true
+	}
 	return makeSubqueryExpr[[]Event]("subquery-rows-as-event", "rowsAsEvent("+schemaName+","+subqueryDescription(definition)+")", definition, func(ctx EvalContext) Value {
 		values := evaluateSubqueryValues(definition, ctx)
 		schema, found := env.Schema(schemaName)
@@ -1404,6 +1427,95 @@ func SubqueryRowsAsEventWithOptions(env *Environment, schemaName string, source 
 		}
 		return Present(events)
 	})
+}
+
+// EventRowsOf materializes each row value of the wrapped expression as an
+// Event of the named schema type, mirroring Java's insert-into population of
+// an array-typed event column from anonymous struct members
+// (new{...} as items). A single struct value wraps into a one-element
+// slice; nil values route as null. The named schema must resolve at
+// evaluation time (register it before building queries that use this).
+func EventRowsOf(env *Environment, schemaName string, rows Expression[any]) Expression[[]Event] {
+	node := &exprNode{
+		kind:        "event-rows-of",
+		typ:         typeOf[[]Event](),
+		description: "eventRowsOf(" + schemaName + "," + rows.Description() + ")",
+		children:    []*exprNode{rows.node()},
+	}
+	return typedExpr[[]Event]{n: node, fn: func(ctx EvalContext) Value {
+		value := rows.eval(ctx)
+		if !value.IsPresent() || value.Any() == nil {
+			return Null()
+		}
+		schema, found := env.Schema(schemaName)
+		if !found {
+			return Null()
+		}
+		single := value.Any()
+		list, ok := single.([]Event)
+		if ok {
+			return Present(list)
+		}
+		row, ok := toProjectionRow(single)
+		if !ok {
+			return Null()
+		}
+		now := time.Time{}
+		if ctx.Engine != nil {
+			now = ctx.Engine.Now()
+		}
+		event, err := newMaterializedEvent(schema, row, now)
+		if err != nil {
+			return Null()
+		}
+		return Present([]Event{event})
+	}}
+}
+
+// toProjectionRow normalizes a materialized projection value into the
+// map[string]any shape consumed by subqueryRowToUnderlying: maps pass
+// through, struct pointers/values flatten via reflection.
+func toProjectionRow(value any) (map[string]any, bool) {
+	if row, ok := value.(map[string]any); ok {
+		return row, true
+	}
+	if value == nil {
+		return nil, false
+	}
+	reflected := reflect.ValueOf(value)
+	if reflected.Kind() == reflect.Pointer {
+		if reflected.IsNil() {
+			return nil, false
+		}
+		reflected = reflected.Elem()
+	}
+	if reflected.Kind() != reflect.Struct {
+		return nil, false
+	}
+	row := make(map[string]any, reflected.NumField())
+	valueType := reflected.Type()
+	for index := 0; index < valueType.NumField(); index++ {
+		field := valueType.Field(index)
+		name := field.Tag.Get("esper")
+		if comma := strings.Index(name, ","); comma >= 0 {
+			name = name[:comma]
+		}
+		if name == "" || name == "-" {
+			continue
+		}
+		row[name] = reflected.Field(index).Interface()
+	}
+	return row, true
+}
+
+// newMaterializedEvent builds an event of the named schema from a projected
+// row, reusing subqueryRowToUnderlying for representation-specific coercion.
+func newMaterializedEvent(schema Schema, row map[string]any, now time.Time) (Event, error) {
+	underlying, err := subqueryRowToUnderlying(schema, row)
+	if err != nil {
+		return Event{}, err
+	}
+	return newEvent(schema, underlying, now)
 }
 
 // SubqueryRows returns every projected row from a multi-column subquery. Each
@@ -2594,4 +2706,85 @@ func variablesWithEngineLockState(variables map[string]Value, engine *Engine, lo
 	}
 	variables[subqueryEngineVariable] = Present(&subqueryEngineRef{engine: engine, locked: locked})
 	return variables
+}
+
+// EventRowOf materializes a single row value of the wrapped expression as an
+// Event of the named schema type — the single-value counterpart of
+// EventRowsOf used by insert-into routes whose target column holds one
+// event-typed member. Null/missing input yields null.
+func EventRowOf(env *Environment, schemaName string, row Expression[any]) Expression[Event] {
+	node := &exprNode{
+		kind:        "event-row-of",
+		typ:         typeOf[Event](),
+		description: "eventRowOf(" + schemaName + "," + row.Description() + ")",
+		children:    []*exprNode{row.node()},
+	}
+	return typedExpr[Event]{n: node, fn: func(ctx EvalContext) Value {
+		value := row.eval(ctx)
+		if !value.IsPresent() || value.Any() == nil {
+			return Null()
+		}
+		schema, found := env.Schema(schemaName)
+		if !found {
+			return Null()
+		}
+		single := value.Any()
+		if event, ok := single.(Event); ok {
+			return Present(event)
+		}
+		prjRow, ok := toProjectionRow(single)
+		if !ok {
+			return Null()
+		}
+		now := time.Time{}
+		if ctx.Engine != nil {
+			now = ctx.Engine.Now()
+		}
+		event, err := newMaterializedEvent(schema, prjRow, now)
+		if err != nil {
+			return Null()
+		}
+		return Present(event)
+	}}
+}
+
+// EventFromAggregate materializes a single aggregate result value (for
+// example MaxBy's winning row) as an Event of the named source schema so an
+// insert-into route can populate an event/[]event-typed column while keeping
+// the member representation and identity readable downstream. Zero rows or a
+// null aggregate result yields null.
+func EventFromAggregate[T any](env *Environment, schemaName string, aggregate AggregateExpression[T]) Expression[Event] {
+	if aggregate == nil {
+		return EventRowOf(env, schemaName, NullLiteral[any]())
+	}
+	base := aggregate.node()
+	node := &exprNode{
+		kind:        "event-from-aggregate",
+		typ:         typeOf[Event](),
+		description: "eventFromAggregate(" + schemaName + "," + aggregate.Description() + ")",
+		children:    []*exprNode{base},
+	}
+	return typedExpr[Event]{n: node, fn: func(ctx EvalContext) Value {
+		value := aggregate.eval(ctx)
+		if !value.IsPresent() || value.Any() == nil {
+			return Null()
+		}
+		schema, found := env.Schema(schemaName)
+		if !found {
+			return Null()
+		}
+		single := value.Any()
+		if event, ok := single.(Event); ok {
+			return Present(event)
+		}
+		now := time.Time{}
+		if ctx.Engine != nil {
+			now = ctx.Engine.Now()
+		}
+		event, err := newEvent(schema, single, now)
+		if err != nil {
+			return Null()
+		}
+		return Present(event)
+	}}
 }

@@ -381,6 +381,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "epl-insert-into-eventcol-rest" || *mode == "epl-insert-into-eventcol-rest-diff" {
+		trace, err := runEplInsertIntoEventColRestScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-insert-into-eventcol-rest-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplInsertIntoEventColRestJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplInsertIntoEventColRestJavaSources),
+				splitMetadata(*javaExecutions, eplInsertIntoEventColRestJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "infra-faf-scene-two" || *mode == "infra-faf-scene-two-diff" {
 		trace, err := runInfraFAFSceneTwoScenario(context.Background(), scenario)
 		if err != nil {

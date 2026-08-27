@@ -1479,7 +1479,19 @@ func validateMergeInsertSelectionsAgainstSchema(e *Environment, input *streamNod
 			}
 		} else if field.Type != nil && field.Type != typeOf[any]() && selection.Expr.Type() != nil &&
 			!field.Type.AssignableTo(selection.Expr.Type()) && !selection.Expr.Type().AssignableTo(field.Type) && !numericTypes(field.Type, selection.Expr.Type()) {
-			return fmt.Errorf("merge insert projection %q has type %s, target expects %s", name, selection.Expr.Type(), field.Type)
+			// An event/[]event-typed member accepts a single routed value:
+			// the runtime wraps it as a fragment carrying the value's own
+			// representation (Java's split/on-merge route wrap of an aggregate
+			// or alias capture into an array-typed event column).
+			exprType := selection.Expr.Type()
+			if exprType.Kind() == reflect.Pointer {
+				exprType = exprType.Elem()
+			}
+			fragmentColumn := field.Type == typeOf[Event]() ||
+				(field.Type.Kind() == reflect.Slice && field.Type.Elem() == typeOf[Event]())
+			if !fragmentColumn {
+				return fmt.Errorf("merge insert projection %q has type %s, target expects %s", name, selection.Expr.Type(), field.Type)
+			}
 		}
 		var expressionErr error
 		if targetKind == "" {

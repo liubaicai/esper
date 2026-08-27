@@ -17486,3 +17486,35 @@ func TestRunEplInsertIntoPopulateUndStreamSelectDiffRejectsTraceMutations(t *tes
 		})
 	}
 }
+
+func TestRunEplInsertIntoEventColRestDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "insertinto-eventcol-col-rest.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "insertinto-eventcol-col-rest.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "insertinto-eventcol-col-rest.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-insert-into-eventcol-rest-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence status=%s differences=%d", evidence.Status, len(evidence.Differences))
+	}
+	if len(evidence.JavaRuntimeIDs) != 12 {
+		t.Fatalf("runtime ids = %d, want 12", len(evidence.JavaRuntimeIDs))
+	}
+}

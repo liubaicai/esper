@@ -1,0 +1,1029 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5a7dbebf11b467444d22",
+    "java-runtime-d9b52924796472db83cb",
+    "java-runtime-10c2cd110438e2422b62",
+    "java-runtime-63b9e9149d6ec7890aba",
+    "java-runtime-6883c88a8250fd587c89",
+    "java-runtime-7f2273f9d9a40f6c3dc2",
+    "java-runtime-2ea417f6f55b2d3543ad",
+    "java-runtime-ba3f88c4715292f3432e",
+    "java-runtime-b121584c40a08d48229d",
+    "java-runtime-97ac55e0199723988adc",
+    "java-runtime-f8d3d61670e7dae24003",
+    "java-runtime-05f38146a2f28887769c"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateEventTypeColumnBean.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateEventTypeColumnNonBean.java"
+  ],
+  "javaExecutions": [
+    "EPLInsertIntoColBeanSingleToMulti",
+    "EPLInsertIntoColBeanMultiToSingle",
+    "EPLInsertIntoColBeanInvalid",
+    "EPLInsertIntoColBeanContextProp",
+    "EPLInsertIntoColNonBeanNewOperatorDocSample{typeType='objectarray'}",
+    "EPLInsertIntoColNonBeanNewOperatorDocSample{typeType='map'}",
+    "EPLInsertIntoColNonBeanCaseNew{representation=MAP}",
+    "EPLInsertIntoColNonBeanCaseNew{representation=OBJECTARRAY}",
+    "EPLInsertIntoColNonBeanCaseNew{representation=JSON}",
+    "EPLInsertIntoColNonBeanSingleColNamedWindow",
+    "EPLInsertIntoColNonBeanSingleToMulti",
+    "EPLInsertIntoColNonBeanBeanInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "insertinto-eventcol-col-rest",
+    "steps": [
+      {
+        "op": "case",
+        "case": "bean-singletomulti"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "bean-multitosingle"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "bean-context-prop"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "bean-invalid"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "nonbean-new-doc-objectarray"
+      },
+      {
+        "op": "send",
+        "eventType": "TriggerEvent",
+        "payload": {}
+      },
+      {
+        "op": "send",
+        "eventType": "TriggerEvent",
+        "payload": {}
+      },
+      {
+        "op": "case",
+        "case": "nonbean-new-doc-map"
+      },
+      {
+        "op": "send",
+        "eventType": "TriggerEvent",
+        "payload": {}
+      },
+      {
+        "op": "send",
+        "eventType": "TriggerEvent",
+        "payload": {}
+      },
+      {
+        "op": "case",
+        "case": "nonbean-case-new-map"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "nonbean-case-new-objectarray"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "nonbean-case-new-json"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "nonbean-singlecol-named-window"
+      },
+      {
+        "op": "send",
+        "eventType": "AEvent",
+        "payload": {
+          "symbol": "GE"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "case",
+        "case": "nonbean-single-to-multi"
+      },
+      {
+        "op": "send",
+        "eventType": "EventA",
+        "payload": {
+          "id": "x1"
+        }
+      },
+      {
+        "op": "case",
+        "case": "nonbean-invalid"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "insertinto-eventcol-col-rest",
+    "records": [
+      {
+        "case": "bean-singletomulti",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sbarr": [
+                {
+                  "__type": "SupportBean",
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-singletomulti",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sbarr": [
+                {
+                  "__type": "SupportBean",
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-multitosingle",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sb": {
+                "__type": "SupportBean",
+                "intPrimitive": 1,
+                "theString": "E1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-multitosingle",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sb": {
+                "__type": "SupportBean",
+                "intPrimitive": 1,
+                "theString": "E1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-context-prop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col": {
+                "__type": "SupportBean",
+                "intPrimitive": 0,
+                "theString": "E1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-invalid",
+        "operation": "compile-rejected",
+        "statement": "TypeOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "bean-invalid",
+        "operation": "compile-rejected",
+        "statement": "TypeTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nonbean-new-doc-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "items": [
+                {
+                  "__type": "Item",
+                  "name": "i1",
+                  "price": "10.0"
+                }
+              ],
+              "orderId": "001"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-new-doc-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "items": [
+                {
+                  "__type": "Item",
+                  "name": "i1",
+                  "price": "10.0"
+                }
+              ],
+              "orderId": "001"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-new-doc-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "items": [
+                {
+                  "__type": "Item",
+                  "name": "i1",
+                  "price": "10.0"
+                }
+              ],
+              "orderId": "001"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-new-doc-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "items": [
+                {
+                  "__type": "Item",
+                  "name": "i1",
+                  "price": "10.0"
+                }
+              ],
+              "orderId": "001"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-map",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "b",
+                "p1": 2
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-map",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "a",
+                "p1": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-objectarray",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "b",
+                "p1": 2
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-objectarray",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "a",
+                "p1": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-json",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "b",
+                "p1": 2
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-json",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "a",
+                "p1": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-singlecol-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e": {
+                "__type": "AEvent",
+                "symbol": "GE"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-single-to-multi",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aArray": [
+                {
+                  "__type": "EventA",
+                  "id": "x1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-single-to-multi",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aArray": [
+                {
+                  "__type": "EventA",
+                  "id": "x1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-invalid",
+        "operation": "compile-rejected",
+        "statement": "invalid-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nonbean-invalid",
+        "operation": "compile-rejected",
+        "statement": "invalid-2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "insertinto-eventcol-col-rest",
+    "records": [
+      {
+        "case": "bean-singletomulti",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sbarr": [
+                {
+                  "__type": "SupportBean",
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-singletomulti",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sbarr": [
+                {
+                  "__type": "SupportBean",
+                  "intPrimitive": 1,
+                  "theString": "E1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-multitosingle",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sb": {
+                "__type": "SupportBean",
+                "intPrimitive": 1,
+                "theString": "E1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-multitosingle",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sb": {
+                "__type": "SupportBean",
+                "intPrimitive": 1,
+                "theString": "E1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-context-prop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col": {
+                "__type": "SupportBean",
+                "intPrimitive": 0,
+                "theString": "E1"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-invalid",
+        "operation": "compile-rejected",
+        "statement": "TypeOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "bean-invalid",
+        "operation": "compile-rejected",
+        "statement": "TypeTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nonbean-new-doc-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "items": [
+                {
+                  "__type": "Item",
+                  "name": "i1",
+                  "price": "10.0"
+                }
+              ],
+              "orderId": "001"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-new-doc-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "items": [
+                {
+                  "__type": "Item",
+                  "name": "i1",
+                  "price": "10.0"
+                }
+              ],
+              "orderId": "001"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-new-doc-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "items": [
+                {
+                  "__type": "Item",
+                  "name": "i1",
+                  "price": "10.0"
+                }
+              ],
+              "orderId": "001"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-new-doc-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "items": [
+                {
+                  "__type": "Item",
+                  "name": "i1",
+                  "price": "10.0"
+                }
+              ],
+              "orderId": "001"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-map",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "b",
+                "p1": 2
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-map",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "a",
+                "p1": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-objectarray",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "b",
+                "p1": 2
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-objectarray",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "a",
+                "p1": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-json",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "b",
+                "p1": 2
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-case-new-json",
+        "operation": "listener",
+        "statement": "out",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "n0": {
+                "__type": "Nested",
+                "p0": "a",
+                "p1": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-singlecol-named-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e": {
+                "__type": "AEvent",
+                "symbol": "GE"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-single-to-multi",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aArray": [
+                {
+                  "__type": "EventA",
+                  "id": "x1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-single-to-multi",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aArray": [
+                {
+                  "__type": "EventA",
+                  "id": "x1"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonbean-invalid",
+        "operation": "compile-rejected",
+        "statement": "invalid-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nonbean-invalid",
+        "operation": "compile-rejected",
+        "statement": "invalid-2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
