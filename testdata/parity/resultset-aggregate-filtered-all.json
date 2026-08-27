@@ -1,0 +1,274 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-filtered-all",
+  "steps": [
+    {
+      "op": "case",
+      "case": "filtered-length3-all"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 100,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 10,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 11,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 20,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 30,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "case",
+      "case": "filtered-sums-length2"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "boolPrimitive": false,
+        "floatPrimitive": 2,
+        "doublePrimitive": 3,
+        "longPrimitive": 4,
+        "shortPrimitive": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "boolPrimitive": true,
+        "floatPrimitive": 3,
+        "doublePrimitive": 4,
+        "longPrimitive": 5,
+        "shortPrimitive": 6
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "boolPrimitive": true,
+        "floatPrimitive": 4,
+        "doublePrimitive": 5,
+        "longPrimitive": 6,
+        "shortPrimitive": 7
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "boolPrimitive": true,
+        "floatPrimitive": 1,
+        "doublePrimitive": 1,
+        "longPrimitive": 1,
+        "shortPrimitive": 1
+      }
+    },
+    {
+      "op": "case",
+      "case": "filtered-stateless"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 10,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 20,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 8,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 7,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 30,
+        "boolPrimitive": false
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 40,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "case",
+      "case": "filtered-exact-big"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanNumeric",
+      "payload": {
+        "bigint": "10",
+        "bigdec": "20"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanNumeric",
+      "payload": {
+        "bigint": "101",
+        "bigdec": "101"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanNumeric",
+      "payload": {
+        "bigint": "20",
+        "bigdec": "40"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanNumeric",
+      "payload": {
+        "bigint": "30",
+        "bigdec": "50"
+      }
+    },
+    {
+      "op": "case",
+      "case": "filtered-distinct-epl"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 100,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 100,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 200,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 200,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 200,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "case",
+      "case": "filtered-distinct-soda"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 100,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 100,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 200,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 200,
+        "boolPrimitive": true
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 200,
+        "boolPrimitive": true
+      }
+    }
+  ]
+}

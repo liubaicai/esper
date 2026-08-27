@@ -13312,6 +13312,69 @@
    ]
   },
   {
+   "id": "case.resultset-aggregate-filtered-all",
+   "javaRuntimeIds": [
+    "java-runtime-2287285f8221e7fc14d4"
+   ],
+   "javaNames": [
+    "ResultSetAggregateAllAggFunctions"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFiltered.java"
+   ],
+   "goTests": [
+    "internal/esper/resultset_aggregate_filtered_all_parity_test.go:TestResultSetAggregateFilteredAllLength3FunctionsParity",
+    "internal/esper/resultset_aggregate_filtered_all_parity_test.go:TestResultSetAggregateFilteredAllNumericWidthsParity",
+    "internal/esper/resultset_aggregate_filtered_all_parity_test.go:TestResultSetAggregateFilteredAllStatelessParity",
+    "internal/esper/resultset_aggregate_filtered_all_parity_test.go:TestResultSetAggregateFilteredAllExactBigParity",
+    "internal/esper/resultset_aggregate_filtered_all_parity_test.go:TestResultSetAggregateFilteredAllDistinctParity",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilteredAllDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilteredAllDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "aggregate",
+    "filter",
+    "length-window",
+    "count-distinct",
+    "big-number",
+    "soda",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "testdata/parity/resultset-aggregate-filtered-all.json",
+    "testdata/parity/resultset-aggregate-filtered-all.trace.json",
+    "testdata/parity/resultset-aggregate-filtered-all.evidence.json",
+    "tools/java-oracle/ResultSetAggregateFilteredAllScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-filtered-all.sh",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2287285f8221e7fc14d4"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-filtered-all"
+   ],
+   "notes": [
+    "ResultSetAggregateAllAggFunctions replayed through one shared scenario (29 records, 0 differences): filtered length(3) all-functions state, filtered primitive-width sums, stateless fmax/fmin, exact BigInteger/BigDecimal aggregates, and filtered distinct seven-stat aggregates through both EPL and SODA Java deployments.",
+    "The Go typed builder preserves filtered Null/singleton sample-stddev semantics, length-window eviction, exact big-number normalization, and distinct aggregate composition. Each case uses a fresh environment because the fixed Java execution redeploys a fresh statement between phases; no clock or old-stream records are involved."
+   ]
+  },
+  {
    "id": "case.aggregate-filtered",
    "javaRuntimeIds": [
     "java-runtime-2287285f8221e7fc14d4",
@@ -13424,11 +13487,13 @@
    "javaRuntimeIds": [
     "java-runtime-b1fdc8c4a3c8eaef8273",
     "java-runtime-2927c28d6990516aebea",
+    "java-runtime-4a89c8657f646a89fce9",
     "java-runtime-2dcfc3045d996cb718ab"
    ],
    "javaNames": [
     "ResultSetAggregateFirstLastEver{soda=true}",
     "ResultSetAggregateFirstLastEver{soda=false}",
+    "ResultSetAggregateFirstLastInvalid",
     "ResultSetAggregateOnDelete"
    ],
    "javaSourceFiles": [
@@ -13475,7 +13540,7 @@
    ],
    "notes": [
     "All three valid ResultSetAggregateFirstEverLastEver executions replayed through one shared scenario (14 records, 0 differences): SODA and EPL first/last/count-ever over length(2), including null boxed values, current-window eviction and filtered counts, plus keepall named-window deletion that retains ever history.",
-    "The ordinal-2 ResultSetAggregateFirstLastInvalid execution (java-runtime-4a89c8657f646a89fce9) remains implemented-only: Java asserts a compile-time countever(distinct ...) diagnostic, while the typed Go API has no exact diagnostic-equivalent surface. The case metadata keeps the fixed Java source and runtime ordering; no Java source was changed."
+    "The ordinal-2 ResultSetAggregateFirstLastInvalid execution (java-runtime-4a89c8657f646a89fce9) remains implemented-only: Java asserts a compile-time countever(distinct ...) diagnostic, while the typed Go API has no exact diagnostic-equivalent surface. The case metadata retains the fixed Java source, runtime, and execution ordering; no Java source was changed."
    ]
   },
   {
@@ -35196,6 +35261,10 @@
    "caseId": "case.expr-core-equals-is"
   },
   {
+   "capabilityId": "resultset.aggregate-filtered",
+   "caseId": "case.resultset-aggregate-filtered-all"
+  },
+  {
    "capabilityId": "expr.core",
    "caseId": "case.expr-core-event-identity-equals"
   },
@@ -37493,12 +37562,12 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 559,
-  "implementedCases": 557,
-  "differentialVerifiedCases": 171,
-  "differentialVerifiedRuntimeIds": 683,
+ "inventoriedCases": 560,
+ "implementedCases": 558,
+  "differentialVerifiedCases": 172,
+  "differentialVerifiedRuntimeIds": 684,
   "intentionallyDifferentCases": 23,
-  "representativeVerifiedCases": 95,
+  "representativeVerifiedCases": 96,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 118,
   "implementedCapabilities": 117,
@@ -37506,14 +37575,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3305,
-  "referencedJavaRuntimeIds": 3101,
+  "runtimeAssociationCount": 3307,
+  "referencedJavaRuntimeIds": 3102,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1035,
-  "representativeScenarioTotal": 98,
-  "representativeScenarioPassing": 98,
-  "totalCases": 559,
+  "unreferencedJavaRuntimeIds": 1034,
+  "representativeScenarioTotal": 99,
+  "representativeScenarioPassing": 99,
+  "totalCases": 560,
   "totalCapabilities": 118,
-  "differentialVerifiedRuntimeIDs": 683
+  "differentialVerifiedRuntimeIDs": 684
  }
 }

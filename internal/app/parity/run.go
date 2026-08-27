@@ -2303,6 +2303,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-aggregate-filtered-all" || *mode == "resultset-aggregate-filtered-all-diff" {
+		trace, err := runResultSetAggregateFilteredAllScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-filtered-all-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateFilteredAllJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetAggregateFilteredAllJavaSources),
+				splitMetadata(*javaExecutions, resultsetAggregateFilteredAllJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-aggregate-count-sum" || *mode == "resultset-aggregate-count-sum-diff" {
 		trace, err := runResultSetAggregateCountSumScenario(context.Background(), scenario)
 		if err != nil {
