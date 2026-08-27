@@ -1,0 +1,11 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-firstlastwindow-prev-nth",
+  "steps": [
+    {"op": "case", "case": "prev-nth"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"intPrimitive": 11}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"intPrimitive": 12}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"intPrimitive": 13}}
+  ]
+}

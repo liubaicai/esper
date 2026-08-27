@@ -480,7 +480,7 @@ func TestExtendedAggregateFunctions(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if last.Get("first").Any() != float64(2) || last.Get("last").Any() != float64(8) || last.Get("nth").Any() != float64(8) {
+	if last.Get("first").Any() != float64(2) || last.Get("last").Any() != float64(8) || last.Get("nth").Any() != float64(4) {
 		t.Fatalf("position aggregates = %#v", last.AsMap())
 	}
 	if last.Get("distinct").Any() != int64(3) || last.Get("median").Any() != float64(6) {

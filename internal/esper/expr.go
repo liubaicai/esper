@@ -4529,10 +4529,11 @@ func CountEver(expressions ...Expr) AggregateExpression[int64] {
 	})
 }
 
-// Nth returns the zero-based nth non-null value in current group order.
-// Negative indexes are invalid at evaluation time and produce Null.
+// Nth returns the zero-based nth non-null value in reverse insertion order,
+// so index zero is the current event and index one is the immediately prior
+// event, matching Esper's nth(value, index) aggregate.
 func Nth[T any](expression Expression[T], index int) AggregateExpression[T] {
-	return aggregatePosition[T](fmt.Sprintf("nth(%d)", index), expression, index, false, "")
+	return aggregatePosition[T](fmt.Sprintf("nth(%d)", index), expression, index, true, "")
 }
 
 func aggregatePosition[T any](kind string, expression Expression[T], index int, last bool, description string) AggregateExpression[T] {

@@ -17913,3 +17913,91 @@ func TestRunResultSetAggregateFirstLastWindowCurrentDiffRejectsTraceMutations(t 
 		})
 	}
 }
+
+func TestRunResultSetAggregateFirstLastWindowPrevNthDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-prev-nth.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-firstlastwindow-prev-nth.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-prev-nth.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-firstlastwindow-prev-nth-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 1 || evidence.JavaRuntimeIDs[0] != "java-runtime-3733f40a5c6d7be2c175" {
+		t.Fatalf("runtime ids = %#v", evidence.JavaRuntimeIDs)
+	}
+}
+
+func TestRunResultSetAggregateFirstLastWindowPrevNthDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "nth-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["n1"] = json.Number("999")
+			},
+		},
+		{
+			name: "null-state",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["p1"] = int64(0)
+			},
+		},
+		{
+			name: "eviction-shift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["l3"] = json.Number("10")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-prev-nth.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-firstlastwindow-prev-nth.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-prev-nth.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-firstlastwindow-prev-nth-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

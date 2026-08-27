@@ -878,7 +878,9 @@
     "internal/esper/infra_table_on_merge_parity_test.go",
     "internal/esper/resultset_aggregate_firstlastwindow_parity_test.go",
     "internal/esper/resultset_aggregate_firstlastwindow_ext_parity_test.go",
-    "internal/app/parity/resultset_aggregate_firstlastwindow_current.go"
+    "internal/app/parity/resultset_aggregate_firstlastwindow_current.go",
+    "internal/esper/resultset_aggregate_firstlastwindow_prev_nth_parity_test.go",
+    "internal/app/parity/resultset_aggregate_firstlastwindow_prev_nth.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -900,10 +902,9 @@
     "java-runtime-6ae9bc8636941d90dd91",
     "java-runtime-b03302bb599098d90c20",
     "java-runtime-e4b69ac483b580cbbf07",
-    "java-runtime-eb23cb37438e324a71ed",
-    "java-runtime-f04c46c8d88698c3726a",
     "java-runtime-7e5e6b41dd7cb8e65879",
-    "java-runtime-e48086834b488cb35e3c"
+    "java-runtime-e48086834b488cb35e3c",
+    "java-runtime-3733f40a5c6d7be2c175"
    ],
    "representativeScenarioIds": [
     "aggregate-firstlastwindow-ext",
@@ -35046,6 +35047,66 @@
     "ResultSetAggregateFirstLastWindowNoGroup and ResultSetAggregateFirstLastWindowGroup replayed through one shared scenario (11 records, 0 differences): current first/last/window access over length(2) ungrouped and length(5) grouped windows, with FIFO eviction and source-defined grouped row ordering.",
     "The typed Go builder uses First, Last, and WindowValues with a fresh environment per execution. The scenario intentionally excludes indexed/prev/nth, wildcard event access, batch/output-rate, joins, subqueries, invalid diagnostics, old-stream, iterator, FAF, and lifecycle variants reserved by the umbrella aggregate-access case."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-firstlastwindow-prev-nth",
+   "javaRuntimeIds": [
+    "java-runtime-3733f40a5c6d7be2c175"
+   ],
+   "javaNames": [
+    "ResultSetAggregatePrevNthIndexedFirstLast"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstLastWindow.java"
+   ],
+   "goTests": [
+    "internal/esper/resultset_aggregate_firstlastwindow_prev_nth_parity_test.go:TestResultSetAggregatePrevNthIndexedFirstLastParity",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFirstLastWindowPrevNthDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFirstLastWindowPrevNthDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "first",
+    "last",
+    "nth",
+    "prev",
+    "indexed",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-firstlastwindow-prev-nth.json",
+    "testdata/parity/resultset-aggregate-firstlastwindow-prev-nth.trace.json",
+    "testdata/parity/resultset-aggregate-firstlastwindow-prev-nth.evidence.json",
+    "tools/java-oracle/ResultSetAggregateFirstLastWindowPrevNthScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-firstlastwindow-prev-nth.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-3733f40a5c6d7be2c175"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-firstlastwindow-prev-nth"
+   ],
+   "notes": [
+    "ResultSetAggregatePrevNthIndexedFirstLast replays one shared length(3) scenario (4 records, 0 differences): typed prev/nth/last indexes 0..2 return newest-to-oldest values, null before enough retained rows, and FIFO eviction shifts the retained prefix.",
+    "The Go surface uses typed Prev, Nth, and indexed Last builders. The scenario intentionally excludes first(indexed) ordinal 5, joins, variables, dynamic indexes, wildcard access, old-stream, iterator, FAF, output-rate, invalid diagnostics, and lifecycle variants reserved by the aggregate-access umbrella."
+   ]
   }
  ],
  "mappings": [
@@ -37628,15 +37689,19 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-firstlastwindow-current"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-firstlastwindow-prev-nth"
   }
  ],
  "summary": {
-  "inventoriedCases": 561,
-  "implementedCases": 559,
-  "differentialVerifiedCases": 173,
-  "differentialVerifiedRuntimeIds": 686,
+  "inventoriedCases": 562,
+  "implementedCases": 560,
+  "differentialVerifiedCases": 174,
+  "differentialVerifiedRuntimeIds": 687,
   "intentionallyDifferentCases": 23,
-  "representativeVerifiedCases": 97,
+  "representativeVerifiedCases": 98,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 118,
   "implementedCapabilities": 117,
@@ -37644,14 +37709,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3309,
+  "runtimeAssociationCount": 3310,
   "referencedJavaRuntimeIds": 3102,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 1034,
-  "representativeScenarioTotal": 100,
-  "representativeScenarioPassing": 100,
-  "totalCases": 561,
+  "representativeScenarioTotal": 101,
+  "representativeScenarioPassing": 101,
+  "totalCases": 562,
   "totalCapabilities": 118,
-  "differentialVerifiedRuntimeIDs": 686
+  "differentialVerifiedRuntimeIDs": 687
  }
 }

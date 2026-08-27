@@ -4,6 +4,7 @@
 
 ## 0. 实时状态入口
 > 最新补充：Draft 4.268（2026-08-28），新增 `resultset-aggregate-firstlastwindow-current` differential-verified 场景，对照固定 Java `ResultSetAggregateFirstLastWindow.java` 的 `ResultSetAggregateFirstLastWindowNoGroup` 与 `ResultSetAggregateFirstLastWindowGroup`（2 个 runtime）：Java/Go 各 11 条 records、0 differences。场景覆盖 typed first/last/window 的 length(2) ungrouped 与 length(5) grouped current-window 语义、FIFO 淘汰和 order-by 行序；indexed/prev/nth、wildcard、batch/output-rate、join、subquery、invalid、old-stream、iterator、FAF 与生命周期变体继续保留在 aggregate-access umbrella。manifest 更新为 561 cases、173 个 differential-verified case、686 个 differential runtime IDs、3309 条 associations（referenced 3102）；capability 118 个（33 DV）。
+> 最新补充：Draft 4.269（2026-08-28），新增 `resultset-aggregate-firstlastwindow-prev-nth` differential-verified 场景，对照固定 Java `ResultSetAggregateFirstLastWindow.java` 的 `ResultSetAggregatePrevNthIndexedFirstLast`（1 个 runtime）：Java/Go 各 4 条 records、0 differences。场景覆盖 typed `prev`/`nth`/`last` indexes 0..2 的 length(3) new-only 输出、窗口淘汰后的 FIFO 历史移位和越界 Null；indexed `first`、join、dynamic index、wildcard、iterator、FAF、output-rate、invalid 与生命周期变体继续保留在 aggregate-access umbrella。manifest 更新为 562 cases、174 个 differential-verified case、687 个 differential runtime IDs、3310 条 associations（referenced 3102）；capability 118 个（33 DV）。
 > 最新补充：Draft 4.267（2026-08-28），新增 `resultset-aggregate-filtered-all` differential-verified 场景，对照固定 Java `ResultSetAggregateFiltered.java` 的 `ResultSetAggregateAllAggFunctions`（1 个 runtime）：Java/Go 各 29 条 records、0 differences。六个隔离子场景覆盖 length(3) filtered avedev/avg/fmax/median/fmin/stddev/sum/fmaxever/fminever、primitive-width sums、无窗口 fmax/fmin、BigDecimal/BigInteger exact aggregates，以及 EPL/SODA filtered distinct 七统计聚合；保留 broad `case.aggregate-filtered` 的全量 source inventory umbrella。manifest 更新为 560 cases、172 个 differential-verified case、684 个 differential runtime IDs、3307 条 associations（referenced 3102）；capability 118 个（33 DV）。
 > 最新补充：Draft 4.266（2026-08-28），新增 `resultset.aggregate-ever` differential-verified 场景，对照固定 Java `ResultSetAggregateFirstEverLastEver.java` 的 3 个可表示 execution（Java/Go 各 14 条 records、0 differences）：SODA/EPL firstever、lastever、first、last 与 countever 的 length(2) current/ever/filter 轨迹，覆盖 null boxed 值和窗口淘汰；keepall named-window on-delete 删除后保留 ever 历史。ordinal 2 `countever(distinct ...)` 为 Go 类型安全 API 不可表示的 compile-error 边界，保持 implemented-only 并保留 Java 原文。独立 `AggregateEverReview-3` 要求 case 元数据保留该 invalid runtime/name；修复后 manifest 仍为 559 cases、171 个 differential-verified case、683 个 differential runtime IDs，association 更新为 3306（referenced 3102，未关联 1034）；capability 118 个（33 DV）。
 > 最新补充：Draft 4.265（2026-08-27），`resultset-aggregate-count-sum` 扩展至 9 个 execution differential-verified（Java/Go 各 55 条 records、0 differences）：count(*) 星号投影、无窗口 sum/count HAVING、SODA grouped count/count-distinct/count 的 null 与窗口淘汰重算、`avg(count(*))` 历史前缀；保留 view/join/named-window 四 execution。manifest 更新为 559 cases、170 DV cases、680 DV runtime IDs、3305 associations（referenced 3101）；capability 118 个（32 DV）。
@@ -1042,19 +1043,18 @@
 ### 2.2 对账清单
 
 | 维度 | 数值 |
-| --- | --- |
 | Capability | 118 个 |
-| Case | 561 个 |
-| Case implemented（verification） | 559 个（其中 173 个 differential-verified、23 个 intentionally-different） |
-| Case differential-verified | 173 个（686 个 runtime） |
+| Case | 562 个 |
+| Case implemented（verification） | 560 个（其中 174 个 differential-verified、23 个 intentionally-different） |
+| Case differential-verified | 174 个（687 个 runtime） |
 | Case intentionally-different | 23 个 |
 | Case inventoried-only | 0 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
-| Runtime 关联 | 3,309 条 |
+| Runtime 关联 | 3,310 条 |
 | 唯一已关联 runtime | 3,102 个 |
 | 未关联 runtime | 1,034 个 |
 | 关联覆盖率 | 75.0% |
-| Representative scenario | 100/100 通过 |
+| Representative scenario | 101/101 通过 |
 | NFR | 0 个已验证 |
 | Docker integration | MySQL/Kafka/RabbitMQ round-trips passed（2026-08-14） |
 | Stress baseline | 语义不变量通过；`historyByEvent` 按需构建后 42.6s→18.45s（约 660 events/s），仍开放（2026-08-14） |

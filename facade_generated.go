@@ -4570,8 +4570,9 @@ func NotInOf(value Expr, candidates ...Expr) Expression[bool] {
 	return internalengine.NotInOf(value, candidates...)
 }
 
-// Nth returns the zero-based nth non-null value in current group order.
-// Negative indexes are invalid at evaluation time and produce Null.
+// Nth returns the zero-based nth non-null value in reverse insertion order,
+// so index zero is the current event and index one is the immediately prior
+// event, matching Esper's nth(value, index) aggregate.
 func Nth[T any](expression Expression[T], index int) AggregateExpression[T] {
 	return internalengine.Nth[T](expression, index)
 }
