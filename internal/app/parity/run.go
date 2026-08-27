@@ -2015,6 +2015,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-querytype-w-time-batch" || *mode == "resultset-querytype-w-time-batch-diff" {
+		trace, err := runResultSetQueryTypeWTimeBatchScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-w-time-batch-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeWTimeBatchJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeWTimeBatchJavaSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeWTimeBatchJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-query-type-having" || *mode == "resultset-query-type-having-diff" {
 		trace, err := runResultSetQueryTypeHavingScenario(context.Background(), scenario)
 		if err != nil {

@@ -5407,9 +5407,10 @@ type aggregateGroup struct {
 }
 
 type aggregateResultEntry struct {
-	result Result
-	group  *aggregateGroup
-	key    string
+	result      Result
+	group       *aggregateGroup
+	key         string
+	sourceEvent Event
 }
 
 type patternRuntimeState struct {
@@ -12501,13 +12502,34 @@ func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 		return joinDelta{}, nil
 	}
 	definition := r.query.join
+	if definition == nil && r.query.aggregate != nil {
+		definition = r.query.aggregate.join
+	}
 	if definition == nil {
 		return joinDelta{}, nil
 	}
 	before := joinKeyedTuples(definition, r.joinState, now, r)
-	delta := r.expire(now)
-	for index := range r.joinState.sides {
-		removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
+	_, windowDeltas := r.expireWindowDeltas(now)
+	for index, source := range joinDefinitionSources(definition) {
+		for _, window := range streamWindowNodes(source) {
+			delta, ok := windowDeltas[window]
+			if !ok {
+				continue
+			}
+			// Expiry rows belong to this source only. Applying one merged
+			// delta to every side breaks same-type/self-joins and lets a
+			// batch on one side remove equal payloads from another side.
+			removeStoredEventsCascade(r.joinState, index, delta.oldEvents)
+			for _, retained := range storedEventsForDelta(r.windows[window], delta.newEvents) {
+				if joinSideContainsEvent(r.joinState.sides[index], retained.event) {
+					continue
+				}
+				r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{
+					event: retained.event, receivedAt: retained.receivedAt,
+					lineageID: r.nextJoinLineageID(),
+				})
+			}
+		}
 	}
 	timedEvents, err := r.advancePatternJoinSources(definition, now)
 	if err != nil {
@@ -12522,6 +12544,150 @@ func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 	}
 	after := joinKeyedTuples(definition, r.joinState, now, r)
 	return joinDeltaWithPairs(diffJoinKeyedTuples(before, after)), nil
+
+}
+
+func (r *statementRuntime) expireWindowDeltas(now time.Time) (eventDelta, map[*streamNode]eventDelta) {
+	var nodes []*streamNode
+	for node := range r.windows {
+		nodes = append(nodes, node)
+	}
+	sort.Slice(nodes, func(i, j int) bool { return nodes[i].describe() < nodes[j].describe() })
+	result := eventDelta{}
+	deltas := make(map[*streamNode]eventDelta, len(nodes))
+	for _, node := range nodes {
+		state := r.windows[node]
+		delta := r.expireWindowState(node.window, state, now)
+		delta.history = windowHistory(node.window, state)
+		if windowHistoryByEventRequired(node.window) {
+			delta.historyByEvent = windowHistoryByEvent(node.window, state)
+		}
+		if len(delta.priorByEvent) == 0 && windowUsesArrivalPrior(node.window) {
+			delta.priorByEvent = windowPriorAccessByEvent(node.window, state)
+		}
+		if windowUsesPreviousAccess(node.window) {
+			delta.previousByEvent = windowPreviousAccessByEvent(node.window, state)
+			if delta.previousByEvent == nil {
+				delta.previousByEvent = make(map[string][]Event)
+			}
+			for _, old := range delta.oldEvents {
+				delta.previousByEvent[eventIdentity(old)] = nil
+				if delta.historyByEvent == nil {
+					delta.historyByEvent = make(map[string][]Event)
+				}
+				delta.historyByEvent[eventIdentity(old)] = nil
+			}
+		}
+		deltas[node] = delta
+		result = mergeDelta(result, delta)
+		if windowStateEmpty(state) && !delta.forced && !state.started {
+			delete(r.windows, node)
+		}
+		if _, isAccum := node.window.(TimeAccumWindowSpec); isAccum && len(delta.oldEvents) == 0 && len(delta.newEvents) == 0 && state.started {
+			result = mergeDelta(result, delta)
+		}
+	}
+	return result, deltas
+}
+
+func streamWindowNodes(source *streamNode) []*streamNode {
+	if source == nil {
+		return nil
+	}
+	result := make([]*streamNode, 0, 1)
+	seen := make(map[*streamNode]struct{})
+	for node := source; node != nil; node = node.input {
+		if node.kind != streamWindow {
+			continue
+		}
+		if _, exists := seen[node]; exists {
+			continue
+		}
+		seen[node] = struct{}{}
+		result = append(result, node)
+	}
+	return result
+}
+
+func storedEventsForDelta(state *windowRuntimeState, events []Event) []storedEvent {
+	if state == nil || len(events) == 0 {
+		return nil
+	}
+	candidates := make([]storedEvent, 0)
+	collectStoredWindowEvents(state, &candidates, make(map[*windowRuntimeState]struct{}))
+	used := make([]bool, len(candidates))
+	result := make([]storedEvent, 0, len(events))
+	for _, event := range events {
+		found := -1
+		for index, candidate := range candidates {
+			if !used[index] && sameEventInstance(candidate.event, event) {
+				found = index
+				break
+			}
+		}
+		if found < 0 {
+			continue
+		}
+		used[found] = true
+		result = append(result, candidates[found])
+	}
+	return result
+}
+
+func collectStoredWindowEvents(state *windowRuntimeState, result *[]storedEvent, seen map[*windowRuntimeState]struct{}) {
+	if state == nil {
+		return
+	}
+	if _, exists := seen[state]; exists {
+		return
+	}
+	seen[state] = struct{}{}
+	*result = append(*result, state.entries...)
+	*result = append(*result, state.pendingNew...)
+	for _, key := range state.keyOrder {
+		if stored, ok := state.keyed[key]; ok {
+			*result = append(*result, stored)
+		}
+	}
+	for key, stored := range state.keyed {
+		found := false
+		for _, ordered := range state.keyOrder {
+			if ordered == key {
+				found = true
+				break
+			}
+		}
+		if !found {
+			*result = append(*result, stored)
+		}
+	}
+	for _, child := range state.groups {
+		collectStoredWindowEvents(child, result, seen)
+	}
+	for _, child := range state.children {
+		collectStoredWindowEvents(child, result, seen)
+	}
+}
+
+func joinSideContainsEvent(side []storedEvent, event Event) bool {
+	for _, stored := range side {
+		if sameEventInstance(stored.event, event) {
+			return true
+		}
+	}
+	return false
+}
+
+func sameEventInstance(left, right Event) bool {
+	if left.identity != nil && right.identity != nil {
+		return left.identity == right.identity
+	}
+	return sameEvent(left, right)
+}
+
+func (r *statementRuntime) expire(now time.Time) eventDelta {
+	result, _ := r.expireWindowDeltas(now)
+	return result
 }
 
 func joinPairs(definition *joinDefinition, state *joinRuntimeState, now time.Time, runtime *statementRuntime) []eventPair {
@@ -14126,48 +14292,6 @@ func flushPendingBatch(state *windowRuntimeState) eventDelta {
 	}
 	state.entries = append([]storedEvent(nil), state.pendingNew...)
 	state.pendingNew = nil
-	return result
-}
-
-func (r *statementRuntime) expire(now time.Time) eventDelta {
-	var nodes []*streamNode
-	for node := range r.windows {
-		nodes = append(nodes, node)
-	}
-	sort.Slice(nodes, func(i, j int) bool { return nodes[i].describe() < nodes[j].describe() })
-	result := eventDelta{}
-	for _, node := range nodes {
-		state := r.windows[node]
-		delta := r.expireWindowState(node.window, state, now)
-		result.forced = result.forced || delta.forced
-		delta.history = windowHistory(node.window, state)
-		if windowHistoryByEventRequired(node.window) {
-			delta.historyByEvent = windowHistoryByEvent(node.window, state)
-		}
-		if len(delta.priorByEvent) == 0 && windowUsesArrivalPrior(node.window) {
-			delta.priorByEvent = windowPriorAccessByEvent(node.window, state)
-		}
-		if windowUsesPreviousAccess(node.window) {
-			delta.previousByEvent = windowPreviousAccessByEvent(node.window, state)
-			if delta.previousByEvent == nil {
-				delta.previousByEvent = make(map[string][]Event)
-			}
-			for _, old := range delta.oldEvents {
-				delta.previousByEvent[eventIdentity(old)] = nil
-				if delta.historyByEvent == nil {
-					delta.historyByEvent = make(map[string][]Event)
-				}
-				delta.historyByEvent[eventIdentity(old)] = nil
-			}
-		}
-		result = mergeDelta(result, delta)
-		if windowStateEmpty(state) && !delta.forced && !state.started {
-			delete(r.windows, node)
-		}
-		if _, isAccum := node.window.(TimeAccumWindowSpec); isAccum && len(delta.oldEvents) == 0 && len(delta.newEvents) == 0 && state.started {
-			result = mergeDelta(result, delta)
-		}
-	}
 	return result
 }
 
@@ -17845,10 +17969,12 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				}
 				if postVisible || (definition.having == nil && len(oldValues) > 0) {
 					oldEntries = append(oldEntries, aggregateResultEntry{
-						result: resultRow(newRow(plan.resultSchema, oldValues)),
-						group:  group,
-						key:    key,
+						result:      resultRow(newRow(plan.resultSchema, oldValues)),
+						group:       group,
+						key:         key,
+						sourceEvent: leaving,
 					})
+
 				}
 			}
 		}
@@ -17862,10 +17988,12 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
 				if visible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 					newEntries = append(newEntries, aggregateResultEntry{
-						result: resultRow(newRow(plan.resultSchema, values)),
-						group:  group,
-						key:    key,
+						result:      resultRow(newRow(plan.resultSchema, values)),
+						group:       group,
+						key:         key,
+						sourceEvent: current,
 					})
+
 				}
 			}
 			if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
@@ -17886,10 +18014,12 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 					}
 					if postVisible || (definition.having == nil && len(oldValues) > 0) {
 						oldEntries = append(oldEntries, aggregateResultEntry{
-							result: resultRow(newRow(plan.resultSchema, oldValues)),
-							group:  group,
-							key:    key,
+							result:      resultRow(newRow(plan.resultSchema, oldValues)),
+							group:       group,
+							key:         key,
+							sourceEvent: leaving,
 						})
+
 					}
 				}
 			}
@@ -17922,10 +18052,12 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				leavingValues, leavingVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
 				if leavingVisible {
 					oldEntries = append(oldEntries, aggregateResultEntry{
-						result: resultRow(newRow(plan.resultSchema, leavingValues)),
-						group:  group,
-						key:    key,
+						result:      resultRow(newRow(plan.resultSchema, leavingValues)),
+						group:       group,
+						key:         key,
+						sourceEvent: leaving,
 					})
+
 				}
 			}
 		}
@@ -17945,9 +18077,10 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				values, eventVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
 				if eventVisible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 					newEntries = append(newEntries, aggregateResultEntry{
-						result: resultRow(newRow(plan.resultSchema, values)),
-						group:  group,
-						key:    key,
+						result:      resultRow(newRow(plan.resultSchema, values)),
+						group:       group,
+						key:         key,
+						sourceEvent: current,
 					})
 				}
 			}
@@ -18048,6 +18181,10 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				key:    "",
 			})
 		}
+	}
+	if len(plan.query.orderBy) == 0 && !containsTableSource(plan.query.input, nil) && len(definition.groupBy) > 0 && len(groupingSets) == 1 && aggregateDefinitionReadsNonKeyEventExceptContext(definition, r.engine.env, plan.query.contextName) {
+		reorderAggregateEntriesBySourceEvent(newEntries, delta.newEvents)
+		reorderAggregateEntriesBySourceEvent(oldEntries, delta.oldEvents)
 	}
 	if len(plan.query.orderBy) > 0 {
 		orderAggregateResults(newEntries, plan.query.orderBy, definition, state.allEvents, state.allEverEvents, now, r.variables, false)
@@ -18883,6 +19020,26 @@ func orderAggregateResults(entries []aggregateResultEntry, keys []SortKey, defin
 		return false
 	})
 }
+func reorderAggregateEntriesBySourceEvent(entries []aggregateResultEntry, events []Event) {
+	if len(entries) < 2 || len(events) < 2 {
+		return
+	}
+	order := make(map[string]int, len(events))
+	for index, event := range events {
+		order[eventIdentity(event)] = index
+	}
+	sort.SliceStable(entries, func(left, right int) bool {
+		leftIndex, leftOK := order[eventIdentity(entries[left].sourceEvent)]
+		rightIndex, rightOK := order[eventIdentity(entries[right].sourceEvent)]
+		if !leftOK {
+			return false
+		}
+		if !rightOK {
+			return true
+		}
+		return leftIndex < rightIndex
+	})
+}
 
 func aggregateResultContext(group *aggregateGroup, definition *aggregateDefinition, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, leaving bool) EvalContext {
 	if group == nil {
@@ -18949,7 +19106,7 @@ func aggregateDefinitionRetainsEmptyGroups(definition *aggregateDefinition) bool
 // Grouped and dimensional aggregates always produce one row per group, even
 // when a projection happens to read a representative event.
 func aggregateDefinitionIsRowForEvent(definition *aggregateDefinition) bool {
-	if definition == nil || definition.join != nil || len(definition.groupBy) != 0 || definition.grouping != aggregateGroupingPlain {
+	if definition == nil || len(definition.groupBy) != 0 || definition.grouping != aggregateGroupingPlain {
 		return false
 	}
 	hasAggregate := false

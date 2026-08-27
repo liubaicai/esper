@@ -1,0 +1,1652 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-2f347eeeb6e7595bf504",
+    "java-runtime-50b076da85020a750f08",
+    "java-runtime-77a1932ea0676781652b",
+    "java-runtime-d38820596d857deae67c",
+    "java-runtime-a68578cc7531f737bd0d",
+    "java-runtime-3c33a86f202c6bf3471b",
+    "java-runtime-d14f54fbebaf213da348",
+    "java-runtime-c76ba92d72beb61d0a66"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeWTimeBatch.java"
+  ],
+  "javaExecutions": [
+    "ResultSetQueryTypeTimeBatchRowForAllNoJoin",
+    "ResultSetQueryTypeTimeBatchRowForAllJoin",
+    "ResultSetQueryTypeTimeBatchRowPerEventNoJoin",
+    "ResultSetQueryTypeTimeBatchRowPerEventJoin",
+    "ResultSetQueryTypeTimeBatchRowPerGroupNoJoin",
+    "ResultSetQueryTypeTimeBatchRowPerGroupJoin",
+    "ResultSetQueryTypeTimeBatchAggrGroupedNoJoin",
+    "ResultSetQueryTypeTimeBatchAggrGroupedJoin"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-w-time-batch",
+    "steps": [
+      {
+        "op": "case",
+        "case": "time-batch-row-for-all-nojoin"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 15,
+          "volume": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 20,
+          "volume": 250
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 20,
+          "volume": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-row-for-all-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "DELL",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 15,
+          "volume": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 20,
+          "volume": 250
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 20,
+          "volume": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-row-per-event-nojoin"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 15,
+          "volume": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 20,
+          "volume": 250
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 20,
+          "volume": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-row-per-event-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "DELL",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 15,
+          "volume": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 20,
+          "volume": 250
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 20,
+          "volume": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-row-per-group-nojoin"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 15,
+          "volume": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 20,
+          "volume": 250
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 20,
+          "volume": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-row-per-group-join",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "DELL",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 15,
+          "volume": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 20,
+          "volume": 250
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 20,
+          "volume": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-aggr-grouped-nojoin"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 15,
+          "volume": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 20,
+          "volume": 250
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 20,
+          "volume": 600
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-aggr-grouped-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "DELL",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IBM",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 15,
+          "volume": 500
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 20,
+          "volume": 250
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 20,
+          "volume": 600
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-w-time-batch",
+    "records": [
+      {
+        "case": "time-batch-row-for-all-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-for-all-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-for-all-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-for-all-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-event-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-event-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-event-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-event-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-group-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-group-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-group-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-group-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-aggr-grouped-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL",
+              "volume": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM",
+              "volume": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL",
+              "volume": 250
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-aggr-grouped-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM",
+              "volume": 600
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL",
+              "volume": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM",
+              "volume": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL",
+              "volume": 250
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-aggr-grouped-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL",
+              "volume": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM",
+              "volume": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL",
+              "volume": 250
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-aggr-grouped-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM",
+              "volume": 600
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL",
+              "volume": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM",
+              "volume": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL",
+              "volume": 250
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-w-time-batch",
+    "records": [
+      {
+        "case": "time-batch-row-for-all-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-for-all-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-for-all-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-for-all-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-event-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-event-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-event-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 45,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-event-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-group-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-group-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-group-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-row-per-group-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-aggr-grouped-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL",
+              "volume": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM",
+              "volume": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL",
+              "volume": 250
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-aggr-grouped-nojoin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM",
+              "volume": 600
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL",
+              "volume": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM",
+              "volume": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL",
+              "volume": 250
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-aggr-grouped-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL",
+              "volume": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 15,
+              "symbol": "IBM",
+              "volume": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 30,
+              "symbol": "DELL",
+              "volume": 250
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-aggr-grouped-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM",
+              "volume": 600
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL",
+              "volume": 200
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": 20,
+              "symbol": "IBM",
+              "volume": 500
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sumPrice": {
+                "state": "null"
+              },
+              "symbol": "DELL",
+              "volume": 250
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

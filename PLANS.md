@@ -31,9 +31,8 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-08-26
-- Baseline: `HEAD` == `origin/master` at Draft 4.255 (`4665f3330`),
-  pushed. Worktree carries the 4.256 implementation pending commit.
+- Updated: 2026-08-27
+- Baseline: `HEAD` == `origin/master` at Draft 4.263 (`07448452e`), pushed. Worktree carries the Draft 4.264 ResultSetQueryTypeWTimeBatch implementation and project facts pending final gates, commit, and push.
 - Previous unit outcome (closed; Draft 4.254, commit `20700fb35`):
   InfraTableIntoTable 9 executions (11 cases) differential-verified at
   59/59 records, 0 differences; runtime additions MaxEver/MinEver/
@@ -45,7 +44,39 @@ activity or a single coverage percentage.
   resultset-query-type-having extended to 7 DV runtimes (14/14 records,
   0 differences); ungrouped irstream null-prior old row gated by
   prior-state having; join-family three executions remain unregistered.
-- Current work unit (Draft 4.261, implemented, review PASS, pending commit):
+- Current work unit (Draft 4.264, implemented, review PASS, project facts updated; final gates pending):
+  `ResultSetQueryTypeWTimeBatch.java` all 8 executions are differential-verified
+  (16/16 Java and Go records, 0 differences). Batch: `JavaTB`+`GoTB`
+  read-only scouts; `ParityAssetsTB` authored the oracle/script/scenario assets;
+  `TimeBatchCoreRepair` and `JoinBatchLifecycle` investigated the shared runtime
+  boundary. Engine changes split per-window expiry deltas for join sides,
+  preserve event lineage through time-batch expiry, and route aggregate join
+  definitions through the corrected expiry path; `AnyModeCompatTests` added
+  explicit mode=any listener-row canonicalization with strict record/batch/value
+  mutation coverage. `WTBParityReview-2` strict verdict PASS with no findings.
+  Targeted package tests, manifest/evidence checks, and `git diff --check` pass;
+  full vet/test gates, commit, and push remain. Scratch probe removed.
+- Prefetch queue: CountSum ordinals 1–5 are frozen read-only for Draft 4.265:
+  fixed Java `ResultSetAggregateCountSum.java`, runtime IDs
+  `7887bb0df9aaf7e99c89`, `5f8ee37abdc1302b4598`,
+  `6fe8e1bd138b1ee81944`, `f24aa8d884bd556d2023`,
+  `9ca872971349f850d32e5`; executions `ResultSetAggregateCountPlusStar`,
+  `ResultSetAggregateCountHaving`, `ResultSetAggregateSumHaving`,
+  `ResultSetAggregateCountOneViewOM`, and
+  `ResultSetAggregateGroupByCountNestedAggregationAvg`. `CountSumJavaContract`
+  and `CountSumGoSurface` completed read-only scouting. No Draft 4.265 writes
+  may start until Draft 4.264 final gates, commit, and push are complete.
+- Prefetch queue: CountSum ordinals 1–5 are frozen read-only for Draft 4.265:
+  fixed Java `ResultSetAggregateCountSum.java`, runtime IDs
+  `7887bb0df9aaf7e99c89`, `5f8ee37abdc1302b4598`,
+  `6fe8e1bd138b1ee81944`, `f24aa8d884bd556d2023`,
+  `9ca872971349f850d32e`; executions `ResultSetAggregateCountPlusStar`,
+  `ResultSetAggregateCountHaving`, `ResultSetAggregateSumHaving`,
+  `ResultSetAggregateCountOneViewOM`, and
+  `ResultSetAggregateGroupByCountNestedAggregationAvg`. `CountSumJavaContract`
+  and `CountSumGoSurface` completed read-only scouting. No Draft 4.265 writes
+  may start until Draft 4.264 review, facts, commit, and push are complete.
+- Previous work unit (Draft 4.261, implemented, review PASS, pending commit):
   case.variables-use closed EPLVariablesUse at 9/11 executions (101/101
   records, 0 differences; legacy 11 records byte-identical). Batch:
   `VURJavaContract`+`VURGoSurface` read-only scouts; frozen contract in
@@ -67,8 +98,6 @@ activity or a single coverage percentage.
   future parity item; evidence scenario normalization is convention-
   consistent). Registered unrepresented: DotSeparateThread, WVarargs,
   byte[] boxed/primitive distinction, SupportBean[] declaration rejection.
-- Prefetch queue: EMPTY. Next unit selection returns to roadmap-driven
-  pick; no contract frozen yet.
 - Closed prefetch (Draft 4.260): epl/variable/EPLVariablesUse.java 10
   executions were prefetched by `VARJavaContract`/`VARGoSurface`; four
   shipped as Draft 4.260, the final two in-scope (EPRuntime API
@@ -174,20 +203,18 @@ activity or a single coverage percentage.
   truth without rushing.
 
 ## Delegation checkpoint
-- Draft 4.256 unit agents: prefetch scouts `RFAJavaContract`
-  (java-oracle-scout) and `RFAGoSurface` (scout) ran concurrently in one
-  task batch before implementation; asset writer `RFA Assets`
-  (parity-asset-worker, isolated) authored the oracle/scenario/script trio
-  and corrected the swapped join=true/false runtime-ID mapping against
-  java-execution-inventory ordinals before delivery. Shared-core writer:
-  primary agent. `RFAReview` verdict PASS-with-findings: P2 runner
-  fallback ID list swapped (fixed + provenance assertion added), P3
-  manifest serialization hygiene (newline + 4 raw punctuation chars
-  restored). Draft 4.256 shipped as `b625de490`.
-
-- Draft 4.254 unit agents: investigation scouts `InfraTTJavaContract`
-  (java-oracle-scout) and `InfraTTGoSurface` (scout) ran concurrently in one
-  task batch before implementation. Asset writer `ITTO Assets`
+- Draft 4.264 unit agents: `JavaTB`/`GoTB` read-only scouts ran concurrently
+  before implementation; `ParityAssetsTB` authored disjoint oracle/scenario/
+  runner assets; `TimeBatchCoreRepair` and `JoinBatchLifecycle` investigated
+  the shared runtime boundary; `AnyModeCompatTests` authored disjoint differ
+  regression tests; `WTBParityReview-2` reviewed the integrated diff and
+  returned strict PASS with no findings. All delegated tasks skipped build,
+  formatter, linter, and tests as required.
+- Draft 4.265 prefetch: `CountSumJavaContract` (java-oracle-scout) and
+  `CountSumGoSurface` (scout) ran concurrently. Their frozen candidate is
+  ResultSetAggregateCountSum ordinals 1–5; no writes started.
+- Primary agent owns shared semantics, parity assets, generated trace/evidence,
+  manifest, roadmap, CHANGELOG, PLANS, validation, commit, and push.
   (parity-asset-worker, isolated) authored the oracle/scenario/script trio on
   the frozen contract; its structured return failed schema validation and the
   isolated worktree was discarded, so the primary recovered all three files

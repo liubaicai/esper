@@ -4,6 +4,17 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.264（2026-08-27），`ResultSetQueryTypeWTimeBatch`
+> differential-verified：固定 Java `ResultSetQueryTypeWTimeBatch.java` 全部 8 个
+> execution（Java/Go 各 16 条 records、0 differences）。覆盖 row-for-all、
+> row-per-event、row-per-group、aggregate-grouped 的 no-join/keepall join
+> 孪生，time-batch 边界与 irstream old/new 批次。引擎修复按窗口节点拆分
+> join expiry delta、保留 row-per-event/grouped aggregate 的事件 lineage，并
+> 将 aggregate join 路由到修正后的 per-window expiry；HashMap 行序区域以
+> mode=any 规范化而保持批次、数量、字段和值严格。manifest 更新为 559 cases、
+> 170 DV cases、675 DV runtime IDs、3300 associations（referenced 3096）；
+> capability 118 个（32 DV）。
+
 > 最新补充：Draft 4.263（2026-08-27），`case.insertinto-eventcol-col-rest`
 > differential-verified：EPLInsertIntoPopulateEventTypeColumnBean/NonBean
 > 剩余 12 个 execution 全部闭环（22 条 records、0 differences）。maxby

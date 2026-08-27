@@ -4789,6 +4789,40 @@
     "java-runtime-95d240ad18c89abe6e99",
     "java-runtime-be79bf345b96e2ccc206"
    ]
+  },
+  {
+   "id": "resultset.querytype-w-time-batch",
+   "domain": "resultset",
+   "level": "S",
+   "summary": "Time-batch query result sets across row-for-all, row-per-event, row-per-group and aggregate-grouped forms, including join expiry and irstream old/new batch semantics",
+   "javaRefs": [
+    "ResultSetQueryTypeWTimeBatch"
+   ],
+   "goRefs": [
+    "internal/app/parity/resultset_querytype_w_time_batch.go",
+    "internal/app/parity/run_test.go",
+    "internal/esper/runtime.go",
+    "internal/compat/differential.go",
+    "internal/compat/differential_any_mode_test.go"
+   ],
+   "phase": 3,
+   "status": "differential-verified",
+   "remaining": [],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2f347eeeb6e7595bf504",
+    "java-runtime-50b076da85020a750f08",
+    "java-runtime-77a1932ea0676781652b",
+    "java-runtime-d38820596d857deae67c",
+    "java-runtime-a68578cc7531f737bd0d",
+    "java-runtime-3c33a86f202c6bf3471b",
+    "java-runtime-d14f54fbebaf213da348",
+    "java-runtime-c76ba92d72beb61d0a66"
+   ]
   }
  ],
  "cases": [
@@ -34762,6 +34796,73 @@
     "Representation registrations: non-map representations express transpose+extra-column inserts as explicit-Alias equivalents (the transpose+additional-columns Build gate to untyped Map targets stands; runtime buildTransposeUnderlying branches already match Java); exec1 phase split is JVM-per-invocation because a live runtime cannot re-register same-name @public path schemas after undeployAll; one compile per phase; child fragment renders {kind:row,fields}; doubles render javaDoubleString both sides; addprop null normalization.",
     "Exec3 Invalid registered implemented-not-DV via Go-unit build-error pins (route validation ErrorInvalidRule for unknown extra column and unsupported transpose-to-typed-target), preserving verbatim Java texts ('Type by name 'E1' in property 'myint' expected Long but receives Integer', avro schema-quote variant, 'Failed to find column 'otherprop' in target type 'E2''); numeric int->long widening acceptance at Build is pinned as an approved API difference for future tightening."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-w-time-batch",
+   "javaRuntimeIds": [
+    "java-runtime-2f347eeeb6e7595bf504",
+    "java-runtime-50b076da85020a750f08",
+    "java-runtime-77a1932ea0676781652b",
+    "java-runtime-d38820596d857deae67c",
+    "java-runtime-a68578cc7531f737bd0d",
+    "java-runtime-3c33a86f202c6bf3471b",
+    "java-runtime-d14f54fbebaf213da348",
+    "java-runtime-c76ba92d72beb61d0a66"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeTimeBatchRowForAllNoJoin",
+    "ResultSetQueryTypeTimeBatchRowForAllJoin",
+    "ResultSetQueryTypeTimeBatchRowPerEventNoJoin",
+    "ResultSetQueryTypeTimeBatchRowPerEventJoin",
+    "ResultSetQueryTypeTimeBatchRowPerGroupNoJoin",
+    "ResultSetQueryTypeTimeBatchRowPerGroupJoin",
+    "ResultSetQueryTypeTimeBatchAggrGroupedNoJoin",
+    "ResultSetQueryTypeTimeBatchAggrGroupedJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeWTimeBatch.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeWTimeBatchDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeWTimeBatchDiffRejectsTraceMutations",
+    "internal/compat/differential_any_mode_test.go:TestNewDifferentialEvidenceAnyModeCanonicalizesListenerRowOrder",
+    "internal/compat/differential_any_mode_test.go:TestNewDifferentialEvidenceAnyModeKeepsListenerBoundariesStrict"
+   ],
+   "tags": [
+    "resultset",
+    "querytype",
+    "time-batch",
+    "join",
+    "irstream",
+    "java-oracle-trace",
+    "go-unit"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-w-time-batch.json",
+    "testdata/parity/resultset-querytype-w-time-batch.trace.json",
+    "testdata/parity/resultset-querytype-w-time-batch.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2f347eeeb6e7595bf504",
+    "java-runtime-50b076da85020a750f08",
+    "java-runtime-77a1932ea0676781652b",
+    "java-runtime-d38820596d857deae67c",
+    "java-runtime-a68578cc7531f737bd0d",
+    "java-runtime-3c33a86f202c6bf3471b",
+    "java-runtime-d14f54fbebaf213da348",
+    "java-runtime-c76ba92d72beb61d0a66"
+   ],
+   "notes": [
+    "All eight ResultSetQueryTypeWTimeBatch executions replayed through one shared scenario (16 records, 0 differences): row-for-all, row-per-event, row-per-group and aggregate-grouped forms, each with no-join and keepall join variants over two one-second batches.",
+    "Engine parity fixes split expiry deltas by window node so a time-batch join does not consume the right-side keepall state, preserve event lineage for row-per-event and grouped aggregate projections during expiry, and route aggregate join definitions through the corrected per-window expiry path. The row-per-group join region is explicitly mode=any because Java HashMap iteration order is not portable; listener batch boundaries, counts, fields and values remain strict."
+   ]
   }
  ],
  "mappings": [
@@ -37328,30 +37429,34 @@
   {
    "capabilityId": "query.insert-into-route",
    "caseId": "case.epl-insert-into-populate-und-stream-select"
+  },
+  {
+   "capabilityId": "resultset.querytype-w-time-batch",
+   "caseId": "case.resultset-querytype-w-time-batch"
   }
  ],
  "summary": {
-  "inventoriedCases": 558,
-  "implementedCases": 556,
-  "differentialVerifiedCases": 169,
-  "differentialVerifiedRuntimeIds": 655,
+  "inventoriedCases": 559,
+  "implementedCases": 557,
+  "differentialVerifiedCases": 170,
+  "differentialVerifiedRuntimeIds": 675,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 94,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 117,
-  "implementedCapabilities": 116,
-  "differentialVerifiedCapabilities": 31,
+  "inventoriedCapabilities": 118,
+  "implementedCapabilities": 117,
+  "differentialVerifiedCapabilities": 32,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3292,
-  "referencedJavaRuntimeIds": 3088,
+  "runtimeAssociationCount": 3300,
+  "referencedJavaRuntimeIds": 3096,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1048,
+  "unreferencedJavaRuntimeIds": 1040,
   "representativeScenarioTotal": 94,
   "representativeScenarioPassing": 94,
-  "totalCases": 558,
-  "totalCapabilities": 117,
-  "differentialVerifiedRuntimeIDs": 667
+  "totalCases": 559,
+  "totalCapabilities": 118,
+  "differentialVerifiedRuntimeIDs": 675
  }
 }

@@ -29,15 +29,13 @@ type DifferentialEvidence struct {
 	Differences     []TraceDifference `json:"differences"`
 }
 
-// canonicalizeAnyModeSnapshotRows sorts the rows of snapshot records whose
-// scenario step declares mode "any". The oracle records engine-natural row
-// order and defers order-insensitivity to the differ: Java's grouped-join
-// AggregateGroupedImpl iterator walks the join set in an order no portable
-// producer reproduces (the RowPerGroupImpl path adds HashMap group order on
-// top), so both traces are canonicalized to the same deterministic row
-// order before the positional comparison.
-func canonicalizeAnyModeSnapshotRows(scenario Scenario, trace *Trace) {
+// canonicalizeAnyModeRows sorts result rows for explicitly order-insensitive
+// scenario regions. Snapshot steps opt in independently with mode "any";
+// listener records opt in through their enclosing case step. Record order,
+// batch boundaries, and all non-opted-in values remain positional and strict.
+func canonicalizeAnyModeRows(scenario Scenario, trace *Trace) {
 	type casePlan struct {
+		anyCase  bool
 		anyFlags []bool
 	}
 	plans := map[string]*casePlan{}
@@ -46,6 +44,12 @@ func canonicalizeAnyModeSnapshotRows(scenario Scenario, trace *Trace) {
 		switch step.Op {
 		case "case":
 			current = step.Case
+			plan := plans[current]
+			if plan == nil {
+				plan = &casePlan{}
+				plans[current] = plan
+			}
+			plan.anyCase = step.Mode == "any"
 		case "snapshot":
 			plan := plans[current]
 			if plan == nil {
@@ -61,11 +65,18 @@ func canonicalizeAnyModeSnapshotRows(scenario Scenario, trace *Trace) {
 	counts := map[string]int{}
 	for index := range trace.Records {
 		record := &trace.Records[index]
-		if record.Operation != "snapshot" {
-			continue
-		}
 		plan := plans[record.Case]
 		if plan == nil {
+			continue
+		}
+		if record.Operation == "listener" {
+			if plan.anyCase {
+				sortResultRecordsByCanonicalFields(record.New)
+				sortResultRecordsByCanonicalFields(record.Old)
+			}
+			continue
+		}
+		if record.Operation != "snapshot" {
 			continue
 		}
 		nth := counts[record.Case]
@@ -119,8 +130,8 @@ func NewDifferentialEvidence(javaCommit string, runtimeIDs, sourceFiles, executi
 	if goTrace.Version != scenario.Version || goTrace.ID != scenario.ID {
 		return DifferentialEvidence{}, fmt.Errorf("compat: Go trace identity does not match scenario")
 	}
-	canonicalizeAnyModeSnapshotRows(scenario, &javaTrace)
-	canonicalizeAnyModeSnapshotRows(scenario, &goTrace)
+	canonicalizeAnyModeRows(scenario, &javaTrace)
+	canonicalizeAnyModeRows(scenario, &goTrace)
 	differences := DiffTraces(javaTrace, goTrace)
 	differences, err = canonicalizeTraceDifferences(differences)
 	if err != nil {
@@ -167,8 +178,8 @@ func (e DifferentialEvidence) Validate() error {
 		return fmt.Errorf("compat: differential evidence has invalid status %q", e.Status)
 	}
 	javaTrace, goTrace := e.JavaTrace, e.GoTrace
-	canonicalizeAnyModeSnapshotRows(e.Scenario, &javaTrace)
-	canonicalizeAnyModeSnapshotRows(e.Scenario, &goTrace)
+	canonicalizeAnyModeRows(e.Scenario, &javaTrace)
+	canonicalizeAnyModeRows(e.Scenario, &goTrace)
 	computed, err := canonicalizeTraceDifferences(DiffTraces(javaTrace, goTrace))
 	if err != nil {
 		return fmt.Errorf("compat: canonicalize computed trace differences: %w", err)

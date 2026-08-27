@@ -1,0 +1,529 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-querytype-w-time-batch",
+ "cases": [
+  {
+   "case": "time-batch-row-for-all-nojoin",
+   "runtimeId": "java-runtime-2f347eeeb6e7595bf504"
+  },
+  {
+   "case": "time-batch-row-for-all-join",
+   "runtimeId": "java-runtime-50b076da85020a750f08"
+  },
+  {
+   "case": "time-batch-row-per-event-nojoin",
+   "runtimeId": "java-runtime-77a1932ea0676781652b"
+  },
+  {
+   "case": "time-batch-row-per-event-join",
+   "runtimeId": "java-runtime-d38820596d857deae67c"
+  },
+  {
+   "case": "time-batch-row-per-group-nojoin",
+   "runtimeId": "java-runtime-a68578cc7531f737bd0d"
+  },
+  {
+   "case": "time-batch-row-per-group-join",
+   "runtimeId": "java-runtime-3c33a86f202c6bf3471b"
+  },
+  {
+   "case": "time-batch-aggr-grouped-nojoin",
+   "runtimeId": "java-runtime-d14f54fbebaf213da348"
+  },
+  {
+   "case": "time-batch-aggr-grouped-join",
+   "runtimeId": "java-runtime-c76ba92d72beb61d0a66"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "time-batch-row-for-all-nojoin",
+   "runtimeId": "java-runtime-2f347eeeb6e7595bf504"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10,
+    "volume": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 15,
+    "volume": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 20,
+    "volume": 250
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 20,
+    "volume": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-batch-row-for-all-join",
+   "runtimeId": "java-runtime-50b076da85020a750f08"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "DELL",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "IBM",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10,
+    "volume": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 15,
+    "volume": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 20,
+    "volume": 250
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 20,
+    "volume": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-batch-row-per-event-nojoin",
+   "runtimeId": "java-runtime-77a1932ea0676781652b"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10,
+    "volume": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 15,
+    "volume": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 20,
+    "volume": 250
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 20,
+    "volume": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-batch-row-per-event-join",
+   "runtimeId": "java-runtime-d38820596d857deae67c"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "DELL",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "IBM",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10,
+    "volume": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 15,
+    "volume": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 20,
+    "volume": 250
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 20,
+    "volume": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-batch-row-per-group-nojoin",
+   "runtimeId": "java-runtime-a68578cc7531f737bd0d"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10,
+    "volume": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 15,
+    "volume": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 20,
+    "volume": 250
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 20,
+    "volume": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-batch-row-per-group-join",
+   "runtimeId": "java-runtime-3c33a86f202c6bf3471b",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "DELL",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "IBM",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10,
+    "volume": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 15,
+    "volume": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 20,
+    "volume": 250
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 20,
+    "volume": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-batch-aggr-grouped-nojoin",
+   "runtimeId": "java-runtime-d14f54fbebaf213da348"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10,
+    "volume": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 15,
+    "volume": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 20,
+    "volume": 250
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 20,
+    "volume": 600
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-batch-aggr-grouped-join",
+   "runtimeId": "java-runtime-c76ba92d72beb61d0a66"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "DELL",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "IBM",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 10,
+    "volume": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 15,
+    "volume": 500
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "price": 20,
+    "volume": 250
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "price": 20,
+    "volume": 600
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  }
+ ]
+}

@@ -1,3 +1,16 @@
+> 最新补充：Draft 4.264（2026-08-27），新增 `resultset.querytype-w-time-batch`
+> differential-verified 场景，对照固定 Java `ResultSetQueryTypeWTimeBatch.java`
+> 全部 8 个 execution（Java/Go 各 16 条 records、0 differences）。覆盖
+> row-for-all、row-per-event、row-per-group、aggregate-grouped 的 no-join 与
+> keepall join 孪生，两个一秒批次的 listener old/new 语义；row-per-group join
+> 的 Java HashMap 行序以 mode=any 规范化，批次边界、记录数、字段和值仍严格。
+> 引擎按窗口节点拆分 join expiry delta，保留 expiry 后 row-per-event/grouped
+> aggregate 的事件 lineage，并让 aggregate join 使用修正后的 per-window expiry
+> 路径；`internal/compat/differential.go` 新增 listener any-mode 规范化及 mutation
+> 约束测试。manifest 更新为 559 cases、170 个 differential-verified case、675
+> 个 differential runtime IDs、3300 条 associations（referenced 3096）；capability
+> 118 个（32 DV）。
+
 > 最新补充：Draft 4.263（2026-08-27），`case.insertinto-eventcol-col-rest`
 > differential-verified，对照固定 Java
 > EPLInsertIntoPopulateEventTypeColumnBean.java ordinals 8-11 与
