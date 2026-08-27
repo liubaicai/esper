@@ -512,9 +512,29 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/resultset-aggregate-count-sum.json`、`testdata/parity/resultset-aggregate-count-sum.evidence.json`；当前差异数为 0，覆盖 `ResultSetAggregateCountSimple`、`ResultSetAggregateCountPlusStar`、`ResultSetAggregateCountHaving`、`ResultSetAggregateSumHaving`、`ResultSetAggregateCountOneViewOM`、`ResultSetAggregateGroupByCountNestedAggregationAvg`、`ResultSetAggregateCountOneView`、`ResultSetAggregateCountJoin` 与 `ResultSetAggregateSumNamedWindowRemoveGroup`，共 55 条 records。
 
+## Resultset-aggregate-ever oracle
+
+第二十五个代表性场景使用 `ResultSetAggregateFirstEverLastEverScenarioOracle.java`（runner：`run-resultset-aggregate-first-ever-last-ever.sh`）。它注册 struct 事件类型 `SupportBean(theString, intPrimitive, intBoxed, boolPrimitive)` 与 `SupportBean_A(id)`，双跑 `ResultSetAggregateFirstEverLastEver.java` 的 3 个可表示 execution：SODA/EPL `firstever`/`lastever`、窗口 `first`/`last` 与 `countever`/filtered `countever` 的 `length(2)` current/ever 轨迹，以及 keepall named-window on-delete 删除后保留 ever 历史。场景包含 null boxed 值、窗口淘汰和按布尔表达式过滤的 count；`countever(distinct ...)` 的 compile-error execution 由 Go 类型安全 API 保持 implemented-only。
+
+```sh
+./tools/java-oracle/run-resultset-aggregate-first-ever-last-ever.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/resultset-aggregate-first-ever-last-ever.json \
+  --output /tmp/resultset-aggregate-first-ever-last-ever-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode resultset-aggregate-first-ever-last-ever-diff \
+  -scenario testdata/parity/resultset-aggregate-first-ever-last-ever.json \
+  -java-trace /tmp/resultset-aggregate-first-ever-last-ever-java.json \
+  -evidence /tmp/resultset-aggregate-first-ever-last-ever.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/resultset-aggregate-first-ever-last-ever.json`、`testdata/parity/resultset-aggregate-first-ever-last-ever.evidence.json`；当前差异数为 0，覆盖 `ResultSetAggregateFirstLastEver{soda=true}`、`ResultSetAggregateFirstLastEver{soda=false}` 与 `ResultSetAggregateOnDelete`，共 14 条 records。
+
 ## Subselect-aggregated-in-exists-any-all oracle
 
-第二十五个代表性场景使用 `EPLSubselectAggregatedInExistsAnyAllScenarioOracle.java`（runner：`run-subselect-aggregated-in-exists-any-all.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`、`SupportValueEvent(value)` 与 `SupportIdAndValueEvent(id, value)`，双跑 `EPLSubselectAggregatedInExistsAnyAll` 的全部 13 个 execution：SupportValueEvent 触发投影 IN/NOT IN、EXISTS/NOT EXISTS 与 ALL/ANY/SOME 量词，对照 SupportBean#keepall 上的聚合子查询（无分组、按 theString 分组、带 `last(theString)/first(theString)` having 过滤），并覆盖 named window + `delete from MyWindow` fire-and-forget 后 EXISTS 复位。Java 语义要点：无分组聚合子查询空输入仍产出 null 聚合行（`10 in (null)` 为 null、EXISTS 为 true），分组空集遵循 SQL 规则（IN/ANY/SOME false、ALL true、EXISTS false），having 过滤掉唯一聚合行时 IN 为 null。Go 以 `SubqueryIn/SubqueryAny/SubqueryAll/SubquerySome/SubqueryExistsValue` + 新增 `SubqueryGroupKey` option + `SubqueryHaving` 复现同一语义；场景回放协议新增 `faf` step（`ReplayWithStatementsAndFaf`）。
+第二十六个代表性场景使用 `EPLSubselectAggregatedInExistsAnyAllScenarioOracle.java`（runner：`run-subselect-aggregated-in-exists-any-all.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`、`SupportValueEvent(value)` 与 `SupportIdAndValueEvent(id, value)`，双跑 `EPLSubselectAggregatedInExistsAnyAll` 的全部 13 个 execution：SupportValueEvent 触发投影 IN/NOT IN、EXISTS/NOT EXISTS 与 ALL/ANY/SOME 量词，对照 SupportBean#keepall 上的聚合子查询（无分组、按 theString 分组、带 `last(theString)/first(theString)` having 过滤），并覆盖 named window + `delete from MyWindow` fire-and-forget 后 EXISTS 复位。Java 语义要点：无分组聚合子查询空输入仍产出 null 聚合行（`10 in (null)` 为 null、EXISTS 为 true），分组空集遵循 SQL 规则（IN/ANY/SOME false、ALL true、EXISTS false），having 过滤掉唯一聚合行时 IN 为 null。Go 以 `SubqueryIn/SubqueryAny/SubqueryAll/SubquerySome/SubqueryExistsValue` 及 `SubqueryHaving` 复现同一语义；
 
 ```sh
 ./tools/java-oracle/run-subselect-aggregated-in-exists-any-all.sh \
@@ -534,7 +554,7 @@ checked-in 场景与 evidence：`testdata/parity/subselect-aggregated-in-exists-
 
 ## Subselect-aggregated-single-value oracle
 
-第二十六个代表性场景使用 `EPLSubselectAggregatedSingleValueScenarioOracle.java`（runner：`run-subselect-aggregated-single-value.sh`）。它注册 Map 事件类型 `SupportBean_S0(id, p00)`、`SupportBean_S1(id, p10, p11)` 与 `SupportBean(theString, intPrimitive)`，双跑 `EPLSubselectAggregatedSingleValue` 的 13 个 execution：单值聚合子查询覆盖无窗口累积 `sum`、keepall + having、select 子句内 `s0.id + max(s1.id)` 混合投影、length(3) where 过滤、相关 count、where 子句相关子查询（含 `||` 拼接变体）、相关 where + having、分组 scalar 子查询（相关 having、having 内相关 `sum = s0.id`）、`last(theString)` 相关 having，以及 table + into-table 聚合列上的 having 子查询（无键与双键分组）。Go 以 `SubquerySum/SubqueryValue/SubqueryGroupScalar` + `OuterField` + `SubqueryHaving` + `IntoTable`/`FromTable` 复现同一语义；table 子查询的行投影与分组键使用 `Field`（`TableField` 是 trigger/assignment 目标行语义）。
+第二十七个代表性场景使用 `EPLSubselectAggregatedSingleValueScenarioOracle.java`（runner：`run-subselect-aggregated-single-value.sh`）。它注册 Map 事件类型 `SupportBean_S0(id, p00)`、`SupportBean_S1(id, p10, p11)` 与 `SupportBean(theString, intPrimitive)`，双跑 `EPLSubselectAggregatedSingleValue` 的 13 个 execution：单值聚合子查询覆盖无窗口累积 `sum`、keepall + having、select 子句内 `s0.id + max(s1.id)` 混合投影、length(3) where 过滤、相关 count、where 子句相关子查询（含 `||` 拼接变体）、相关 where + having、分组 scalar 子查询（相关 having、having 内相关 `sum = s0.id`）、`last(theString)` 相关 having，以及 table + into-table 聚合列上的 having 子查询（无键与双键分组）。Go 以 `SubquerySum/SubqueryValue/SubqueryGroupScalar` + `OuterField` + `SubqueryHaving` + `IntoTable`/`FromTable` 复现同一语义；table 子查询的行投影与分组键使用 `Field`（`TableField` 是 trigger/assignment 目标行语义）。
 
 ```sh
 ./tools/java-oracle/run-subselect-aggregated-single-value.sh \
@@ -554,7 +574,7 @@ checked-in 场景与 evidence：`testdata/parity/subselect-aggregated-single-val
 
 ## Subselect-in oracle
 
-第二十七个代表性场景使用 `EPLSubselectInScenarioOracle.java`（runner：`run-subselect-in.sh`）。它注册 Map 事件类型 `SupportBean_S0(id, p00, p01)`、`SupportBean_S1(id, p10, p11)` 与 `SupportBean(theString, intBoxed, longBoxed)`，双跑 `EPLSubselectIn` 的 14 个 execution：IN/NOT IN 子查询在 select 子句（含 OM/Compile 等价变体）、filter criteria（length(2) 窗口淘汰边界）与 where 子句（含 `3*id in (select 2*id)` 双侧表达式）的位置形态，nullable 字符串（p00/p10）与 boxed 数值（longBoxed in intBoxed 及反向）的 coercion 三值逻辑，null row（`x in (null)` → null、空集 `not in` → true 含 null 外层），以及 keepall 相关 IN 索引形态（`s0.p01 in (s1.p10, s1.p11)` 与 `s1.p11 in (s0.p00, s0.p01)`）。Go 以 `SubqueryIn` + `In` + `Not` 与 boxed 指针值语义（`reflect.DeepEqual` 指针解引用）复现同一行为。
+第二十八个代表性场景使用 `EPLSubselectInScenarioOracle.java`（runner：`run-subselect-in.sh`）。它注册 Map 事件类型 `SupportBean_S0(id, p00, p01)`、`SupportBean_S1(id, p10, p11)` 与 `SupportBean(theString, intBoxed, longBoxed)`，双跑 `EPLSubselectIn` 的 14 个 execution：IN/NOT IN 子查询在 select 子句（含 OM/Compile 等价变体）、filter criteria（length(2) 窗口淘汰边界）与 where 子句（含 `3*id in (select 2*id)` 双侧表达式）的位置形态，nullable 字符串（p00/p10）与 boxed 数值（longBoxed in intBoxed 及反向）的 coercion 三值逻辑，null row（`x in (null)` → null、空集 `not in` → true 含 null 外层），以及 keepall 相关 IN 索引形态（`s0.p01 in (s1.p10, s1.p11)` 与 `s1.p11 in (s0.p00, s0.p01)`）。Go 以 `SubqueryIn` + `In` + `Not` 与 boxed 指针值语义（`reflect.DeepEqual` 指针解引用）复现同一行为。
 
 ```sh
 ./tools/java-oracle/run-subselect-in.sh \

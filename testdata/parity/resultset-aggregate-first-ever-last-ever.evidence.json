@@ -1,0 +1,742 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-b1fdc8c4a3c8eaef8273",
+    "java-runtime-2927c28d6990516aebea",
+    "java-runtime-2dcfc3045d996cb718ab"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstEverLastEver.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateFirstLastEver{soda=true}",
+    "ResultSetAggregateFirstLastEver{soda=false}",
+    "ResultSetAggregateOnDelete"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-first-ever-last-ever",
+    "steps": [
+      {
+        "op": "case",
+        "case": "first-last-ever-soda-true"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "intBoxed": 100,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11,
+          "intBoxed": null,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 12,
+          "intBoxed": 120,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 13,
+          "intBoxed": 130,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "case",
+        "case": "first-last-ever-soda-false"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "intBoxed": 100,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11,
+          "intBoxed": null,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 12,
+          "intBoxed": 120,
+          "boolPrimitive": false
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 13,
+          "intBoxed": 130,
+          "boolPrimitive": true
+        }
+      },
+      {
+        "op": "case",
+        "case": "on-delete"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-first-ever-last-ever",
+    "records": [
+      {
+        "case": "first-last-ever-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 1,
+              "cntexprfiltered": 1,
+              "cntstar": 1,
+              "cntstarfiltered": 1,
+              "firsteverstring": "E1",
+              "firststring": "E1",
+              "lasteverstring": "E1",
+              "laststring": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 1,
+              "cntexprfiltered": 1,
+              "cntstar": 2,
+              "cntstarfiltered": 2,
+              "firsteverstring": "E1",
+              "firststring": "E1",
+              "lasteverstring": "E2",
+              "laststring": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 2,
+              "cntexprfiltered": 1,
+              "cntstar": 3,
+              "cntstarfiltered": 2,
+              "firsteverstring": "E1",
+              "firststring": "E2",
+              "lasteverstring": "E3",
+              "laststring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 3,
+              "cntexprfiltered": 2,
+              "cntstar": 4,
+              "cntstarfiltered": 3,
+              "firsteverstring": "E1",
+              "firststring": "E3",
+              "lasteverstring": "E4",
+              "laststring": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 1,
+              "cntexprfiltered": 1,
+              "cntstar": 1,
+              "cntstarfiltered": 1,
+              "firsteverstring": "E1",
+              "firststring": "E1",
+              "lasteverstring": "E1",
+              "laststring": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 1,
+              "cntexprfiltered": 1,
+              "cntstar": 2,
+              "cntstarfiltered": 2,
+              "firsteverstring": "E1",
+              "firststring": "E1",
+              "lasteverstring": "E2",
+              "laststring": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 2,
+              "cntexprfiltered": 1,
+              "cntstar": 3,
+              "cntstarfiltered": 2,
+              "firsteverstring": "E1",
+              "firststring": "E2",
+              "lasteverstring": "E3",
+              "laststring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 3,
+              "cntexprfiltered": 2,
+              "cntstar": 4,
+              "cntstarfiltered": 3,
+              "firsteverstring": "E1",
+              "firststring": "E3",
+              "lasteverstring": "E4",
+              "laststring": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 1,
+              "firsteverstring": "E1",
+              "lasteverstring": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 2,
+              "firsteverstring": "E1",
+              "lasteverstring": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 3,
+              "firsteverstring": "E1",
+              "lasteverstring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 3,
+              "firsteverstring": "E1",
+              "lasteverstring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 3,
+              "firsteverstring": "E1",
+              "lasteverstring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 3,
+              "firsteverstring": "E1",
+              "lasteverstring": "E3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-first-ever-last-ever",
+    "records": [
+      {
+        "case": "first-last-ever-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 1,
+              "cntexprfiltered": 1,
+              "cntstar": 1,
+              "cntstarfiltered": 1,
+              "firsteverstring": "E1",
+              "firststring": "E1",
+              "lasteverstring": "E1",
+              "laststring": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 1,
+              "cntexprfiltered": 1,
+              "cntstar": 2,
+              "cntstarfiltered": 2,
+              "firsteverstring": "E1",
+              "firststring": "E1",
+              "lasteverstring": "E2",
+              "laststring": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 2,
+              "cntexprfiltered": 1,
+              "cntstar": 3,
+              "cntstarfiltered": 2,
+              "firsteverstring": "E1",
+              "firststring": "E2",
+              "lasteverstring": "E3",
+              "laststring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 3,
+              "cntexprfiltered": 2,
+              "cntstar": 4,
+              "cntstarfiltered": 3,
+              "firsteverstring": "E1",
+              "firststring": "E3",
+              "lasteverstring": "E4",
+              "laststring": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 1,
+              "cntexprfiltered": 1,
+              "cntstar": 1,
+              "cntstarfiltered": 1,
+              "firsteverstring": "E1",
+              "firststring": "E1",
+              "lasteverstring": "E1",
+              "laststring": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 1,
+              "cntexprfiltered": 1,
+              "cntstar": 2,
+              "cntstarfiltered": 2,
+              "firsteverstring": "E1",
+              "firststring": "E1",
+              "lasteverstring": "E2",
+              "laststring": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 2,
+              "cntexprfiltered": 1,
+              "cntstar": 3,
+              "cntstarfiltered": 2,
+              "firsteverstring": "E1",
+              "firststring": "E2",
+              "lasteverstring": "E3",
+              "laststring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-ever-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cntexpr": 3,
+              "cntexprfiltered": 2,
+              "cntstar": 4,
+              "cntstarfiltered": 3,
+              "firsteverstring": "E1",
+              "firststring": "E3",
+              "lasteverstring": "E4",
+              "laststring": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 1,
+              "firsteverstring": "E1",
+              "lasteverstring": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 2,
+              "firsteverstring": "E1",
+              "lasteverstring": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 3,
+              "firsteverstring": "E1",
+              "lasteverstring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 3,
+              "firsteverstring": "E1",
+              "lasteverstring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 3,
+              "firsteverstring": "E1",
+              "lasteverstring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-delete",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "counteverall": 3,
+              "firsteverstring": "E1",
+              "lasteverstring": "E3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

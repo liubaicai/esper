@@ -820,17 +820,17 @@
    "level": "S",
    "summary": "First/last/count ever aggregates with retained historical state across window eviction",
    "javaRefs": [
-    "ResultSetAggregateFirstEverLastEver",
-    "ResultSetAggregateFiltered"
+    "ResultSetAggregateFirstEverLastEver"
    ],
    "goRefs": [
     "internal/esper/expr.go",
     "internal/esper/runtime.go",
     "internal/esper/aggregate_test.go",
-    "internal/esper/aggregate_ever_test.go"
+    "internal/esper/aggregate_ever_test.go",
+    "internal/app/parity/resultset_aggregate_first_ever_last_ever.go"
    ],
    "phase": 3,
-   "status": "implemented",
+   "status": "differential-verified",
    "remaining": [
     "full ever/filter/access method family",
     "table/join/context/rollup lifecycle matrix",
@@ -838,7 +838,16 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b1fdc8c4a3c8eaef8273",
+    "java-runtime-2927c28d6990516aebea",
+    "java-runtime-2dcfc3045d996cb718ab"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-first-ever-last-ever"
    ]
   },
   {
@@ -13415,38 +13424,58 @@
    "javaRuntimeIds": [
     "java-runtime-b1fdc8c4a3c8eaef8273",
     "java-runtime-2927c28d6990516aebea",
-    "java-runtime-47dee40e6fe320005f49"
+    "java-runtime-2dcfc3045d996cb718ab"
    ],
    "javaNames": [
     "ResultSetAggregateFirstLastEver{soda=true}",
     "ResultSetAggregateFirstLastEver{soda=false}",
-    "ResultSetAggregateFirstLastEver"
+    "ResultSetAggregateOnDelete"
    ],
    "javaSourceFiles": [
-    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstEverLastEver.java",
-    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFiltered.java"
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstEverLastEver.java"
    ],
    "goTests": [
-    "TestEverAggregatesRetainHistoryAfterWindowEviction",
-    "TestAggregateFirstLastEverWindowAndFilteredTrace",
-    "TestAggregateFirstLastEverNamedWindowDeleteRetainsHistory",
-    "TestAggregateCountEverRejectsMultipleExpressions"
+    "internal/esper/aggregate_ever_test.go:TestAggregateFirstLastEverWindowAndFilteredTrace",
+    "internal/esper/aggregate_ever_test.go:TestAggregateFirstLastEverNamedWindowDeleteRetainsHistory",
+    "internal/esper/aggregate_ever_test.go:TestAggregateCountEverRejectsMultipleExpressions",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFirstEverLastEverDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFirstEverLastEverDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
     "aggregate",
     "window",
-    "ever"
+    "ever",
+    "named-window",
+    "on-delete",
+    "soda",
+    "differential",
+    "representative"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-baseline",
-    "go-unit"
+    "testdata/parity/resultset-aggregate-first-ever-last-ever.json",
+    "testdata/parity/resultset-aggregate-first-ever-last-ever.trace.json",
+    "testdata/parity/resultset-aggregate-first-ever-last-ever.evidence.json"
    ],
-   "difference": "Go covers first-ever/last-ever/count-ever against a length-window group and retains historical state after eviction; TestAggregateFirstLastEverWindowAndFilteredTrace mirrors the current first/last plus ever/filter matrix across E1-E4, TestAggregateFirstLastEverNamedWindowDeleteRetainsHistory verifies Named Window deletion does not erase ever-state, and TestAggregateCountEverRejectsMultipleExpressions fixes the fluent API invalid boundary. Java SODA variants, table/join/output combinations and complete lifecycle/trace behavior remain open.",
+   "difference": null,
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b1fdc8c4a3c8eaef8273",
+    "java-runtime-2927c28d6990516aebea",
+    "java-runtime-2dcfc3045d996cb718ab"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-first-ever-last-ever"
+   ],
+   "notes": [
+    "All three valid ResultSetAggregateFirstEverLastEver executions replayed through one shared scenario (14 records, 0 differences): SODA and EPL first/last/count-ever over length(2), including null boxed values, current-window eviction and filtered counts, plus keepall named-window deletion that retains ever history.",
+    "The ordinal-2 ResultSetAggregateFirstLastInvalid execution (java-runtime-4a89c8657f646a89fce9) remains implemented-only: Java asserts a compile-time countever(distinct ...) diagnostic, while the typed Go API has no exact diagnostic-equivalent surface. The case metadata keeps the fixed Java source and runtime ordering; no Java source was changed."
    ]
   },
   {
@@ -37466,14 +37495,14 @@
  "summary": {
   "inventoriedCases": 559,
   "implementedCases": 557,
-  "differentialVerifiedCases": 170,
-  "differentialVerifiedRuntimeIds": 680,
+  "differentialVerifiedCases": 171,
+  "differentialVerifiedRuntimeIds": 683,
   "intentionallyDifferentCases": 23,
-  "representativeVerifiedCases": 94,
+  "representativeVerifiedCases": 95,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 118,
   "implementedCapabilities": 117,
-  "differentialVerifiedCapabilities": 32,
+  "differentialVerifiedCapabilities": 33,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
@@ -37481,10 +37510,10 @@
   "referencedJavaRuntimeIds": 3101,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 1035,
-  "representativeScenarioTotal": 97,
-  "representativeScenarioPassing": 97,
+  "representativeScenarioTotal": 98,
+  "representativeScenarioPassing": 98,
   "totalCases": 559,
   "totalCapabilities": 118,
-  "differentialVerifiedRuntimeIDs": 680
+  "differentialVerifiedRuntimeIDs": 683
  }
 }

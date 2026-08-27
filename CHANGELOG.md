@@ -1,3 +1,5 @@
+> 最新补充：Draft 4.266（2026-08-28），新增 `resultset.aggregate-ever` differential-verified 场景，对照固定 Java `ResultSetAggregateFirstEverLastEver.java` 的 3 个可表示 execution（Java/Go 各 14 条 records、0 differences）：SODA/EPL `firstever`/`lastever`、窗口 `first`/`last` 与 `countever`/filtered `countever` 的 `length(2)` current/ever/filter 轨迹，覆盖 null boxed 值与窗口淘汰；keepall named-window on-delete 删除后保留 ever 历史。`countever(distinct ...)` compile-error execution 因 Go 类型安全 API 不可表示保持 implemented-only。manifest 更新为 559 cases、171 个 differential-verified case、683 个 differential runtime IDs、3308 条 associations（referenced 3104）；capability 118 个（33 DV）。
+
 > 最新补充：Draft 4.264（2026-08-27），新增 `resultset.querytype-w-time-batch`
 > differential-verified 场景，对照固定 Java `ResultSetQueryTypeWTimeBatch.java`
 > 全部 8 个 execution（Java/Go 各 16 条 records、0 differences）。覆盖

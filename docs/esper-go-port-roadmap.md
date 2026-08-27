@@ -3,6 +3,7 @@
 > 文档定位：本文件只维护当前阶段、优先级、remaining 和风险。完整范围与架构见 [实施规划](esper-go-port-implementation-plan.md)，日常步骤见 [执行手册](esper-go-port-runbook.md)，差分、合成数据和验收口径见 [质量策略](esper-go-port-quality-strategy.md)，历史见 [CHANGELOG](../CHANGELOG.md)。统计数字以 `testdata/compat/capability-manifest.json` 的已校验 `summary` 为唯一来源。
 
 ## 0. 实时状态入口
+> 最新补充：Draft 4.266（2026-08-28），新增 `resultset.aggregate-ever` differential-verified 场景，对照固定 Java `ResultSetAggregateFirstEverLastEver.java` 的 3 个可表示 execution（Java/Go 各 14 条 records、0 differences）：SODA/EPL firstever、lastever、first、last 与 countever 的 length(2) current/ever/filter 轨迹，覆盖 null boxed 值和窗口淘汰；keepall named-window on-delete 删除后保留 ever 历史。ordinal 2 `countever(distinct ...)` 为 Go 类型安全 API 不可表示的 compile-error 边界，保持 implemented-only 并保留 Java 原文。manifest 更新为 559 cases、171 个 differential-verified case、683 个 differential runtime IDs、3308 条 associations（referenced 3104）；capability 118 个（33 DV）。
 
 > 最新补充：Draft 4.265（2026-08-27），`resultset-aggregate-count-sum` 扩展至 9 个 execution differential-verified（Java/Go 各 55 条 records、0 differences）：count(*) 星号投影、无窗口 sum/count HAVING、SODA grouped count/count-distinct/count 的 null 与窗口淘汰重算、`avg(count(*))` 历史前缀；保留 view/join/named-window 四 execution。manifest 更新为 559 cases、170 DV cases、680 DV runtime IDs、3305 associations（referenced 3101）；capability 118 个（32 DV）。
 
@@ -1032,10 +1033,10 @@
 - 最新进展：`subselect-aggregated-single-value` 登记为 differential-verified（`EPLSubselectAggregatedSingleValue` 13 个 execution，14 个 case、57 条 records/0 differences）：无窗口累积 sum、OuterField+聚合混合投影、相关 count/where/having、分组 scalar 子查询（单组多事件折叠）、table + into-table having 子查询；`SubquerySum/SubqueryAvg` 包装聚合投影、`SubqueryGroupScalar` 单组判定、table 子查询行投影用 `Field`；
 - 最新进展：`subselect-aggregated-in-exists-any-all` 登记为 differential-verified（`EPLSubselectAggregatedInExistsAnyAll` 13 个 execution，13 个 case、47 条 records/0 differences）：IN/EXISTS/ALL/ANY/SOME 聚合子查询的空集 SQL 语义（无分组空输入 null 行、分组空集 false/true 规则）、`last/first(theString)` having 按组过滤、named window + FAF delete-all 复位；公共 API 新增 `SubqueryGroupKey`，compat 回放协议新增 `faf` step；
 - 最新进展：`resultset-aggregate-count-sum` 登记为 differential-verified（`ResultSetAggregateCountSum.java` 9 个 execution、9 个 case、55 条 records/0 differences）：count(*) 星号投影的累积计数、无窗口 sum/count HAVING 进入与退出、SODA grouped count/count-distinct/count 的 null 与窗口淘汰重算、`avg(count(*))` 的有界窗口历史前缀语义；保留既有 view/join/named-window 四 execution，`CountDistinct` 按 boxed 指向值去重，grouped irstream 行序和 named-window on-delete iterator 快照均已核对；无效编译 execution 不在本轮范围。
-- 最新进展：`resultset-aggregate-limit-snapshot` 登记为 differential-verified（`ResultSetLimitSnapshot`/`ResultSetLimitSnapshotJoin`，2 个 case、6 条 records/0 differences），修复 time(10s) `output snapshot every 1 seconds` 的精确边界语义：snapshot 在同一 tick 包含 deadline == now 的到期事件及其聚合贡献，时钟跳变跨过的 overdue 事件在后续 snapshot 排除，istream 含边界到期不变；join 聚合 snapshot 恢复 row-per-event 形状（`aggregateDefinitionSnapshotRowForEvent` 放开 join）；`resultset-aggregate-group-output` 已登记 `ResultSetLastNoDataWindow`/`ResultSetWildcardRowPerGroup`/`ResultSetUnaggregatedOutputFirst`/`ResultSetFirstSimpleHavingAndNoHaving`，并修复 `applyLastEveryTimeGrouped` 单 grouping-set 只发 new（rollup 保留 old）与新增 `RecordStream.Having` 非聚合 having 公共 API；对账修复：`case.output-policy-iterator` 与 `case.filter-window-aggregate-output` 此前把未实际重放的 Java execution 登记为 differential-verified，现改为 representative-verified 合成场景并移除 runtime 声明；`resultset-aggregate-multikey` 已登记 `ResultSetOutputLastMultikeyWArray`/`ResultSetOutputAllMultikeyWArray`；`resultset-aggregate-join-sort-window` 已登记 `ResultSetJoinSortWindow` 并修复 join 侧“进入即淘汰”同一事件的 tuple/delta 处理、aggregate 先 new 后 old，以及按行身份（`sameEventRow`）的聚合移除匹配（同负载替换事件不误删）；`resultset-having-every-events` 已扩展 `ResultSetHavingJoin`；`resultset-aggregate-join-events` 已登记 `ResultSetJoinDefault/All/Last`；`resultset-aggregate-all-having` 已登记 `ResultSet11/12AllHaving`；`resultset-aggregate-join` 已登记 `ResultSet2/4/6/8/14/16/17/10` join 执行；`resultset-aggregate-all-time-window` 已登记 `ResultSet9AllNoHavingNoJoin`；`resultset-aggregate-max-time-window` 已登记 `ResultSetMaxTimeWindow`；`resultset-aggregate-all-events` 已登记 `ResultSetNoJoinAll`；`resultset-aggregate-snapshot-time-window` 已登记 `ResultSet18SnapshotNoHavingNoJoin`；`resultset-aggregate-first-time-window` 已登记 `ResultSet17FirstNoHavingNoJoin`；`resultset-aggregate-last-time-window` 已登记 `ResultSet13LastNoHavingNoJoin` 与 `ResultSet15LastHavingNoJoin`；`resultset-aggregate-time-window` 已登记 `ResultSet5DefaultNoHavingNoJoin` 与 `ResultSet7DefaultHavingNoJoin`；`resultset-aggregate-no-output`、`resultset-aggregate-last`、`resultset-aggregate-default`、`rollup-output-first-having`、`rollup-output-all-sorted`、`rollup-output-all`、`rollup-output-default-market`、`rollup-output-no-limit-market`、`rollup-output-first-market`、`rollup-output-last-market`、`rollup-output-snapshot`、`rollup-output-snapshot-order-limit`、`rollup-output-first-sorted`、`rollup-output-first`、`rollup-output-every-sorted`、`rollup-output-last` 与 `rollup-output-last-sorted` 亦已登记。
-- 最新已提交：`35017ea53`（Add subselect-in differential scenario）
-- 最新已提交：`8c43e4856`（Update roadmap latest commit）
-- 最新已提交：`9510dcd91`（Add resultset-aggregate-limit-snapshot differential scenario）
+- 最新进展：`resultset-aggregate-ever` 登记为 differential-verified（`ResultSetAggregateFirstEverLastEver.java` 3 个可表示 execution、3 个 runtime、14 条 records/0 differences）：SODA/EPL firstever/lastever/first/last/countever 的 length(2) current/ever/filter 轨迹，null boxed 值与窗口淘汰，以及 keepall named-window on-delete 删除后保留 ever 历史；`countever(distinct ...)` compile-error execution 因 Go 类型安全 API 不可表示保持 implemented-only。
+- 最新提交：`35017ea53`（Add subselect-in differential scenario）
+- 最新提交：`8c43e4856`（Update roadmap latest commit）
+- 最新提交：`9510dcd91`（Add resultset-aggregate-limit-snapshot differential scenario）
 
 ### 2.2 对账清单
 
@@ -1043,16 +1044,16 @@
 | --- | --- |
 | Capability | 118 个 |
 | Case | 559 个 |
-| Case implemented（verification） | 557 个（其中 170 个 differential-verified、23 个 intentionally-different） |
-| Case differential-verified | 170 个（680 个 runtime） |
+| Case implemented（verification） | 557 个（其中 171 个 differential-verified、23 个 intentionally-different） |
+| Case differential-verified | 171 个（683 个 runtime） |
 | Case intentionally-different | 23 个 |
 | Case inventoried-only | 0 个 |
 | Java inventory runtime | 4,136 个 `status=ok` runtime |
-| Runtime 关联 | 3,305 条 |
-| 唯一已关联 runtime | 3,101 个 |
-| 未关联 runtime | 1,035 个 |
+| Runtime 关联 | 3,308 条 |
+| 唯一已关联 runtime | 3,104 个 |
+| 未关联 runtime | 1,032 个 |
 | 关联覆盖率 | 75.0% |
-| Representative scenario | 94/94 通过 |
+| Representative scenario | 98/98 通过 |
 | NFR | 0 个已验证 |
 | Docker integration | MySQL/Kafka/RabbitMQ round-trips passed（2026-08-14） |
 | Stress baseline | 语义不变量通过；`historyByEvent` 按需构建后 42.6s→18.45s（约 660 events/s），仍开放（2026-08-14） |
