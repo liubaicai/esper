@@ -1,0 +1,655 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-7e5e6b41dd7cb8e65879",
+    "java-runtime-e48086834b488cb35e3c"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstLastWindow.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateFirstLastWindowNoGroup",
+    "ResultSetAggregateFirstLastWindowGroup"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-current",
+    "steps": [
+      {
+        "op": "case",
+        "case": "no-group"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "case",
+        "case": "group"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 14
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 16
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-current",
+    "records": [
+      {
+        "case": "no-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                10
+              ],
+              "firstint": 10,
+              "firststring": "E1",
+              "lastint": 10,
+              "laststring": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                10,
+                11
+              ],
+              "firstint": 10,
+              "firststring": "E1",
+              "lastint": 11,
+              "laststring": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                11,
+                12
+              ],
+              "firstint": 11,
+              "firststring": "E2",
+              "lastint": 12,
+              "laststring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                12,
+                13
+              ],
+              "firstint": 12,
+              "firststring": "E3",
+              "lastint": 13,
+              "laststring": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                10
+              ],
+              "firstint": 10,
+              "firststring": "E1",
+              "lastint": 10,
+              "laststring": "E1",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                11
+              ],
+              "firstint": 11,
+              "firststring": "E2",
+              "lastint": 11,
+              "laststring": "E2",
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                10,
+                12
+              ],
+              "firstint": 10,
+              "firststring": "E1",
+              "lastint": 12,
+              "laststring": "E1",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                11,
+                13
+              ],
+              "firstint": 11,
+              "firststring": "E2",
+              "lastint": 13,
+              "laststring": "E2",
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                11,
+                13,
+                14
+              ],
+              "firstint": 11,
+              "firststring": "E2",
+              "lastint": 14,
+              "laststring": "E2",
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                12,
+                15
+              ],
+              "firstint": 12,
+              "firststring": "E1",
+              "lastint": 15,
+              "laststring": "E1",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                12,
+                15,
+                16
+              ],
+              "firstint": 12,
+              "firststring": "E1",
+              "lastint": 16,
+              "laststring": "E1",
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                13,
+                14
+              ],
+              "firstint": 13,
+              "firststring": "E2",
+              "lastint": 14,
+              "laststring": "E2",
+              "theString": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-current",
+    "records": [
+      {
+        "case": "no-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                10
+              ],
+              "firstint": 10,
+              "firststring": "E1",
+              "lastint": 10,
+              "laststring": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                10,
+                11
+              ],
+              "firstint": 10,
+              "firststring": "E1",
+              "lastint": 11,
+              "laststring": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                11,
+                12
+              ],
+              "firstint": 11,
+              "firststring": "E2",
+              "lastint": 12,
+              "laststring": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                12,
+                13
+              ],
+              "firstint": 12,
+              "firststring": "E3",
+              "lastint": 13,
+              "laststring": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                10
+              ],
+              "firstint": 10,
+              "firststring": "E1",
+              "lastint": 10,
+              "laststring": "E1",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                11
+              ],
+              "firstint": 11,
+              "firststring": "E2",
+              "lastint": 11,
+              "laststring": "E2",
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                10,
+                12
+              ],
+              "firstint": 10,
+              "firststring": "E1",
+              "lastint": 12,
+              "laststring": "E1",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                11,
+                13
+              ],
+              "firstint": 11,
+              "firststring": "E2",
+              "lastint": 13,
+              "laststring": "E2",
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                11,
+                13,
+                14
+              ],
+              "firstint": 11,
+              "firststring": "E2",
+              "lastint": 14,
+              "laststring": "E2",
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                12,
+                15
+              ],
+              "firstint": 12,
+              "firststring": "E1",
+              "lastint": 15,
+              "laststring": "E1",
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                12,
+                15,
+                16
+              ],
+              "firstint": 12,
+              "firststring": "E1",
+              "lastint": 16,
+              "laststring": "E1",
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "allint": [
+                13,
+                14
+              ],
+              "firstint": 13,
+              "firststring": "E2",
+              "lastint": 14,
+              "laststring": "E2",
+              "theString": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

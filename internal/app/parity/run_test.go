@@ -17819,3 +17819,97 @@ func TestRunResultSetQueryTypeWTimeBatchDiffRejectsTraceMutations(t *testing.T) 
 		})
 	}
 }
+
+func TestRunResultSetAggregateFirstLastWindowCurrentDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-current.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-firstlastwindow-current.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-current.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-firstlastwindow-current-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 2 {
+		t.Fatalf("runtime ids = %d, want 2", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetAggregateFirstLastWindowCurrentDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "no-group-value",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					if trace.Records[index].Case == "no-group" {
+						trace.Records[index].New[0].Fields["firststring"] = "MUTATED"
+						return
+					}
+				}
+				panic("no no-group record")
+			},
+		},
+		{
+			name: "group-row-order",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					if trace.Records[index].Case == "group" && len(trace.Records[index].New) == 2 {
+						trace.Records[index].New[0], trace.Records[index].New[1] = trace.Records[index].New[1], trace.Records[index].New[0]
+						return
+					}
+				}
+				panic("no grouped two-row record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-current.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-firstlastwindow-current.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-current.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-firstlastwindow-current-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
