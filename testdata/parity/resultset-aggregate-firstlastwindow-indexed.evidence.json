@@ -1,0 +1,297 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-30f62dc2e86a7a1e80a0"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstLastWindow.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateFirstLastIndexed"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-indexed",
+    "steps": [
+      {
+        "op": "case",
+        "case": "indexed"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 13
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-indexed",
+    "records": [
+      {
+        "case": "indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f0": 10,
+              "f1": {
+                "state": "null"
+              },
+              "f2": {
+                "state": "null"
+              },
+              "f3": {
+                "state": "null"
+              },
+              "l0": 10,
+              "l1": {
+                "state": "null"
+              },
+              "l2": {
+                "state": "null"
+              },
+              "l3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f0": 10,
+              "f1": 11,
+              "f2": {
+                "state": "null"
+              },
+              "f3": {
+                "state": "null"
+              },
+              "l0": 11,
+              "l1": 10,
+              "l2": {
+                "state": "null"
+              },
+              "l3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f0": 10,
+              "f1": 11,
+              "f2": 12,
+              "f3": {
+                "state": "null"
+              },
+              "l0": 12,
+              "l1": 11,
+              "l2": 10,
+              "l3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f0": 11,
+              "f1": 12,
+              "f2": 13,
+              "f3": {
+                "state": "null"
+              },
+              "l0": 13,
+              "l1": 12,
+              "l2": 11,
+              "l3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-indexed",
+    "records": [
+      {
+        "case": "indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f0": 10,
+              "f1": {
+                "state": "null"
+              },
+              "f2": {
+                "state": "null"
+              },
+              "f3": {
+                "state": "null"
+              },
+              "l0": 10,
+              "l1": {
+                "state": "null"
+              },
+              "l2": {
+                "state": "null"
+              },
+              "l3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f0": 10,
+              "f1": 11,
+              "f2": {
+                "state": "null"
+              },
+              "f3": {
+                "state": "null"
+              },
+              "l0": 11,
+              "l1": 10,
+              "l2": {
+                "state": "null"
+              },
+              "l3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f0": 10,
+              "f1": 11,
+              "f2": 12,
+              "f3": {
+                "state": "null"
+              },
+              "l0": 12,
+              "l1": 11,
+              "l2": 10,
+              "l3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "indexed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f0": 11,
+              "f1": 12,
+              "f2": 13,
+              "f3": {
+                "state": "null"
+              },
+              "l0": 13,
+              "l1": 12,
+              "l2": 11,
+              "l3": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

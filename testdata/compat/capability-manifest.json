@@ -35107,6 +35107,64 @@
     "ResultSetAggregatePrevNthIndexedFirstLast replays one shared length(3) scenario (4 records, 0 differences): typed prev/nth/last indexes 0..2 return newest-to-oldest values, null before enough retained rows, and FIFO eviction shifts the retained prefix.",
     "The Go surface uses typed Prev, Nth, and indexed Last builders. The scenario intentionally excludes first(indexed) ordinal 5, joins, variables, dynamic indexes, wildcard access, old-stream, iterator, FAF, output-rate, invalid diagnostics, and lifecycle variants reserved by the aggregate-access umbrella."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-firstlastwindow-indexed",
+   "javaRuntimeIds": [
+    "java-runtime-30f62dc2e86a7a1e80a0"
+   ],
+   "javaNames": [
+    "ResultSetAggregateFirstLastIndexed"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstLastWindow.java"
+   ],
+   "goTests": [
+    "internal/esper/resultset_aggregate_firstlastwindow_indexed_parity_test.go:TestResultSetAggregateFirstLastWindowIndexedParity",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFirstLastWindowIndexedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFirstLastWindowIndexedDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "first",
+    "last",
+    "indexed",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-firstlastwindow-indexed.json",
+    "testdata/parity/resultset-aggregate-firstlastwindow-indexed.trace.json",
+    "testdata/parity/resultset-aggregate-firstlastwindow-indexed.evidence.json",
+    "tools/java-oracle/ResultSetAggregateFirstLastWindowIndexedScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-firstlastwindow-indexed.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-30f62dc2e86a7a1e80a0"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-firstlastwindow-indexed"
+   ],
+   "notes": [
+    "ResultSetAggregateFirstLastIndexed replays one shared length(3) scenario (4 records, 0 differences): typed first/last indexes 0..3 return oldest-to-newest and newest-to-oldest retained values, null before enough retained rows and at out-of-range index 3, with FIFO eviction shifting the retained prefix.",
+    "The Go surface uses typed First and Last builders with zero-based indexes. The scenario intentionally excludes prev/nth, joins, variables, dynamic indexes, wildcard access, old-stream, iterator, FAF, output-rate, invalid diagnostics, and lifecycle variants reserved by the aggregate-access umbrella."
+   ]
   }
  ],
  "mappings": [
@@ -37693,15 +37751,19 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-firstlastwindow-prev-nth"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-firstlastwindow-indexed"
   }
  ],
  "summary": {
-  "inventoriedCases": 562,
-  "implementedCases": 560,
-  "differentialVerifiedCases": 174,
-  "differentialVerifiedRuntimeIds": 687,
+  "inventoriedCases": 563,
+  "implementedCases": 561,
+  "differentialVerifiedCases": 175,
+  "differentialVerifiedRuntimeIds": 688,
   "intentionallyDifferentCases": 23,
-  "representativeVerifiedCases": 98,
+  "representativeVerifiedCases": 99,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 118,
   "implementedCapabilities": 117,
@@ -37709,14 +37771,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3310,
+  "runtimeAssociationCount": 3311,
   "referencedJavaRuntimeIds": 3102,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 1034,
-  "representativeScenarioTotal": 101,
-  "representativeScenarioPassing": 101,
-  "totalCases": 562,
+  "representativeScenarioTotal": 102,
+  "representativeScenarioPassing": 102,
+  "totalCases": 563,
   "totalCapabilities": 118,
-  "differentialVerifiedRuntimeIDs": 687
+  "differentialVerifiedRuntimeIDs": 688
  }
 }

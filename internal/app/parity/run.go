@@ -24,7 +24,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, expr-core-bitwise, expr-core-bitwise-diff, expr-core-logical, expr-core-logical-diff, expr-core-coalesce, expr-core-coalesce-diff, expr-core-relop, expr-core-relop-diff, expr-core-like-regexp, expr-core-like-regexp-diff, expr-core-in-between, expr-core-in-between-diff, expr-core-equals-is, expr-core-equals-is-diff, expr-core-case, expr-core-case-diff, expr-core-instanceof, expr-core-instanceof-diff, expr-core-type-name, expr-core-type-name-diff, expr-core-exists-cast, expr-core-exists-cast-diff, expr-core-current-timestamp, expr-core-current-timestamp-diff, expr-core-current-evaluation-context, expr-core-current-evaluation-context-diff, expr-dt-between, expr-dt-between-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, pattern-timer, pattern-timer-diff, output-policy, output-policy-diff, output-after, output-after-diff, resultset-aggregate-first-ever-last-ever, resultset-aggregate-first-ever-last-ever-diff, resultset-aggregate-firstlastwindow-current, resultset-aggregate-firstlastwindow-current-diff, resultset-aggregate-firstlastwindow-prev-nth, resultset-aggregate-firstlastwindow-prev-nth-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, expr-core-bitwise, expr-core-bitwise-diff, expr-core-logical, expr-core-logical-diff, expr-core-coalesce, expr-core-coalesce-diff, expr-core-relop, expr-core-relop-diff, expr-core-like-regexp, expr-core-like-regexp-diff, expr-core-in-between, expr-core-in-between-diff, expr-core-equals-is, expr-core-equals-is-diff, expr-core-case, expr-core-case-diff, expr-core-instanceof, expr-core-instanceof-diff, expr-core-type-name, expr-core-type-name-diff, expr-core-exists-cast, expr-core-exists-cast-diff, expr-core-current-timestamp, expr-core-current-timestamp-diff, expr-core-current-evaluation-context, expr-core-current-evaluation-context-diff, expr-dt-between, expr-dt-between-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff, pattern-timer, pattern-timer-diff, output-policy, output-policy-diff, output-after, output-after-diff, resultset-aggregate-first-ever-last-ever, resultset-aggregate-first-ever-last-ever-diff, resultset-aggregate-firstlastwindow-current, resultset-aggregate-firstlastwindow-current-diff, resultset-aggregate-firstlastwindow-prev-nth, resultset-aggregate-firstlastwindow-prev-nth-diff, resultset-aggregate-firstlastwindow-indexed, resultset-aggregate-firstlastwindow-indexed-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -839,6 +839,21 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, rollupOutputFirstHavingJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, rollupOutputFirstHavingJavaSources),
 				splitMetadata(*javaExecutions, rollupOutputFirstHavingJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-firstlastwindow-indexed" || *mode == "resultset-aggregate-firstlastwindow-indexed-diff" {
+		trace, err := runResultSetAggregateFirstLastWindowIndexedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-firstlastwindow-indexed-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetAggregateFirstLastWindowIndexedJavaCommit,
+				resultsetAggregateFirstLastWindowIndexedJavaRuntimeIDs, resultsetAggregateFirstLastWindowIndexedJavaSources,
+				resultsetAggregateFirstLastWindowIndexedJavaExecutions, scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
