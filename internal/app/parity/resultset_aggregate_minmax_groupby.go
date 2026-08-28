@@ -18,6 +18,10 @@ type resultsetAggregateMinMaxGroupByMarketData struct {
 	Volume *int64  `esper:"volume"`
 }
 
+type resultsetAggregateMinMaxGroupByStringBean struct {
+	TheString string `esper:"theString"`
+}
+
 const resultsetAggregateMinMaxGroupByJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 
 var resultsetAggregateMinMaxGroupByJavaSources = []string{

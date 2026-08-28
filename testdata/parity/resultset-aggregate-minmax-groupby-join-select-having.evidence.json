@@ -1,0 +1,1211 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-802aec9425dc772e3aa5",
+    "java-runtime-060f5af73edf420ef45a"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMaxMinGroupBy.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateMinMaxJoin",
+    "ResultSetAggregateMinNoGroupSelectHaving"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-minmax-groupby-join-select-having",
+    "steps": [
+      {
+        "op": "case",
+        "case": "minmax-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DELL"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 50,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 30,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 30,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 90,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 100,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 20,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 5,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 15,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 18,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": null,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": null,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": null,
+          "price": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "min-no-group-select-having"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 100,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 105,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 100,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 131,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 132,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 129,
+          "price": 0
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-minmax-groupby-join-select-having",
+    "records": [
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 50,
+              "minVol": 50,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": {
+                "state": "null"
+              },
+              "maxVol": {
+                "state": "null"
+              },
+              "minDistVol": {
+                "state": "null"
+              },
+              "minVol": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 50,
+              "minVol": 50,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 90,
+              "maxVol": 90,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 90,
+              "maxVol": 90,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 20,
+              "minVol": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 90,
+              "minVol": 90,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": {
+                "state": "null"
+              },
+              "maxVol": {
+                "state": "null"
+              },
+              "minDistVol": {
+                "state": "null"
+              },
+              "minVol": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 100,
+              "minVol": 100,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 20,
+              "minVol": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 90,
+              "minVol": 90,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": {
+                "state": "null"
+              },
+              "maxVol": {
+                "state": "null"
+              },
+              "minDistVol": {
+                "state": "null"
+              },
+              "minVol": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 100,
+              "minVol": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 15,
+              "minVol": 15,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 18,
+              "minVol": 18,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 15,
+              "minVol": 15,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": {
+                "state": "null"
+              },
+              "maxVol": {
+                "state": "null"
+              },
+              "minDistVol": {
+                "state": "null"
+              },
+              "minVol": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 18,
+              "minVol": 18,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "min-no-group-select-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymin": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "min-no-group-select-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymin": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-minmax-groupby-join-select-having",
+    "records": [
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 50,
+              "minVol": 50,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": {
+                "state": "null"
+              },
+              "maxVol": {
+                "state": "null"
+              },
+              "minDistVol": {
+                "state": "null"
+              },
+              "minVol": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 50,
+              "minVol": 50,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 90,
+              "maxVol": 90,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 50,
+              "maxVol": 50,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 90,
+              "maxVol": 90,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 20,
+              "minVol": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 90,
+              "minVol": 90,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": {
+                "state": "null"
+              },
+              "maxVol": {
+                "state": "null"
+              },
+              "minDistVol": {
+                "state": "null"
+              },
+              "minVol": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 30,
+              "minVol": 30,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 100,
+              "minVol": 100,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 20,
+              "minVol": 20,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 90,
+              "minVol": 90,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": {
+                "state": "null"
+              },
+              "maxVol": {
+                "state": "null"
+              },
+              "minDistVol": {
+                "state": "null"
+              },
+              "minVol": {
+                "state": "null"
+              },
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 100,
+              "maxVol": 100,
+              "minDistVol": 100,
+              "minVol": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 20,
+              "maxVol": 20,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 15,
+              "minVol": 15,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 5,
+              "minVol": 5,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 18,
+              "minVol": 18,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 15,
+              "minVol": 15,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "minmax-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": {
+                "state": "null"
+              },
+              "maxVol": {
+                "state": "null"
+              },
+              "minDistVol": {
+                "state": "null"
+              },
+              "minVol": {
+                "state": "null"
+              },
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "maxDistVol": 18,
+              "maxVol": 18,
+              "minDistVol": 18,
+              "minVol": 18,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "min-no-group-select-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymin": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "min-no-group-select-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymin": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

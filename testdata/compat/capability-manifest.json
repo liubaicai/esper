@@ -4129,7 +4129,9 @@
     "ResultSetAggregateMinMax",
     "ResultSetAggregateMinNoGroupHaving",
     "ResultSetAggregateMinMaxOM",
-    "ResultSetAggregateMinMaxViewCompile"
+    "ResultSetAggregateMinMaxViewCompile",
+    "ResultSetAggregateMinMaxJoin",
+    "ResultSetAggregateMinNoGroupSelectHaving"
    ],
    "goRefs": [
     "internal/esper/resultset_aggregate_parity_test.go",
@@ -4179,13 +4181,12 @@
     "internal/esper/resultset_query_type_iterator_parity_test.go",
     "internal/app/parity/resultset_aggregate_minmax_groupby.go",
     "internal/app/parity/resultset_aggregate_minmax_groupby_om_viewcompile.go",
+    "internal/app/parity/resultset_aggregate_minmax_groupby_join_select_having.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 2,
    "status": "differential-verified",
    "remaining": [
-    "ResultSetAggregateMinMaxJoin",
-    "ResultSetAggregateMinNoGroupSelectHaving",
     "ResultSetAggregateMedianAndDeviation suite",
     "ResultSetAggregateMinMax suite (subquery/named-window variants)",
     "ResultSetOrderBy* suites",
@@ -4240,7 +4241,9 @@
     "java-runtime-6ee286d6f857ddbbd091",
     "java-runtime-cd645170c5defa3996da",
     "java-runtime-2408009c4113ea2214c4",
-    "java-runtime-30dbed587648347e610a"
+    "java-runtime-30dbed587648347e610a",
+    "java-runtime-802aec9425dc772e3aa5",
+    "java-runtime-060f5af73edf420ef45a"
    ],
    "representativeScenarioIds": [
     "output-policy-iterator",
@@ -35571,6 +35574,51 @@
    ]
   },
   {
+   "id": "case.resultset-aggregate-minmax-groupby-join-select-having",
+   "javaRuntimeIds": [
+    "java-runtime-802aec9425dc772e3aa5",
+    "java-runtime-060f5af73edf420ef45a"
+   ],
+   "javaStaticIds": [
+    "java-6b177406a733a140a453",
+    "java-89cead06d92ef2fbf53c"
+   ],
+   "javaNames": [
+    "ResultSetAggregateMinMaxJoin",
+    "ResultSetAggregateMinNoGroupSelectHaving"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMaxMinGroupBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByJoinSelectHavingDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByJoinSelectHavingCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByJoinSelectHavingRejectsMalformedScenarioShape",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByJoinSelectHavingDiffRejectsTraceMutations"
+   ],
+   "tags": ["correctness", "resultset", "aggregate", "min", "max", "distinct", "group-by", "join", "having", "null-handling", "window", "java-oracle-trace", "differential"],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-minmax-groupby-join-select-having.json",
+    "testdata/parity/resultset-aggregate-minmax-groupby-join-select-having.trace.json",
+    "testdata/parity/resultset-aggregate-minmax-groupby-join-select-having.go.trace.json",
+    "testdata/parity/resultset-aggregate-minmax-groupby-join-select-having.evidence.json",
+    "tools/java-oracle/ResultSetAggregateMaxMinGroupByJoinSelectHavingScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-minmax-groupby-join-select-having.sh",
+    "java-runtime-inventory", "java-source", "java-oracle", "go-unit", "differential-evidence", "mutation"
+   ],
+   "difference": null,
+   "verification": ["inventoried", "implemented", "differential-verified"],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-802aec9425dc772e3aa5",
+    "java-runtime-060f5af73edf420ef45a"
+   ],
+   "notes": [
+    "ResultSetAggregateMinMaxJoin and ResultSetAggregateMinNoGroupSelectHaving replay one deterministic scenario (14 Java/Go records, 0 differences): the join emits 12 irstream callbacks over filtered length(3) grouped min/max all/distinct aggregates, and the ungrouped length(5) HAVING selection emits two new-only rows.",
+    "The typed Go surface uses nullable *int64 market volumes, a typed SupportBeanString join seed, source-indexed JoinField equality, grouped extrema and DistinctAggregate, and raw boxed-volume HAVING arithmetic. The runner and Java oracle strictly validate the 22-step input sequence, null handling, callback ordering, timestamps, record count and trace mutations."
+   ]
+  },
+  {
    "id": "case.resultset-aggregate-minmax-groupby-om-viewcompile",
    "javaRuntimeIds": [
     "java-runtime-2408009c4113ea2214c4",
@@ -38246,6 +38294,10 @@
   },
   {
    "capabilityId": "resultset.aggregate-group-by",
+   "caseId": "case.resultset-aggregate-minmax-groupby-join-select-having"
+  },
+  {
+   "capabilityId": "resultset.aggregate-group-by",
    "caseId": "case.resultset-aggregate-minmax-groupby-om-viewcompile"
   },
   {
@@ -38254,10 +38306,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 569,
-  "implementedCases": 567,
-  "differentialVerifiedCases": 182,
-  "differentialVerifiedRuntimeIds": 703,
+  "inventoriedCases": 570,
+  "implementedCases": 568,
+  "differentialVerifiedCases": 183,
+  "differentialVerifiedRuntimeIds": 705,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 103,
   "nfrVerifiedCases": 0,
@@ -38267,14 +38319,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3324,
-  "referencedJavaRuntimeIds": 3111,
+  "runtimeAssociationCount": 3326,
+  "referencedJavaRuntimeIds": 3113,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1025,
+  "unreferencedJavaRuntimeIds": 1023,
   "representativeScenarioTotal": 106,
   "representativeScenarioPassing": 106,
-  "totalCases": 569,
+  "totalCases": 570,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 703
+  "differentialVerifiedRuntimeIDs": 705
  }
 }
