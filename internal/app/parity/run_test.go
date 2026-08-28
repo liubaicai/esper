@@ -18785,3 +18785,128 @@ func TestRunResultSetAggregateSortedMultiCriteriaDiffRejectsTraceMutations(t *te
 		})
 	}
 }
+
+func TestRunResultSetQueryTypeRowForAllDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-for-all.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-row-for-all.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-for-all.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-querytype-row-for-all-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	wantIDs := []string{
+		"java-runtime-1d0f29a53fbb381563ec",
+		"java-runtime-061f312bd81e3cb1c340",
+		"java-runtime-422d65bd284a78278d56e",
+		"java-runtime-9a7f951d363bb58d506e",
+		"java-runtime-780e3dede1e586fde738",
+	}
+	if !reflect.DeepEqual(evidence.JavaRuntimeIDs, wantIDs) {
+		t.Fatalf("javaRuntimeIds = %v, want %v", evidence.JavaRuntimeIDs, wantIDs)
+	}
+	if len(evidence.JavaTrace.Records) != 33 {
+		t.Fatalf("Java trace records = %d, want 33", len(evidence.JavaTrace.Records))
+	}
+	wantCases := map[string]int{"sum-one-view": 13, "sum-join": 13, "avg-per-sym": 5, "select-star-std-group-by": 1, "select-expr-group-win": 1}
+	caseCounts := map[string]int{}
+	for _, record := range evidence.JavaTrace.Records {
+		caseCounts[record.Case]++
+	}
+	if !reflect.DeepEqual(caseCounts, wantCases) {
+		t.Fatalf("case record layout = %#v, want %#v", caseCounts, wantCases)
+	}
+}
+
+func TestRunResultSetQueryTypeRowForAllDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "sum-value", mutate: func(trace *compat.Trace) {
+			for i := range trace.Records {
+				if trace.Records[i].Case == "sum-one-view" && len(trace.Records[i].New) > 0 {
+					if _, ok := trace.Records[i].New[0].Fields["mySum"]; ok {
+						trace.Records[i].New[0].Fields["mySum"] = 999
+						return
+					}
+				}
+			}
+			t.Fatal("sum record missing mySum")
+		}},
+		{name: "old-row-loss", mutate: func(trace *compat.Trace) {
+			for i := range trace.Records {
+				if len(trace.Records[i].Old) > 0 {
+					trace.Records[i].Old = nil
+					return
+				}
+			}
+			t.Fatal("trace has no old row")
+		}},
+		{name: "avg-group-value", mutate: func(trace *compat.Trace) {
+			for i := range trace.Records {
+				if trace.Records[i].Case == "avg-per-sym" && len(trace.Records[i].New) > 0 {
+					trace.Records[i].New[0].Fields["avgp"] = 999
+					return
+				}
+			}
+			t.Fatal("avg record missing")
+		}},
+		{name: "wildcard-type", mutate: func(trace *compat.Trace) {
+			for i := range trace.Records {
+				if trace.Records[i].Case == "select-star-std-group-by" && len(trace.Records[i].New) > 0 {
+					trace.Records[i].New[0].Fields["__type"] = "mutated"
+					return
+				}
+			}
+			t.Fatal("wildcard record missing")
+		}},
+		{name: "listener-time-sequence", mutate: func(trace *compat.Trace) {
+			if len(trace.Records) == 0 {
+				t.Fatal("trace has no records")
+			}
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+			trace.Records[0].Sequence++
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t, filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-for-all.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "e.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{"-mode", "resultset-querytype-row-for-all-diff", "-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-for-all.json"), "-java-trace", javaTracePath, "-evidence", evidencePath}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

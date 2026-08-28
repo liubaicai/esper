@@ -1,0 +1,121 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-row-for-all",
+  "description": "ResultSetQueryTypeRowForAll ordinals 4-8: time-window sum with listener and iterator expiry, grouped price average, and typed wildcard/scalar groupwin selections.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java",
+  "javaRuntimes": [
+    "java-runtime-1d0f29a53fbb381563ec",
+    "java-runtime-061f312bd81e3cb1c340",
+    "java-runtime-422d65bd284a78278d56",
+    "java-runtime-9a7f951d363bb58d506e",
+    "java-runtime-780e3dede1e586fde738"
+  ],
+  "javaNames": [
+    "ResultSetQueryTypeRowForAllSumOneView",
+    "ResultSetQueryTypeRowForAllSumJoin",
+    "ResultSetQueryTypeRowForAllAvgPerSym",
+    "ResultSetQueryTypeRowForAllSelectStarStdGroupBy",
+    "ResultSetQueryTypeRowForAllSelectExprGroupWin"
+  ],
+  "cases": [
+    {
+      "case": "sum-one-view",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-1d0f29a53fbb381563ec",
+      "executionName": "ResultSetQueryTypeRowForAllSumOneView",
+      "observation": "listener",
+      "iteratorSnapshots": 7,
+      "epl": "@name('s0') select irstream sum(longBoxed) as mySum from SupportBean#time(10 sec)"
+    },
+    {
+      "case": "sum-join",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-061f312bd81e3cb1c340",
+      "executionName": "ResultSetQueryTypeRowForAllSumJoin",
+      "observation": "listener",
+      "iteratorSnapshots": 7,
+      "epl": "@name('s0') select irstream sum(longBoxed) as mySum from SupportBeanString#keepall as one, SupportBean#time(10 sec) as two where one.theString = two.theString"
+    },
+    {
+      "case": "avg-per-sym",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-422d65bd284a78278d56",
+      "executionName": "ResultSetQueryTypeRowForAllAvgPerSym",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select irstream avg(price) as avgp, sym from SupportPriceEvent#groupwin(sym)#length(2)"
+    },
+    {
+      "case": "select-star-std-group-by",
+      "ordinal": 7,
+      "runtimeId": "java-runtime-9a7f951d363bb58d506e",
+      "executionName": "ResultSetQueryTypeRowForAllSelectStarStdGroupBy",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select istream * from SupportMarketDataBean#groupwin(symbol)#length(2)"
+    },
+    {
+      "case": "select-expr-group-win",
+      "ordinal": 8,
+      "runtimeId": "java-runtime-780e3dede1e586fde738",
+      "executionName": "ResultSetQueryTypeRowForAllSelectExprGroupWin",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select istream price from SupportMarketDataBean#groupwin(symbol)#length(2)"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "sum-one-view"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "snapshot", "statement": "s0", "label": "initial-null", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": 10}},
+    {"op": "snapshot", "statement": "s0", "label": "after-10", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:05Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": 15}},
+    {"op": "snapshot", "statement": "s0", "label": "after-15", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:08Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": -5}},
+    {"op": "snapshot", "statement": "s0", "label": "after-minus-5", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:10Z"},
+    {"op": "snapshot", "statement": "s0", "label": "after-expire-10", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:15Z"},
+    {"op": "snapshot", "statement": "s0", "label": "after-expire-15", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:18Z"},
+    {"op": "snapshot", "statement": "s0", "label": "after-expire-minus-5", "mode": "any"},
+
+    {"op": "case", "case": "sum-join"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KEY"}},
+    {"op": "snapshot", "statement": "s0", "label": "initial-null", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": 10}},
+    {"op": "snapshot", "statement": "s0", "label": "after-10", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:05Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": 15}},
+    {"op": "snapshot", "statement": "s0", "label": "after-15", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:08Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": -5}},
+    {"op": "snapshot", "statement": "s0", "label": "after-minus-5", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:10Z"},
+    {"op": "snapshot", "statement": "s0", "label": "after-expire-10", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:15Z"},
+    {"op": "snapshot", "statement": "s0", "label": "after-expire-15", "mode": "any"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:18Z"},
+    {"op": "snapshot", "statement": "s0", "label": "after-expire-minus-5", "mode": "any"},
+
+    {"op": "case", "case": "avg-per-sym"},
+    {"op": "send", "eventType": "SupportPriceEvent", "payload": {"price": 1, "sym": "A"}},
+    {"op": "send", "eventType": "SupportPriceEvent", "payload": {"price": 2, "sym": "B"}},
+    {"op": "send", "eventType": "SupportPriceEvent", "payload": {"price": 9, "sym": "A"}},
+    {"op": "send", "eventType": "SupportPriceEvent", "payload": {"price": 18, "sym": "B"}},
+    {"op": "send", "eventType": "SupportPriceEvent", "payload": {"price": 5, "sym": "A"}},
+
+    {"op": "case", "case": "select-star-std-group-by"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "A", "id": null, "price": 1, "volume": null, "feed": null}},
+
+    {"op": "case", "case": "select-expr-group-win"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "A", "id": null, "price": 1, "volume": null, "feed": null}}
+  ]
+}

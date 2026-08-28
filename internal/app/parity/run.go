@@ -2126,6 +2126,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-querytype-row-for-all" || *mode == "resultset-querytype-row-for-all-diff" {
+		trace, err := runResultSetQueryTypeRowForAllScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-row-for-all-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultSetQueryTypeRowForAllJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeRowForAllJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeRowForAllJavaSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeRowForAllJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-orderby-row-for-all" || *mode == "resultset-orderby-row-for-all-diff" {
 		trace, err := runResultSetOrderByRowForAllScenario(context.Background(), scenario)
 		if err != nil {

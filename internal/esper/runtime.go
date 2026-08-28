@@ -10275,12 +10275,17 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 	if r == nil || definition == nil || definition.join == nil || r.joinState == nil {
 		return result
 	}
-	tuples := joinKeyedTuples(definition.join, r.joinState, now, r)
-	if len(tuples) == 0 {
+	tups := joinKeyedTuples(definition.join, r.joinState, now, r)
+	if len(tups) == 0 {
+		if len(definition.groupBy) == 0 && !aggregateDefinitionSnapshotRowForEvent(definition) {
+			if values, visible := evaluateEmptyAggregateGroup(definition, now, r.variables); visible {
+				result.New = append(result.New, resultRow(newRow(plan.resultSchema, values)))
+			}
+		}
 		return result
 	}
-	events := make([]Event, 0, len(tuples))
-	for _, tuple := range tuples {
+	events := make([]Event, 0, len(tups))
+	for _, tuple := range tups {
 		events = append(events, newJoinTupleEvent(tuple.events, now))
 	}
 	if definition.where != nil {

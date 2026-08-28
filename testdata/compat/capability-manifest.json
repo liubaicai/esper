@@ -4860,6 +4860,38 @@
     "java-runtime-d14f54fbebaf213da348",
     "java-runtime-c76ba92d72beb61d0a66"
    ]
+  },
+  {
+   "id": "resultset.querytype-row-for-all",
+   "domain": "resultset",
+   "level": "S",
+   "summary": "Row-for-all query result sets with time-window aggregate listener and iterator snapshots, grouped average, typed wildcard, and scalar group-window selections",
+   "javaRefs": [
+    "ResultSetQueryTypeRowForAll"
+   ],
+   "goRefs": [
+    "internal/app/parity/resultset_querytype_row_for_all.go",
+    "internal/app/parity/run_test.go",
+    "internal/esper/runtime.go"
+   ],
+   "phase": 3,
+   "status": "differential-verified",
+   "remaining": [
+    "row-for-all/grouped querytype executions beyond ordinals 4-8",
+    "additional output-rate, join and invalid/error-phase combinations"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1d0f29a53fbb381563ec",
+    "java-runtime-061f312bd81e3cb1c340",
+    "java-runtime-422d65bd284a78278d56",
+    "java-runtime-9a7f951d363bb58d506e",
+    "java-runtime-780e3dede1e586fde738"
+   ]
   }
  ],
  "cases": [
@@ -35430,6 +35462,82 @@
     "ResultSetAggregateSortedMultiCriteria replays one table-backed sorted aggregate scenario (1 record, 0 differences): seven SupportBean rows populate MyTable.sortcol under the (theString, intPrimitive) lexicographic key, and an on-event trigger reads firstKey, lastKey, lowerKey, and higherKey.",
     "The typed Go surface uses CreateTable, IntoTable, SortedAccessByMulti, SortedMultiKey, TableField, and OnEvent.SelectFromTableWhere. The scenario freezes the exact seven sends and trigger, while runner and oracle validators reject malformed fields, duplicate keys, non-integer or out-of-range payloads, and trace value/order/time/record-count mutations."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-row-for-all",
+   "javaRuntimeIds": [
+    "java-runtime-1d0f29a53fbb381563ec",
+    "java-runtime-061f312bd81e3cb1c340",
+    "java-runtime-422d65bd284a78278d56",
+    "java-runtime-9a7f951d363bb58d506e",
+    "java-runtime-780e3dede1e586fde738"
+   ],
+   "javaStaticIds": [
+    "java-bc11e2f6050e55363879",
+    "java-00cfc4061ba3a5f163ff",
+    "java-37e0c1f5635eeb35eb80",
+    "java-8365ed29927b20c08486",
+    "java-106ea4427ad8de418588"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeRowForAllSumOneView",
+    "ResultSetQueryTypeRowForAllSumJoin",
+    "ResultSetQueryTypeRowForAllAvgPerSym",
+    "ResultSetQueryTypeRowForAllSelectStarStdGroupBy",
+    "ResultSetQueryTypeRowForAllSelectExprGroupWin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "querytype",
+    "row-for-all",
+    "aggregate",
+    "grouped",
+    "time-window",
+    "join",
+    "irstream",
+    "iterator",
+    "wildcard",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-row-for-all.json",
+    "testdata/parity/resultset-querytype-row-for-all.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRowForAllScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-row-for-all.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1d0f29a53fbb381563ec",
+    "java-runtime-061f312bd81e3cb1c340",
+    "java-runtime-422d65bd284a78278d56",
+    "java-runtime-9a7f951d363bb58d506e",
+    "java-runtime-780e3dede1e586fde738"
+   ],
+   "notes": [
+    "Five ResultSetQueryTypeRowForAll executions replayed through one shared scenario (33 records, 0 differences): time-window sum view and matching keepall join with listener/iterator expiry snapshots; grouped per-symbol average; typed wildcard group-window row; and scalar group-window projection.",
+    "The Go runner uses typed time/group windows and aggregate or scalar selections; wildcard normalization preserves the SupportMarketDataBean type marker. The bounded runtime repair emits an empty non-grouped join aggregate iterator row, matching Java's initial null state without changing grouped or row-per-event join paths."
+   ]
   }
  ],
  "mappings": [
@@ -38036,30 +38144,34 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-sorted-multi-criteria"
+  },
+  {
+   "capabilityId": "resultset.querytype-row-for-all",
+   "caseId": "case.resultset-querytype-row-for-all"
   }
  ],
  "summary": {
-  "inventoriedCases": 567,
-  "implementedCases": 565,
-  "differentialVerifiedCases": 179,
-  "differentialVerifiedRuntimeIds": 694,
+  "inventoriedCases": 568,
+  "implementedCases": 566,
+  "differentialVerifiedCases": 180,
+  "differentialVerifiedRuntimeIds": 699,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 103,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 118,
-  "implementedCapabilities": 117,
-  "differentialVerifiedCapabilities": 33,
+  "inventoriedCapabilities": 119,
+  "implementedCapabilities": 118,
+  "differentialVerifiedCapabilities": 34,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3317,
-  "referencedJavaRuntimeIds": 3104,
+  "runtimeAssociationCount": 3322,
+  "referencedJavaRuntimeIds": 3109,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1032,
+  "unreferencedJavaRuntimeIds": 1027,
   "representativeScenarioTotal": 106,
   "representativeScenarioPassing": 106,
-  "totalCases": 567,
-  "totalCapabilities": 118,
-  "differentialVerifiedRuntimeIDs": 694
+  "totalCases": 568,
+  "totalCapabilities": 119,
+  "differentialVerifiedRuntimeIDs": 699
  }
 }
