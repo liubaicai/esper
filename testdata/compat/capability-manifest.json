@@ -884,7 +884,8 @@
     "internal/esper/resultset_aggregate_nth_parity_test.go",
     "internal/app/parity/resultset_aggregate_nth.go",
     "internal/app/parity/resultset_aggregate_sorted_minmax_by.go",
-    "internal/app/parity/resultset_aggregate_sorted_multi_criteria_simple.go"
+    "internal/app/parity/resultset_aggregate_sorted_multi_criteria_simple.go",
+    "internal/app/parity/resultset_aggregate_sorted_multi_criteria.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -913,14 +914,16 @@
     "java-runtime-f1f2e402fb4c6783cf33",
     "java-runtime-7387fafedcfa741088b9",
     "java-runtime-5609d311148a91227b28",
-    "java-runtime-9f50a7b345919de5a8cf"
+    "java-runtime-9f50a7b345919de5a8cf",
+    "java-runtime-dd79ba5aba4eb4ec0a1a"
    ],
    "representativeScenarioIds": [
     "aggregate-firstlastwindow-ext",
     "aggregate-firstlastwindow",
     "resultset-aggregate-nth",
     "resultset-aggregate-sorted-minmax-by",
-    "resultset-aggregate-sorted-multi-criteria-simple"
+    "resultset-aggregate-sorted-multi-criteria-simple",
+    "resultset-aggregate-sorted-multi-criteria"
    ]
   },
   {
@@ -35365,6 +35368,68 @@
     "ResultSetAggregateMultipleCriteriaSimple replays one keepall sorted aggregate scenario (4 listener records, 0 differences): lexicographic descending sorted(theString, intPrimitive) preserves full SupportBean rows and emits [C/10], [D/20,C/10], [D/20,C/15,C/10], [D/20,D/19,C/15,C/10].",
     "The typed Go surface uses SortedEvents with two descending keys and Event identity; runner and oracle validators freeze the exact four sends and reject malformed fields, duplicate keys, non-integer or out-of-range payloads, and trace value/order/time/record-count mutations."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-sorted-multi-criteria",
+   "javaRuntimeIds": [
+    "java-runtime-dd79ba5aba4eb4ec0a1a"
+   ],
+   "javaStaticIds": [
+    "java-427c23ee540c6e2e7cf9"
+   ],
+   "javaNames": [
+    "ResultSetAggregateSortedMultiCriteria"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodSorted.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMultiCriteriaDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMultiCriteriaRejectsMalformedScenarioShape",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMultiCriteriaDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "sorted",
+    "multi-criteria",
+    "table",
+    "navigable",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-sorted-multi-criteria.json",
+    "testdata/parity/resultset-aggregate-sorted-multi-criteria.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-multi-criteria.evidence.json",
+    "tools/java-oracle/ResultSetAggregationMethodSortedMultiCriteriaScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregation-method-sorted-multi-criteria.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-dd79ba5aba4eb4ec0a1a"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-sorted-multi-criteria"
+   ],
+   "notes": [
+    "ResultSetAggregateSortedMultiCriteria replays one table-backed sorted aggregate scenario (1 record, 0 differences): seven SupportBean rows populate MyTable.sortcol under the (theString, intPrimitive) lexicographic key, and an on-event trigger reads firstKey, lastKey, lowerKey, and higherKey.",
+    "The typed Go surface uses CreateTable, IntoTable, SortedAccessByMulti, SortedMultiKey, TableField, and OnEvent.SelectFromTableWhere. The scenario freezes the exact seven sends and trigger, while runner and oracle validators reject malformed fields, duplicate keys, non-integer or out-of-range payloads, and trace value/order/time/record-count mutations."
+   ]
   }
  ],
  "mappings": [
@@ -37967,15 +38032,19 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-sorted-multi-criteria-simple"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-sorted-multi-criteria"
   }
  ],
  "summary": {
-  "inventoriedCases": 566,
-  "implementedCases": 564,
-  "differentialVerifiedCases": 178,
-  "differentialVerifiedRuntimeIds": 693,
+  "inventoriedCases": 567,
+  "implementedCases": 565,
+  "differentialVerifiedCases": 179,
+  "differentialVerifiedRuntimeIds": 694,
   "intentionallyDifferentCases": 23,
-  "representativeVerifiedCases": 102,
+  "representativeVerifiedCases": 103,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 118,
   "implementedCapabilities": 117,
@@ -37983,14 +38052,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3316,
+  "runtimeAssociationCount": 3317,
   "referencedJavaRuntimeIds": 3104,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 1032,
-  "representativeScenarioTotal": 105,
-  "representativeScenarioPassing": 105,
-  "totalCases": 566,
+  "representativeScenarioTotal": 106,
+  "representativeScenarioPassing": 106,
+  "totalCases": 567,
   "totalCapabilities": 118,
-  "differentialVerifiedRuntimeIDs": 693
+  "differentialVerifiedRuntimeIDs": 694
  }
 }
