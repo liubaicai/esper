@@ -532,6 +532,27 @@ go run ./cmd/parity \
 
 checked-in 场景与 evidence：`testdata/parity/resultset-aggregate-first-ever-last-ever.json`、`testdata/parity/resultset-aggregate-first-ever-last-ever.evidence.json`；当前差异数为 0，覆盖 `ResultSetAggregateFirstLastEver{soda=true}`、`ResultSetAggregateFirstLastEver{soda=false}` 与 `ResultSetAggregateOnDelete`，共 14 条 records。
 
+## Resultset-aggregate-nth oracle
+
+第二十六个代表性场景使用 `ResultSetAggregateNThScenarioOracle.java`（runner：`run-resultset-aggregate-nth.sh`）。它注册 struct 事件类型 `SupportBean(theString, intPrimitive)`，双跑 `ResultSetAggregateNTh.java` 的直接 execution `ResultSetAggregateNTh`：`group by theString` 上的 typed `nth(intPrimitive, 0/1)`、`output last every 3 events` 与 `order by theString`。九个事件覆盖每组 newest/prior 值、输出批次边界、null prior 和 keepall 状态；EPL 与 eplToModelCompileDeploy 生命周期各产生 3 条 listener records，共 6 条。
+
+```sh
+./tools/java-oracle/run-resultset-aggregate-nth.sh \
+  --esper-root /root/app/esper \
+  --scenario testdata/parity/resultset-aggregate-nth.json \
+  --output /tmp/resultset-aggregate-nth-java.json \
+  --skip-build
+
+go run ./cmd/parity \
+  -mode resultset-aggregate-nth-diff \
+  -scenario testdata/parity/resultset-aggregate-nth.json \
+  -java-trace /tmp/resultset-aggregate-nth-java.json \
+  -evidence /tmp/resultset-aggregate-nth.evidence.json
+```
+
+checked-in 场景与 evidence：`testdata/parity/resultset-aggregate-nth.json`、`testdata/parity/resultset-aggregate-nth.trace.json` 与 `testdata/parity/resultset-aggregate-nth.evidence.json`；当前差异数为 0，覆盖 `ResultSetAggregateNTh`，共 6 条 records。Go runner 对 scenario payload 执行与 Java shell/oracle 一致的严格 shape 校验。
+
+
 ## Subselect-aggregated-in-exists-any-all oracle
 
 第二十六个代表性场景使用 `EPLSubselectAggregatedInExistsAnyAllScenarioOracle.java`（runner：`run-subselect-aggregated-in-exists-any-all.sh`）。它注册 Map 事件类型 `SupportBean(theString, intPrimitive)`、`SupportValueEvent(value)` 与 `SupportIdAndValueEvent(id, value)`，双跑 `EPLSubselectAggregatedInExistsAnyAll` 的全部 13 个 execution：SupportValueEvent 触发投影 IN/NOT IN、EXISTS/NOT EXISTS 与 ALL/ANY/SOME 量词，对照 SupportBean#keepall 上的聚合子查询（无分组、按 theString 分组、带 `last(theString)/first(theString)` having 过滤），并覆盖 named window + `delete from MyWindow` fire-and-forget 后 EXISTS 复位。Java 语义要点：无分组聚合子查询空输入仍产出 null 聚合行（`10 in (null)` 为 null、EXISTS 为 true），分组空集遵循 SQL 规则（IN/ANY/SOME false、ALL true、EXISTS false），having 过滤掉唯一聚合行时 IN 为 null。Go 以 `SubqueryIn/SubqueryAny/SubqueryAll/SubquerySome/SubqueryExistsValue` 及 `SubqueryHaving` 复现同一语义；

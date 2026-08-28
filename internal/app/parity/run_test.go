@@ -18088,3 +18088,145 @@ func TestRunResultSetAggregateFirstLastWindowIndexedDiffRejectsTraceMutations(t 
 		})
 	}
 }
+func TestRunResultSetAggregateNthDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-nth.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-nth.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-nth.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-nth-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 1 || evidence.JavaRuntimeIDs[0] != "java-runtime-1a257602734874ff3fc4" {
+		t.Fatalf("runtime ids = %#v", evidence.JavaRuntimeIDs)
+	}
+}
+
+func TestRunResultSetAggregateNthRejectsMalformedScenarioShape(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-nth.json")
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(file)
+	closeErr := file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Scenario)
+	}{
+		{
+			name: "missing-field",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"G1"}`)
+			},
+		},
+		{
+			name: "extra-field",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"G1","intPrimitive":10,"extra":1}`)
+			},
+		},
+		{
+			name: "non-integer",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"G1","intPrimitive":10.5}`)
+			},
+		},
+		{
+			name: "extra-case",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps = append(scenario.Steps, compat.Step{Op: "case", Case: "unexpected"})
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			malformed := scenario
+			malformed.Steps = append([]compat.Step(nil), scenario.Steps...)
+			test.mutate(&malformed)
+			if _, err := runResultSetAggregateNthScenario(context.Background(), malformed); err == nil {
+				t.Fatalf("malformed scenario unexpectedly replayed: %#v", malformed)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateNthDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "nth-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["int1"] = json.Number("999")
+			},
+		},
+		{
+			name: "null-state",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[1].Fields["int2"] = int64(0)
+			},
+		},
+		{
+			name: "row-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0], trace.Records[0].New[1] = trace.Records[0].New[1], trace.Records[0].New[0]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-nth.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-nth.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-nth.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-nth-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

@@ -1,0 +1,385 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-1a257602734874ff3fc4"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateNTh.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateNTh"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-nth",
+    "steps": [
+      {
+        "op": "case",
+        "case": "nth"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 25
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 8
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-nth",
+    "records": [
+      {
+        "case": "epl",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 12,
+              "int2": 10,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 11,
+              "int2": {
+                "state": "null"
+              },
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "epl",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 25,
+              "int2": 20,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "epl",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": -2,
+              "int2": -1,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 8,
+              "int2": 25,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 12,
+              "int2": 10,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 11,
+              "int2": {
+                "state": "null"
+              },
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 25,
+              "int2": 20,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": -2,
+              "int2": -1,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 8,
+              "int2": 25,
+              "theString": "G2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-nth",
+    "records": [
+      {
+        "case": "epl",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 12,
+              "int2": 10,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 11,
+              "int2": {
+                "state": "null"
+              },
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "epl",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 25,
+              "int2": 20,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "epl",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": -2,
+              "int2": -1,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 8,
+              "int2": 25,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 12,
+              "int2": 10,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 11,
+              "int2": {
+                "state": "null"
+              },
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 25,
+              "int2": 20,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "soda",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "int1": -2,
+              "int2": -1,
+              "theString": "G1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "int1": 8,
+              "int2": 25,
+              "theString": "G2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
