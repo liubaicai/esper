@@ -1,0 +1,11 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-sorted-multi-criteria-simple",
+  "steps": [
+    {"op": "case", "case": "multiple-criteria-simple"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "C", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "D", "intPrimitive": 20}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "C", "intPrimitive": 15}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "D", "intPrimitive": 19}}
+  ]
+}

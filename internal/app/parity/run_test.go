@@ -18383,3 +18383,165 @@ func TestRunResultSetAggregateSortedMinMaxByDiffRejectsTraceMutations(t *testing
 		})
 	}
 }
+
+func TestRunResultSetAggregateSortedMultiCriteriaSimpleDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-sorted-multi-criteria-simple.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-multi-criteria-simple.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-sorted-multi-criteria-simple.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-multi-criteria-simple-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	wantRuntimeIDs := []string{"java-runtime-9f50a7b345919de5a8cf"}
+	if !reflect.DeepEqual(evidence.JavaRuntimeIDs, wantRuntimeIDs) {
+		t.Fatalf("runtime ids = %#v, want %#v", evidence.JavaRuntimeIDs, wantRuntimeIDs)
+	}
+}
+
+func TestRunResultSetAggregateSortedMultiCriteriaSimpleRejectsMalformedScenarioShape(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-sorted-multi-criteria-simple.json")
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(file)
+	closeErr := file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Scenario)
+	}{
+		{
+			name: "missing-field",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"C"}`)
+			},
+		},
+		{
+			name: "extra-field",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"C","intPrimitive":10,"extra":1}`)
+			},
+		},
+		{
+			name: "non-integer",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"C","intPrimitive":10.5}`)
+			},
+		},
+		{
+			name: "duplicate-field",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"C","intPrimitive":10,"intPrimitive":11}`)
+			},
+		},
+		{
+			name: "integer-above-max",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"C","intPrimitive":2147483648}`)
+			},
+		},
+		{
+			name: "integer-below-min",
+			mutate: func(scenario *compat.Scenario) {
+				scenario.Steps[1].Payload = json.RawMessage(`{"theString":"C","intPrimitive":-2147483649}`)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			malformed := scenario
+			malformed.Steps = append([]compat.Step(nil), scenario.Steps...)
+			test.mutate(&malformed)
+			if _, err := runResultSetAggregateSortedMultiCriteriaSimpleScenario(context.Background(), malformed); err == nil {
+				t.Fatalf("malformed scenario unexpectedly replayed: %#v", malformed)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateSortedMultiCriteriaSimpleDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["c0"] = json.Number("999")
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+			},
+		},
+		{
+			name: "time-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+		{
+			name: "missing-record",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-sorted-multi-criteria-simple.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-multi-criteria-simple.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-sorted-multi-criteria-simple.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-sorted-multi-criteria-simple-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
