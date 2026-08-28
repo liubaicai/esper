@@ -1,0 +1,41 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-minmax-groupby-om-viewcompile",
+  "description": "ResultSetAggregateMinMaxOM and ResultSetAggregateMinMaxViewCompile executions (ordinals 1 and 2): grouped irstream min/max all and distinct volume over a filtered length(3) market window, replayed independently with identical deterministic payloads. Java verifies SODA model copy/toEPL and EPL-to-model compilation; Go intentionally uses its equivalent typed immutable Query/Plan path, so the persisted differential scope is shared listener semantics, not representation internals.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMaxMinGroupBy.java",
+  "javaRuntimes": ["java-runtime-2408009c4113ea2214c4", "java-runtime-30dbed587648347e610a"],
+  "javaNames": ["ResultSetAggregateMinMaxOM", "ResultSetAggregateMinMaxViewCompile"],
+  "cases": [
+    {"case":"minmax-om", "ordinal":1, "runtimeId":"java-runtime-2408009c4113ea2214c4", "executionName":"ResultSetAggregateMinMaxOM", "observation":"listener", "epl":"select irstream symbol, min(volume) as minVol, max(volume) as maxVol, min(distinct volume) as minDistVol, max(distinct volume) as maxDistVol from SupportMarketDataBean#length(3) where symbol=\"DELL\" or symbol=\"IBM\" or symbol=\"GE\" group by symbol"},
+    {"case":"minmax-view-compile", "ordinal":2, "runtimeId":"java-runtime-30dbed587648347e610a", "executionName":"ResultSetAggregateMinMaxViewCompile", "observation":"listener", "epl":"@name('s0') select irstream symbol, min(volume) as minVol, max(volume) as maxVol, min(distinct volume) as minDistVol, max(distinct volume) as maxDistVol from SupportMarketDataBean#length(3) where symbol=\"DELL\" or symbol=\"IBM\" or symbol=\"GE\" group by symbol"}
+  ],
+  "steps": [
+    {"op":"case","case":"minmax-om"},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":50,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":30,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":30,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":90,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":100,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":20,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":5,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":15,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":18,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":null,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":null,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":null,"price":0}},
+    {"op":"case","case":"minmax-view-compile"},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":50,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":30,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":30,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":90,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"DELL","volume":100,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":20,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":5,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":15,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":18,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":null,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":null,"price":0}},
+    {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","volume":null,"price":0}}
+  ]
+}
