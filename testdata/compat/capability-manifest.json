@@ -4174,10 +4174,12 @@
     "internal/esper/output_first_having_parity_test.go",
     "internal/app/parity/output_first_having.go",
     "internal/esper/resultset_row_per_group_parity_test.go",
-    "internal/esper/resultset_query_type_iterator_parity_test.go"
+    "internal/esper/resultset_query_type_iterator_parity_test.go",
+    "internal/app/parity/resultset_aggregate_minmax_groupby.go",
+    "internal/app/parity/run_test.go"
    ],
    "phase": 2,
-   "status": "implemented",
+   "status": "differential-verified",
    "remaining": [
     "ResultSetAggregateMinMaxOM",
     "ResultSetAggregateMinMaxViewCompile",
@@ -4233,7 +4235,9 @@
     "java-runtime-9ca872971349f850d32e",
     "java-runtime-ef1afacfc1fb429a8bef",
     "java-runtime-5fd3d359929d94deba32",
-    "java-runtime-d2a92c1b89214be184e4"
+    "java-runtime-d2a92c1b89214be184e4",
+    "java-runtime-6ee286d6f857ddbbd091",
+    "java-runtime-cd645170c5defa3996da"
    ],
    "representativeScenarioIds": [
     "output-policy-iterator",
@@ -21663,6 +21667,9 @@
     "java-runtime-6ee286d6f857ddbbd091",
     "java-runtime-cd645170c5defa3996da"
    ],
+   "javaStaticIds": [
+    "java-0ca3164935a71ca95033"
+   ],
    "javaNames": [
     "ResultSetAggregateMinMax",
     "ResultSetAggregateMinNoGroupHaving"
@@ -21671,9 +21678,10 @@
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMaxMinGroupBy.java"
    ],
    "goTests": [
-    "TestResultSetAggregateMinMaxGroupByMatchesEsper",
-    "TestResultSetAggregateCountSumAvgGroupByMatchesEsper",
-    "TestResultSetAggregateHavingMatchesEsper"
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByRejectsMalformedScenarioShape",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -21685,17 +21693,37 @@
     "group-by",
     "having",
     "null-handling",
-    "window"
+    "window",
+    "java-oracle-trace",
+    "differential"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
+    "testdata/parity/resultset-aggregate-minmax-groupby.json",
+    "testdata/parity/resultset-aggregate-minmax-groupby.trace.json",
+    "testdata/parity/resultset-aggregate-minmax-groupby.evidence.json",
+    "tools/java-oracle/ResultSetAggregateMaxMinGroupByScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-minmax-groupby.sh",
     "java-runtime-inventory",
-    "go-unit"
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
    ],
-   "difference": "",
+   "difference": null,
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6ee286d6f857ddbbd091",
+    "java-runtime-cd645170c5defa3996da"
+   ],
+   "notes": [
+    "ResultSetAggregateMaxMinGroupBy replays the two selected executions through one fixed scenario (14 Java/Go records, 0 differences): MinMax emits 12 irstream callbacks with old/new batch sizes [1,1,1,1,1,2,2,2,1,1,1,1], and MinNoGroupHaving emits two new-only rows while nonmatching inputs remain silent.",
+    "The typed Go surface uses filtered length/time windows with grouped Min, Max, DistinctAggregate, Cast, Multiply and Having selections. The runner and Java oracle strictly validate the pinned 20-step payload sequence, callback batch shape, null aggregates, timestamps, ordering and record count; trace mutations are rejected."
    ]
   },
   {
@@ -38153,8 +38181,8 @@
  "summary": {
   "inventoriedCases": 568,
   "implementedCases": 566,
-  "differentialVerifiedCases": 180,
-  "differentialVerifiedRuntimeIds": 699,
+ "differentialVerifiedCases": 181,
+ "differentialVerifiedRuntimeIds": 701,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 103,
   "nfrVerifiedCases": 0,
@@ -38172,6 +38200,6 @@
   "representativeScenarioPassing": 106,
   "totalCases": 568,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 699
+ "differentialVerifiedRuntimeIDs": 701
  }
 }

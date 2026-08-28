@@ -1,0 +1,55 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-minmax-groupby",
+  "description": "ResultSetAggregateMaxMinGroupBy executions ResultSetAggregateMinMax (ordinal 0) and ResultSetAggregateMinNoGroupHaving (ordinal 4): grouped irstream min/max all and distinct volume over a filtered length(3) market window, followed by ungrouped new-only volume HAVING over a time(5 sec) window. No virtual time is advanced; payloads preserve the pinned SupportMarketDataBean symbol, volume (including null), and price=0 sequence.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMaxMinGroupBy.java",
+  "javaRuntimes": [
+    "java-runtime-6ee286d6f857ddbbd091",
+    "java-runtime-cd645170c5defa3996da"
+  ],
+  "javaNames": [
+    "ResultSetAggregateMinMax",
+    "ResultSetAggregateMinNoGroupHaving"
+  ],
+  "cases": [
+    {
+      "case": "minmax",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-6ee286d6f857ddbbd091",
+      "executionName": "ResultSetAggregateMinMax",
+      "observation": "listener",
+      "epl": "@name('s0') select irstream symbol, min(all volume) as minVol, max(all volume) as maxVol, min(distinct volume) as minDistVol, max(distinct volume) as maxDistVol from SupportMarketDataBean#length(3) where symbol='DELL' or symbol='IBM' or symbol='GE' group by symbol"
+    },
+    {
+      "case": "min-no-group-having",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-cd645170c5defa3996da",
+      "executionName": "ResultSetAggregateMinNoGroupHaving",
+      "observation": "listener",
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#time(5 sec) having volume > min(volume) * 1.3"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "minmax"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 50, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 30, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 30, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 90, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 100, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 20, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 5, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 15, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 18, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": null, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": null, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": null, "price": 0}},
+    {"op": "case", "case": "min-no-group-having"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 100, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 105, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 100, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 131, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 132, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "volume": 129, "price": 0}}
+  ]
+}

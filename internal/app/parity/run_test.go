@@ -30,6 +30,11 @@ func TestRunHelpSucceeds(t *testing.T) {
 	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
 	}
+	for _, mode := range []string{"resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff"} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
 }
 
 func TestRunContextHashDiffWritesPassingEvidence(t *testing.T) {
@@ -18764,6 +18769,230 @@ func TestRunResultSetAggregateSortedMultiCriteriaDiffRejectsTraceMutations(t *te
 			var stdout, stderr bytes.Buffer
 			code := Run([]string{
 				"-mode", "resultset-aggregate-sorted-multi-criteria-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateMinMaxGroupByDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-minmax-groupby.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-minmax-groupby.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-minmax-groupby.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-minmax-groupby-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if !reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateMinMaxGroupByJavaRuntimeIDs) {
+		t.Fatalf("runtime ids = %#v, want %#v", evidence.JavaRuntimeIDs, resultsetAggregateMinMaxGroupByJavaRuntimeIDs)
+	}
+	if len(evidence.JavaTrace.Records) != 14 {
+		t.Fatalf("Java trace records = %d, want 14", len(evidence.JavaTrace.Records))
+	}
+	wantCaseCounts := map[string]int{resultsetAggregateMinMaxGroupByMinMaxCase: 12, resultsetAggregateMinMaxGroupByHavingCase: 2}
+	caseCounts := map[string]int{}
+	for _, record := range evidence.JavaTrace.Records {
+		caseCounts[record.Case]++
+	}
+	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
+		t.Fatalf("case record counts = %#v, want %#v", caseCounts, wantCaseCounts)
+	}
+}
+
+func TestRunResultSetAggregateMinMaxGroupByCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-minmax-groupby.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-minmax-groupby.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateMinMaxGroupByJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateMinMaxGroupByJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateMinMaxGroupByJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateMinMaxGroupByJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	scenarioPath := filepath.Join(root, "resultset-aggregate-minmax-groupby.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-minmax-groupby", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+}
+
+func TestRunResultSetAggregateMinMaxGroupByRejectsMalformedScenarioShape(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-minmax-groupby.json")
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(file)
+	closeErr := file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Scenario)
+	}{
+		{name: "missing-field", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].Payload = json.RawMessage(`{"symbol":"DELL","price":0}`)
+		}},
+		{name: "extra-field", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].Payload = json.RawMessage(`{"symbol":"DELL","volume":50,"price":0,"extra":1}`)
+		}},
+		{name: "non-integer", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].Payload = json.RawMessage(`{"symbol":"DELL","volume":50.5,"price":0}`)
+		}},
+		{name: "wrong-symbol", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].Payload = json.RawMessage(`{"symbol":"IBM","volume":50,"price":0}`)
+		}},
+		{name: "extra-case", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps = append(scenario.Steps, compat.Step{Op: "case", Case: "unexpected"})
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			malformed := scenario
+			malformed.Steps = append([]compat.Step(nil), scenario.Steps...)
+			test.mutate(&malformed)
+			if _, err := runResultSetAggregateMinMaxGroupByScenario(context.Background(), malformed); err == nil {
+				t.Fatalf("malformed scenario unexpectedly replayed: %#v", malformed)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateMinMaxGroupByDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["minVol"] = json.Number("999")
+		}},
+		{name: "multi-row-value", mutate: func(trace *compat.Trace) {
+			trace.Records[5].New[1].Fields["maxVol"] = json.Number("999")
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "missing-record", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-minmax-groupby.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-minmax-groupby.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-minmax-groupby.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-minmax-groupby-diff",
 				"-scenario", scenarioPath,
 				"-java-trace", javaTracePath,
 				"-evidence", evidencePath,
