@@ -882,7 +882,8 @@
     "internal/esper/resultset_aggregate_firstlastwindow_prev_nth_parity_test.go",
     "internal/app/parity/resultset_aggregate_firstlastwindow_prev_nth.go",
     "internal/esper/resultset_aggregate_nth_parity_test.go",
-    "internal/app/parity/resultset_aggregate_nth.go"
+    "internal/app/parity/resultset_aggregate_nth.go",
+    "internal/app/parity/resultset_aggregate_sorted_minmax_by.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -907,12 +908,16 @@
     "java-runtime-7e5e6b41dd7cb8e65879",
     "java-runtime-e48086834b488cb35e3c",
     "java-runtime-3733f40a5c6d7be2c175",
-    "java-runtime-1a257602734874ff3fc4"
+    "java-runtime-1a257602734874ff3fc4",
+    "java-runtime-f1f2e402fb4c6783cf33",
+    "java-runtime-7387fafedcfa741088b9",
+    "java-runtime-5609d311148a91227b28"
    ],
    "representativeScenarioIds": [
     "aggregate-firstlastwindow-ext",
     "aggregate-firstlastwindow",
-    "resultset-aggregate-nth"
+    "resultset-aggregate-nth",
+    "resultset-aggregate-sorted-minmax-by"
    ]
   },
   {
@@ -35229,6 +35234,73 @@
     "ResultSetAggregateNTh replays one shared grouped keepall scenario through EPL and SODA lifecycle phases (6 listener records, 0 differences): output-last-every-3 emits new-only rows ordered by theString, with nth indexes 0 and 1 retaining each group's newest and prior values across the nine-event sequence.",
     "The typed Go surface uses Window(KeepAll()), GroupBy, Nth, OutputLastEveryEvents, and projected-row OrderBy. The Go runner validates the exact ten-step SupportBean scenario shape before replay so malformed or broadened inputs cannot pass Go while the pinned Java oracle rejects them."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-sorted-minmax-by",
+   "javaRuntimeIds": [
+    "java-runtime-f1f2e402fb4c6783cf33",
+    "java-runtime-7387fafedcfa741088b9",
+    "java-runtime-5609d311148a91227b28"
+   ],
+   "javaNames": [
+    "ResultSetAggregateGroupedSortedMinMax",
+    "ResultSetAggregateMultipleOverlappingCategories",
+    "ResultSetAggregateMinByMaxByOverWindow"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByRejectsMalformedScenarioShape",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "sorted",
+    "minby",
+    "maxby",
+    "window",
+    "grouped",
+    "multi-criteria",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-sorted-minmax-by.json",
+    "testdata/parity/resultset-aggregate-sorted-minmax-by.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-minmax-by.evidence.json",
+    "tools/java-oracle/ResultSetAggregateSortedMinMaxByScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-sorted-minmax-by.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f1f2e402fb4c6783cf33",
+    "java-runtime-7387fafedcfa741088b9",
+    "java-runtime-5609d311148a91227b28"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-sorted-minmax-by"
+   ],
+   "notes": [
+    "ResultSetAggregateGroupedSortedMinMax, ResultSetAggregateMultipleOverlappingCategories, and ResultSetAggregateMinByMaxByOverWindow replayed through one shared scenario (25 records, 0 differences): grouped length(3) current/sorted/minby/maxby/ever access, overlapping keepall current/ever categories, and length(5) current-vs-ever min/max-by projections through FIFO eviction.",
+    "The typed Go surface uses GroupWindow, SortedEvents, MinBy/MaxBy, MinByEver/MaxByEver, EventValue, and Property. The scenario fixes 25 SupportBean sends across three fresh lifecycles; the runner rejects missing/extra fields, non-integer payloads, and unexpected case markers."
+   ]
   }
  ],
  "mappings": [
@@ -37823,15 +37895,19 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-nth"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-sorted-minmax-by"
   }
  ],
  "summary": {
-  "inventoriedCases": 564,
-  "implementedCases": 562,
-  "differentialVerifiedCases": 176,
-  "differentialVerifiedRuntimeIds": 689,
+  "inventoriedCases": 565,
+  "implementedCases": 563,
+  "differentialVerifiedCases": 177,
+  "differentialVerifiedRuntimeIds": 692,
   "intentionallyDifferentCases": 23,
-  "representativeVerifiedCases": 100,
+  "representativeVerifiedCases": 101,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 118,
   "implementedCapabilities": 117,
@@ -37839,14 +37915,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3312,
-  "referencedJavaRuntimeIds": 3102,
+  "runtimeAssociationCount": 3315,
+  "referencedJavaRuntimeIds": 3103,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1034,
-  "representativeScenarioTotal": 103,
-  "representativeScenarioPassing": 103,
-  "totalCases": 564,
+  "unreferencedJavaRuntimeIds": 1033,
+  "representativeScenarioTotal": 104,
+  "representativeScenarioPassing": 104,
+  "totalCases": 565,
   "totalCapabilities": 118,
-  "differentialVerifiedRuntimeIDs": 689
+  "differentialVerifiedRuntimeIDs": 692
  }
 }

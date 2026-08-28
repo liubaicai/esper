@@ -1,0 +1,3114 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f1f2e402fb4c6783cf33",
+    "java-runtime-7387fafedcfa741088b9",
+    "java-runtime-5609d311148a91227b28"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateGroupedSortedMinMax",
+    "ResultSetAggregateMultipleOverlappingCategories",
+    "ResultSetAggregateMinByMaxByOverWindow"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-sorted-minmax-by",
+    "steps": [
+      {
+        "op": "case",
+        "case": "grouped"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 3,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": -1,
+          "longPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": -1,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 2,
+          "longPrimitive": 2
+        }
+      },
+      {
+        "op": "case",
+        "case": "overlap"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 10,
+          "longPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "P",
+          "intPrimitive": 5,
+          "longPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 7,
+          "longPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 7,
+          "longPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 1,
+          "longPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X",
+          "intPrimitive": 7,
+          "longPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 100,
+          "longPrimitive": 7
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Z",
+          "intPrimitive": 1000,
+          "longPrimitive": 8
+        }
+      },
+      {
+        "op": "case",
+        "case": "over-window"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "longPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "longPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5,
+          "longPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 6,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 7,
+          "longPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 8,
+          "longPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9",
+          "intPrimitive": 9,
+          "longPrimitive": 19
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E10",
+          "intPrimitive": 10,
+          "longPrimitive": 12
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-sorted-minmax-by",
+    "records": [
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 1,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 1,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 1,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "longPrimitive": 1,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 1,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "longPrimitive": 1,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 1,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "longPrimitive": 1,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 1,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "longPrimitive": 1,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 1,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 1,
+                  "theString": "E6"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 1,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 1,
+                  "theString": "E6"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 2,
+                    "theString": "E7"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 2,
+                    "theString": "E7"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 2,
+                    "theString": "E7"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 2,
+                  "theString": "E7"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 2,
+                  "theString": "E7"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 1,
+              "c2": 1,
+              "c3": 1,
+              "c4": 1,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2,
+              "c2": 2,
+              "c3": 1,
+              "c4": 1,
+              "c5": 2,
+              "c6": 2,
+              "c7": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2,
+              "c2": 2,
+              "c3": 1,
+              "c4": 1,
+              "c5": 2,
+              "c6": 2,
+              "c7": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2,
+              "c2": 2,
+              "c3": 4,
+              "c4": 1,
+              "c5": 2,
+              "c6": 2,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2,
+              "c2": 5,
+              "c3": 4,
+              "c4": 1,
+              "c5": 2,
+              "c6": 5,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 6,
+              "c2": 5,
+              "c3": 4,
+              "c4": 1,
+              "c5": 6,
+              "c6": 5,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 7,
+              "c1": 6,
+              "c2": 5,
+              "c3": 4,
+              "c4": 7,
+              "c5": 6,
+              "c6": 5,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 8,
+              "c1": 8,
+              "c2": 5,
+              "c3": 4,
+              "c4": 8,
+              "c5": 8,
+              "c6": 5,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c2": 10,
+              "c3": "E1",
+              "c4": 1,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c6": 10,
+              "c7": "E1",
+              "c8": 1,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 10,
+              "c7": "E1",
+              "c8": 1,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E5",
+              "c4": 5,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "longPrimitive": 20,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E5",
+              "c4": 5,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "longPrimitive": 20,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E4",
+              "c8": 4,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 4,
+                  "longPrimitive": 5,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E5",
+              "c4": 5,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "longPrimitive": 20,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c6": 10,
+              "c7": "E6",
+              "c8": 6,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 6,
+                  "longPrimitive": 10,
+                  "theString": "E6"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E7",
+              "c4": 7,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 7,
+                  "longPrimitive": 20,
+                  "theString": "E7"
+                },
+                "kind": "row"
+              },
+              "c6": 10,
+              "c7": "E6",
+              "c8": 6,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 6,
+                  "longPrimitive": 10,
+                  "theString": "E6"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-sorted-minmax-by",
+    "records": [
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 1,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 1,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 1,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "longPrimitive": 1,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 1,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "longPrimitive": 1,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 1,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "longPrimitive": 1,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 1,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 1,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "longPrimitive": 1,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 1,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": 0,
+                  "longPrimitive": 1,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 1,
+                    "theString": "E6"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 0,
+                    "longPrimitive": 1,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 3,
+                    "longPrimitive": 1,
+                    "theString": "E4"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 1,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 1,
+                  "theString": "E6"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 1,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 1,
+                  "theString": "E6"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 2,
+                    "theString": "E7"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c1": [
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 2,
+                    "theString": "E7"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c2": [
+                {
+                  "fields": {
+                    "intPrimitive": -1,
+                    "longPrimitive": 2,
+                    "theString": "E5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 2,
+                    "longPrimitive": 2,
+                    "theString": "E7"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "c3": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 2,
+                  "theString": "E7"
+                },
+                "kind": "row"
+              },
+              "c4": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 2,
+                  "theString": "E7"
+                },
+                "kind": "row"
+              },
+              "c6": {
+                "fields": {
+                  "intPrimitive": -1,
+                  "longPrimitive": 2,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 1,
+              "c2": 1,
+              "c3": 1,
+              "c4": 1,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2,
+              "c2": 2,
+              "c3": 1,
+              "c4": 1,
+              "c5": 2,
+              "c6": 2,
+              "c7": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2,
+              "c2": 2,
+              "c3": 1,
+              "c4": 1,
+              "c5": 2,
+              "c6": 2,
+              "c7": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2,
+              "c2": 2,
+              "c3": 4,
+              "c4": 1,
+              "c5": 2,
+              "c6": 2,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2,
+              "c2": 5,
+              "c3": 4,
+              "c4": 1,
+              "c5": 2,
+              "c6": 5,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 6,
+              "c2": 5,
+              "c3": 4,
+              "c4": 1,
+              "c5": 6,
+              "c6": 5,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 7,
+              "c1": 6,
+              "c2": 5,
+              "c3": 4,
+              "c4": 7,
+              "c5": 6,
+              "c6": 5,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "overlap",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 8,
+              "c1": 8,
+              "c2": 5,
+              "c3": 4,
+              "c4": 8,
+              "c5": 8,
+              "c6": 5,
+              "c7": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c2": 10,
+              "c3": "E1",
+              "c4": 1,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c6": 10,
+              "c7": "E1",
+              "c8": 1,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 10,
+              "c7": "E1",
+              "c8": 1,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "longPrimitive": 10,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E2",
+              "c4": 2,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E5",
+              "c4": 5,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "longPrimitive": 20,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E3",
+              "c8": 3,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E5",
+              "c4": 5,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "longPrimitive": 20,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c6": 5,
+              "c7": "E4",
+              "c8": 4,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 4,
+                  "longPrimitive": 5,
+                  "theString": "E4"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E5",
+              "c4": 5,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 5,
+                  "longPrimitive": 20,
+                  "theString": "E5"
+                },
+                "kind": "row"
+              },
+              "c6": 10,
+              "c7": "E6",
+              "c8": 6,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 6,
+                  "longPrimitive": 10,
+                  "theString": "E6"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "over-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "intPrimitive": 2,
+                  "longPrimitive": 20,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "intPrimitive": 3,
+                  "longPrimitive": 5,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "c2": 20,
+              "c3": "E7",
+              "c4": 7,
+              "c5": {
+                "fields": {
+                  "intPrimitive": 7,
+                  "longPrimitive": 20,
+                  "theString": "E7"
+                },
+                "kind": "row"
+              },
+              "c6": 10,
+              "c7": "E6",
+              "c8": 6,
+              "c9": {
+                "fields": {
+                  "intPrimitive": 6,
+                  "longPrimitive": 10,
+                  "theString": "E6"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
