@@ -1,0 +1,243 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f1fedff9a25cca57fefa"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMinMax.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateMinMaxNoDataWindowSubquery"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-minmax-no-data-window-subquery",
+    "steps": [
+      {
+        "op": "case",
+        "case": "no-data-window-subquery"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 5
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-minmax-no-data-window-subquery",
+    "records": [
+      {
+        "case": "no-data-window-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "max0": {
+                "state": "null"
+              },
+              "maxi": 3,
+              "min0": {
+                "state": "null"
+              },
+              "mini": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-data-window-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "max0": {
+                "state": "null"
+              },
+              "maxi": 4,
+              "min0": {
+                "state": "null"
+              },
+              "mini": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-data-window-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "max0": 2,
+              "maxi": 4,
+              "min0": 2,
+              "mini": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-data-window-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "max0": 1,
+              "maxi": 5,
+              "min0": 1,
+              "mini": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-minmax-no-data-window-subquery",
+    "records": [
+      {
+        "case": "no-data-window-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "max0": {
+                "state": "null"
+              },
+              "maxi": 3,
+              "min0": {
+                "state": "null"
+              },
+              "mini": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-data-window-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "max0": {
+                "state": "null"
+              },
+              "maxi": 4,
+              "min0": {
+                "state": "null"
+              },
+              "mini": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-data-window-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "max0": 2,
+              "maxi": 4,
+              "min0": 2,
+              "mini": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "no-data-window-subquery",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "max0": 1,
+              "maxi": 5,
+              "min0": 1,
+              "mini": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

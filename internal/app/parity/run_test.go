@@ -19921,3 +19921,260 @@ func TestRunResultSetAggregateMedianAndDeviationCheckedInEvidenceMatchesTraceAnd
 		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
 	}
 }
+
+func TestRunResultSetAggregateMinMaxNoDataWindowSubqueryDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := filepath.Join(t.TempDir(), "resultset-aggregate-minmax-no-data-window-subquery.java.trace.json")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-minmax-no-data-window-subquery.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(javaTracePath, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-minmax-no-data-window-subquery.evidence.json")
+	scenarioPath := filepath.Join(root, "resultset-aggregate-minmax-no-data-window-subquery.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-minmax-no-data-window-subquery-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	evidenceData, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(evidenceData))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", evidenceData, stdout.String())
+	}
+	if evidence.JavaCommit != resultsetAggregateMinMaxNoDataWindowSubqueryJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateMinMaxNoDataWindowSubqueryJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateMinMaxNoDataWindowSubqueryJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateMinMaxNoDataWindowSubqueryJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	if len(evidence.JavaTrace.Records) != 4 {
+		t.Fatalf("Java trace records = %d, want 4", len(evidence.JavaTrace.Records))
+	}
+	for index, record := range evidence.JavaTrace.Records {
+		if record.Case != resultsetAggregateMinMaxNoDataWindowSubqueryCase || record.Operation != "listener" || record.Statement != "s0" || record.Sequence != uint64(index+1) || len(record.New) != 1 || len(record.Old) != 0 {
+			t.Fatalf("record %d = %#v", index, record)
+		}
+	}
+}
+
+func TestRunResultSetAggregateMinMaxNoDataWindowSubqueryDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["maxi"] = json.Number("999")
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "null-state", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["max0"] = json.Number("0")
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t, filepath.Join(root, "resultset-aggregate-minmax-no-data-window-subquery.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-minmax-no-data-window-subquery.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-minmax-no-data-window-subquery-diff",
+				"-scenario", filepath.Join(root, "resultset-aggregate-minmax-no-data-window-subquery.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateMinMaxNoDataWindowSubqueryRejectsMalformedScenarioShape(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-minmax-no-data-window-subquery.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-minmax-no-data-window-subquery"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-minmax-no-data-window-subquery"`)...), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 3`), []byte(`"intPrimitive": 3, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 3`), []byte(`"intPrimitive": 3, "intPrimitive": 4`), 1)
+		}},
+		{name: "wrong-event-order", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_S0"`), []byte(`"eventType": "SupportBean"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(data, []byte(` {}`)...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(path, test.mutate(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-aggregate-minmax-no-data-window-subquery", "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateMinMaxNoDataWindowSubqueryCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-minmax-no-data-window-subquery.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-minmax-no-data-window-subquery.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateMinMaxNoDataWindowSubqueryJavaCommit || !reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateMinMaxNoDataWindowSubqueryJavaRuntimeIDs) || !reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateMinMaxNoDataWindowSubqueryJavaSources) || !reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateMinMaxNoDataWindowSubqueryJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	scenarioPath := filepath.Join(root, "resultset-aggregate-minmax-no-data-window-subquery.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-minmax-no-data-window-subquery", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+}
+
+func TestRunResultSetAggregateMinMaxNoDataWindowSubqueryRejectsInt32OverflowAndSwappedS0(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-minmax-no-data-window-subquery.json")
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateMinMaxNoDataWindowSubqueryScenario(file)
+	_ = file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Scenario)
+	}{
+		{"overflow", func(s *compat.Scenario) {
+			s.Steps[1].Payload = json.RawMessage(`{"theString":"E1","intPrimitive":2147483648}`)
+		}},
+		{"swapped-s0", func(s *compat.Scenario) {
+			s.Steps[3].Payload, s.Steps[5].Payload = s.Steps[5].Payload, s.Steps[3].Payload
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			malformed := scenario
+			malformed.Steps = append([]compat.Step(nil), scenario.Steps...)
+			tc.mutate(&malformed)
+			if _, err := runResultSetAggregateMinMaxNoDataWindowSubqueryScenario(context.Background(), malformed); err == nil {
+				t.Fatal("malformed scenario unexpectedly replayed")
+			}
+		})
+	}
+}

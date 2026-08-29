@@ -1,0 +1,28 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-minmax-no-data-window-subquery",
+  "description": "ResultSetAggregateMinMax ordinal 0 NoDataWindowSubquery: unbounded SupportBean max/min plus scalar last-event SupportBean_S0 max/min. S0 updates alone produce no callback; four SupportBean events produce new-only rows.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMinMax.java",
+  "javaRuntimes": ["java-runtime-f1fedff9a25cca57fefa"],
+  "javaNames": ["ResultSetAggregateMinMaxNoDataWindowSubquery"],
+  "javaStaticIds": ["java-347fe4c3739663bf45c4"],
+  "javaFlags": ["EXCLUDEWHENINSTRUMENTED"],
+  "cases": [{
+    "case": "no-data-window-subquery",
+    "ordinal": 0,
+    "runtimeId": "java-runtime-f1fedff9a25cca57fefa",
+    "executionName": "ResultSetAggregateMinMaxNoDataWindowSubquery",
+    "observation": "listener",
+    "epl": "@name('s0') select max(intPrimitive) as maxi, min(intPrimitive) as mini,(select max(id) from SupportBean_S0#lastevent) as max0, (select min(id) from SupportBean_S0#lastevent) as min0 from SupportBean"
+  }],
+  "steps": [
+    {"op": "case", "case": "no-data-window-subquery"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 3}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 4}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 2}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 4}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 5}}
+  ]
+}

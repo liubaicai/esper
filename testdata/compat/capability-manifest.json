@@ -4132,7 +4132,8 @@
     "ResultSetAggregateMinMaxViewCompile",
     "ResultSetAggregateMinMaxJoin",
     "ResultSetAggregateMinNoGroupSelectHaving",
-    "ResultSetAggregateMedianAndDeviation"
+    "ResultSetAggregateMedianAndDeviation",
+    "ResultSetAggregateMinMaxNoDataWindowSubquery"
    ],
    "goRefs": [
     "internal/esper/resultset_aggregate_parity_test.go",
@@ -4185,13 +4186,14 @@
     "internal/app/parity/resultset_aggregate_minmax_groupby_join_select_having.go",
     "internal/app/parity/run_test.go",
     "internal/app/parity/resultset_aggregate_median_deviation.go",
+    "internal/app/parity/resultset_aggregate_minmax_no_data_window_subquery.go",
     "internal/esper/expr.go",
     "internal/esper/runtime.go"
    ],
    "phase": 2,
    "status": "differential-verified",
    "remaining": [
-    "ResultSetAggregateMinMax suite (subquery/named-window variants)",
+    "ResultSetAggregateMinMax suite named-window variants",
     "ResultSetOrderBy* suites",
     "ResultSetOutputLimit* suites",
     "ResultSetQueryType* suites"
@@ -4249,7 +4251,8 @@
     "java-runtime-060f5af73edf420ef45a",
     "java-runtime-101db664ea346721e986",
     "java-runtime-2f533a8a1bc0d93ae649",
-    "java-runtime-2667a7eadeb7a458d7ce"
+    "java-runtime-2667a7eadeb7a458d7ce",
+    "java-runtime-f1fedff9a25cca57fefa"
    ],
    "representativeScenarioIds": [
     "output-policy-iterator",
@@ -4275,6 +4278,10 @@
     "output-first-having",
     "resultset-grouped-time-window",
     "resultset-row-per-group-simple"
+   ],
+   "notes": [
+    "ResultSetAggregateMinMaxNoDataWindowSubquery replays one fixed unbounded SupportBean aggregate with a scalar SupportBean_S0 last-event subquery (4 Java/Go records, 0 differences): SupportBean min/max updates emit new-only rows, S0 updates remain silent, and the empty scalar subquery normalizes as Null.",
+    "The typed Go surface uses unbounded Min/Max plus SubqueryValue over a LastEvent window. The scenario, runner and Java oracle pin metadata, event order, callback values, Null state, timestamps and record count; malformed scenario fields, duplicate JSON keys, payload errors and trace mutations are rejected."
    ]
   },
   {
@@ -35742,6 +35749,69 @@
     "ResultSetAggregateStmt, ResultSetAggregateStmtJoinOM, and ResultSetAggregateStmtJoin replay one deterministic grouped median/deviation scenario (21 Java/Go records, 0 differences): filtered length(5) irstream median(all), median(distinct), sample stddev, and avedev over the DELL price sequence 10,20,20,90,5,90,30; the two join executions use matching DELL/IBM/AAA seeds.",
     "The typed Go surface uses Median, DistinctAggregate, StdDev, Avedev, GroupBy, and source-indexed JoinField. The Java source's separate NaN-sensitivity redeployment is covered by TestResultSetAggregateMedianAndDeviationStdDevNaNPoisoning; it is intentionally outside the finite JSON trace, while runner and oracle validators reject malformed fields, values, case order, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-minmax-no-data-window-subquery",
+   "javaRuntimeIds": [
+    "java-runtime-f1fedff9a25cca57fefa"
+   ],
+   "javaStaticIds": [
+    "java-347fe4c3739663bf45c4"
+   ],
+   "javaNames": [
+    "ResultSetAggregateMinMaxNoDataWindowSubquery"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMinMax.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNoDataWindowSubqueryDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNoDataWindowSubqueryCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNoDataWindowSubqueryRejectsMalformedScenarioShape",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNoDataWindowSubqueryDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNoDataWindowSubqueryRejectsInt32OverflowAndSwappedS0"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "min",
+    "max",
+    "subquery",
+    "scalar",
+    "last-event",
+    "null-handling",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-minmax-no-data-window-subquery.json",
+    "testdata/parity/resultset-aggregate-minmax-no-data-window-subquery.trace.json",
+    "testdata/parity/resultset-aggregate-minmax-no-data-window-subquery.go.trace.json",
+    "testdata/parity/resultset-aggregate-minmax-no-data-window-subquery.evidence.json",
+    "tools/java-oracle/ResultSetAggregateMinMaxNoDataWindowSubqueryScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-minmax-no-data-window-subquery.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f1fedff9a25cca57fefa"
+   ],
+   "notes": [
+    "ResultSetAggregateMinMaxNoDataWindowSubquery replays one fixed unbounded SupportBean aggregate with a scalar SupportBean_S0 last-event subquery (4 Java/Go records, 0 differences): SupportBean min/max updates emit new-only rows, S0 updates remain silent, and the empty scalar subquery normalizes as Null.",
+    "The typed Go surface uses unbounded Min/Max plus SubqueryValue over a LastEvent window. The scenario, runner and Java oracle pin metadata, event order, callback values, Null state, timestamps and record count; malformed scenario fields, duplicate JSON keys, payload errors and trace mutations are rejected."
+   ]
   }
  ],
  "mappings": [
@@ -38364,13 +38434,17 @@
   {
    "capabilityId": "resultset.aggregate-group-by",
    "caseId": "case.resultset-aggregate-median-and-deviation"
+  },
+  {
+   "capabilityId": "resultset.aggregate-group-by",
+   "caseId": "case.resultset-aggregate-minmax-no-data-window-subquery"
   }
  ],
  "summary": {
-  "inventoriedCases": 571,
-  "implementedCases": 569,
-  "differentialVerifiedCases": 184,
-  "differentialVerifiedRuntimeIds": 708,
+  "inventoriedCases": 572,
+  "implementedCases": 570,
+  "differentialVerifiedCases": 185,
+  "differentialVerifiedRuntimeIds": 709,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -38380,14 +38454,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3329,
-  "referencedJavaRuntimeIds": 3116,
+  "runtimeAssociationCount": 3330,
+  "referencedJavaRuntimeIds": 3117,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1020,
+  "unreferencedJavaRuntimeIds": 1019,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 571,
+  "totalCases": 572,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 708
+  "differentialVerifiedRuntimeIDs": 709
  }
 }
