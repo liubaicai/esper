@@ -1,0 +1,111 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-minmax-named-window-wever",
+  "description": "ResultSetAggregateMinMax ordinals 2-3 NamedWindowWEver: public length(2) named window min/max current plus minever/maxever; four SupportBean sends produce new-only rows and length eviction changes current extrema while ever values retain the first event.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMinMax.java",
+  "javaRuntimes": [
+    "java-runtime-7d0a94525b0038b397fd",
+    "java-runtime-840f1ca5610dd00d3ec0"
+  ],
+  "javaNames": [
+    "ResultSetAggregateMinMaxNamedWindowWEver{soda=false}",
+    "ResultSetAggregateMinMaxNamedWindowWEver{soda=true}"
+  ],
+  "javaStaticIds": [
+    "java-09115f6e876ce88a42f9"
+  ],
+  "javaFlags": ["EXCLUDEWHENINSTRUMENTED"],
+  "cases": [
+    {
+      "case": "named-window-wever-soda-false",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-7d0a94525b0038b397fd",
+      "executionName": "ResultSetAggregateMinMaxNamedWindowWEver{soda=false}",
+      "observation": "listener",
+      "epl": "@name('s0') select min(intPrimitive) as lower, max(intPrimitive) as upper, minever(intPrimitive) as lowerever, maxever(intPrimitive) as upperever from NamedWindow5m"
+    },
+    {
+      "case": "named-window-wever-soda-true",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-840f1ca5610dd00d3ec0",
+      "executionName": "ResultSetAggregateMinMaxNamedWindowWEver{soda=true}",
+      "observation": "listener",
+      "epl": "@name('s0') select min(intPrimitive) as lower, max(intPrimitive) as upper, minever(intPrimitive) as lowerever, maxever(intPrimitive) as upperever from NamedWindow5m"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "named-window-wever-soda-false"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 6
+      }
+    },
+    {
+      "op": "case",
+      "case": "named-window-wever-soda-true"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 5
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 6
+      }
+    }
+  ]
+}

@@ -34,7 +34,7 @@ func TestRunHelpSucceeds(t *testing.T) {
 	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
 	}
-	for _, mode := range []string{"resultset-aggregate-median-and-deviation", "resultset-aggregate-median-and-deviation-diff", "resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff", "resultset-aggregate-minmax-groupby-om-viewcompile", "resultset-aggregate-minmax-groupby-om-viewcompile-diff", "resultset-aggregate-minmax-groupby-join-select-having", "resultset-aggregate-minmax-groupby-join-select-having-diff"} {
+	for _, mode := range []string{"resultset-aggregate-median-and-deviation", "resultset-aggregate-median-and-deviation-diff", "resultset-aggregate-minmax-named-window-wever", "resultset-aggregate-minmax-named-window-wever-diff", "resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff", "resultset-aggregate-minmax-groupby-om-viewcompile", "resultset-aggregate-minmax-groupby-om-viewcompile-diff", "resultset-aggregate-minmax-groupby-join-select-having", "resultset-aggregate-minmax-groupby-join-select-having-diff"} {
 		if !strings.Contains(stderr.String(), mode) {
 			t.Fatalf("help output omits %q: %s", mode, stderr.String())
 		}
@@ -20174,6 +20174,290 @@ func TestRunResultSetAggregateMinMaxNoDataWindowSubqueryRejectsInt32OverflowAndS
 			tc.mutate(&malformed)
 			if _, err := runResultSetAggregateMinMaxNoDataWindowSubqueryScenario(context.Background(), malformed); err == nil {
 				t.Fatal("malformed scenario unexpectedly replayed")
+			}
+		})
+	}
+}
+func TestRunResultSetAggregateMinMaxNamedWindowWEverDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join(root, "resultset-aggregate-minmax-named-window-wever.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-minmax-named-window-wever.evidence.json")
+	scenarioPath := filepath.Join(root, "resultset-aggregate-minmax-named-window-wever.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-minmax-named-window-wever-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if !reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateMinMaxNamedWindowWEverJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateMinMaxNamedWindowWEverJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateMinMaxNamedWindowWEverJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	if len(evidence.JavaTrace.Records) != 8 {
+		t.Fatalf("Java trace records = %d, want 8", len(evidence.JavaTrace.Records))
+	}
+	wantCaseCounts := map[string]int{
+		resultsetAggregateMinMaxNamedWindowWEverCases[0]: 4,
+		resultsetAggregateMinMaxNamedWindowWEverCases[1]: 4,
+	}
+	caseCounts := map[string]int{}
+	for _, record := range evidence.JavaTrace.Records {
+		caseCounts[record.Case]++
+	}
+	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
+		t.Fatalf("case record counts = %#v, want %#v", caseCounts, wantCaseCounts)
+	}
+}
+
+func TestRunResultSetAggregateMinMaxNamedWindowWEverDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["lower"] = json.Number("999")
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "null-state", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["lower"] = map[string]any{"state": "null"}
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-aggregate-minmax-named-window-wever.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-minmax-named-window-wever.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-minmax-named-window-wever-diff",
+				"-scenario", filepath.Join(root, "resultset-aggregate-minmax-named-window-wever.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateMinMaxNamedWindowWEverRejectsMalformedScenarioShape(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-minmax-named-window-wever.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-minmax-named-window-wever"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-minmax-named-window-wever"`)...), 1)
+		}},
+		{name: "java-commit-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 2`), []byte(`"ordinal": 3`), 1)
+		}},
+		{name: "java-flags-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": ["EXCLUDEWHENINSTRUMENTED"]`), []byte(`"javaFlags": []`), 1)
+		}},
+		{name: "step-extra", mutate: func(data []byte) []byte {
+			needle := []byte("\"op\": \"case\",\n      \"case\": \"named-window-wever-soda-false\"\n    }")
+			replacement := []byte("\"op\": \"case\",\n      \"case\": \"named-window-wever-soda-false\", \"extra\": 0\n    }")
+			return bytes.Replace(data, needle, replacement, 1)
+		}},
+		{name: "step-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte("\"op\": \"case\",\n      \"case\": \"named-window-wever-soda-false\"\n    }")
+			replacement := []byte("\"op\": \"case\",\n      \"case\": \"named-window-wever-soda-false\", \"case\": \"named-window-wever-soda-false\"\n    }")
+			return bytes.Replace(data, needle, replacement, 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1, "intPrimitive": 2`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			path := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(path, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-aggregate-minmax-named-window-wever", "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateMinMaxNamedWindowWEverCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-minmax-named-window-wever.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-minmax-named-window-wever.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateMinMaxNamedWindowWEverJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateMinMaxNamedWindowWEverJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateMinMaxNamedWindowWEverJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateMinMaxNamedWindowWEverJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	scenarioPath := filepath.Join(root, "resultset-aggregate-minmax-named-window-wever.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateMinMaxNamedWindowWEverScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-minmax-named-window-wever", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+}
+
+func TestRunResultSetAggregateMinMaxNamedWindowWEverRejectsInt32OverflowAndWrongEvent(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-minmax-named-window-wever.json")
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateMinMaxNamedWindowWEverScenario(file)
+	closeErr := file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Scenario)
+	}{
+		{name: "overflow", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].Payload = json.RawMessage(`{"theString":null,"intPrimitive":2147483648}`)
+		}},
+		{name: "wrong-event", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].EventType = "SupportBeanString"
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			malformed := scenario
+			malformed.Steps = append([]compat.Step(nil), scenario.Steps...)
+			test.mutate(&malformed)
+			if _, err := runResultSetAggregateMinMaxNamedWindowWEverScenario(context.Background(), malformed); err == nil {
+				t.Fatalf("malformed scenario %q unexpectedly replayed", test.name)
 			}
 		})
 	}

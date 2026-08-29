@@ -24,11 +24,11 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, resultset-aggregate-minmax-no-data-window-subquery, resultset-aggregate-minmax-no-data-window-subquery-diff, expr-core-bitwise, expr-core-bitwise-diff, expr-core-logical, expr-core-logical-diff, expr-core-coalesce, expr-core-coalesce-diff, expr-core-relop, expr-core-relop-diff, expr-core-like-regexp, expr-core-like-regexp-diff, expr-core-in-between, expr-core-in-between-diff, expr-core-equals-is, expr-core-equals-is-diff, expr-core-case, expr-core-case-diff, expr-core-instanceof, expr-core-instanceof-diff, expr-core-type-name, expr-core-type-name-diff, expr-core-exists-cast, expr-core-exists-cast-diff, expr-core-current-timestamp, expr-core-current-timestamp-diff, expr-dt-between, expr-dt-between-diff, filter-window-aggregate, filter-window-aggregate-diff, join-length-window, join-length-window-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, resultset-aggregate-minmax-no-data-window-subquery, resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever, resultset-aggregate-minmax-named-window-wever-diff, expr-core-bitwise, expr-core-bitwise-diff, expr-core-logical, expr-core-logical-diff, expr-core-coalesce, expr-core-coalesce-diff, expr-core-relop, expr-core-relop-diff, expr-core-like-regexp, expr-core-like-regexp-diff, expr-core-in-between, expr-core-in-between-diff, expr-core-equals-is, expr-core-equals-is-diff, expr-core-case, expr-core-case-diff, expr-core-instanceof, expr-core-instanceof-diff, expr-core-type-name, expr-core-type-name-diff, expr-core-exists-cast, expr-core-exists-cast-diff, expr-core-current-timestamp, expr-core-current-timestamp-diff, …")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -50,6 +50,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetAggregateSortedMultiCriteriaScenario(file)
 	} else if *mode == "resultset-aggregate-median-and-deviation" || *mode == "resultset-aggregate-median-and-deviation-diff" {
 		scenario, err = loadResultSetAggregateMedianAndDeviationScenario(file)
+	} else if *mode == "resultset-aggregate-minmax-named-window-wever" || *mode == "resultset-aggregate-minmax-named-window-wever-diff" {
+		scenario, err = loadResultSetAggregateMinMaxNamedWindowWEverScenario(file)
 	} else if *mode == "resultset-aggregate-minmax-no-data-window-subquery" || *mode == "resultset-aggregate-minmax-no-data-window-subquery-diff" {
 		scenario, err = loadResultSetAggregateMinMaxNoDataWindowSubqueryScenario(file)
 	} else {
@@ -926,6 +928,21 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		if *mode == "resultset-aggregate-minmax-no-data-window-subquery-diff" {
 			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetAggregateMinMaxNoDataWindowSubqueryJavaCommit, resultsetAggregateMinMaxNoDataWindowSubqueryJavaRuntimeIDs, resultsetAggregateMinMaxNoDataWindowSubqueryJavaSources, resultsetAggregateMinMaxNoDataWindowSubqueryJavaExecutions, scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-minmax-named-window-wever" || *mode == "resultset-aggregate-minmax-named-window-wever-diff" {
+		trace, err := runResultSetAggregateMinMaxNamedWindowWEverScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-minmax-named-window-wever-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetAggregateMinMaxNamedWindowWEverJavaCommit,
+				resultsetAggregateMinMaxNamedWindowWEverJavaRuntimeIDs, resultsetAggregateMinMaxNamedWindowWEverJavaSources,
+				resultsetAggregateMinMaxNamedWindowWEverJavaExecutions, scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

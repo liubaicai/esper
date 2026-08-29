@@ -4133,7 +4133,8 @@
     "ResultSetAggregateMinMaxJoin",
     "ResultSetAggregateMinNoGroupSelectHaving",
     "ResultSetAggregateMedianAndDeviation",
-    "ResultSetAggregateMinMaxNoDataWindowSubquery"
+    "ResultSetAggregateMinMaxNoDataWindowSubquery",
+    "ResultSetAggregateMinMaxNamedWindowWEver"
    ],
    "goRefs": [
     "internal/esper/resultset_aggregate_parity_test.go",
@@ -4187,13 +4188,13 @@
     "internal/app/parity/run_test.go",
     "internal/app/parity/resultset_aggregate_median_deviation.go",
     "internal/app/parity/resultset_aggregate_minmax_no_data_window_subquery.go",
+    "internal/app/parity/resultset_aggregate_minmax_named_window_wever.go",
     "internal/esper/expr.go",
     "internal/esper/runtime.go"
    ],
    "phase": 2,
    "status": "differential-verified",
    "remaining": [
-    "ResultSetAggregateMinMax suite named-window variants",
     "ResultSetOrderBy* suites",
     "ResultSetOutputLimit* suites",
     "ResultSetQueryType* suites"
@@ -4252,7 +4253,9 @@
     "java-runtime-101db664ea346721e986",
     "java-runtime-2f533a8a1bc0d93ae649",
     "java-runtime-2667a7eadeb7a458d7ce",
-    "java-runtime-f1fedff9a25cca57fefa"
+    "java-runtime-f1fedff9a25cca57fefa",
+    "java-runtime-7d0a94525b0038b397fd",
+    "java-runtime-840f1ca5610dd00d3ec0"
    ],
    "representativeScenarioIds": [
     "output-policy-iterator",
@@ -4281,7 +4284,8 @@
    ],
    "notes": [
     "ResultSetAggregateMinMaxNoDataWindowSubquery replays one fixed unbounded SupportBean aggregate with a scalar SupportBean_S0 last-event subquery (4 Java/Go records, 0 differences): SupportBean min/max updates emit new-only rows, S0 updates remain silent, and the empty scalar subquery normalizes as Null.",
-    "The typed Go surface uses unbounded Min/Max plus SubqueryValue over a LastEvent window. The scenario, runner and Java oracle pin metadata, event order, callback values, Null state, timestamps and record count; malformed scenario fields, duplicate JSON keys, payload errors and trace mutations are rejected."
+    "The typed Go surface uses unbounded Min/Max plus SubqueryValue over a LastEvent window. The scenario, runner and Java oracle pin metadata, event order, callback values, Null state, timestamps and record count; malformed scenario fields, duplicate JSON keys, payload errors and trace mutations are rejected.",
+    "ResultSetAggregateMinMaxNamedWindowWEver{soda=false} and {soda=true} replay a deterministic public length(2) named-window scenario (8 Java/Go records, 0 differences): current min/max change after FIFO eviction while minever/maxever retain the first value."
    ]
   },
   {
@@ -35812,6 +35816,71 @@
     "ResultSetAggregateMinMaxNoDataWindowSubquery replays one fixed unbounded SupportBean aggregate with a scalar SupportBean_S0 last-event subquery (4 Java/Go records, 0 differences): SupportBean min/max updates emit new-only rows, S0 updates remain silent, and the empty scalar subquery normalizes as Null.",
     "The typed Go surface uses unbounded Min/Max plus SubqueryValue over a LastEvent window. The scenario, runner and Java oracle pin metadata, event order, callback values, Null state, timestamps and record count; malformed scenario fields, duplicate JSON keys, payload errors and trace mutations are rejected."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-minmax-named-window-wever",
+   "javaRuntimeIds": [
+    "java-runtime-7d0a94525b0038b397fd",
+    "java-runtime-840f1ca5610dd00d3ec0"
+   ],
+   "javaStaticIds": [
+    "java-09115f6e876ce88a42f9"
+   ],
+   "javaNames": [
+    "ResultSetAggregateMinMaxNamedWindowWEver{soda=false}",
+    "ResultSetAggregateMinMaxNamedWindowWEver{soda=true}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMinMax.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNamedWindowWEverDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNamedWindowWEverCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNamedWindowWEverRejectsMalformedScenarioShape",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNamedWindowWEverDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxNamedWindowWEverRejectsInt32OverflowAndWrongEvent"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "min",
+    "max",
+    "ever",
+    "named-window",
+    "length-window",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-minmax-named-window-wever.json",
+    "testdata/parity/resultset-aggregate-minmax-named-window-wever.trace.json",
+    "testdata/parity/resultset-aggregate-minmax-named-window-wever.go.trace.json",
+    "testdata/parity/resultset-aggregate-minmax-named-window-wever.evidence.json",
+    "tools/java-oracle/ResultSetAggregateMinMaxNamedWindowWEverScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-minmax-named-window-wever.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7d0a94525b0038b397fd",
+    "java-runtime-840f1ca5610dd00d3ec0"
+   ],
+   "notes": [
+    "ResultSetAggregateMinMaxNamedWindowWEver{soda=false} and {soda=true} replay one deterministic public length(2) named-window scenario (8 Java/Go records, 0 differences): current min/max change after FIFO eviction while minever/maxever retain the first value.",
+    "The typed Go surface uses NamedWindowRetention(LengthWindow(2)), InsertIntoNamedWindow, FromNamedWindowAs, and typed Min/Max/MinEver/MaxEver. The SODA representation path is covered by the Java oracle only; runner and oracle validators reject malformed metadata, duplicate fields, payload errors, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -38438,13 +38507,17 @@
   {
    "capabilityId": "resultset.aggregate-group-by",
    "caseId": "case.resultset-aggregate-minmax-no-data-window-subquery"
+  },
+  {
+   "capabilityId": "resultset.aggregate-group-by",
+   "caseId": "case.resultset-aggregate-minmax-named-window-wever"
   }
  ],
  "summary": {
-  "inventoriedCases": 572,
-  "implementedCases": 570,
-  "differentialVerifiedCases": 185,
-  "differentialVerifiedRuntimeIds": 709,
+  "inventoriedCases": 573,
+  "implementedCases": 571,
+  "differentialVerifiedCases": 186,
+  "differentialVerifiedRuntimeIds": 711,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -38454,14 +38527,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3330,
-  "referencedJavaRuntimeIds": 3117,
+  "runtimeAssociationCount": 3332,
+  "referencedJavaRuntimeIds": 3119,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1019,
+  "unreferencedJavaRuntimeIds": 1017,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 572,
+  "totalCases": 573,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 709
+  "differentialVerifiedRuntimeIDs": 711
  }
 }
