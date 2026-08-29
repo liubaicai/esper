@@ -1,0 +1,80 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-median-and-deviation",
+  "description": "ResultSetAggregateMedianAndDeviation ordinals 0-2: grouped and join median, distinct median, sample stddev, and avedev over the finite DELL price sequence 10,20,20,90,5,90,30. The source NaN sensitivity phase is covered by a focused Go semantic test and is not represented in JSON.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateMedianAndDeviation.java",
+  "javaRuntimes": [
+    "java-runtime-101db664ea346721e986",
+    "java-runtime-2f533a8a1bc0d93ae649",
+    "java-runtime-2667a7eadeb7a458d7ce"
+  ],
+  "javaNames": [
+    "ResultSetAggregateStmt",
+    "ResultSetAggregateStmtJoinOM",
+    "ResultSetAggregateStmtJoin"
+  ],
+  "javaStaticIds": [
+    "java-b11b233b0ea7da05217f",
+    "java-66a516ce6e14456627b2",
+    "java-a5c65b307ecdb2d0355b"
+  ],
+  "cases": [
+    {
+      "case": "stmt-main",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-101db664ea346721e986",
+      "executionName": "ResultSetAggregateStmt",
+      "observation": "listener",
+      "epl": "@name('s0') select irstream symbol,median(all price) as myMedian,median(distinct price) as myDistMedian,stddev(all price) as myStdev,avedev(all price) as myAvedev from SupportMarketDataBean#length(5) where symbol='DELL' or symbol='IBM' or symbol='GE' group by symbol"
+    },
+    {
+      "case": "join-om",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-2f533a8a1bc0d93ae649",
+      "executionName": "ResultSetAggregateStmtJoinOM",
+      "observation": "listener",
+      "epl": "select irstream symbol, median(price) as myMedian, median(distinct price) as myDistMedian, stddev(price) as myStdev, avedev(price) as myAvedev from SupportBeanString#length(100) as one, SupportMarketDataBean#length(5) as two where (symbol=\"DELL\" or symbol=\"IBM\" or symbol=\"GE\") and one.theString=two.symbol group by symbol"
+    },
+    {
+      "case": "join-epl",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-2667a7eadeb7a458d7ce",
+      "executionName": "ResultSetAggregateStmtJoin",
+      "observation": "listener",
+      "epl": "@name('s0') select irstream symbol,median(price) as myMedian,median(distinct price) as myDistMedian,stddev(price) as myStdev,avedev(price) as myAvedev from SupportBeanString#length(100) as one, SupportMarketDataBean#length(5) as two where (symbol='DELL' or symbol='IBM' or symbol='GE')        and one.theString = two.symbol group by symbol"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "stmt-main"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 10, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 20, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 20, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 90, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 5, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 90, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 30, "volume": 0}},
+    {"op": "case", "case": "join-om"},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DELL"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "AAA"}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 10, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 20, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 20, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 90, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 5, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 90, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 30, "volume": 0}},
+    {"op": "case", "case": "join-epl"},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DELL"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "AAA"}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 10, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 20, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 20, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 90, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 5, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 90, "volume": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 30, "volume": 0}}
+  ]
+}

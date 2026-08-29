@@ -4650,27 +4650,232 @@ func Median[T Numeric](expression Expression[T]) AggregateExpression[float64] {
 	})
 }
 
+type aggregateStdDevEntry struct {
+	event Event
+	value Value
+}
+
+type aggregateStdDevAccumulator struct {
+	entries     []aggregateStdDevEntry
+	mean        float64
+	qn          float64
+	count       int64
+	initialized bool
+}
+
+func (s *aggregateStdDevAccumulator) enter(value Value) {
+	if s == nil {
+		return
+	}
+	number, ok := numericValue(value)
+	if !ok {
+		return
+	}
+	if s.count == 0 {
+		s.mean = number
+		s.qn = 0
+		s.count = 1
+		return
+	}
+	s.count++
+	oldMean := s.mean
+	s.mean += (number - oldMean) / float64(s.count)
+	s.qn += (number - oldMean) * (number - s.mean)
+}
+
+func (s *aggregateStdDevAccumulator) leave(value Value) {
+	if s == nil {
+		return
+	}
+	number, ok := numericValue(value)
+	if !ok {
+		return
+	}
+	if s.count <= 1 {
+		s.mean = 0
+		s.qn = 0
+		s.count = 0
+		return
+	}
+	s.count--
+	oldMean := s.mean
+	s.mean -= (number - s.mean) / float64(s.count)
+	s.qn -= (number - oldMean) * (number - s.mean)
+}
+
+func (s *aggregateStdDevAccumulator) clear() {
+	if s == nil {
+		return
+	}
+	s.entries = nil
+	s.mean = 0
+	s.qn = 0
+	s.count = 0
+	s.initialized = false
+}
+
+func (s *aggregateStdDevAccumulator) syncValues(values []Value) {
+	s.clear()
+	s.initialized = true
+	for _, value := range values {
+		s.enter(value)
+	}
+}
+
+func (s *aggregateStdDevAccumulator) value() (Value, bool) {
+	if s == nil || s.count < 2 {
+		return Null(), false
+	}
+	return Present(math.Sqrt(s.qn / float64(s.count-1))), true
+}
+
+func (s *aggregateStdDevAccumulator) reconcile(events []Event, expression Expr, ctx EvalContext) {
+	if s == nil || expression == nil {
+		return
+	}
+	if !s.initialized {
+		s.initialized = true
+		for index, event := range events {
+			value := expression.eval(ctx.groupEventContext(event, index))
+			s.entries = append(s.entries, aggregateStdDevEntry{event: event, value: value})
+			s.enter(value)
+		}
+		return
+	}
+	oldIDs := make(map[string]struct{}, len(s.entries))
+	for _, entry := range s.entries {
+		oldIDs[eventIdentity(entry.event)] = struct{}{}
+	}
+	currentIDs := make(map[string]struct{}, len(events))
+	for index, event := range events {
+		identity := eventIdentity(event)
+		currentIDs[identity] = struct{}{}
+		if _, retained := oldIDs[identity]; retained {
+			continue
+		}
+		value := expression.eval(ctx.groupEventContext(event, index))
+		// Esper applies enter before leave when one length-window update
+		// contains both the incoming and evicted values.
+		s.entries = append(s.entries, aggregateStdDevEntry{event: event, value: value})
+		s.enter(value)
+	}
+	for _, entry := range s.entries {
+		if _, retained := currentIDs[eventIdentity(entry.event)]; retained {
+			continue
+		}
+		s.leave(entry.value)
+	}
+	kept := s.entries[:0]
+	for _, entry := range s.entries {
+		if _, retained := currentIDs[eventIdentity(entry.event)]; retained {
+			kept = append(kept, entry)
+		}
+	}
+	s.entries = kept
+}
+
+func (s *aggregateStdDevAccumulator) clone() *aggregateStdDevAccumulator {
+	if s == nil {
+		return nil
+	}
+	result := *s
+	result.entries = append([]aggregateStdDevEntry(nil), s.entries...)
+	return &result
+}
+
+// aggregateStdDevState is kept in the existing per-group aggregate state
+// map. Scopes distinguish nested filtered/distinct aggregates that reuse the
+// same inner expression node.
+type aggregateStdDevState struct {
+	scopes map[string]*aggregateStdDevAccumulator
+}
+
+func (s *aggregateStdDevState) scope(name string) *aggregateStdDevAccumulator {
+	if s.scopes == nil {
+		s.scopes = make(map[string]*aggregateStdDevAccumulator)
+	}
+	if s.scopes[name] == nil {
+		s.scopes[name] = &aggregateStdDevAccumulator{}
+	}
+	return s.scopes[name]
+}
+
+func (s *aggregateStdDevState) enter(value Value)    { s.scope("").enter(value) }
+func (s *aggregateStdDevState) leave(value Value)    { s.scope("").leave(value) }
+func (s *aggregateStdDevState) value() (Value, bool) { return s.scope("").value() }
+func (s *aggregateStdDevState) sync(values []Value)  { s.scope("").syncValues(values) }
+
+func (s *aggregateStdDevState) clear() {
+	for _, scope := range s.scopes {
+		scope.clear()
+	}
+	s.scopes = nil
+}
+
+func (s *aggregateStdDevState) reconcile(events []Event, expression Expr, ctx EvalContext, scopeName string) (Value, bool) {
+	accumulator := s.scope(scopeName)
+	accumulator.reconcile(events, expression, ctx)
+	return accumulator.value()
+}
+
+func (s *aggregateStdDevState) clone() *aggregateStdDevState {
+	if s == nil {
+		return nil
+	}
+	result := &aggregateStdDevState{scopes: make(map[string]*aggregateStdDevAccumulator, len(s.scopes))}
+	for name, scope := range s.scopes {
+		result.scopes[name] = scope.clone()
+	}
+	return result
+}
+
 // StdDev uses the sample standard-deviation convention used by Esper's
 // stddev aggregate. A singleton group has no defined sample deviation and
 // therefore evaluates to Null, matching Esper's aggregate result semantics.
 func StdDev[T Numeric](expression Expression[T]) AggregateExpression[float64] {
-	return makeAggregateExpr[float64]("stddev", "stddev("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
-		values := numericAggregateValues[T](expression, ctx)
-		if len(values) < 2 {
-			return Null()
-		}
-		var total float64
-		for _, value := range values {
-			total += value
-		}
-		mean := total / float64(len(values))
-		var squared float64
-		for _, value := range values {
-			delta := value - mean
-			squared += delta * delta
-		}
-		return Present(math.Sqrt(squared / float64(len(values)-1)))
-	})
+	if expression == nil {
+		return invalidAggregate[float64]("stddev", expression, "stddev(<invalid>)")
+	}
+	node := &exprNode{
+		kind:        "stddev",
+		typ:         typeOf[float64](),
+		description: "stddev(" + expression.Description() + ")",
+		children:    []*exprNode{expression.node()},
+	}
+	return aggregateExpr[float64]{typedExpr: typedExpr[float64]{
+		n: node,
+		fn: func(ctx EvalContext) Value {
+			if len(ctx.Group) > 0 && ctx.aggregatePluginStates != nil {
+				state, exists := ctx.aggregatePluginStates[node]
+				stddevState, compatible := state.(*aggregateStdDevState)
+				if !exists {
+					stddevState = &aggregateStdDevState{}
+					ctx.aggregatePluginStates[node] = stddevState
+				}
+				if compatible || !exists {
+					value, present := stddevState.reconcile(ctx.Group, expression, ctx, ctx.aggregateMultiScope)
+					if !present {
+						return Null()
+					}
+					return value
+				}
+			}
+			values := numericAggregateValues[T](expression, ctx)
+			if len(values) < 2 {
+				return Null()
+			}
+			mean := values[0]
+			var qn float64
+			for index := 1; index < len(values); index++ {
+				count := float64(index + 1)
+				oldMean := mean
+				value := values[index]
+				mean += (value - oldMean) / count
+				qn += (value - oldMean) * (value - mean)
+			}
+			return Present(math.Sqrt(qn / float64(len(values)-1)))
+		},
+	}}
 }
 
 // StdDevPop computes population standard deviation. It is kept separate from

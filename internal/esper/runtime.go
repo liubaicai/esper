@@ -5994,10 +5994,18 @@ func cloneAggregateGroup(source *aggregateGroup) *aggregateGroup {
 	result.leavingEvents = append([]Event(nil), source.leavingEvents...)
 	result.groupingSet = append([]int(nil), source.groupingSet...)
 	result.previous = append([]Value(nil), source.previous...)
-	// Aggregate plug-in state has no clone contract. Staged runtimes rebuild
-	// plug-in state from the cloned group on the next evaluation; retaining the
-	// original interface value would leak mutations across a failed route.
-	result.pluginStates = nil
+	// Aggregate plug-in state has no clone contract. Standard deviation is an
+	// internal stateful aggregate with an explicit value-semantic clone so
+	// staged routes preserve its Java enter/leave recurrence without sharing
+	// mutable state with the original runtime.
+	if source.pluginStates != nil {
+		result.pluginStates = make(map[*exprNode]aggregatePluginState, len(source.pluginStates))
+		for node, state := range source.pluginStates {
+			if stddev, ok := state.(*aggregateStdDevState); ok {
+				result.pluginStates[node] = stddev.clone()
+			}
+		}
+	}
 	result.multiPluginStates = nil
 	return &result
 }

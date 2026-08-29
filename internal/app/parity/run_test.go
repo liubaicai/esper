@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
+	esper "github.com/liubaicai/esper"
 	"github.com/liubaicai/esper/internal/compat"
 )
 
@@ -30,7 +34,7 @@ func TestRunHelpSucceeds(t *testing.T) {
 	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
 	}
-	for _, mode := range []string{"resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff", "resultset-aggregate-minmax-groupby-om-viewcompile", "resultset-aggregate-minmax-groupby-om-viewcompile-diff", "resultset-aggregate-minmax-groupby-join-select-having", "resultset-aggregate-minmax-groupby-join-select-having-diff"} {
+	for _, mode := range []string{"resultset-aggregate-median-and-deviation", "resultset-aggregate-median-and-deviation-diff", "resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff", "resultset-aggregate-minmax-groupby-om-viewcompile", "resultset-aggregate-minmax-groupby-om-viewcompile-diff", "resultset-aggregate-minmax-groupby-join-select-having", "resultset-aggregate-minmax-groupby-join-select-having-diff"} {
 		if !strings.Contains(stderr.String(), mode) {
 			t.Fatalf("help output omits %q: %s", mode, stderr.String())
 		}
@@ -19579,5 +19583,341 @@ func TestRunResultSetAggregateMinMaxGroupByJoinSelectHavingRejectsMalformedScena
 				t.Fatalf("malformed scenario unexpectedly replayed: %#v", malformed)
 			}
 		})
+	}
+}
+
+func TestRunResultSetAggregateMedianAndDeviationRejectsMalformedScenarioShape(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-median-and-deviation.json")
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateMedianAndDeviationScenario(file)
+	closeErr := file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Scenario)
+	}{
+		{name: "wrong-id", mutate: func(scenario *compat.Scenario) { scenario.ID = "unexpected" }},
+		{name: "missing-field", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].Payload = json.RawMessage(`{"symbol":"DELL","volume":0}`)
+		}},
+		{name: "extra-field", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].Payload = json.RawMessage(`{"symbol":"DELL","price":10,"volume":0,"extra":1}`)
+		}},
+		{name: "wrong-value", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps[1].Payload = json.RawMessage(`{"symbol":"DELL","price":11,"volume":0}`)
+		}},
+		{name: "wrong-event-type", mutate: func(scenario *compat.Scenario) { scenario.Steps[1].EventType = "SupportBean" }},
+		{name: "wrong-case-order", mutate: func(scenario *compat.Scenario) { scenario.Steps[8].Case = resultsetAggregateMedianAndDeviationJoinCase }},
+		{name: "extra-case", mutate: func(scenario *compat.Scenario) {
+			scenario.Steps = append(scenario.Steps, compat.Step{Op: "case", Case: "unexpected"})
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			malformed := scenario
+			malformed.Steps = append([]compat.Step(nil), scenario.Steps...)
+			test.mutate(&malformed)
+			if _, err := runResultSetAggregateMedianAndDeviationScenario(context.Background(), malformed); err == nil {
+				t.Fatalf("malformed scenario unexpectedly replayed: %#v", malformed)
+			}
+		})
+	}
+}
+func TestRunResultSetAggregateMedianAndDeviationRejectsRawScenarioShape(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-median-and-deviation.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-median-and-deviation"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-median-and-deviation"`)...), 1)
+		}},
+		{name: "java-commit-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 0`), []byte(`"ordinal": 1`), 1)
+		}},
+		{name: "step-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "stmt-main"}`), []byte(`{"op": "case", "case": "stmt-main", "extra": 0}`), 1)
+		}},
+		{name: "step-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "stmt-main"}`), []byte(`{"op": "case", "case": "stmt-main", "case": "stmt-main"}`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-median-and-deviation",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("raw mutation %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestResultSetAggregateMedianAndDeviationStdDevNaNPoisoning(t *testing.T) {
+	env := esper.NewEnvironment()
+	if _, err := esper.RegisterStruct[resultsetAggregateMedianAndDeviationMarketData](env, "SupportMarketDataBean"); err != nil {
+		t.Fatal(err)
+	}
+	price := esper.Field[resultsetAggregateMedianAndDeviationMarketData, float64]("price")
+	plan, err := env.Build(esper.From[resultsetAggregateMedianAndDeviationMarketData](env, "SupportMarketDataBean").Window(esper.LengthWindow(3)).Aggregate(
+		esper.Alias("val", esper.StdDev[float64](price)),
+	).Query(esper.StatementName("nan")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := esper.NewEngine(env, esper.WithStartTime(time.Unix(0, 0).UTC()))
+	defer func() { _ = engine.Close(context.Background()) }()
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statements := deployment.Statements()
+	if len(statements) != 1 {
+		t.Fatalf("statements = %d, want 1", len(statements))
+	}
+	var last esper.Row
+	var haveLast bool
+	if _, err := statements[0].Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+		if len(batch.New) == 0 {
+			return nil
+		}
+		row, ok := batch.New[len(batch.New)-1].Row()
+		if !ok {
+			return fmt.Errorf("stddev result is not a row")
+		}
+		last, haveLast = row, true
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for index, value := range []float64{math.NaN(), math.NaN(), math.NaN(), 1, 2, 3} {
+		if err := engine.SendEvent(context.Background(), resultsetAggregateMedianAndDeviationMarketData{Symbol: fmt.Sprintf("E%d", index+1), Price: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !haveLast {
+		t.Fatal("stddev statement produced no result")
+	}
+	value := last.Get("val").Any()
+	got, ok := value.(float64)
+	if !ok || !math.IsNaN(got) {
+		t.Fatalf("final stddev = %#v, want NaN", value)
+	}
+}
+
+func TestRunResultSetAggregateMedianAndDeviationDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join(root, "resultset-aggregate-median-and-deviation.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-median-and-deviation.evidence.json")
+	scenarioPath := filepath.Join(root, "resultset-aggregate-median-and-deviation.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-median-and-deviation-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if evidence.JavaCommit != resultsetAggregateMedianAndDeviationJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateMedianAndDeviationJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateMedianAndDeviationJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateMedianAndDeviationJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	if len(evidence.JavaTrace.Records) != 21 {
+		t.Fatalf("Java trace records = %d, want 21", len(evidence.JavaTrace.Records))
+	}
+	wantCaseCounts := map[string]int{
+		resultsetAggregateMedianAndDeviationStmtCase:   7,
+		resultsetAggregateMedianAndDeviationJoinOMCase: 7,
+		resultsetAggregateMedianAndDeviationJoinCase:   7,
+	}
+	caseCounts := map[string]int{}
+	for _, record := range evidence.JavaTrace.Records {
+		caseCounts[record.Case]++
+	}
+	if !reflect.DeepEqual(caseCounts, wantCaseCounts) {
+		t.Fatalf("case record counts = %#v, want %#v", caseCounts, wantCaseCounts)
+	}
+}
+
+func TestRunResultSetAggregateMedianAndDeviationDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["myMedian"] = json.Number("999")
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-aggregate-median-and-deviation.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-median-and-deviation.evidence.json")
+			scenarioPath := filepath.Join(root, "resultset-aggregate-median-and-deviation.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-median-and-deviation-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateMedianAndDeviationCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-median-and-deviation.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-median-and-deviation.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateMedianAndDeviationJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateMedianAndDeviationJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateMedianAndDeviationJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateMedianAndDeviationJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	scenarioPath := filepath.Join(root, "resultset-aggregate-median-and-deviation.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := compat.LoadScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-median-and-deviation", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
 	}
 }
