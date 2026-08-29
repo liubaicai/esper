@@ -1,0 +1,23 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-row-for-all-having-sum-join",
+  "description": "ResultSetQueryTypeRowForAllHaving ordinal 1: time-window join sum with having threshold and listener expiry.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAllHaving.java",
+  "javaRuntimes": ["java-runtime-dfb97881f562ac33e873"],
+  "javaNames": ["ResultSetQueryTypeRowForAllWHavingSumJoin"],
+  "javaFlags": [],
+  "javaStaticIds": ["java-bf6637bf00f9e0e78f89"],
+  "cases": [{"case":"sum-join","ordinal":1,"runtimeId":"java-runtime-dfb97881f562ac33e873","executionName":"ResultSetQueryTypeRowForAllWHavingSumJoin","observation":"listener","iteratorSnapshots":0,"epl":"@name('s0') select irstream sum(longBoxed) as mySum from SupportBeanString#time(10 seconds) as one, SupportBean#time(10 seconds) as two where one.theString = two.theString having sum(longBoxed) > 10"}],
+  "steps": [
+    {"op":"case","case":"sum-join"},
+    {"op":"advance-time","at":"1970-01-01T00:00:00Z"},
+    {"op":"send","eventType":"SupportBeanString","payload":{"theString":"KEY"}},
+    {"op":"send","eventType":"SupportBean","payload":{"theString":"KEY","intBoxed":0,"shortBoxed":0,"longBoxed":10}},
+    {"op":"advance-time","at":"1970-01-01T00:00:05Z"},
+    {"op":"send","eventType":"SupportBean","payload":{"theString":"KEY","intBoxed":0,"shortBoxed":0,"longBoxed":15}},
+    {"op":"advance-time","at":"1970-01-01T00:00:08Z"},
+    {"op":"send","eventType":"SupportBean","payload":{"theString":"KEY","intBoxed":0,"shortBoxed":0,"longBoxed":-5}},
+    {"op":"advance-time","at":"1970-01-01T00:00:10Z"}
+  ]
+}

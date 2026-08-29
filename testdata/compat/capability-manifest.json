@@ -4900,12 +4900,13 @@
     "internal/app/parity/resultset_querytype_row_for_all.go",
     "internal/app/parity/run_test.go",
     "internal/esper/runtime.go",
-    "internal/app/parity/resultset_query_type_row_for_all_having_sum.go"
+    "internal/app/parity/resultset_query_type_row_for_all_having_sum.go",
+    "internal/app/parity/resultset_query_type_row_for_all_having_sum_join.go"
    ],
    "phase": 3,
    "status": "differential-verified",
    "remaining": [
-    "row-for-all querytype executions beyond covered ordinals 0 and 4-8",
+    "row-for-all querytype executions beyond covered ordinals 0-1 and 4-8",
     "additional output-rate, join and invalid/error-phase combinations"
    ],
    "verification": [
@@ -4919,11 +4920,76 @@
     "java-runtime-422d65bd284a78278d56",
     "java-runtime-9a7f951d363bb58d506e",
     "java-runtime-780e3dede1e586fde738",
-    "java-runtime-65e4ba1499cb12f04d8a"
+    "java-runtime-65e4ba1499cb12f04d8a",
+    "java-runtime-dfb97881f562ac33e873"
    ]
   }
  ],
  "cases": [
+  {
+   "id": "case.resultset-querytype-row-for-all-having-sum-join",
+   "javaRuntimeIds": [
+    "java-runtime-dfb97881f562ac33e873"
+   ],
+   "javaStaticIds": [
+    "java-bf6637bf00f9e0e78f89"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeRowForAllWHavingSumJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAllHaving.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingSumJoinDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingSumJoinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingSumJoinDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingSumJoinCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingSumJoinRejectsMalformedScenarioShape"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "row-for-all",
+    "aggregate",
+    "having",
+    "time-window",
+    "join",
+    "irstream",
+    "old-stream",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-row-for-all-having-sum-join.json",
+    "testdata/parity/resultset-querytype-row-for-all-having-sum-join.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-having-sum-join.go.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-having-sum-join.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRowForAllHavingSumJoinScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-row-for-all-having-sum-join.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-dfb97881f562ac33e873"
+   ],
+   "notes": [
+    "ResultSetQueryTypeRowForAllWHavingSumJoin replays one deterministic 10-second time-window join sum with having sum(longBoxed) > 10 (3 Java/Go records, 0 differences): the matching SupportBeanString/SupportBean pair emits new 25 at t5, new 20/old 25 at t8, and old 20 on the first expiry at t10.",
+    "The typed Go surface uses nullable LongBoxed, two typed TimeWindow streams, Join, Sum, Having, and WithOldStream. The scenario and oracle pin virtual-time order, join payload metadata, old/new row shape, values, timestamps, and listener lifecycle; strict validators reject malformed or duplicate fields, payload errors, and trace mutations."
+   ]
+  },
   {
    "id": "case.event-avro-record",
    "javaRuntimeIds": [
@@ -38580,13 +38646,17 @@
   {
    "capabilityId": "resultset.querytype-row-for-all",
    "caseId": "case.resultset-querytype-row-for-all-having-sum-one"
+  },
+  {
+   "capabilityId": "resultset.querytype-row-for-all",
+   "caseId": "case.resultset-querytype-row-for-all-having-sum-join"
   }
  ],
  "summary": {
-  "inventoriedCases": 574,
-  "implementedCases": 572,
-  "differentialVerifiedCases": 187,
-  "differentialVerifiedRuntimeIds": 712,
+  "inventoriedCases": 575,
+  "implementedCases": 573,
+  "differentialVerifiedCases": 188,
+  "differentialVerifiedRuntimeIds": 713,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -38596,15 +38666,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3333,
-  "referencedJavaRuntimeIds": 3120,
+  "runtimeAssociationCount": 3334,
+  "referencedJavaRuntimeIds": 3121,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1016,
+  "unreferencedJavaRuntimeIds": 1015,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 574,
+  "totalCases": 575,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 712
-
+  "differentialVerifiedRuntimeIDs": 713
  }
 }
