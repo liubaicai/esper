@@ -1,0 +1,30 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-row-for-all-having-sum-one",
+  "description": "ResultSetQueryTypeRowForAllHaving ordinal 0: time-window sum with having threshold and listener expiry.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAllHaving.java",
+  "javaRuntimes": ["java-runtime-65e4ba1499cb12f04d8a"],
+  "javaNames": ["ResultSetQueryTypeRowForAllWHavingSumOneView"],
+  "javaFlags": [],
+  "javaStaticIds": ["java-52f40599a0c7dc213c2b"],
+  "cases": [{
+    "case": "sum-one-view",
+    "ordinal": 0,
+    "runtimeId": "java-runtime-65e4ba1499cb12f04d8a",
+    "executionName": "ResultSetQueryTypeRowForAllWHavingSumOneView",
+    "observation": "listener",
+    "iteratorSnapshots": 0,
+    "epl": "@name('s0') select irstream sum(longBoxed) as mySum from SupportBean#time(10 seconds) having sum(longBoxed) > 10"
+  }],
+  "steps": [
+    {"op": "case", "case": "sum-one-view"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": 10}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:05Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": 15}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:08Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "longBoxed": -5}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:10Z"}
+  ]
+}

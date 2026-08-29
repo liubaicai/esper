@@ -24,11 +24,11 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff, resultset-querytype-row-for-all-having-sum and resultset-querytype-row-for-all-having-sum-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, resultset-aggregate-minmax-no-data-window-subquery, resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever, resultset-aggregate-minmax-named-window-wever-diff, expr-core-bitwise, expr-core-bitwise-diff, expr-core-logical, expr-core-logical-diff, expr-core-coalesce, expr-core-coalesce-diff, expr-core-relop, expr-core-relop-diff, expr-core-like-regexp, expr-core-like-regexp-diff, expr-core-in-between, expr-core-in-between-diff, expr-core-equals-is, expr-core-equals-is-diff, expr-core-case, expr-core-case-diff, expr-core-instanceof, expr-core-instanceof-diff, expr-core-type-name, expr-core-type-name-diff, expr-core-exists-cast, expr-core-exists-cast-diff, expr-core-current-timestamp, expr-core-current-timestamp-diff, …")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, context-hash-diff, resultset-querytype-row-for-all-having-sum, resultset-querytype-row-for-all-having-sum-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -46,7 +46,9 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	}
 	defer file.Close()
 	var scenario compat.Scenario
-	if *mode == "resultset-aggregate-sorted-multi-criteria" || *mode == "resultset-aggregate-sorted-multi-criteria-diff" {
+	if *mode == "resultset-querytype-row-for-all-having-sum" || *mode == "resultset-querytype-row-for-all-having-sum-diff" {
+		scenario, err = loadResultSetQueryTypeRowForAllHavingSumScenario(file)
+	} else if *mode == "resultset-aggregate-sorted-multi-criteria" || *mode == "resultset-aggregate-sorted-multi-criteria-diff" {
 		scenario, err = loadResultSetAggregateSortedMultiCriteriaScenario(file)
 	} else if *mode == "resultset-aggregate-median-and-deviation" || *mode == "resultset-aggregate-median-and-deviation-diff" {
 		scenario, err = loadResultSetAggregateMedianAndDeviationScenario(file)
@@ -2219,6 +2221,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeAggregateGroupedJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultSetQueryTypeAggregateGroupedJavaSources),
 				splitMetadata(*javaExecutions, resultSetQueryTypeAggregateGroupedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-querytype-row-for-all-having-sum" || *mode == "resultset-querytype-row-for-all-having-sum-diff" {
+		trace, err := runResultSetQueryTypeRowForAllHavingSumScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-row-for-all-having-sum-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultSetQueryTypeRowForAllHavingSumJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeRowForAllHavingSumJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeRowForAllHavingSumJavaSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeRowForAllHavingSumJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -17943,20 +17943,29 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		// Rollup/cube result sets (multiple grouping sets), ungrouped
 		// aggregates, grouped joins, named-window consumers and grouped
 		// row-per-group result sets post the previous row as old whenever the
+		// statement emits removal-aware output.
 		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) && !aggregateGroupedRowPerEvent && !aggregateDefinitionIsRowForEvent(definition) {
 			if definition.having != nil && len(delta.oldEvents) > 0 {
-				// Java ResultSetProcessorRowForAllImpl with HAVING: the old
-				// row binds plain columns to the leaving event and aggregates
-				// to the post-update state; it is suppressed when the having
-				// predicate fails under that binding.
-				for _, leaving := range delta.oldEvents {
-					_, leaveVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
-					if leaveVisible {
-						oldEntries = append(oldEntries, aggregateResultEntry{
-							result: resultRow(newRow(plan.resultSchema, group.previous)),
-							group:  group,
-							key:    key,
-						})
+				if plan.query.selector == SelectIRStream && len(definition.groupBy) == 0 {
+					// The old row is the previously emitted aggregate, even when
+					// removal makes HAVING false in the post-removal state.
+					oldEntries = append(oldEntries, aggregateResultEntry{
+						result: resultRow(newRow(plan.resultSchema, group.previous)),
+						group:  group,
+						key:    key,
+					})
+				} else {
+					// Grouped paths bind the old row to each leaving event and
+					// the post-update aggregate; suppress it when HAVING fails.
+					for _, leaving := range delta.oldEvents {
+						_, leaveVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+						if leaveVisible {
+							oldEntries = append(oldEntries, aggregateResultEntry{
+								result: resultRow(newRow(plan.resultSchema, group.previous)),
+								group:  group,
+								key:    key,
+							})
+						}
 					}
 				}
 			} else {
