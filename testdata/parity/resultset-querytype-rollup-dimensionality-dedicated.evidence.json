@@ -1,0 +1,4166 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-20c08346e2644a7201e5",
+    "java-runtime-994120aef6b9ff1c0e75",
+    "java-runtime-71fb38d67af471287089"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupDimensionality.java"
+  ],
+  "javaExecutions": [
+    "ResultSetQueryTypeUnboundGroupingSet2LevelUnenclosed",
+    "ResultSetQueryTypeBoundCube3Dim",
+    "ResultSetQueryTypeContextPartitionAlsoRollup"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "rollup-dimensionality-dedicated",
+    "steps": [
+      {
+        "op": "case",
+        "case": "unbound-grouping-set-2level-unenclosed-a"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100,
+          "doublePrimitive": 1000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 200,
+          "doublePrimitive": 2000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 200,
+          "doublePrimitive": 3000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 100,
+          "doublePrimitive": 4000
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbound-grouping-set-2level-unenclosed-b"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100,
+          "doublePrimitive": 1000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 200,
+          "doublePrimitive": 2000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 200,
+          "doublePrimitive": 3000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 100,
+          "doublePrimitive": 4000
+        }
+      },
+      {
+        "op": "case",
+        "case": "bound-cube-3dim-cube"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 20,
+          "doublePrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 10,
+          "doublePrimitive": 300
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 20,
+          "doublePrimitive": 400
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 500
+        }
+      },
+      {
+        "op": "case",
+        "case": "bound-cube-3dim-gs"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 20,
+          "doublePrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 10,
+          "doublePrimitive": 300
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 20,
+          "doublePrimitive": 400
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 10,
+          "doublePrimitive": 500
+        }
+      },
+      {
+        "op": "case",
+        "case": "context-partition-also-rollup"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 25
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-dimensionality-dedicated",
+    "records": [
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100,
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200,
+              "c3": 2000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200,
+              "c3": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100,
+              "c3": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100,
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200,
+              "c3": 2000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200,
+              "c3": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100,
+              "c3": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 400,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 400,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 400,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": 20,
+              "c3": 1,
+              "c4": 400,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 2,
+              "c4": 600,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 600,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": 20,
+              "c3": 1,
+              "c4": 400,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 2,
+              "c4": 600,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 0,
+              "c4": {
+                "state": "null"
+              },
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 0,
+              "c4": {
+                "state": "null"
+              },
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 1100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 800,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 400,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 400,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 400,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": 20,
+              "c3": 1,
+              "c4": 400,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 2,
+              "c4": 600,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 600,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": 20,
+              "c3": 1,
+              "c4": 400,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 2,
+              "c4": 600,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 0,
+              "c4": {
+                "state": "null"
+              },
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 0,
+              "c4": {
+                "state": "null"
+              },
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 1100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 800,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-partition-also-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-partition-also-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-partition-also-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 25
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 25
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 25
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-dimensionality-dedicated",
+    "records": [
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100,
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200,
+              "c3": 2000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200,
+              "c3": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-a",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100,
+              "c3": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100,
+              "c3": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200,
+              "c3": 2000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 200,
+              "c3": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbound-grouping-set-2level-unenclosed-b",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 20,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 6000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 100,
+              "c3": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 400,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 400,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 400,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": 20,
+              "c3": 1,
+              "c4": 400,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 2,
+              "c4": 600,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 600,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": 20,
+              "c3": 1,
+              "c4": 400,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 2,
+              "c4": 600,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-cube",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 0,
+              "c4": {
+                "state": "null"
+              },
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 0,
+              "c4": {
+                "state": "null"
+              },
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 1100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 800,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 100,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 200,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 1,
+              "c4": 200,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 300,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 400,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 400,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 400,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 600,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": 20,
+              "c3": 1,
+              "c4": 400,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 400,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 2,
+              "c4": 600,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 600,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": 20,
+              "c3": 1,
+              "c4": 400,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 2,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 20,
+              "c3": 2,
+              "c4": 600,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1000,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "bound-cube-3dim-gs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10,
+              "c3": 0,
+              "c4": {
+                "state": "null"
+              },
+              "c5": 0,
+              "c6": 0,
+              "c7": 0,
+              "c8": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 0,
+              "c4": {
+                "state": "null"
+              },
+              "c5": 0,
+              "c6": 0,
+              "c7": 1,
+              "c8": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 1,
+              "c7": 0,
+              "c8": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 3,
+              "c4": 1100,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 1,
+              "c4": 300,
+              "c5": 0,
+              "c6": 1,
+              "c7": 1,
+              "c8": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": 10,
+              "c3": 1,
+              "c4": 500,
+              "c5": 1,
+              "c6": 0,
+              "c7": 0,
+              "c8": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 1,
+              "c2": {
+                "state": "null"
+              },
+              "c3": 2,
+              "c4": 700,
+              "c5": 1,
+              "c6": 0,
+              "c7": 1,
+              "c8": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10,
+              "c3": 2,
+              "c4": 800,
+              "c5": 1,
+              "c6": 1,
+              "c7": 0,
+              "c8": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": {
+                "state": "null"
+              },
+              "c3": 4,
+              "c4": 1400,
+              "c5": 1,
+              "c6": 1,
+              "c7": 1,
+              "c8": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-partition-also-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 1,
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-partition-also-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 2,
+              "c2": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-partition-also-rollup",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 1,
+              "c2": 25
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": {
+                "state": "null"
+              },
+              "c2": 25
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "c2": 25
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

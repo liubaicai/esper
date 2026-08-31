@@ -1,9 +1,11 @@
 package parity
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 
 	esper "github.com/liubaicai/esper"
@@ -72,16 +74,233 @@ var (
 		"ResultSetQueryTypeGroupByWithComputation"}
 )
 
+const (
+	rollupDimensionalityDedicatedID          = "rollup-dimensionality-dedicated"
+	rollupDimensionalityDedicatedDescription = "Dedicated ResultSetQueryTypeRollupDimensionality ordinals 10, 11, and 17: unbound grouping-set, bounded cube, and context-partition rollup semantics."
+)
+
+var rollupDimensionalityDedicatedJavaRuntimeIDs = []string{
+	"java-runtime-20c08346e2644a7201e5",
+	"java-runtime-994120aef6b9ff1c0e75",
+	"java-runtime-71fb38d67af471287089",
+}
+
+var rollupDimensionalityDedicatedJavaExecutions = []string{
+	"ResultSetQueryTypeUnboundGroupingSet2LevelUnenclosed",
+	"ResultSetQueryTypeBoundCube3Dim",
+	"ResultSetQueryTypeContextPartitionAlsoRollup",
+}
+
+var rollupDimensionalityDedicatedJavaStaticIDs = []string{
+	"java-04090eecaf8dbe129c67",
+	"java-2bb53dfa0bac679a3c29",
+	"java-e684c2e0c509d0592a0d",
+}
+
+var rollupDimensionalityDedicatedCases = []string{
+	"unbound-grouping-set-2level-unenclosed-a",
+	"unbound-grouping-set-2level-unenclosed-b",
+	"bound-cube-3dim-cube",
+	"bound-cube-3dim-gs",
+	"context-partition-also-rollup",
+}
+
+var rollupDimensionalityDedicatedCaseRuntimes = []string{
+	"java-runtime-20c08346e2644a7201e5",
+	"java-runtime-20c08346e2644a7201e5",
+	"java-runtime-994120aef6b9ff1c0e75",
+	"java-runtime-994120aef6b9ff1c0e75",
+	"java-runtime-71fb38d67af471287089",
+}
+
+var rollupDimensionalityDedicatedCaseOrdinals = []int{10, 10, 11, 11, 17}
+
+var rollupDimensionalityDedicatedCaseEPL = []string{
+	"@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, sum(doublePrimitive) as c3 from SupportBean group by theString, grouping sets(intPrimitive, longPrimitive)",
+	"@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, sum(doublePrimitive) as c3 from SupportBean group by grouping sets((theString, intPrimitive), (theString, longPrimitive))",
+	"@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, count(*) as c3, sum(doublePrimitive) as c4,grouping(theString) as c5,grouping(intPrimitive) as c6,grouping(longPrimitive) as c7,grouping_id(theString, intPrimitive, longPrimitive) as c8 from SupportBean#length(4) group by cube(theString, intPrimitive, longPrimitive)",
+	"@Name('s0')select theString as c0, intPrimitive as c1, longPrimitive as c2, count(*) as c3, sum(doublePrimitive) as c4,grouping(theString) as c5,grouping(intPrimitive) as c6,grouping(longPrimitive) as c7,grouping_id(theString, intPrimitive, longPrimitive) as c8 from SupportBean#length(4) group by grouping sets((theString, intPrimitive, longPrimitive),(theString, intPrimitive),(theString, longPrimitive),(theString),(intPrimitive, longPrimitive),(intPrimitive),(longPrimitive),())",
+	"create context SegmentedByString partition by theString from SupportBean;\n@name('s0') context SegmentedByString select theString as c0, intPrimitive as c1, sum(longPrimitive) as c2 from SupportBean group by rollup(theString, intPrimitive)",
+}
+
 // runRollupDimensionalityScenario replays the unbound rollup, cube and
 // bound/batch family of ResultSetQueryTypeRollupDimensionality (8 executions
 // across 16 scenario cases; the 1-dim rollup/cube pair, the three unenclosed
+func loadRollupDimensionalityScenario(reader io.Reader) (compat.Scenario, error) {
+	if reader == nil {
+		return compat.Scenario{}, fmt.Errorf("rollup-dimensionality scenario reader is required")
+	}
+	raw, err := io.ReadAll(reader)
+	if err != nil {
+		return compat.Scenario{}, fmt.Errorf("read rollup-dimensionality scenario: %w", err)
+	}
+	var envelope struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return compat.Scenario{}, fmt.Errorf("decode rollup-dimensionality scenario: %w", err)
+	}
+	if envelope.ID == rollupDimensionalityDedicatedID {
+		return loadRollupDimensionalityDedicatedScenario(bytes.NewReader(raw))
+	}
+	return compat.LoadScenario(bytes.NewReader(raw))
+}
+
+func loadRollupDimensionalityDedicatedScenario(reader io.Reader) (compat.Scenario, error) {
+	if reader == nil {
+		return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated scenario reader is required")
+	}
+	raw, err := io.ReadAll(reader)
+	if err != nil {
+		return compat.Scenario{}, fmt.Errorf("read rollup-dimensionality dedicated scenario: %w", err)
+	}
+	if err := rejectDuplicateJSON(raw); err != nil {
+		return compat.Scenario{}, fmt.Errorf("decode rollup-dimensionality dedicated scenario: %w", err)
+	}
+	var root map[string]json.RawMessage
+	if err := strictObject(raw, &root); err != nil {
+		return compat.Scenario{}, fmt.Errorf("decode rollup-dimensionality dedicated scenario: %w", err)
+	}
+	required := []string{"version", "id", "description", "javaCommit", "javaSource", "javaRuntimes", "javaNames", "javaStaticIds", "javaFlags", "cases", "steps"}
+	if len(root) != len(required) {
+		return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated scenario contains unexpected or missing fields")
+	}
+	for _, name := range required {
+		if _, ok := root[name]; !ok {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated scenario is missing field %q", name)
+		}
+	}
+	var version, id, description, javaCommit, javaSource string
+	for name, target := range map[string]*string{
+		"version": &version, "id": &id, "description": &description,
+		"javaCommit": &javaCommit, "javaSource": &javaSource,
+	} {
+		if err := json.Unmarshal(root[name], target); err != nil {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated scenario %s must be a string", name)
+		}
+	}
+	if version != compat.ScenarioVersion || id != rollupDimensionalityDedicatedID ||
+		description != rollupDimensionalityDedicatedDescription ||
+		javaCommit != "9e1b9f1cc9117fea4bf33ab043762c045d73839c" ||
+		javaSource != rollupDimensionalityJavaSources[0] {
+		return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated scenario metadata is not pinned")
+	}
+	for name, expected := range map[string][]string{
+		"javaRuntimes":  rollupDimensionalityDedicatedJavaRuntimeIDs,
+		"javaNames":     rollupDimensionalityDedicatedJavaExecutions,
+		"javaStaticIds": rollupDimensionalityDedicatedJavaStaticIDs,
+		"javaFlags":     {},
+	} {
+		if err := validateResultSetQueryTypeRowForAllHavingSumStringArray(root[name], expected, name); err != nil {
+			return compat.Scenario{}, err
+		}
+	}
+
+	var rawCases []json.RawMessage
+	if err := json.Unmarshal(root["cases"], &rawCases); err != nil || len(rawCases) != len(rollupDimensionalityDedicatedCases) {
+		return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated scenario must contain exactly five cases")
+	}
+	for index, rawCase := range rawCases {
+		var object map[string]json.RawMessage
+		if err := strictObject(rawCase, &object); err != nil {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated case %d: %w", index, err)
+		}
+		requiredCase := []string{"case", "ordinal", "runtimeId", "executionName", "observation", "iteratorSnapshots", "epl"}
+		if len(object) != len(requiredCase) {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated case %d contains unexpected or missing fields", index)
+		}
+		for _, name := range requiredCase {
+			if _, ok := object[name]; !ok {
+				return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated case %d is missing field %q", index, name)
+			}
+		}
+		var caseName, runtimeID, executionName, observation, epl string
+		var ordinal, iteratorSnapshots int
+		if err := json.Unmarshal(object["case"], &caseName); err != nil ||
+			json.Unmarshal(object["runtimeId"], &runtimeID) != nil ||
+			json.Unmarshal(object["executionName"], &executionName) != nil ||
+			json.Unmarshal(object["observation"], &observation) != nil ||
+			json.Unmarshal(object["epl"], &epl) != nil ||
+			json.Unmarshal(object["ordinal"], &ordinal) != nil ||
+			json.Unmarshal(object["iteratorSnapshots"], &iteratorSnapshots) != nil {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated case %d metadata has invalid types", index)
+		}
+		if caseName != rollupDimensionalityDedicatedCases[index] ||
+			ordinal != rollupDimensionalityDedicatedCaseOrdinals[index] ||
+			runtimeID != rollupDimensionalityDedicatedCaseRuntimes[index] ||
+			executionName != rollupDimensionalityDedicatedJavaExecutions[index/2] ||
+			observation != "listener" || iteratorSnapshots != 0 ||
+			epl != rollupDimensionalityDedicatedCaseEPL[index] {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated case %d metadata is not pinned", index)
+		}
+	}
+
+	var rawSteps []json.RawMessage
+	if err := json.Unmarshal(root["steps"], &rawSteps); err != nil || len(rawSteps) != 26 {
+		return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated scenario must contain exactly 26 steps")
+	}
+	steps := make([]compat.Step, len(rawSteps))
+	for index, rawStep := range rawSteps {
+		var object map[string]json.RawMessage
+		if err := strictObject(rawStep, &object); err != nil {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated step %d: %w", index, err)
+		}
+		if index == 0 || index == 5 || index == 10 || index == 16 || index == 22 {
+			expectedCase := rollupDimensionalityDedicatedCases[index/5]
+			if len(object) != 2 || string(bytes.TrimSpace(object["op"])) != `"case"` || string(bytes.TrimSpace(object["case"])) != fmt.Sprintf(`%q`, expectedCase) {
+				return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated step %d marker fields are not pinned", index)
+			}
+		} else if len(object) != 3 {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated step %d send fields are not pinned", index)
+		}
+		if err := json.Unmarshal(rawStep, &steps[index]); err != nil {
+			return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated step %d: %w", index, err)
+		}
+		if steps[index].Op == "send" {
+			var payload map[string]json.RawMessage
+			if err := strictObject(steps[index].Payload, &payload); err != nil {
+				return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated step %d payload: %w", index, err)
+			}
+			expectedPayloadFields := 4
+			if index >= 22 {
+				expectedPayloadFields = 3
+			}
+			if len(payload) != expectedPayloadFields {
+				return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated step %d payload fields are not pinned", index)
+			}
+			for _, field := range []string{"theString", "intPrimitive", "longPrimitive"} {
+				if _, ok := payload[field]; !ok {
+					return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated step %d payload is missing %q", index, field)
+				}
+			}
+			if expectedPayloadFields == 4 {
+				if _, ok := payload["doublePrimitive"]; !ok {
+					return compat.Scenario{}, fmt.Errorf("rollup-dimensionality dedicated step %d payload is missing doublePrimitive", index)
+				}
+			}
+		}
+	}
+	scenario := compat.Scenario{Version: version, ID: id, Steps: steps}
+	if err := validateRollupDimensionalityDedicatedScenario(scenario); err != nil {
+		return compat.Scenario{}, err
+	}
+	return scenario, nil
+}
+
 // syntax variants, the two 3-dim pairs, the cube-unenclosed trio, the 4-dim
 // cube, and the bound/batch pair each replay one shared sequence):
 // hierarchical detail-to-overall rows, null-padded aggregated key columns,
 // monotonic accumulation on unbounded and windowed streams, rollup/cube/
 // grouping-sets syntax equivalence, cube bitmask row ordering, and batch
 // flush new/old IR pairs.
+// runRollupDimensionalityScenario replays the unbound rollup, cube and
+// bound/batch family of ResultSetQueryTypeRollupDimensionality. The dedicated
+// scenario is kept separate so its exact three-execution metadata and trace
+// contract cannot be confused with the broad umbrella scenario.
 func runRollupDimensionalityScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
+	if scenario.ID == rollupDimensionalityDedicatedID {
+		return runRollupDimensionalityDedicatedScenario(ctx, scenario)
+	}
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
 	}
@@ -128,6 +347,197 @@ func runRollupDimensionalityScenario(ctx context.Context, scenario compat.Scenar
 		trace.Records = append(trace.Records, caseTrace.Records...)
 	}
 	return trace, nil
+}
+
+func runRollupDimensionalityDedicatedScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
+	if err := validateRollupDimensionalityDedicatedScenario(scenario); err != nil {
+		return compat.Trace{}, err
+	}
+	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
+	for _, caseName := range rollupDimensionalityDedicatedCases {
+		caseScenario, err := scenarioForCase(scenario, caseName)
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		caseTrace, err := runRollupDimensionalityDedicatedCase(ctx, caseScenario, caseName)
+		if err != nil {
+			return compat.Trace{}, fmt.Errorf("rollup-dimensionality dedicated case %q: %w", caseName, err)
+		}
+		trace.Records = append(trace.Records, caseTrace.Records...)
+	}
+	return trace, nil
+}
+
+func validateRollupDimensionalityDedicatedScenario(scenario compat.Scenario) error {
+	if err := scenario.Validate(); err != nil {
+		return err
+	}
+	if scenario.ID != rollupDimensionalityDedicatedID || len(scenario.Steps) != 26 {
+		return fmt.Errorf("rollup-dimensionality dedicated scenario steps are not pinned")
+	}
+	expectedSymbols := [][]string{
+		{"E1", "E1", "E1", "E1"},
+		{"E1", "E1", "E1", "E1"},
+		{"E1", "E2", "E1", "E2", "E2"},
+		{"E1", "E2", "E1", "E2", "E2"},
+		{"E1", "E1", "E2"},
+	}
+	expectedInts := [][]int{
+		{10, 20, 10, 20},
+		{10, 20, 10, 20},
+		{1, 1, 2, 2, 1},
+		{1, 1, 2, 2, 1},
+		{1, 2, 1},
+	}
+	expectedLongs := [][]int64{
+		{100, 200, 200, 100},
+		{100, 200, 200, 100},
+		{10, 20, 10, 20, 10},
+		{10, 20, 10, 20, 10},
+		{10, 20, 25},
+	}
+	expectedDoubles := [][]float64{
+		{1000, 2000, 3000, 4000},
+		{1000, 2000, 3000, 4000},
+		{100, 200, 300, 400, 500},
+		{100, 200, 300, 400, 500},
+		nil,
+	}
+	expectedPayloadFields := [][]string{
+		{"theString", "intPrimitive", "longPrimitive", "doublePrimitive"},
+		{"theString", "intPrimitive", "longPrimitive", "doublePrimitive"},
+		{"theString", "intPrimitive", "longPrimitive", "doublePrimitive"},
+		{"theString", "intPrimitive", "longPrimitive", "doublePrimitive"},
+		{"theString", "intPrimitive", "longPrimitive"},
+	}
+	caseIndex := -1
+	sendIndex := 0
+	seenCases := make([]bool, len(rollupDimensionalityDedicatedCases))
+	for stepIndex, step := range scenario.Steps {
+		if step.Op == "case" {
+			caseIndex++
+			if caseIndex >= len(rollupDimensionalityDedicatedCases) || seenCases[caseIndex] ||
+				step.Case != rollupDimensionalityDedicatedCases[caseIndex] || len(step.Payload) != 0 {
+				return fmt.Errorf("rollup-dimensionality dedicated case marker %d is not pinned", caseIndex)
+			}
+			seenCases[caseIndex] = true
+			sendIndex = 0
+			continue
+		}
+		if step.Op != "send" || step.EventType != "SupportBean" || step.Case != "" {
+			return fmt.Errorf("rollup-dimensionality dedicated step %d must be an unscoped SupportBean send", stepIndex)
+		}
+		if caseIndex < 0 || sendIndex >= len(expectedSymbols[caseIndex]) {
+			return fmt.Errorf("rollup-dimensionality dedicated send sequence is not pinned")
+		}
+		var payload map[string]json.RawMessage
+		if err := strictObject(step.Payload, &payload); err != nil {
+			return fmt.Errorf("rollup-dimensionality dedicated step %d payload: %w", stepIndex, err)
+		}
+		if len(payload) != len(expectedPayloadFields[caseIndex]) {
+			return fmt.Errorf("rollup-dimensionality dedicated step %d payload fields are not pinned", stepIndex)
+		}
+		for _, field := range expectedPayloadFields[caseIndex] {
+			if _, ok := payload[field]; !ok {
+				return fmt.Errorf("rollup-dimensionality dedicated step %d payload is missing %q", stepIndex, field)
+			}
+		}
+		var values struct {
+			TheString       string  `json:"theString"`
+			IntPrimitive    int     `json:"intPrimitive"`
+			LongPrimitive   int64   `json:"longPrimitive"`
+			DoublePrimitive float64 `json:"doublePrimitive"`
+		}
+		if err := json.Unmarshal(step.Payload, &values); err != nil {
+			return fmt.Errorf("rollup-dimensionality dedicated step %d payload: %w", stepIndex, err)
+		}
+		if values.TheString != expectedSymbols[caseIndex][sendIndex] ||
+			values.IntPrimitive != expectedInts[caseIndex][sendIndex] ||
+			values.LongPrimitive != expectedLongs[caseIndex][sendIndex] ||
+			(caseIndex < 4 && values.DoublePrimitive != expectedDoubles[caseIndex][sendIndex]) {
+			return fmt.Errorf("rollup-dimensionality dedicated payload %d is not pinned", sendIndex)
+		}
+		sendIndex++
+		if sendIndex == len(expectedSymbols[caseIndex]) {
+			continue
+		}
+	}
+	if caseIndex != len(rollupDimensionalityDedicatedCases)-1 || sendIndex != len(expectedSymbols[caseIndex]) {
+		return fmt.Errorf("rollup-dimensionality dedicated case/send sequence is incomplete")
+	}
+	return nil
+}
+
+func runRollupDimensionalityDedicatedCase(ctx context.Context, scenario compat.Scenario, caseName string) (compat.Trace, error) {
+	env := esper.NewEnvironment()
+	if _, err := esper.RegisterStruct[rollupDimensionalityBean](env, "SupportBean"); err != nil {
+		return compat.Trace{}, err
+	}
+	theString := esper.Field[rollupDimensionalityBean, string]("theString")
+	intPrimitive := esper.Field[rollupDimensionalityBean, int]("intPrimitive")
+	longPrimitive := esper.Field[rollupDimensionalityBean, int64]("longPrimitive")
+	doublePrimitive := esper.Field[rollupDimensionalityBean, float64]("doublePrimitive")
+	var query esper.Query
+	switch caseName {
+	case rollupDimensionalityDedicatedCases[0]:
+		query = esper.From[rollupDimensionalityBean](env, "SupportBean").GroupByGroupingSets(
+			esper.GroupingSet(theString, intPrimitive), esper.GroupingSet(theString, longPrimitive),
+		).Select(esper.Alias("c0", theString), esper.Alias("c1", intPrimitive), esper.Alias("c2", longPrimitive), esper.Alias("c3", esper.Sum[float64](doublePrimitive))).Query(esper.StatementName("s0"))
+	case rollupDimensionalityDedicatedCases[1]:
+		query = esper.From[rollupDimensionalityBean](env, "SupportBean").GroupByGroupingSets(
+			esper.GroupingSet(theString, intPrimitive), esper.GroupingSet(theString, longPrimitive),
+		).Select(esper.Alias("c0", theString), esper.Alias("c1", intPrimitive), esper.Alias("c2", longPrimitive), esper.Alias("c3", esper.Sum[float64](doublePrimitive))).Query(esper.StatementName("s0"))
+	case rollupDimensionalityDedicatedCases[2], rollupDimensionalityDedicatedCases[3]:
+		stream := esper.From[rollupDimensionalityBean](env, "SupportBean").Window(esper.LengthWindow(4))
+		var aggregate esper.AggregateStream
+		if caseName == rollupDimensionalityDedicatedCases[2] {
+			aggregate = stream.GroupByCube(theString, intPrimitive, longPrimitive)
+		} else {
+			aggregate = stream.GroupByGroupingSets(
+				esper.GroupingSet(theString, intPrimitive, longPrimitive),
+				esper.GroupingSet(theString, intPrimitive), esper.GroupingSet(theString, longPrimitive), esper.GroupingSet(theString),
+				esper.GroupingSet(intPrimitive, longPrimitive), esper.GroupingSet(intPrimitive), esper.GroupingSet(longPrimitive), esper.GroupingSet(),
+			)
+		}
+		query = aggregate.Select(
+			esper.Alias("c0", theString), esper.Alias("c1", intPrimitive), esper.Alias("c2", longPrimitive),
+			esper.Alias("c3", esper.CountAll()), esper.Alias("c4", esper.Sum[float64](doublePrimitive)),
+			esper.Alias("c5", esper.Grouping(theString)), esper.Alias("c6", esper.Grouping(intPrimitive)), esper.Alias("c7", esper.Grouping(longPrimitive)), esper.Alias("c8", esper.GroupingID(theString, intPrimitive, longPrimitive)),
+		).Query(esper.StatementName("s0"))
+	case rollupDimensionalityDedicatedCases[4]:
+		if _, err := esper.CreateKeyContext(env, "SegmentedByString", theString); err != nil {
+			return compat.Trace{}, err
+		}
+		query = esper.From[rollupDimensionalityBean](env, "SupportBean").GroupByRollup(theString, intPrimitive).Select(
+			esper.Alias("c0", theString), esper.Alias("c1", intPrimitive), esper.Alias("c2", esper.Sum[int64](longPrimitive)),
+		).Query(esper.StatementName("s0"), esper.WithContext("SegmentedByString"))
+	default:
+		return compat.Trace{}, fmt.Errorf("unsupported rollup-dimensionality dedicated case %q", caseName)
+	}
+	plan, err := env.Build(query)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	engine, statement, err := deployParityStatementWithRuntime(ctx, env, plan, rollupDimensionalityDedicatedCaseRuntimes[indexOfString(rollupDimensionalityDedicatedCases, caseName)])
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	return compat.ReplayWithStatements(ctx, engine, statement, scenario, decodeRollupDimensionalityPayload, func(name string) (*esper.Statement, error) {
+		if name != statement.Name() {
+			return nil, fmt.Errorf("unknown rollup-dimensionality dedicated statement %q", name)
+		}
+		return statement, nil
+	})
+}
+
+func indexOfString(values []string, wanted string) int {
+	for index, value := range values {
+		if value == wanted {
+			return index
+		}
+	}
+	return -1
 }
 
 func runRollupDimensionalityCase(ctx context.Context, scenario compat.Scenario, caseName string) (compat.Trace, error) {

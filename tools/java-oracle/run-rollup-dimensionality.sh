@@ -118,9 +118,29 @@ mkdir -p "$parent"
     -Duser.country=US -Duser.variant= -cp "$classpath" \
     EPLResultSetQueryTypeRollupDimensionalityScenarioOracle "$scenario" > "$output"
 
-if ! jq -e '.version == "esper-parity/v1" and (.id | length > 0) and (.records | type == "array")' "$output" >/dev/null 2>&1; then
-    echo "Java oracle produced an invalid trace: $output" >&2
-    exit 1
+scenario_id=$(jq -r '.id // empty' "$scenario")
+if [ "$scenario_id" = "rollup-dimensionality-dedicated" ]; then
+    if ! jq -e '
+        (keys | sort) == ["id", "java", "javaCommit", "records", "version"]
+        and .version == "esper-parity/v1"
+        and .id == "rollup-dimensionality-dedicated"
+        and .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
+        and (.java | type == "string" and length > 0)
+        and (.records | type == "array" and length == 21)
+        and all(.records[];
+            (keys | sort) == ["case", "new", "operation", "sequence", "statement", "time"]
+            and .operation == "listener" and .statement == "s0"
+            and .time == "1970-01-01T00:00:00Z"
+            and (.new | type == "array")
+        )' "$output" >/dev/null 2>&1; then
+        echo "Java oracle produced an invalid dedicated trace: $output" >&2
+        exit 1
+    fi
+else
+    if ! jq -e '.version == "esper-parity/v1" and (.id | length > 0) and (.records | type == "array")' "$output" >/dev/null 2>&1; then
+        echo "Java oracle produced an invalid trace: $output" >&2
+        exit 1
+    fi
 fi
 
 echo "javaCommit=$actual_commit java=$java_version output=$output"

@@ -34,7 +34,7 @@ func TestRunHelpSucceeds(t *testing.T) {
 	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
 	}
-	for _, mode := range []string{"resultset-aggregate-median-and-deviation", "resultset-aggregate-median-and-deviation-diff", "resultset-aggregate-minmax-named-window-wever", "resultset-aggregate-minmax-named-window-wever-diff", "resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff", "resultset-aggregate-minmax-groupby-om-viewcompile", "resultset-aggregate-minmax-groupby-om-viewcompile-diff", "resultset-aggregate-minmax-groupby-join-select-having", "resultset-aggregate-minmax-groupby-join-select-having-diff", "resultset-querytype-row-for-all-select-avg-expr-std-group-by", "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff", "resultset-querytype-row-for-all-having-avg-group-window", "resultset-querytype-row-for-all-having-avg-group-window-diff", "resultset-querytype-row-for-all-having-sum-join", "resultset-querytype-row-for-all-having-sum-join-diff"} {
+	for _, mode := range []string{"resultset-aggregate-median-and-deviation", "resultset-aggregate-median-and-deviation-diff", "resultset-aggregate-minmax-named-window-wever", "resultset-aggregate-minmax-named-window-wever-diff", "resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff", "resultset-aggregate-minmax-groupby-om-viewcompile", "resultset-aggregate-minmax-groupby-om-viewcompile-diff", "resultset-aggregate-minmax-groupby-join-select-having", "resultset-aggregate-minmax-groupby-join-select-having-diff", "resultset-querytype-row-for-all-select-avg-expr-std-group-by", "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff", "resultset-querytype-row-for-all-having-avg-group-window", "resultset-querytype-row-for-all-having-avg-group-window-diff", "resultset-querytype-row-for-all-having-sum-join", "resultset-querytype-row-for-all-having-sum-join-diff", "rollup-dimensionality", "rollup-dimensionality-diff"} {
 		if !strings.Contains(stderr.String(), mode) {
 			t.Fatalf("help output omits %q: %s", mode, stderr.String())
 		}
@@ -14521,6 +14521,339 @@ func TestRunRollupDimensionalityCubeMutations(t *testing.T) {
 				t.Fatalf("mutation evidence = %#v", output)
 			}
 		})
+	}
+}
+
+func TestRunRollupDimensionalityDedicatedDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "rollup-dimensionality", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertRollupDimensionalityDedicatedTrace(t, trace)
+	javaFile, err := os.Open(filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, loadErr := compat.LoadTrace(javaFile)
+	closeErr := javaFile.Close()
+	if loadErr != nil {
+		t.Fatal(loadErr)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if differences := compat.DiffTraces(javaTrace, trace); len(differences) != 0 {
+		t.Fatalf("dedicated replay differs from pinned Java trace: %#v", differences)
+	}
+}
+
+func TestRunRollupDimensionalityDedicatedDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.trace.json")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-rollup-dimensionality-dedicated.evidence.json")
+	scenarioPath := filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "rollup-dimensionality-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.JavaCommit != "9e1b9f1cc9117fea4bf33ab043762c045d73839c" ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, rollupDimensionalityDedicatedJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, rollupDimensionalityJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, rollupDimensionalityDedicatedJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	assertRollupDimensionalityDedicatedTrace(t, evidence.JavaTrace)
+	assertRollupDimensionalityDedicatedTrace(t, evidence.GoTrace)
+}
+
+func TestRunRollupDimensionalityDedicatedDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "grouping-subtotal", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["c3"] = json.Number("999")
+		}},
+		{name: "cube-grouping-id", mutate: func(trace *compat.Trace) {
+			trace.Records[8].New[0].Fields["c8"] = json.Number("7")
+		}},
+		{name: "context-partition-sum", mutate: func(trace *compat.Trace) {
+			trace.Records[19].New[1].Fields["c2"] = json.Number("31")
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-rollup-dimensionality-dedicated.evidence.json")
+			scenarioPath := filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "rollup-dimensionality-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunRollupDimensionalityDedicatedCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != "9e1b9f1cc9117fea4bf33ab043762c045d73839c" ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, rollupDimensionalityDedicatedJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, rollupDimensionalityJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, rollupDimensionalityDedicatedJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	assertRollupDimensionalityDedicatedTrace(t, javaTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-querytype-rollup-dimensionality-dedicated.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadRollupDimensionalityScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "rollup-dimensionality", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertRollupDimensionalityDedicatedTrace(t, goTrace)
+}
+
+func TestRunRollupDimensionalityDedicatedRejectsMalformedRawScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-rollup-dimensionality-dedicated.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const firstCase = "unbound-grouping-set-2level-unenclosed-a"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps":[`), []byte(`"extra":0,"steps":[`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id":"rollup-dimensionality-dedicated"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`,"id":"rollup-dimensionality-dedicated"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit":"9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit":"wrong"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case":"`+firstCase+`","ordinal"`), []byte(`"case":"`+firstCase+`","extra":0,"ordinal"`), 1)
+		}},
+		{name: "case-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case":"`+firstCase+`","ordinal"`), []byte(`"case":"`+firstCase+`","case":"`+firstCase+`","ordinal"`), 1)
+		}},
+		{name: "marker-unknown-field", mutate: func(data []byte) []byte {
+			needle := []byte(`{"op":"case","case":"` + firstCase + `"}`)
+			return bytes.Replace(data, needle, []byte(`{"foo":"case","case":"`+firstCase+`"}`), 1)
+		}},
+		{name: "marker-wrong-op", mutate: func(data []byte) []byte {
+			needle := []byte(`{"op":"case","case":"` + firstCase + `"}`)
+			return bytes.Replace(data, needle, []byte(`{"op":"wrong","case":"`+firstCase+`"}`), 1)
+		}},
+		{name: "send-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op":"send","eventType":"SupportBean","payload"`), []byte(`{"op":"send","extra":0,"eventType":"SupportBean","payload"`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"doublePrimitive":1000`), []byte(`"doublePrimitive":1000,"doublePrimitive":1000`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType":"SupportBean"`), []byte(`"eventType":"WrongEvent"`), 1)
+		}},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags":[]`), []byte(`"javaFlags":null`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal":10`), []byte(`"ordinal":11`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "rollup-dimensionality", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func assertRollupDimensionalityDedicatedTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != rollupDimensionalityDedicatedID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 21 {
+		t.Fatalf("trace records = %d, want 21", len(trace.Records))
+	}
+	expected := []struct {
+		name       string
+		records    int
+		rowCounts  []int
+		fieldCount int
+	}{
+		{name: rollupDimensionalityDedicatedCases[0], records: 4, rowCounts: []int{2, 2, 2, 2}, fieldCount: 4},
+		{name: rollupDimensionalityDedicatedCases[1], records: 4, rowCounts: []int{2, 2, 2, 2}, fieldCount: 4},
+		{name: rollupDimensionalityDedicatedCases[2], records: 5, rowCounts: []int{8, 8, 8, 8, 12}, fieldCount: 9},
+		{name: rollupDimensionalityDedicatedCases[3], records: 5, rowCounts: []int{8, 8, 8, 8, 12}, fieldCount: 9},
+		{name: rollupDimensionalityDedicatedCases[4], records: 3, rowCounts: []int{3, 3, 3}, fieldCount: 3},
+	}
+	offset := 0
+	for _, group := range expected {
+		for sequence := 1; sequence <= group.records; sequence++ {
+			record := trace.Records[offset]
+			if record.Case != group.name || record.Operation != "listener" || record.Statement != "s0" ||
+				record.Sequence != uint64(sequence) || record.Time != "1970-01-01T00:00:00Z" {
+				t.Fatalf("record %d metadata = %#v", offset, record)
+			}
+			if len(record.New) != group.rowCounts[sequence-1] || len(record.Old) != 0 {
+				t.Fatalf("record %d new/old shape = %d/%d", offset, len(record.New), len(record.Old))
+			}
+			for rowIndex, row := range record.New {
+				if row.Kind != "row" || len(row.Fields) != group.fieldCount {
+					t.Fatalf("record %d row %d = %#v", offset, rowIndex, row)
+				}
+			}
+			offset++
+		}
+	}
+	first := trace.Records[0].New[0].Fields
+	if first["c0"] != "E1" || first["c1"] != json.Number("10") ||
+		!reflect.DeepEqual(first["c2"], map[string]any{"state": "null"}) || first["c3"] != json.Number("1000") {
+		t.Fatalf("first grouping row = %#v", first)
+	}
+	cube := trace.Records[12].New[0].Fields
+	if cube["c0"] != "E2" || cube["c1"] != json.Number("1") || cube["c2"] != json.Number("10") || cube["c8"] != json.Number("0") {
+		t.Fatalf("cube expiry row = %#v", cube)
+	}
+	contextRow := trace.Records[19].New[1].Fields
+	if contextRow["c0"] != "E1" || !reflect.DeepEqual(contextRow["c1"], map[string]any{"state": "null"}) || contextRow["c2"] != json.Number("30") {
+		t.Fatalf("context rollup row = %#v", contextRow)
 	}
 }
 

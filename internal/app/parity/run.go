@@ -24,11 +24,11 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff, resultset-querytype-row-for-all-select-avg-expr-std-group-by and resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-select-avg-std-group-by-uni and resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff, resultset-querytype-row-for-all-static-method-double-nested and resultset-querytype-row-for-all-static-method-double-nested-diff, resultset-querytype-row-for-all-having-avg-group-window and resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum and resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join and resultset-querytype-row-for-all-having-sum-join-diff, resultset-querytype-row-for-all and resultset-querytype-row-for-all-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff, resultset-querytype-row-for-all-select-avg-expr-std-group-by and resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-select-avg-std-group-by-uni and resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff, resultset-querytype-row-for-all-static-method-double-nested and resultset-querytype-row-for-all-static-method-double-nested-diff, resultset-querytype-row-for-all-having-avg-group-window and resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum and resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join and resultset-querytype-row-for-all-having-sum-join-diff, rollup-dimensionality and rollup-dimensionality-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, resultset-querytype-row-for-all-select-avg-expr-std-group-by, resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-select-avg-std-group-by-uni, resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff, resultset-querytype-row-for-all-static-method-double-nested, resultset-querytype-row-for-all-static-method-double-nested-diff, resultset-querytype-row-for-all-having-avg-group-window, resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum, resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join, resultset-querytype-row-for-all-having-sum-join-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, resultset-querytype-row-for-all-select-avg-expr-std-group-by, resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-select-avg-std-group-by-uni, resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff, resultset-querytype-row-for-all-static-method-double-nested, resultset-querytype-row-for-all-static-method-double-nested-diff, resultset-querytype-row-for-all-having-avg-group-window, resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum, resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join, resultset-querytype-row-for-all-having-sum-join-diff, rollup-dimensionality, rollup-dimensionality-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -54,7 +54,6 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetQueryTypeRowForAllStaticMethodDoubleNestedScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-having-avg-group-window" || *mode == "resultset-querytype-row-for-all-having-avg-group-window-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllHavingAvgScenario(file)
-
 	} else if *mode == "resultset-querytype-row-for-all-having-sum-join" || *mode == "resultset-querytype-row-for-all-having-sum-join-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllHavingSumJoinScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-having-sum" || *mode == "resultset-querytype-row-for-all-having-sum-diff" {
@@ -67,6 +66,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetAggregateMinMaxNamedWindowWEverScenario(file)
 	} else if *mode == "resultset-aggregate-minmax-no-data-window-subquery" || *mode == "resultset-aggregate-minmax-no-data-window-subquery-diff" {
 		scenario, err = loadResultSetAggregateMinMaxNoDataWindowSubqueryScenario(file)
+	} else if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
+		scenario, err = loadRollupDimensionalityScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -2548,10 +2549,14 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			return fail(stderr, err)
 		}
 		if *mode == "rollup-dimensionality-diff" {
+			runtimes := rollupDimensionalityJavaRuntimeIDs
+			executions := rollupDimensionalityJavaExecutions
+			if scenario.ID == rollupDimensionalityDedicatedID {
+				runtimes = rollupDimensionalityDedicatedJavaRuntimeIDs
+				executions = rollupDimensionalityDedicatedJavaExecutions
+			}
 			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
-				splitMetadata(*javaRuntimeIDs, rollupDimensionalityJavaRuntimeIDs),
-				splitMetadata(*javaSourceFiles, rollupDimensionalityJavaSources),
-				splitMetadata(*javaExecutions, rollupDimensionalityJavaExecutions), scenario, trace)
+				runtimes, rollupDimensionalityJavaSources, executions, scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
