@@ -4903,7 +4903,8 @@
     "internal/app/parity/resultset_query_type_row_for_all_having_sum.go",
     "internal/app/parity/resultset_query_type_row_for_all_having_sum_join.go",
     "internal/app/parity/resultset_query_type_row_for_all_having_avg.go",
-    "internal/app/parity/resultset_querytype_row_for_all_select_avg_expr_std_group_by.go"
+    "internal/app/parity/resultset_querytype_row_for_all_select_avg_expr_std_group_by.go",
+    "internal/app/parity/resultset_querytype_row_for_all_select_avg_std_group_by_uni.go"
    ],
    "phase": 3,
    "status": "differential-verified",
@@ -4925,7 +4926,8 @@
     "java-runtime-65e4ba1499cb12f04d8a",
     "java-runtime-dfb97881f562ac33e873",
     "java-runtime-d20a1ee344797d87678b",
-    "java-runtime-873d7f4fc2344cd9c631"
+    "java-runtime-873d7f4fc2344cd9c631",
+    "java-runtime-de3a01d12a22bb33ee43"
    ]
   }
  ],
@@ -36139,6 +36141,68 @@
     "ResultSetQueryTypeRowForAllSelectAvgExprStdGroupBy replays the standard group-window average over SupportMarketDataBean (2 Java/Go records, 0 differences): A=1 emits 1.0 and B=3 emits the global 2.0 row-for-all average across both group-window partitions.",
     "The typed Go surface uses nullable SupportMarketDataBean fields, GroupWindow(symbol, LengthWindow(2)), Avg(price), and new-only listener output. The scenario and oracle pin metadata, payload, values, order, timestamps, and row shape; strict validators reject malformed or duplicate fields and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-row-for-all-select-avg-std-group-by-uni",
+   "javaRuntimeIds": [
+    "java-runtime-de3a01d12a22bb33ee43"
+   ],
+   "javaStaticIds": [
+    "java-7ba8b4893d30071e2fa5"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeRowForAllSelectAvgStdGroupByUni"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniRejectsMalformedRawScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "row-for-all",
+    "aggregate",
+    "group-window",
+    "univariate-statistics",
+    "istream",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-row-for-all-select-avg-std-group-by-uni.json",
+    "testdata/parity/resultset-querytype-row-for-all-select-avg-std-group-by-uni.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-select-avg-std-group-by-uni.go.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-select-avg-std-group-by-uni.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRowForAllSelectAvgStdGroupByUniScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-row-for-all-select-avg-std-group-by-uni.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-de3a01d12a22bb33ee43"
+   ],
+   "notes": [
+    "ResultSetQueryTypeRowForAllSelectAvgStdGroupByUni replays a deterministic group-window univariate-statistics average (4 Java/Go records, 0 differences): A/1 emits 1, B/3 emits 3, A/3 emits 2, A/10 is reset after its callback, and A/20 emits 15 after per-symbol length(2) eviction.",
+    "The typed Go surface uses GroupWindow(symbol, LengthWindow(2)), UnivariateStatistics(price).Average(), and new-only listener output. The bounded aggregate runtime detects univariate-statistics derived-view dependencies recursively so #uni uses the GroupWindow key while ordinary Avg remains row-for-all; strict validators reject malformed or duplicate fields, payload errors, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -38785,30 +38849,34 @@
   {
    "capabilityId": "resultset.querytype-row-for-all",
    "caseId": "case.resultset-querytype-row-for-all-select-avg-expr-std-group-by"
+  },
+  {
+   "capabilityId": "resultset.querytype-row-for-all",
+   "caseId": "case.resultset-querytype-row-for-all-select-avg-std-group-by-uni"
   }
  ],
  "summary": {
-  "inventoriedCases": 577,
-  "implementedCases": 575,
-  "differentialVerifiedCases": 190,
-  "differentialVerifiedRuntimeIds": 715,
-  "intentionallyDifferentCases": 23,
-  "representativeVerifiedCases": 104,
-  "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 119,
-  "implementedCapabilities": 118,
-  "differentialVerifiedCapabilities": 34,
-  "intentionallyDifferentCapabilities": 8,
-  "representativeVerifiedCapabilities": 11,
-  "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3336,
-  "referencedJavaRuntimeIds": 3123,
-  "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1013,
-  "representativeScenarioTotal": 107,
-  "representativeScenarioPassing": 107,
-  "totalCases": 577,
-  "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 715
+ "inventoriedCases": 578,
+ "implementedCases": 576,
+ "differentialVerifiedCases": 191,
+ "differentialVerifiedRuntimeIds": 716,
+ "intentionallyDifferentCases": 23,
+ "representativeVerifiedCases": 104,
+ "nfrVerifiedCases": 0,
+ "inventoriedCapabilities": 119,
+ "implementedCapabilities": 118,
+ "differentialVerifiedCapabilities": 34,
+ "intentionallyDifferentCapabilities": 8,
+ "representativeVerifiedCapabilities": 11,
+ "nfrVerifiedCapabilities": 0,
+ "runtimeAssociationCount": 3337,
+ "referencedJavaRuntimeIds": 3124,
+ "totalJavaRuntimeIds": 4136,
+ "unreferencedJavaRuntimeIds": 1012,
+ "representativeScenarioTotal": 107,
+ "representativeScenarioPassing": 107,
+ "totalCases": 578,
+ "totalCapabilities": 119,
+ "differentialVerifiedRuntimeIDs": 716
  }
 }

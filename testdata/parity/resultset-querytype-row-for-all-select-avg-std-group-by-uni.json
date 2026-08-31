@@ -1,0 +1,28 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-row-for-all-select-avg-std-group-by-uni",
+  "description": "ResultSetQueryTypeRowForAll ordinal 10: average with standard group-by and unique price view.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java",
+  "javaRuntimes": ["java-runtime-de3a01d12a22bb33ee43"],
+  "javaNames": ["ResultSetQueryTypeRowForAllSelectAvgStdGroupByUni"],
+  "javaFlags": [],
+  "javaStaticIds": ["java-7ba8b4893d30071e2fa5"],
+  "cases": [{
+    "case": "avg-std-group-by-uni",
+    "ordinal": 10,
+    "runtimeId": "java-runtime-de3a01d12a22bb33ee43",
+    "executionName": "ResultSetQueryTypeRowForAllSelectAvgStdGroupByUni",
+    "observation": "listener",
+    "iteratorSnapshots": 0,
+    "epl": "@name('s0') select istream average as aprice from SupportMarketDataBean#groupwin(symbol)#length(2)#uni(price)"
+  }],
+  "steps": [
+    {"op": "case", "case": "avg-std-group-by-uni"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "A", "id": null, "price": 1, "volume": null, "feed": null}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "B", "id": null, "price": 3, "volume": null, "feed": null}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "A", "id": null, "price": 3, "volume": null, "feed": null}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "A", "id": null, "price": 10, "volume": null, "feed": null}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "A", "id": null, "price": 20, "volume": null, "feed": null}}
+  ]
+}

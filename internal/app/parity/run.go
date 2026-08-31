@@ -24,11 +24,11 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("parity", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff, resultset-querytype-row-for-all-select-avg-expr-std-group-by and resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-having-avg-group-window and resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum and resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join and resultset-querytype-row-for-all-having-sum-join-diff, resultset-querytype-row-for-all and resultset-querytype-row-for-all-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff, resultset-querytype-row-for-all-select-avg-expr-std-group-by and resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-select-avg-std-group-by-uni and resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff, resultset-querytype-row-for-all-having-avg-group-window and resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum and resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join and resultset-querytype-row-for-all-having-sum-join-diff, resultset-querytype-row-for-all and resultset-querytype-row-for-all-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
-	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, resultset-querytype-row-for-all-select-avg-expr-std-group-by, resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-having-avg-group-window, resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum, resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join, resultset-querytype-row-for-all-having-sum-join-diff")
+	mode := flags.String("mode", "stage1", "runner mode: stage1, context-hash, resultset-querytype-row-for-all-select-avg-expr-std-group-by, resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-select-avg-std-group-by-uni, resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff, resultset-querytype-row-for-all-having-avg-group-window, resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum, resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join, resultset-querytype-row-for-all-having-sum-join-diff")
 	javaTracePath := flags.String("java-trace", "", "Java trace JSON for context-hash-diff")
 	evidencePath := flags.String("evidence", "", "write differential evidence JSON to this path")
 	javaCommit := flags.String("java-commit", contextHashJavaCommit, "Java oracle commit for differential evidence")
@@ -48,6 +48,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	var scenario compat.Scenario
 	if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
+	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
+		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgStdGroupByUniScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-having-avg-group-window" || *mode == "resultset-querytype-row-for-all-having-avg-group-window-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllHavingAvgScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-having-sum-join" || *mode == "resultset-querytype-row-for-all-having-sum-join-diff" {
@@ -2243,6 +2245,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeRowForAllSelectAvgExprStdGroupByJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultSetQueryTypeRowForAllSelectAvgExprStdGroupByJavaSources),
 				splitMetadata(*javaExecutions, resultSetQueryTypeRowForAllSelectAvgExprStdGroupByJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
+		trace, err := runResultSetQueryTypeRowForAllSelectAvgStdGroupByUniScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

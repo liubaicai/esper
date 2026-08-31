@@ -3,6 +3,7 @@
 > 文档定位：本文件只维护当前阶段、优先级、remaining 和风险。完整范围与架构见 [实施规划](esper-go-port-implementation-plan.md)，日常步骤见 [执行手册](esper-go-port-runbook.md)，差分、合成数据和验收口径见 [质量策略](esper-go-port-quality-strategy.md)，历史见 [CHANGELOG](../CHANGELOG.md)。统计数字以 `testdata/compat/capability-manifest.json` 的已校验 `summary` 为唯一来源。
 
 ## 0. 实时状态入口
+> 最新补充：Draft 4.286（2026-08-31），新增 `resultset-querytype-row-for-all-select-avg-std-group-by-uni` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRowForAll.java` ordinal 10 的 `ResultSetQueryTypeRowForAllSelectAvgStdGroupByUni`（runtime `java-runtime-de3a01d12a22bb33ee43`；shared inventory ID `java-00cfc4061ba3a5f163ff`；static candidate `java-7ba8b4893d30071e2fa5`；无 flags）：Java/Go 各 4 条 records、0 differences。场景覆盖 `SupportMarketDataBean#groupwin(symbol)#length(2)#uni(price)` 的 `istream average`：A/1 输出 1.0、B/3 输出 3.0、A/3 输出 2.0、A/10 callback 仅用于 listener reset、A/20 在每符号 length(2) 淘汰后输出 15.0；typed Go `GroupWindow`、`LengthWindow(2)`、`UnivariateStatistics(price).Average()` 与 new-only listener replay；递归 `univariate-statistics*` 依赖检测使 `#uni` 使用隐式 group-window key，同时保留普通 `Avg` 的 row-for-all 语义；严格 scenario/oracle validator 固定 metadata、payload、value/order/time/record-shape 并拒绝 mutation；manifest 更新为 578 cases、191 个 differential-verified case、716 个 differential runtime IDs、3337 条 associations（referenced 3124）；capability 119 个（34 DV）。
 > 最新补充：Draft 4.285（2026-08-31），新增 `resultset-querytype-row-for-all-select-avg-expr-std-group-by` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRowForAll.java` ordinal 9 的 `ResultSetQueryTypeRowForAllSelectAvgExprStdGroupBy`（runtime `java-runtime-873d7f4fc2344cd9c631`；shared inventory ID `java-00cfc4061ba3a5f163ff`；static candidate `java-d8d6953f53a7a43d2324`；无 flags）：Java/Go 各 2 条 records、0 differences。场景覆盖 `SupportMarketDataBean#groupwin(symbol)#length(2)` 上 `istream avg(price)` 的 row-for-all 全局平均：A=1 输出 1.0、B=3 输出跨 group-window 分区的 2.0；typed Go `GroupWindow`、`Avg` 与严格 scenario/oracle validator 固定 payload、metadata、value/order/time/record-shape 及 mutation rejection；为保留纯聚合 row-for-all 语义，bounded aggregate runtime 仅在投影读取非 key 属性或 into-table 时 materialize 隐式分组；manifest 更新为 577 cases、190 个 differential-verified case、715 个 differential runtime IDs、3336 条 associations（referenced 3123）；capability 119 个（34…
 > 最新补充：Draft 4.284（2026-08-31），新增 `resultset-querytype-row-for-all-having-avg-group-window` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRowForAllHaving.java` ordinal 2 的 `ResultSetQueryTypeAvgRowForAllWHavingGroupWindow`（runtime `java-runtime-d20a1ee344797d87678b`；shared inventory/static ID `java-45a56190252ed051c35f`；无 flags）：Java/Go 各 3 条 records、0 differences。场景覆盖 `SupportMarketDataBean#unique(symbol)` 的 `istream avg(price) <= 0` having：A=-1、A=5 替换后抑制、B=-6、C 正均值抑制、C=-2 恢复输出；typed Go `Unique`、`Avg`、`Having` 与严格 scenario/oracle validator 固定 payload、metadata、value/order/time/record-shape 及 mutation rejection；manifest 更新为 576 cases、189 个 differential-verified case、714 个 differential runtime IDs、3335 条 associations（referenced 3122）；capability 119 个（34 DV）。
 > 最新补充：Draft 4.283（2026-08-29），新增 `resultset-querytype-row-for-all-having-sum-join` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRowForAllHaving.java` ordinal 1 的 `ResultSetQueryTypeRowForAllWHavingSumJoin`（runtime `java-runtime-dfb97881f562ac33e873`；shared inventory `java-45a56190252ed051c35f`；static candidate `java-bf6637bf00f9e0e78f89`，无 flags）：Java/Go 各 3 条 records、0 differences。场景覆盖两个 `SupportBeanString`/`SupportBean` 十秒 time-window 的 key join、`irstream sum(longBoxed) > 10`、t5/t8/t10 新旧 listener 行与双窗口首个到期（t5 new 25、t8 new 20/old 25、t10 old 20）；typed Go `Join`、nullable `LongBoxed`、两个 `TimeWindow`、`Sum`、`Having`、`WithOldStream` 与严格 scenario/oracle validator 固定 join metadata、payload、value/order/time/record-shape；manifest 更新为 575 cases、188 个 differential-verified case、713 个 differential runtime IDs、3334 条 associations（referenced 3121）；capability 119 个（34 DV）。
@@ -988,11 +989,11 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 119 |
-| Case | 577 |
-| Case differential-verified | 190 |
-| Differential-verified runtime | 715 / 4,136 |
-| Runtime 已关联 | 3,123 / 4,136（75.5%） |
-| Runtime 未关联 | 1,013 |
+| Case | 578 |
+| Case differential-verified | 191 |
+| Differential-verified runtime | 716 / 4,136 |
+| Runtime 已关联 | 3,124 / 4,136（75.5%） |
+| Runtime 未关联 | 1,012 |
 | Representative scenario | 107 / 107 通过 |
 | Intentionally-different case | 23 |
 | NFR-verified case | 0 |

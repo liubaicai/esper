@@ -20750,6 +20750,245 @@ func TestRunResultSetQueryTypeRowForAllHavingSumJoinCheckedInEvidenceMatchesTrac
 	}
 	assertResultSetQueryTypeRowForAllHavingSumJoinTrace(t, goTrace)
 }
+func TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "resultset-querytype-row-for-all-select-avg-std-group-by-uni.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-row-for-all-select-avg-std-group-by-uni", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetQueryTypeRowForAllSelectAvgStdGroupByUniTrace(t, trace)
+}
+
+func TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := writeJavaTraceFixtureFromTrace(t, filepath.Join(root, "resultset-querytype-row-for-all-select-avg-std-group-by-uni.trace.json"), func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-row-for-all-select-avg-std-group-by-uni.evidence.json")
+	scenarioPath := filepath.Join(root, "resultset-querytype-row-for-all-select-avg-std-group-by-uni.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"-mode", "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff", "-scenario", scenarioPath, "-java-trace", javaTracePath, "-evidence", evidencePath}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if evidence.JavaCommit != resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetQueryTypeRowForAllSelectAvgStdGroupByUniTrace(t, evidence.JavaTrace)
+}
+
+func TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) { trace.Records[0].New[0].Fields["aprice"] = json.Number("999") }},
+		{name: "row-shape", mutate: func(trace *compat.Trace) { trace.Records[0].New = nil }},
+		{name: "sequence", mutate: func(trace *compat.Trace) { trace.Records[1].Sequence++ }},
+		{name: "record-order", mutate: func(trace *compat.Trace) { trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0] }},
+		{name: "time", mutate: func(trace *compat.Trace) { trace.Records[0].Time = "1970-01-01T00:00:01Z" }},
+		{name: "record-count", mutate: func(trace *compat.Trace) { trace.Records = trace.Records[:len(trace.Records)-1] }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t, filepath.Join(root, "resultset-querytype-row-for-all-select-avg-std-group-by-uni.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-row-for-all-select-avg-std-group-by-uni.evidence.json")
+			scenarioPath := filepath.Join(root, "resultset-querytype-row-for-all-select-avg-std-group-by-uni.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{"-mode", "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff", "-scenario", scenarioPath, "-java-trace", javaTracePath, "-evidence", evidencePath}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-querytype-row-for-all-select-avg-std-group-by-uni.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-querytype-row-for-all-select-avg-std-group-by-uni.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeRowForAllSelectAvgStdGroupByUniJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	assertResultSetQueryTypeRowForAllSelectAvgStdGroupByUniTrace(t, javaTrace)
+	scenarioPath := filepath.Join(root, "resultset-querytype-row-for-all-select-avg-std-group-by-uni.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-row-for-all-select-avg-std-group-by-uni", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetQueryTypeRowForAllSelectAvgStdGroupByUniTrace(t, goTrace)
+}
+
+func TestRunResultSetQueryTypeRowForAllSelectAvgStdGroupByUniRejectsMalformedRawScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-for-all-select-avg-std-group-by-uni.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "resultset-querytype-row-for-all-select-avg-std-group-by-uni"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "avg-std-group-by-uni",`), []byte(`"case": "avg-std-group-by-uni", "extra": 0,`), 1)
+		}},
+		{name: "case-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "avg-std-group-by-uni",`), []byte(`"case": "avg-std-group-by-uni", "case": "avg-std-group-by-uni",`), 1)
+		}},
+		{name: "step-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "avg-std-group-by-uni"}`), []byte(`{"op": "case", "case": "avg-std-group-by-uni", "extra": 0}`), 1)
+		}},
+		{name: "step-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "avg-std-group-by-uni"}`), []byte(`{"op": "case", "case": "avg-std-group-by-uni", "case": "avg-std-group-by-uni"}`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"feed": null`), []byte(`"feed": null, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"feed": null`), []byte(`"feed": null, "feed": null`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportMarketDataBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "wrong-symbol", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "A"`), []byte(`"symbol": "Z"`), 1)
+		}},
+		{name: "wrong-price", mutate: func(data []byte) []byte { return bytes.Replace(data, []byte(`"price": 1`), []byte(`"price": 1.5`), 1) }},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": null`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 10`), []byte(`"ordinal": 9`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte { return append(append([]byte(nil), data...), []byte("\n{}\n")...) }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-querytype-row-for-all-select-avg-std-group-by-uni", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func assertResultSetQueryTypeRowForAllSelectAvgStdGroupByUniTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultSetQueryTypeRowForAllSelectAvgStdGroupByUniID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 4 {
+		t.Fatalf("trace records = %d, want 4", len(trace.Records))
+	}
+	want := []float64{1, 3, 2, 15}
+	for i, record := range trace.Records {
+		if record.Case != resultSetQueryTypeRowForAllSelectAvgStdGroupByUniCase || record.Operation != "listener" || record.Statement != "s0" || record.Sequence != uint64(i+1) || record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d metadata = %#v", i, record)
+		}
+		if len(record.New) != 1 || len(record.Old) != 0 {
+			t.Fatalf("record %d new/old shape = %d/%d", i, len(record.New), len(record.Old))
+		}
+		row := record.New[0]
+		if row.Kind != "row" || len(row.Fields) != 1 {
+			t.Fatalf("record %d row shape = %#v", i, row)
+		}
+		value, ok := row.Fields["aprice"].(json.Number)
+		if !ok {
+			t.Fatalf("record %d aprice type = %T, value = %#v", i, row.Fields["aprice"], row.Fields["aprice"])
+		}
+		got, err := value.Float64()
+		if err != nil || got != want[i] {
+			t.Fatalf("record %d aprice = %v (err=%v), want %v", i, value, err, want[i])
+		}
+	}
+}
+
 func TestRunResultSetQueryTypeRowForAllSelectAvgExprStdGroupByDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	scenarioPath := filepath.Join(root, "resultset-querytype-row-for-all-select-avg-expr-std-group-by.json")

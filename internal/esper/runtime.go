@@ -17776,7 +17776,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	if definition == nil {
 		return ResultBatch{}, NewError(ErrorInvalidRule, "aggregate runtime has no definition")
 	}
-	if len(definition.groupBy) == 0 && (plan.query.tableTarget != "" || aggregateDefinitionReadsNonKeyEvent(definition)) {
+	if len(definition.groupBy) == 0 && (plan.query.tableTarget != "" || aggregateDefinitionReadsNonKeyEvent(definition) || aggregateDefinitionUsesUnivariateStatistics(definition)) {
 		if keys := implicitAggregateGroupBy(definition.input); len(keys) > 0 {
 			// A grouped retention is an implicit aggregate dimension when the
 			// projection reads a non-aggregate event property (or when an
@@ -19191,6 +19191,45 @@ func aggregateDefinitionReadsNonKeyEventExceptContext(definition *aggregateDefin
 		}
 	}
 	return hasAggregate && readsNonKeyEvent
+}
+
+// aggregateDefinitionUsesUnivariateStatistics reports whether a projection or
+// HAVING predicate depends on Esper's #uni derived-view aggregate. A grouped
+// retention view supplies the aggregate's per-key scope even when the
+// projection contains no ordinary event property; plain Avg remains a
+// row-for-all aggregate and is intentionally not included here.
+func aggregateDefinitionUsesUnivariateStatistics(definition *aggregateDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	for _, selection := range definition.selections {
+		if expressionTreeContainsUnivariateStatistics(selection.Expr) {
+			return true
+		}
+	}
+	return expressionTreeContainsUnivariateStatistics(definition.having)
+}
+
+func expressionTreeContainsUnivariateStatistics(expression Expr) bool {
+	if expression == nil || expression.node() == nil {
+		return false
+	}
+	var visit func(*exprNode) bool
+	visit = func(node *exprNode) bool {
+		if node == nil {
+			return false
+		}
+		if node.kind == "univariate-statistics" || strings.HasPrefix(node.kind, "univariate-statistics-") {
+			return true
+		}
+		for _, child := range node.children {
+			if visit(child) {
+				return true
+			}
+		}
+		return false
+	}
+	return visit(expression.node())
 }
 
 func aggregateDefinitionReadsNonKeyEvent(definition *aggregateDefinition) bool {
