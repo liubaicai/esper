@@ -891,7 +891,8 @@
     "internal/app/parity/resultset_aggregate_sorted_multi_criteria_simple.go",
     "internal/app/parity/resultset_aggregate_sorted_multi_criteria.go",
     "internal/app/parity/resultset_query_type_rollup_having_iterator.go",
-    "internal/app/parity/resultset_querytype_rollup_orderby_unidirectional.go"
+    "internal/app/parity/resultset_querytype_rollup_orderby_unidirectional.go",
+    "internal/app/parity/resultset_aggregate_sorted_no_data_window.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -36606,6 +36607,68 @@
     "ResultSetQueryTypeIteratorWindow{join=false,true} replays two deterministic length(3) rollup iterator executions (8 Java/Go snapshot records per side, 0 differences): each snapshot contains the leaf groups and Null rollup subtotal, with FIFO eviction changing the final row order and membership.",
     "The typed Go surface uses LengthWindow(3), GroupByRollup, Sum, Statement.Snapshot, and an optional SupportBean_S0 keep-all join. The scenario and oracle pin runtime metadata, payloads, any-order rows, timestamps, and record shape; strict validators reject malformed fields, duplicate JSON keys, payload errors, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-sorted-no-data-window",
+   "javaRuntimeIds": [
+    "java-runtime-af551963966a83d26468"
+   ],
+   "javaStaticIds": [
+    "java-f645b6fb41fd8c63d7f0"
+   ],
+   "javaNames": [
+    "ResultSetAggregateNoDataWindow"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedNoDataWindowDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedNoDataWindowDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedNoDataWindowDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedNoDataWindowCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedNoDataWindowRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedNoDataWindowRejectsQuotedInteger"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "sorted",
+    "minby",
+    "maxby",
+    "no-data-window",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-sorted-no-data-window.json",
+    "testdata/parity/resultset-aggregate-sorted-no-data-window.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-no-data-window.go.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-no-data-window.evidence.json",
+    "tools/java-oracle/ResultSetAggregateSortedNoDataWindowScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-sorted-no-data-window.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-af551963966a83d26468"
+   ],
+   "notes": [
+    "ResultSetAggregateNoDataWindow replays one deterministic unwindowed SupportBean lifecycle (4 listener records, 0 differences): maxbyever/minbyever and current maxby/minby projections advance through E1=1, E2=2, E3=0, and E4=3 with no old stream or iterator output.",
+    "The typed Go surface uses MaxBy/MinBy, MaxByEver/MinByEver, EventValue, Property, and an immutable aggregate query without an explicit data window. The scenario, Java oracle, and Go runner pin runtime/static metadata, exact payloads, row values/order/time/shape, and reject malformed JSON, duplicate keys, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -39280,13 +39343,17 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-querytype-rollup-orderby-unidirectional"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-sorted-no-data-window"
   }
- ],
+],
  "summary": {
- "inventoriedCases": 584,
- "implementedCases": 582,
- "differentialVerifiedCases": 197,
- "differentialVerifiedRuntimeIds": 728,
+ "inventoriedCases": 585,
+ "implementedCases": 583,
+ "differentialVerifiedCases": 198,
+ "differentialVerifiedRuntimeIds": 729,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39296,14 +39363,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3349,
-"referencedJavaRuntimeIds": 3132,
+ "runtimeAssociationCount": 3350,
+ "referencedJavaRuntimeIds": 3133,
  "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1004,
+ "unreferencedJavaRuntimeIds": 1003,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
-"totalCases": 584,
-"totalCapabilities": 119,
-"differentialVerifiedRuntimeIDs": 728
+ "totalCases": 585,
+ "totalCapabilities": 119,
+ "differentialVerifiedRuntimeIDs": 729
  }
 }

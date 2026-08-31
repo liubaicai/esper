@@ -1,0 +1,27 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-sorted-no-data-window",
+  "description": "ResultSetAggregateSortedMinMaxBy ordinal 6: unwindowed current and ever min/max-by projections.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java",
+  "javaRuntimes": ["java-runtime-af551963966a83d26468"],
+  "javaNames": ["ResultSetAggregateNoDataWindow"],
+  "javaStaticIds": ["java-f645b6fb41fd8c63d7f0"],
+  "javaFlags": [],
+  "cases": [{
+    "case": "resultset-aggregate-sorted-no-data-window",
+    "ordinal": 6,
+    "runtimeId": "java-runtime-af551963966a83d26468",
+    "executionName": "ResultSetAggregateNoDataWindow",
+    "observation": "listener",
+    "iteratorSnapshots": 0,
+    "epl": "@name('s0') select maxbyever(intPrimitive).theString as c0, minbyever(intPrimitive).theString as c1, maxby(intPrimitive).theString as c2, minby(intPrimitive).theString as c3 from SupportBean"
+  }],
+  "steps": [
+    {"op": "case", "case": "resultset-aggregate-sorted-no-data-window"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 3}}
+  ]
+}

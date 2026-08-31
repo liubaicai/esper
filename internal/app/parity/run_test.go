@@ -23783,3 +23783,284 @@ func assertResultSetQueryTypeRollupOrderByUnidirectionalRows(t *testing.T, recor
 		}
 	}
 }
+
+func TestRunResultSetAggregateSortedNoDataWindowDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "resultset-aggregate-sorted-no-data-window.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-sorted-no-data-window", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetAggregateSortedNoDataWindowTrace(t, trace)
+}
+
+func TestRunResultSetAggregateSortedNoDataWindowDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-no-data-window.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-no-data-window-diff",
+		"-scenario", filepath.Join(root, "resultset-aggregate-sorted-no-data-window.json"),
+		"-java-trace", filepath.Join(root, "resultset-aggregate-sorted-no-data-window.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetAggregateSortedNoDataWindowJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateSortedNoDataWindowJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateSortedNoDataWindowJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateSortedNoDataWindowJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetAggregateSortedNoDataWindowTrace(t, evidence.JavaTrace)
+	assertResultSetAggregateSortedNoDataWindowTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetAggregateSortedNoDataWindowDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["c0"] = "wrong"
+		}},
+		{name: "missing-field", mutate: func(trace *compat.Trace) {
+			delete(trace.Records[0].New[0].Fields, "c3")
+		}},
+		{name: "sequence", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Sequence++
+		}},
+		{name: "time", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-aggregate-sorted-no-data-window.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-no-data-window.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-sorted-no-data-window-diff",
+				"-scenario", filepath.Join(root, "resultset-aggregate-sorted-no-data-window.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateSortedNoDataWindowCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-no-data-window.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-no-data-window.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateSortedNoDataWindowJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateSortedNoDataWindowJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateSortedNoDataWindowJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateSortedNoDataWindowJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	assertResultSetAggregateSortedNoDataWindowTrace(t, javaTrace)
+	scenarioPath := filepath.Join(root, "resultset-aggregate-sorted-no-data-window.json")
+	var scenarioFile *os.File
+	scenarioFile, err = os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateSortedNoDataWindowScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetAggregateSortedNoDataWindowJavaCommit,
+		resultsetAggregateSortedNoDataWindowJavaRuntimeIDs,
+		resultsetAggregateSortedNoDataWindowJavaSources,
+		resultsetAggregateSortedNoDataWindowJavaExecutions,
+		scenario, javaTrace, evidence.JavaTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-sorted-no-data-window", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetAggregateSortedNoDataWindowTrace(t, goTrace)
+}
+
+func TestRunResultSetAggregateSortedNoDataWindowRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-sorted-no-data-window.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-sorted-no-data-window"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-sorted-no-data-window"`)...), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"epl": "@name('s0')`), []byte(`"extra": 0, "epl": "@name('s0')`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1, "intPrimitive": 2`), 1)
+		}},
+		{name: "wrong-event-order", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1"`), []byte(`"theString": "E2"`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1.5`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-aggregate-sorted-no-data-window", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func assertResultSetAggregateSortedNoDataWindowTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetAggregateSortedNoDataWindowID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 4 {
+		t.Fatalf("trace records = %d, want 4", len(trace.Records))
+	}
+	for index, record := range trace.Records {
+		if record.Case != resultsetAggregateSortedNoDataWindowCase || record.Operation != "listener" ||
+			record.Statement != "s0" || record.Sequence != uint64(index+1) ||
+			record.Time != "1970-01-01T00:00:00Z" || len(record.New) != 1 || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", index, record)
+		}
+		if record.New[0].Kind != "row" || len(record.New[0].Fields) != 4 {
+			t.Fatalf("record %d row shape = %#v", index, record.New[0])
+		}
+		want := make(map[string]any, 4)
+		for fieldIndex, value := range resultsetAggregateSortedNoDataWindowExpectedRows[index] {
+			want[fmt.Sprintf("c%d", fieldIndex)] = value
+		}
+		if !reflect.DeepEqual(record.New[0].Fields, want) {
+			t.Fatalf("record %d fields = %#v, want %#v", index, record.New[0].Fields, want)
+		}
+	}
+}
+func TestRunResultSetAggregateSortedNoDataWindowRejectsQuotedInteger(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-sorted-no-data-window.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutated := bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": "1"`), 1)
+	if bytes.Equal(mutated, data) {
+		t.Fatal("quoted-integer mutation did not change scenario")
+	}
+	scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+	if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-sorted-no-data-window", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+		t.Fatalf("quoted integer unexpectedly replayed: stdout=%q stderr=%q", stdout.String(), stderr.String())
+	}
+}
