@@ -746,7 +746,8 @@
     "internal/esper/runtime.go",
     "internal/esper/aggregate_test.go",
     "internal/app/parity/rollup_dimensionality.go",
-    "internal/app/parity/rollup_grouping_funcs.go"
+    "internal/app/parity/rollup_grouping_funcs.go",
+    "internal/app/parity/rollup_grouping_faf.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -784,7 +785,8 @@
     "java-runtime-20c08346e2644a7201e5",
     "java-runtime-994120aef6b9ff1c0e75",
     "java-runtime-71fb38d67af471287089",
-    "java-runtime-52a4f853b6052fb47437"
+    "java-runtime-52a4f853b6052fb47437",
+    "java-runtime-e8f49362431d4c33baa8"
    ]
   },
   {
@@ -36399,6 +36401,68 @@
     "ResultSetQueryTypeDocSampleCarEventAndGroupingFunc replays three deterministic fresh compilation paths (plain, @Audit, and eplToModel) with six Java/Go listener records and 0 differences; each callback emits the four grouping-set rows in detail-to-overall order for the two SupportCarEvent inputs.",
     "The typed Go surface uses GroupByGroupingSets, Sum, Grouping, and GroupingID over SupportCarEvent. The scenario, runner, and Java oracle pin metadata, payloads, grouping nulls, values, order, timestamps, and record shape; strict validators reject malformed fields, duplicate JSON keys, payload errors, and trace mutations."
    ]
+  },
+  {
+   "id": "case.rollup-grouping-funcs-faf-dedicated",
+   "javaRuntimeIds": [
+    "java-runtime-e8f49362431d4c33baa8"
+   ],
+   "javaStaticIds": [
+    "java-1ae66c9985dc53282af0"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeFAFCarEventAndGroupingFunc"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupGroupingFuncs.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFAFDedicatedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFAFDedicatedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFAFDedicatedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFAFDedicatedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFAFDedicatedRejectsMalformedRawScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "rollup",
+    "grouping-sets",
+    "grouping-functions",
+    "fire-and-forget",
+    "named-window",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/rollup-grouping-funcs-faf-dedicated.json",
+    "testdata/parity/rollup-grouping-funcs-faf-dedicated.trace.json",
+    "testdata/parity/rollup-grouping-funcs-faf-dedicated.go.trace.json",
+    "testdata/parity/rollup-grouping-funcs-faf-dedicated.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRollupGroupingFAFScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-rollup-grouping-faf.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-e8f49362431d4c33baa8"
+   ],
+   "notes": [
+    "ResultSetQueryTypeFAFCarEventAndGroupingFunc replays one deterministic fire-and-forget grouping snapshot with one 12-row Java/Go record and 0 differences after six SupportCarEvent inserts.",
+    "The typed Go surface uses a public CarWindow keep-all named window, GroupByGroupingSets, Sum, Grouping, and GroupingID. The scenario, runner, and Java oracle pin FAF metadata, payloads, grouping nulls, values, order, timestamp, and record shape; strict validators reject malformed fields, duplicate JSON keys, payload errors, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -39061,13 +39125,17 @@
   {
    "capabilityId": "resultset.aggregate-dimensional",
    "caseId": "case.rollup-grouping-funcs-dedicated"
+  },
+  {
+   "capabilityId": "resultset.aggregate-dimensional",
+   "caseId": "case.rollup-grouping-funcs-faf-dedicated"
   }
  ],
  "summary": {
-"inventoriedCases": 581,
-"implementedCases": 579,
-"differentialVerifiedCases": 194,
-"differentialVerifiedRuntimeIds": 721,
+ "inventoriedCases": 582,
+ "implementedCases": 580,
+ "differentialVerifiedCases": 195,
+ "differentialVerifiedRuntimeIds": 722,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39077,14 +39145,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3342,
-"referencedJavaRuntimeIds": 3125,
+"runtimeAssociationCount": 3343,
+"referencedJavaRuntimeIds": 3126,
  "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1011,
+ "unreferencedJavaRuntimeIds": 1010,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
-"totalCases": 581,
+"totalCases": 582,
 "totalCapabilities": 119,
-"differentialVerifiedRuntimeIDs": 721
+"differentialVerifiedRuntimeIDs": 722
  }
 }

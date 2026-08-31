@@ -41,6 +41,280 @@ func TestRunHelpSucceeds(t *testing.T) {
 	}
 }
 
+func TestRunRollupGroupingFAFDedicatedDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "rollup-grouping-funcs-faf-dedicated", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertRollupGroupingFAFTrace(t, trace)
+}
+
+func TestRunRollupGroupingFAFDedicatedDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.trace.json")
+	evidencePath := filepath.Join(t.TempDir(), "rollup-grouping-funcs-faf-dedicated.evidence.json")
+	scenarioPath := filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "rollup-grouping-funcs-faf-dedicated-diff", "-scenario", scenarioPath, "-java-trace", javaTracePath, "-evidence", evidencePath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || len(evidence.JavaTrace.Records) != 1 || len(evidence.GoTrace.Records) != 1 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunRollupGroupingFAFDedicatedDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "grouping-value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["gid"] = json.Number("9")
+		}},
+		{name: "row-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0], trace.Records[0].New[1] = trace.Records[0].New[1], trace.Records[0].New[0]
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = nil
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t, filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "rollup-grouping-funcs-faf-dedicated.evidence.json")
+			scenarioPath := filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{"-mode", "rollup-grouping-funcs-faf-dedicated-diff", "-scenario", scenarioPath, "-java-trace", javaTracePath, "-evidence", evidencePath}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", evidence)
+			}
+		})
+	}
+}
+
+func TestRunRollupGroupingFAFDedicatedCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != rollupGroupingFAFJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, rollupGroupingFAFJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, rollupGroupingFAFJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, rollupGroupingFAFJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	assertRollupGroupingFAFTrace(t, javaTrace)
+
+	scenarioPath := filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadRollupGroupingFAFScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "rollup-grouping-funcs-faf-dedicated", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertRollupGroupingFAFTrace(t, goTrace)
+}
+
+func assertRollupGroupingFAFTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != rollupGroupingFAFID || len(trace.Records) != 1 {
+		t.Fatalf("trace identity/record count = %q/%q/%d", trace.Version, trace.ID, len(trace.Records))
+	}
+	record := trace.Records[0]
+	if record.Case != rollupGroupingFAFCase || record.Operation != "faf" || record.Statement != "s0" || record.Sequence != 0 || record.Time != "1970-01-01T00:00:00Z" || len(record.New) != 12 || len(record.Old) != 0 {
+		t.Fatalf("record metadata/shape = %#v", record)
+	}
+	want := []struct {
+		name, place                           string
+		sum, groupingName, groupingPlace, gid int
+	}{
+		{"skoda", "france", 10000, 0, 0, 0},
+		{"skoda", "germany", 5000, 0, 0, 0},
+		{"bmw", "france", 100, 0, 0, 0},
+		{"bmw", "germany", 1000, 0, 0, 0},
+		{"opel", "france", 7000, 0, 0, 0},
+		{"opel", "germany", 7000, 0, 0, 0},
+		{"skoda", "", 15000, 0, 1, 1},
+		{"bmw", "", 1100, 0, 1, 1},
+		{"opel", "", 14000, 0, 1, 1},
+		{"", "france", 17100, 1, 0, 2},
+		{"", "germany", 13000, 1, 0, 2},
+		{"", "", 30100, 1, 1, 3},
+	}
+	for index, expected := range want {
+		row := record.New[index]
+		if row.Kind != "row" || len(row.Fields) != 6 {
+			t.Fatalf("row %d shape = %#v", index, row)
+		}
+		if !rollupGroupingFAFStringField(row.Fields["name"], expected.name) || !rollupGroupingFAFStringField(row.Fields["place"], expected.place) ||
+			row.Fields["sum(count)"] != json.Number(fmt.Sprint(expected.sum)) ||
+			row.Fields["grouping(name)"] != json.Number(fmt.Sprint(expected.groupingName)) ||
+			row.Fields["grouping(place)"] != json.Number(fmt.Sprint(expected.groupingPlace)) ||
+			row.Fields["gid"] != json.Number(fmt.Sprint(expected.gid)) {
+			t.Fatalf("row %d = %#v", index, row.Fields)
+		}
+	}
+}
+
+func rollupGroupingFAFStringField(value any, expected string) bool {
+	if expected == "" {
+		return reflect.DeepEqual(value, map[string]any{"state": "null"})
+	}
+	return value == expected
+}
+
+func TestRunRollupGroupingFAFDedicatedRejectsMalformedRawScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "rollup-grouping-funcs-faf-dedicated.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "rollup-grouping-funcs-faf-dedicated"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "rollup-grouping-funcs-faf-dedicated"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "faf-grouping-snapshot",`), []byte(`"case": "faf-grouping-snapshot", "extra": 0,`), 1)
+		}},
+		{name: "marker-unknown-field", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",
+      "case": "faf-grouping-snapshot"`), []byte(`"foo": "case",
+      "case": "faf-grouping-snapshot"`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"name": "skoda",`), []byte(`"name": "skoda", "name": "skoda",`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportCarEvent"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "rollup-grouping-funcs-faf-dedicated", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
 func TestRunRollupGroupingFuncsDedicatedDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	scenarioPath := filepath.Join(root, "rollup-grouping-funcs-dedicated.json")

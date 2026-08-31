@@ -1,0 +1,405 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-e8f49362431d4c33baa8"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupGroupingFuncs.java"
+  ],
+  "javaExecutions": [
+    "ResultSetQueryTypeFAFCarEventAndGroupingFunc"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "rollup-grouping-funcs-faf-dedicated",
+    "steps": [
+      {
+        "op": "case",
+        "case": "faf-grouping-snapshot"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "skoda",
+          "place": "france",
+          "count": 10000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "skoda",
+          "place": "germany",
+          "count": 5000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "bmw",
+          "place": "france",
+          "count": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "bmw",
+          "place": "germany",
+          "count": 1000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "opel",
+          "place": "france",
+          "count": 7000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "opel",
+          "place": "germany",
+          "count": 7000
+        }
+      },
+      {
+        "op": "faf",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-grouping-funcs-faf-dedicated",
+    "records": [
+      {
+        "case": "faf-grouping-snapshot",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "france",
+              "sum(count)": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "germany",
+              "sum(count)": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "bmw",
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "bmw",
+              "place": "germany",
+              "sum(count)": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "opel",
+              "place": "france",
+              "sum(count)": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "opel",
+              "place": "germany",
+              "sum(count)": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 15000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "bmw",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "opel",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 14000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "france",
+              "sum(count)": 17100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "germany",
+              "sum(count)": 13000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 30100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-grouping-funcs-faf-dedicated",
+    "records": [
+      {
+        "case": "faf-grouping-snapshot",
+        "operation": "faf",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "france",
+              "sum(count)": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "germany",
+              "sum(count)": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "bmw",
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "bmw",
+              "place": "germany",
+              "sum(count)": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "opel",
+              "place": "france",
+              "sum(count)": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "opel",
+              "place": "germany",
+              "sum(count)": 7000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 15000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "bmw",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 1100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "opel",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 14000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "france",
+              "sum(count)": 17100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "germany",
+              "sum(count)": 13000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 30100
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

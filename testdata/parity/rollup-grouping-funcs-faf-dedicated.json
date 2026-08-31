@@ -1,0 +1,94 @@
+{
+  "version": "esper-parity/v1",
+  "id": "rollup-grouping-funcs-faf-dedicated",
+  "description": "ResultSetQueryTypeRollupGroupingFuncs ordinal 2: fire-and-forget grouping sets over a public CarWindow.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupGroupingFuncs.java",
+  "javaRuntimes": [
+    "java-runtime-e8f49362431d4c33baa8"
+  ],
+  "javaNames": [
+    "ResultSetQueryTypeFAFCarEventAndGroupingFunc"
+  ],
+  "javaStaticIds": [
+    "java-1ae66c9985dc53282af0"
+  ],
+  "javaFlags": [
+    "FIREANDFORGET"
+  ],
+  "cases": [
+    {
+      "case": "faf-grouping-snapshot",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-e8f49362431d4c33baa8",
+      "executionName": "ResultSetQueryTypeFAFCarEventAndGroupingFunc",
+      "observation": "faf",
+      "iteratorSnapshots": 0,
+      "epl": "select name, place, sum(count), grouping(name), grouping(place), grouping_id(name,place) as gid from CarWindow group by grouping sets((name, place), name, place, ())"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "faf-grouping-snapshot"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportCarEvent",
+      "payload": {
+        "name": "skoda",
+        "place": "france",
+        "count": 10000
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportCarEvent",
+      "payload": {
+        "name": "skoda",
+        "place": "germany",
+        "count": 5000
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportCarEvent",
+      "payload": {
+        "name": "bmw",
+        "place": "france",
+        "count": 100
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportCarEvent",
+      "payload": {
+        "name": "bmw",
+        "place": "germany",
+        "count": 1000
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportCarEvent",
+      "payload": {
+        "name": "opel",
+        "place": "france",
+        "count": 7000
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportCarEvent",
+      "payload": {
+        "name": "opel",
+        "place": "germany",
+        "count": 7000
+      }
+    },
+    {
+      "op": "faf",
+      "statement": "s0"
+    }
+  ]
+}
