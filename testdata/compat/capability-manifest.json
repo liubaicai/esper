@@ -4901,12 +4901,13 @@
     "internal/app/parity/run_test.go",
     "internal/esper/runtime.go",
     "internal/app/parity/resultset_query_type_row_for_all_having_sum.go",
-    "internal/app/parity/resultset_query_type_row_for_all_having_sum_join.go"
+    "internal/app/parity/resultset_query_type_row_for_all_having_sum_join.go",
+    "internal/app/parity/resultset_query_type_row_for_all_having_avg.go"
    ],
    "phase": 3,
    "status": "differential-verified",
    "remaining": [
-    "row-for-all querytype executions beyond covered ordinals 0-1 and 4-8",
+    "row-for-all querytype executions beyond covered ordinals 0-2 and 4-8",
     "additional output-rate, join and invalid/error-phase combinations"
    ],
    "verification": [
@@ -4921,7 +4922,8 @@
     "java-runtime-9a7f951d363bb58d506e",
     "java-runtime-780e3dede1e586fde738",
     "java-runtime-65e4ba1499cb12f04d8a",
-    "java-runtime-dfb97881f562ac33e873"
+    "java-runtime-dfb97881f562ac33e873",
+    "java-runtime-d20a1ee344797d87678b"
    ]
   }
  ],
@@ -36012,6 +36014,68 @@
     "ResultSetQueryTypeRowForAllWHavingSumOneView replays one deterministic 10-second time-window sum with having sum(longBoxed) > 10 (3 Java/Go records, 0 differences): the initial 10 is suppressed, t5 emits new 25, t8 emits new 20/old 25, and t10 emits old 20 after expiry.",
     "The typed Go surface uses nullable LongBoxed, TimeWindow, Sum, Having, and WithOldStream. The scenario and oracle pin virtual-time order, old/new row shape, values, timestamps, and metadata; strict validators reject malformed or duplicate fields, payload errors, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-row-for-all-having-avg-group-window",
+   "javaRuntimeIds": [
+    "java-runtime-d20a1ee344797d87678b"
+   ],
+   "javaStaticIds": [
+    "java-45a56190252ed051c35f"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeAvgRowForAllWHavingGroupWindow"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAllHaving.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingAvgDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingAvgDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingAvgDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingAvgCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllHavingAvgRejectsMalformedRawScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "row-for-all",
+    "aggregate",
+    "having",
+    "unique-window",
+    "istream",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-row-for-all-having-avg-group-window.json",
+    "testdata/parity/resultset-querytype-row-for-all-having-avg-group-window.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-having-avg-group-window.go.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-having-avg-group-window.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRowForAllHavingAvgGroupWindowScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-row-for-all-having-avg-group-window.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d20a1ee344797d87678b"
+   ],
+   "notes": [
+    "ResultSetQueryTypeAvgRowForAllWHavingGroupWindow replays one deterministic unique-symbol average with having avg(price) <= 0 (3 Java/Go records, 0 differences): A=-1 emits -1, A=5 is suppressed after unique replacement, B=-6 emits -0.5, positive C averages are suppressed, and C=-2 emits -1.",
+    "The typed Go surface uses SupportMarketDataBean with Unique(symbol), Avg(price), Having, and new-only listener output. The scenario and oracle pin metadata, payload, values, order, timestamps, and record shape; strict validators reject malformed or duplicate fields, payload errors, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -38650,13 +38714,17 @@
   {
    "capabilityId": "resultset.querytype-row-for-all",
    "caseId": "case.resultset-querytype-row-for-all-having-sum-join"
+  },
+  {
+   "capabilityId": "resultset.querytype-row-for-all",
+   "caseId": "case.resultset-querytype-row-for-all-having-avg-group-window"
   }
  ],
  "summary": {
-  "inventoriedCases": 575,
-  "implementedCases": 573,
-  "differentialVerifiedCases": 188,
-  "differentialVerifiedRuntimeIds": 713,
+  "inventoriedCases": 576,
+  "implementedCases": 574,
+  "differentialVerifiedCases": 189,
+  "differentialVerifiedRuntimeIds": 714,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -38666,14 +38734,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3334,
-  "referencedJavaRuntimeIds": 3121,
+  "runtimeAssociationCount": 3335,
+  "referencedJavaRuntimeIds": 3122,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1015,
+  "unreferencedJavaRuntimeIds": 1014,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 575,
+  "totalCases": 576,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 713
+  "differentialVerifiedRuntimeIDs": 714
  }
 }

@@ -34,7 +34,7 @@ func TestRunHelpSucceeds(t *testing.T) {
 	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
 	}
-	for _, mode := range []string{"resultset-aggregate-median-and-deviation", "resultset-aggregate-median-and-deviation-diff", "resultset-aggregate-minmax-named-window-wever", "resultset-aggregate-minmax-named-window-wever-diff", "resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff", "resultset-aggregate-minmax-groupby-om-viewcompile", "resultset-aggregate-minmax-groupby-om-viewcompile-diff", "resultset-aggregate-minmax-groupby-join-select-having", "resultset-aggregate-minmax-groupby-join-select-having-diff", "resultset-querytype-row-for-all-having-sum-join", "resultset-querytype-row-for-all-having-sum-join-diff"} {
+	for _, mode := range []string{"resultset-aggregate-median-and-deviation", "resultset-aggregate-median-and-deviation-diff", "resultset-aggregate-minmax-named-window-wever", "resultset-aggregate-minmax-named-window-wever-diff", "resultset-aggregate-minmax-groupby", "resultset-aggregate-minmax-groupby-diff", "resultset-aggregate-minmax-groupby-om-viewcompile", "resultset-aggregate-minmax-groupby-om-viewcompile-diff", "resultset-aggregate-minmax-groupby-join-select-having", "resultset-aggregate-minmax-groupby-join-select-having-diff", "resultset-querytype-row-for-all-having-avg-group-window", "resultset-querytype-row-for-all-having-avg-group-window-diff", "resultset-querytype-row-for-all-having-sum-join", "resultset-querytype-row-for-all-having-sum-join-diff"} {
 		if !strings.Contains(stderr.String(), mode) {
 			t.Fatalf("help output omits %q: %s", mode, stderr.String())
 		}
@@ -20749,6 +20749,316 @@ func TestRunResultSetQueryTypeRowForAllHavingSumJoinCheckedInEvidenceMatchesTrac
 		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
 	}
 	assertResultSetQueryTypeRowForAllHavingSumJoinTrace(t, goTrace)
+}
+func TestRunResultSetQueryTypeRowForAllHavingAvgDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "resultset-querytype-row-for-all-having-avg-group-window.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-row-for-all-having-avg-group-window", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetQueryTypeRowForAllHavingAvgTrace(t, trace)
+}
+
+func TestRunResultSetQueryTypeRowForAllHavingAvgDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join(root, "resultset-querytype-row-for-all-having-avg-group-window.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-row-for-all-having-avg-group-window.evidence.json")
+	scenarioPath := filepath.Join(root, "resultset-querytype-row-for-all-having-avg-group-window.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-querytype-row-for-all-having-avg-group-window-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if evidence.JavaCommit != resultSetQueryTypeRowForAllHavingAvgJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeRowForAllHavingAvgJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeRowForAllHavingAvgJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeRowForAllHavingAvgJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetQueryTypeRowForAllHavingAvgTrace(t, evidence.JavaTrace)
+}
+
+func TestRunResultSetQueryTypeRowForAllHavingAvgDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["aprice"] = json.Number("999")
+		}},
+		{name: "row-shape", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New = nil
+		}},
+		{name: "null-state", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["aprice"] = map[string]any{"state": "null"}
+		}},
+		{name: "sequence", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Sequence++
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "time", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-querytype-row-for-all-having-avg-group-window.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-row-for-all-having-avg-group-window.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-querytype-row-for-all-having-avg-group-window-diff",
+				"-scenario", filepath.Join(root, "resultset-querytype-row-for-all-having-avg-group-window.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetQueryTypeRowForAllHavingAvgCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-querytype-row-for-all-having-avg-group-window.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-querytype-row-for-all-having-avg-group-window.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultSetQueryTypeRowForAllHavingAvgJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeRowForAllHavingAvgJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeRowForAllHavingAvgJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeRowForAllHavingAvgJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	assertResultSetQueryTypeRowForAllHavingAvgTrace(t, javaTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-querytype-row-for-all-having-avg-group-window.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetQueryTypeRowForAllHavingAvgScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-row-for-all-having-avg-group-window", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetQueryTypeRowForAllHavingAvgTrace(t, goTrace)
+}
+
+func TestRunResultSetQueryTypeRowForAllHavingAvgRejectsMalformedRawScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-for-all-having-avg-group-window.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "resultset-querytype-row-for-all-having-avg-group-window"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "avg-group-window",`), []byte(`"case": "avg-group-window", "extra": 0,`), 1)
+		}},
+		{name: "case-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "avg-group-window",`), []byte(`"case": "avg-group-window", "case": "avg-group-window",`), 1)
+		}},
+		{name: "step-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "avg-group-window"}`), []byte(`{"op": "case", "case": "avg-group-window", "extra": 0}`), 1)
+		}},
+		{name: "step-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "avg-group-window"}`), []byte(`{"op": "case", "case": "avg-group-window", "case": "avg-group-window"}`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"feed": null`), []byte(`"feed": null, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"feed": null`), []byte(`"feed": null, "feed": null`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportMarketDataBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "wrong-symbol", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "A"`), []byte(`"symbol": "Z"`), 1)
+		}},
+		{name: "wrong-price", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"price": -1`), []byte(`"price": -1.5`), 1)
+		}},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": null`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 2`), []byte(`"ordinal": 3`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-querytype-row-for-all-having-avg-group-window", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func assertResultSetQueryTypeRowForAllHavingAvgTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultSetQueryTypeRowForAllHavingAvgID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 3 {
+		t.Fatalf("trace records = %d, want 3", len(trace.Records))
+	}
+	wantValues := []float64{-1, -0.5, -1}
+	for i, record := range trace.Records {
+		if record.Case != resultSetQueryTypeRowForAllHavingAvgCase || record.Operation != "listener" || record.Statement != "s0" || record.Sequence != uint64(i+1) || record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d metadata = %#v", i, record)
+		}
+		if len(record.New) != 1 || len(record.Old) != 0 {
+			t.Fatalf("record %d new/old shape = %d/%d", i, len(record.New), len(record.Old))
+		}
+		assertResultSetQueryTypeRowForAllHavingAvgRow(t, record.New[0], wantValues[i])
+	}
+}
+
+func assertResultSetQueryTypeRowForAllHavingAvgRow(t *testing.T, row compat.ResultRecord, want float64) {
+	t.Helper()
+	if row.Kind != "row" || len(row.Fields) != 1 {
+		t.Fatalf("row shape = %#v", row)
+	}
+	value, ok := row.Fields["aprice"]
+	if !ok {
+		t.Fatalf("row fields = %#v", row.Fields)
+	}
+	number, ok := value.(json.Number)
+	if !ok {
+		t.Fatalf("aprice type = %T, value = %#v", value, value)
+	}
+	got, err := number.Float64()
+	if err != nil || got != want {
+		t.Fatalf("aprice = %v (err=%v), want %v", number, err, want)
+	}
 }
 
 func TestRunResultSetQueryTypeRowForAllHavingSumDirectReplay(t *testing.T) {

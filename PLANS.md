@@ -31,20 +31,21 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-08-29
-- Baseline: `HEAD` == `origin/master` at Draft 4.282 (`617e3037576d6c82b52281d5aa4efae87d17481a`), pushed; Draft 4.283 is the current documented semantic delta.
+- Updated: 2026-08-31
+- Baseline: `HEAD` == `origin/master` at Draft 4.283 (`391f56dc89ae23bdc2257787e065fccf8e4800e1`), pushed; Draft 4.284 is the current documented semantic delta.
+- Closed unit (Draft 4.283; validation and independent review complete): `ResultSetQueryTypeRowForAllHaving.java` ordinal 1 `ResultSetQueryTypeRowForAllWHavingSumJoin` was differentially verified with 3 Java/Go records and zero differences; strict replay/mutation validation, manifest/evidence consistency, layout, vet, full Go tests and `make check` passed; reviewer `ReviewDraft4283` returned PASS.
 - Closed unit (Draft 4.282; validation and independent review complete): `ResultSetQueryTypeRowForAllHaving.java` ordinal 0 `ResultSetQueryTypeRowForAllWHavingSumOneView` was differentially verified with 3 Java/Go records and zero differences; strict replay/mutation validation and full local gates passed; reviewer `ReviewDraft4282` returned PASS.
 - Closed unit (Draft 4.281): `ResultSetAggregateMinMax.java` ordinals 2-3 named-window current/ever min/max were differentially verified with 8 Java/Go records and zero differences; reviewer PASS.
 - Closed unit (Draft 4.280): `ResultSetAggregateMinMax.java` ordinal 0 no-data-window subquery was differentially verified with 4 Java/Go records and zero differences; reviewer PASS.
 
 ## Current work unit
-Draft 4.283: port the smallest safe slice of fixed `ResultSetQueryTypeRowForAllHaving.java`, ordinal 1 `ResultSetQueryTypeRowForAllWHavingSumJoin`. Runtime `java-runtime-dfb97881f562ac33e873`, shared execution-inventory ID `java-45a56190252ed051c35f`, static candidate `java-bf6637bf00f9e0e78f89`, inventory/static flags `[]`, source order ordinal 1. The fixed Java oracle is `/root/app/esper` at commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
-Java contract is `@name('s0') select irstream sum(longBoxed) as mySum from SupportBeanString#time(10 seconds) as one, SupportBean#time(10 seconds) as two where one.theString = two.theString having sum(longBoxed) > 10`; `mySum` is `Long`. Deploy and attach `s0`, seed `SupportBeanString(KEY)` at time zero, then send matching `SupportBean(KEY,10)`, advance to 5 seconds and send `KEY,15`, advance to 8 seconds and send `KEY,-5`, then advance to 10 seconds. Expected listener records are new-only 25 at t5, new 20/old 25 at t8, and old-only 20 at t10; no iterator or compile/deploy error path is observed.
-Go contract is typed `SupportBeanString{TheString string}` keepalive time window joined to typed `SupportBean{TheString string, LongBoxed *int64}` time window by `theString`, with `Sum[int64](Cast[*int64, int64](JoinField[*int64](1, "longBoxed")))`, strict `Greater(sum, Literal(int64(10)))`, statement `s0`, and `WithOldStream`; use the pinned runtime URI and strict metadata/payload/trace validation. Isolate ordinal 1 from ordinal 2 group-window average; do not change shared `internal/esper` semantics unless replay proves a concrete join-expiry defect.
-Delegation checkpoint: read-only scouts `RowForAllHavingJoinJava` and `RowForAllHavingJoinGo` completed in parallel. Java scout froze the source/runtime/static identity and exact three-callback contract; Go scout found the existing typed `sum-join` builder and replay patterns, identified ungrouped sliding-join expiry as the risk, and found no proven shared-core gap. A Go slice writer owns only the new join runner/dispatch/focused tests (and any proven bounded runtime repair); a parity asset writer owns only new Java oracle/launcher/scenario source assets. Primary owns generated traces/evidence, manifest, roadmap, CHANGELOG, validation, review, commit, and push.
+Draft 4.284: port the smallest safe slice of fixed `ResultSetQueryTypeRowForAllHaving.java`, ordinal 2 `ResultSetQueryTypeAvgRowForAllWHavingGroupWindow`. Runtime `java-runtime-d20a1ee344797d87678b`, shared execution-inventory/static-candidate ID `java-45a56190252ed051c35f`, inventory/static flags `[]`, source order ordinal 2. The fixed Java oracle is `/root/app/esper` at commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+Java contract is `@name('s0') select istream avg(price) as aprice from SupportMarketDataBean#unique(symbol) having avg(price) <= 0`. Deploy and attach `s0`; send `SupportMarketDataBean(A,-1)`, `A,5`, `B,-6`, `C,2`, `C,3`, `C,-2`. Expected new-only listener rows are `-1.0`, `-0.5`, and `-1.0`; positive averages suppress output after unique-symbol replacement. No time, iterator, SODA, old-stream, malformed-input, null-symbol, lifecycle, or compile-error path is in scope.
+Go contract is typed `RegisterStruct{Symbol string, Price float64}`, `Unique(Field("symbol"))`, `Aggregate(Alias("aprice", Avg(Field("price"))))`, `Having(LessOrEqual(avg, Literal(0.0)))`, `Query(StatementName("s0"))`, with no `WithOldStream`; use the pinned runtime URI and strict scenario/oracle metadata, payload, value/order/record-shape validation. Do not change shared `internal/esper` semantics unless replay proves a concrete defect.
+Delegation checkpoint: read-only Java/Go scouts froze ordinal 2 identity and surface; independent parity reviewer `ReviewDraft4284-2` returned PASS with no P0-P3 findings after checking source/runtime/static IDs, oracle/scenario/traces/evidence, strict validation, and mutation coverage. Primary owns generated traces/evidence, manifest, roadmap, CHANGELOG, validation, commit, and push.
 
 ## Handoff
-After Draft 4.283 integration, run the fixed Java oracle and Go replay, compare zero-difference traces, complete review and local gates, update central facts before one semantic commit, then verify the pushed ref read-only. Do not bundle ordinal 2 or add a checkpoint-only hash update.
+After Draft 4.284 integration, run the fixed Java oracle and Go replay, compare zero-difference traces, complete review and local gates, update central facts before one semantic commit, then verify the pushed ref read-only. Do not bundle later `ResultSetQueryTypeRowForAllHaving` executions.
 
 ## Recent outcome
 Draft 4.278 is complete and pushed; its final independent review found no correctness or documentation findings.
@@ -1099,28 +1100,15 @@ Progress:
 
 ## Validation evidence
 
-- Investigation baseline before the Cast slice on 2026-08-20: `/root/app/esper`
-  is fixed at `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; `master` was clean and
-  matched `origin/master` at `c325027dc`. Manifest summary reported 522 cases,
-  134 differential-verified cases, and 415 differential runtimes before the
-  four Cast runtime IDs were added.
-- Current unit result: `case.expr-core-exists-cast` is differential-verified
-  across 17 exact inventory-ordered runtime IDs and 54 listener records. The
-  Cast Dates metadata repair aligns Go/evidence runtime IDs and execution names
-  with the manifest and Java inventory; the regenerated evidence is passing with
-  zero differences. The pinned trace remains byte-identical. Full local gates
-  and the independent `CastDatesReview-2` re-review pass; remote delivery is
-  ready for the semantic repair commit and push.
+- Pinned Java oracle launcher regenerated `testdata/parity/resultset-querytype-row-for-all-having-avg-group-window.trace.json` from `/root/app/esper` at `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; Java 17.0.20 emitted 3 records. Go replay emitted the same 3 normalized records.
+- Differential evidence is passing with 3 Java records, 3 Go records, and 0 differences. Focused average replay/evidence/mutation tests and `TestCapabilityManifestArtifactValidates` passed; independent reviewer `ReviewDraft4284-2` returned PASS with no P0-P3 findings after checking source/runtime/static IDs, strict validators, traces/evidence, manifest, README, roadmap and CHANGELOG. Full local gates passed: `gofmt -l` reported no files, `go vet ./...`, `go test ./... -count=1 -timeout 240s`, `make check`, and `git diff --check`.
+- Persisted evidence and manifest checks are complete. The checked-in evidence remains `passing` with zero differences and 3 records per side; the manifest generator/inventory validation and `TestCapabilityManifestArtifactValidates` pass. Commit/push once; do not write the resulting hash into tracked files.
+
 ## Delivery
 
-- The current Exists/Cast unit has passed replay, review fallback, final diff
-  review, and required local gates and is ready for one semantic commit and
-  push. Git will remain authoritative for the resulting commit identity.
-- After the semantic commit, verify the pushed ref without editing tracked
-  files or creating a checkpoint-only follow-up commit.
+- Draft 4.284 is ready for final local gates and one semantic commit/push after the verification commands above. Git will remain authoritative for the resulting commit identity.
+- After the semantic commit, verify the pushed ref without editing tracked files or creating a checkpoint-only follow-up commit.
 
 ## Handoff
 
-After delivery, verify the pushed ref read-only and select the next work unit
-from the roadmap and manifest; do not edit this file only to add the new
-commit hash.
+After delivery, verify the pushed ref read-only and select the next work unit from the roadmap and manifest; do not edit this file only to add the new commit hash.
