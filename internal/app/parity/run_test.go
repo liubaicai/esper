@@ -23051,3 +23051,360 @@ func TestRunResultSetQueryTypeRowForAllStaticMethodDoubleNestedRejectsMalformedR
 		})
 	}
 }
+func TestRunResultSetQueryTypeRollupHavingIteratorDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "resultset-querytype-rollup-having-iterator.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-rollup-having-iterator", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetQueryTypeRollupHavingIteratorTrace(t, trace)
+}
+
+func TestRunResultSetQueryTypeRollupHavingIteratorDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-rollup-having-iterator.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-querytype-rollup-having-iterator-diff",
+		"-scenario", filepath.Join(root, "resultset-querytype-rollup-having-iterator.json"),
+		"-java-trace", filepath.Join(root, "resultset-querytype-rollup-having-iterator.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultSetQueryTypeRollupHavingIteratorJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeRollupHavingIteratorJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeRollupHavingIteratorJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeRollupHavingIteratorJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	if len(evidence.JavaTrace.Records) != 8 || len(evidence.GoTrace.Records) != 8 {
+		t.Fatalf("trace record counts = %d/%d", len(evidence.JavaTrace.Records), len(evidence.GoTrace.Records))
+	}
+	assertResultSetQueryTypeRollupHavingIteratorTrace(t, evidence.JavaTrace)
+	assertResultSetQueryTypeRollupHavingIteratorTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetQueryTypeRollupHavingIteratorDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["c1"] = json.Number("999")
+		}},
+		{name: "null-state", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[1].Fields["c0"] = "E1"
+		}},
+		{name: "row-shape", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New = nil
+		}},
+		{name: "sequence", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Sequence++
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "case-label", mutate: func(trace *compat.Trace) {
+			trace.Records[4].Case = "iterator-window-no-join"
+		}},
+		{name: "time", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-querytype-rollup-having-iterator.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-rollup-having-iterator.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-querytype-rollup-having-iterator-diff",
+				"-scenario", filepath.Join(root, "resultset-querytype-rollup-having-iterator.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetQueryTypeRollupHavingIteratorCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-querytype-rollup-having-iterator.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-querytype-rollup-having-iterator.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultSetQueryTypeRollupHavingIteratorJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeRollupHavingIteratorJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeRollupHavingIteratorJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeRollupHavingIteratorJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	assertResultSetQueryTypeRollupHavingIteratorTrace(t, javaTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-querytype-rollup-having-iterator.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetQueryTypeRollupHavingIteratorScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultSetQueryTypeRollupHavingIteratorJavaCommit,
+		resultSetQueryTypeRollupHavingIteratorJavaRuntimeIDs,
+		resultSetQueryTypeRollupHavingIteratorJavaSources,
+		resultSetQueryTypeRollupHavingIteratorJavaExecutions,
+		scenario,
+		javaTrace,
+		evidence.JavaTrace,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace under any-mode canonicalization: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-rollup-having-iterator", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentReplayEvidence, err := compat.NewDifferentialEvidence(
+		resultSetQueryTypeRollupHavingIteratorJavaCommit,
+		resultSetQueryTypeRollupHavingIteratorJavaRuntimeIDs,
+		resultSetQueryTypeRollupHavingIteratorJavaSources,
+		resultSetQueryTypeRollupHavingIteratorJavaExecutions,
+		scenario,
+		evidence.GoTrace,
+		goTrace,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if currentReplayEvidence.Status != "passing" || len(currentReplayEvidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay under any-mode canonicalization: %#v", currentReplayEvidence.Differences)
+	}
+	assertResultSetQueryTypeRollupHavingIteratorTrace(t, goTrace)
+}
+
+func TestRunResultSetQueryTypeRollupHavingIteratorRejectsMalformedRawScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-rollup-having-iterator.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "resultset-querytype-rollup-having-iterator"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "iterator-window-no-join",`), []byte(`"case": "iterator-window-no-join", "extra": 0,`), 1)
+		}},
+		{name: "case-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "iterator-window-no-join",`), []byte(`"case": "iterator-window-no-join", "case": "iterator-window-no-join",`), 1)
+		}},
+		{name: "marker-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",
+      "case": "iterator-window-no-join"`), []byte(`"op": "case",
+      "case": "iterator-window-no-join", "extra": 0`), 1)
+		}},
+		{name: "marker-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "case",
+      "case": "iterator-window-no-join"`), []byte(`"op": "case",
+      "case": "iterator-window-no-join", "case": "iterator-window-no-join"`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"id": 1`), []byte(`"id": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"id": 1`), []byte(`"id": 1, "id": 1`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "wrong-string", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1"`), []byte(`"theString": "E9"`), 1)
+		}},
+		{name: "wrong-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 9`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1.5`), 1)
+		}},
+		{name: "snapshot-mode", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"mode": "any"`), []byte(`"mode": "ordered"`), 1)
+		}},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": null`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 2`), []byte(`"ordinal": 3`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-querytype-rollup-having-iterator", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func assertResultSetQueryTypeRollupHavingIteratorTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultSetQueryTypeRollupHavingIteratorID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 8 {
+		t.Fatalf("trace records = %d, want 8", len(trace.Records))
+	}
+	wantCases := resultSetQueryTypeRollupHavingIteratorCases
+	wantRows := [][]struct {
+		c0 any
+		c1 json.Number
+	}{
+		{{c0: "E1", c1: json.Number("1")}, {c0: map[string]any{"state": "null"}, c1: json.Number("1")}},
+		{{c0: "E1", c1: json.Number("1")}, {c0: "E2", c1: json.Number("2")}, {c0: map[string]any{"state": "null"}, c1: json.Number("3")}},
+		{{c0: "E1", c1: json.Number("4")}, {c0: "E2", c1: json.Number("2")}, {c0: map[string]any{"state": "null"}, c1: json.Number("6")}},
+		{{c0: "E2", c1: json.Number("6")}, {c0: "E1", c1: json.Number("3")}, {c0: map[string]any{"state": "null"}, c1: json.Number("9")}},
+	}
+	for index, record := range trace.Records {
+		caseIndex := index / 4
+		sequence := uint64(index%4 + 1)
+		if record.Case != wantCases[caseIndex] || record.Operation != "snapshot" || record.Statement != "s0" ||
+			record.Sequence != sequence || record.Time != "1970-01-01T00:00:00Z" || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", index, record)
+		}
+		expectedRows := wantRows[index%4]
+		if len(record.New) != len(expectedRows) {
+			t.Fatalf("record %d row count = %d, want %d", index, len(record.New), len(expectedRows))
+		}
+		matched := make([]bool, len(record.New))
+		for expectedIndex, expected := range expectedRows {
+			match := -1
+			for rowIndex, row := range record.New {
+				if matched[rowIndex] || row.Kind != "row" || len(row.Fields) != 2 ||
+					!reflect.DeepEqual(row.Fields["c0"], expected.c0) || row.Fields["c1"] != expected.c1 {
+					continue
+				}
+				match = rowIndex
+				break
+			}
+			if match < 0 {
+				t.Fatalf("record %d expected row %d %#v not found in any-order rows %#v", index, expectedIndex, expected, record.New)
+			}
+			matched[match] = true
+		}
+	}
+}

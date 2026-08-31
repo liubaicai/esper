@@ -1,0 +1,167 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-rollup-having-iterator",
+  "description": "ResultSetQueryTypeRollupHavingAndOrderBy ordinals 2-3: length-window rollup iterator snapshots with an optional keepall join.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupHavingAndOrderBy.java",
+  "javaRuntimes": [
+    "java-runtime-1ce0d3fc4b6fed76d38d",
+    "java-runtime-7730d794daee6dac92c7"
+  ],
+  "javaNames": [
+    "ResultSetQueryTypeIteratorWindow{join=false}",
+    "ResultSetQueryTypeIteratorWindow{join=true}"
+  ],
+  "javaStaticIds": [
+    "java-efb06d5c38363ea3a5d0"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "iterator-window-no-join",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-1ce0d3fc4b6fed76d38d",
+      "executionName": "ResultSetQueryTypeIteratorWindow{join=false}",
+      "observation": "iterator",
+      "iteratorSnapshots": 4,
+      "epl": "@Name('s0') select theString as c0, sum(intPrimitive) as c1 from SupportBean#length(3) group by rollup(theString)"
+    },
+    {
+      "case": "iterator-window-join",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-7730d794daee6dac92c7",
+      "executionName": "ResultSetQueryTypeIteratorWindow{join=true}",
+      "observation": "iterator",
+      "iteratorSnapshots": 4,
+      "epl": "@Name('s0') select theString as c0, sum(intPrimitive) as c1 from SupportBean#length(3), SupportBean_S0#keepall group by rollup(theString)"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "iterator-window-no-join"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0",
+      "mode": "any"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0",
+      "mode": "any"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0",
+      "mode": "any"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 4
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0",
+      "mode": "any"
+    },
+    {
+      "op": "case",
+      "case": "iterator-window-join"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0",
+      "mode": "any"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0",
+      "mode": "any"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0",
+      "mode": "any"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 4
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0",
+      "mode": "any"
+    }
+  ]
+}

@@ -889,7 +889,8 @@
     "internal/app/parity/resultset_aggregate_nth.go",
     "internal/app/parity/resultset_aggregate_sorted_minmax_by.go",
     "internal/app/parity/resultset_aggregate_sorted_multi_criteria_simple.go",
-    "internal/app/parity/resultset_aggregate_sorted_multi_criteria.go"
+    "internal/app/parity/resultset_aggregate_sorted_multi_criteria.go",
+    "internal/app/parity/resultset_query_type_rollup_having_iterator.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -919,7 +920,9 @@
     "java-runtime-7387fafedcfa741088b9",
     "java-runtime-5609d311148a91227b28",
     "java-runtime-9f50a7b345919de5a8cf",
-    "java-runtime-dd79ba5aba4eb4ec0a1a"
+    "java-runtime-dd79ba5aba4eb4ec0a1a",
+    "java-runtime-1ce0d3fc4b6fed76d38d",
+    "java-runtime-7730d794daee6dac92c7"
    ],
    "representativeScenarioIds": [
     "aggregate-firstlastwindow-ext",
@@ -36463,6 +36466,71 @@
     "ResultSetQueryTypeFAFCarEventAndGroupingFunc replays one deterministic fire-and-forget grouping snapshot with one 12-row Java/Go record and 0 differences after six SupportCarEvent inserts.",
     "The typed Go surface uses a public CarWindow keep-all named window, GroupByGroupingSets, Sum, Grouping, and GroupingID. The scenario, runner, and Java oracle pin FAF metadata, payloads, grouping nulls, values, order, timestamp, and record shape; strict validators reject malformed fields, duplicate JSON keys, payload errors, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-rollup-having-iterator",
+   "javaRuntimeIds": [
+    "java-runtime-1ce0d3fc4b6fed76d38d",
+    "java-runtime-7730d794daee6dac92c7"
+   ],
+   "javaStaticIds": [
+    "java-efb06d5c38363ea3a5d0"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeIteratorWindow{join=false}",
+    "ResultSetQueryTypeIteratorWindow{join=true}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupHavingAndOrderBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupHavingIteratorDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupHavingIteratorDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupHavingIteratorDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupHavingIteratorCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupHavingIteratorRejectsMalformedRawScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "rollup",
+    "iterator",
+    "length-window",
+    "join",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-rollup-having-iterator.json",
+    "testdata/parity/resultset-querytype-rollup-having-iterator.trace.json",
+    "testdata/parity/resultset-querytype-rollup-having-iterator.go.trace.json",
+    "testdata/parity/resultset-querytype-rollup-having-iterator.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRollupHavingIteratorScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-rollup-having-iterator.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1ce0d3fc4b6fed76d38d",
+    "java-runtime-7730d794daee6dac92c7"
+   ],
+   "notes": [
+    "ResultSetQueryTypeIteratorWindow{join=false,true} replays two deterministic length(3) rollup iterator executions (8 Java/Go snapshot records per side, 0 differences): each snapshot contains the leaf groups and Null rollup subtotal, with FIFO eviction changing the final row order and membership.",
+    "The typed Go surface uses LengthWindow(3), GroupByRollup, Sum, Statement.Snapshot, and an optional SupportBean_S0 keep-all join. The scenario and oracle pin runtime metadata, payloads, any-order rows, timestamps, and record shape; strict validators reject malformed fields, duplicate JSON keys, payload errors, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -39129,13 +39197,17 @@
   {
    "capabilityId": "resultset.aggregate-dimensional",
    "caseId": "case.rollup-grouping-funcs-faf-dedicated"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-querytype-rollup-having-iterator"
   }
  ],
  "summary": {
- "inventoriedCases": 582,
- "implementedCases": 580,
- "differentialVerifiedCases": 195,
- "differentialVerifiedRuntimeIds": 722,
+ "inventoriedCases": 583,
+ "implementedCases": 581,
+ "differentialVerifiedCases": 196,
+ "differentialVerifiedRuntimeIds": 724,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39145,14 +39217,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3343,
-"referencedJavaRuntimeIds": 3126,
+"runtimeAssociationCount": 3345,
+"referencedJavaRuntimeIds": 3128,
  "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1010,
+ "unreferencedJavaRuntimeIds": 1008,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
-"totalCases": 582,
+"totalCases": 583,
 "totalCapabilities": 119,
-"differentialVerifiedRuntimeIDs": 722
+"differentialVerifiedRuntimeIDs": 724
  }
 }
