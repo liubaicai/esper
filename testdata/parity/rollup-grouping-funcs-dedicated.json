@@ -1,0 +1,27 @@
+{
+  "version":"esper-parity/v1",
+  "id":"rollup-grouping-funcs-dedicated",
+  "description":"ResultSetQueryTypeRollupGroupingFuncs ordinal 0: three compilation paths for the SupportCarEvent grouping-function documentation sample.",
+  "javaCommit":"9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource":"regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupGroupingFuncs.java",
+  "javaRuntimes":["java-runtime-52a4f853b6052fb47437"],
+  "javaNames":["ResultSetQueryTypeDocSampleCarEventAndGroupingFunc"],
+  "javaStaticIds":["java-1ae66c9985dc53282af0"],
+  "javaFlags":[],
+  "cases":[
+    {"case":"doc-sample-plain","ordinal":0,"runtimeId":"java-runtime-52a4f853b6052fb47437","executionName":"ResultSetQueryTypeDocSampleCarEventAndGroupingFunc","observation":"listener","iteratorSnapshots":0,"epl":"@name('s0') select name, place, sum(count), grouping(name), grouping(place), grouping_id(name,place) as gid from SupportCarEvent group by grouping sets((name, place), name, place, ())"},
+    {"case":"doc-sample-audit","ordinal":0,"runtimeId":"java-runtime-52a4f853b6052fb47437","executionName":"ResultSetQueryTypeDocSampleCarEventAndGroupingFunc","observation":"listener","iteratorSnapshots":0,"epl":"@name('s0') select name, place, sum(count), grouping(name), grouping(place), grouping_id(name,place) as gid from SupportCarEvent group by grouping sets((name, place), name, place, ())"},
+    {"case":"doc-sample-model","ordinal":0,"runtimeId":"java-runtime-52a4f853b6052fb47437","executionName":"ResultSetQueryTypeDocSampleCarEventAndGroupingFunc","observation":"listener","iteratorSnapshots":0,"epl":"@name('s0') select name, place, sum(count), grouping(name), grouping(place), grouping_id(name,place) as gid from SupportCarEvent group by grouping sets((name, place), name, place, ())"}
+  ],
+  "steps":[
+    {"op":"case","case":"doc-sample-plain"},
+    {"op":"send","eventType":"SupportCarEvent","payload":{"name":"skoda","place":"france","count":100}},
+    {"op":"send","eventType":"SupportCarEvent","payload":{"name":"skoda","place":"germany","count":75}},
+    {"op":"case","case":"doc-sample-audit"},
+    {"op":"send","eventType":"SupportCarEvent","payload":{"name":"skoda","place":"france","count":100}},
+    {"op":"send","eventType":"SupportCarEvent","payload":{"name":"skoda","place":"germany","count":75}},
+    {"op":"case","case":"doc-sample-model"},
+    {"op":"send","eventType":"SupportCarEvent","payload":{"name":"skoda","place":"france","count":100}},
+    {"op":"send","eventType":"SupportCarEvent","payload":{"name":"skoda","place":"germany","count":75}}
+  ]
+}

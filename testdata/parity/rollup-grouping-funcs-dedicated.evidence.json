@@ -1,0 +1,831 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-52a4f853b6052fb47437"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupGroupingFuncs.java"
+  ],
+  "javaExecutions": [
+    "ResultSetQueryTypeDocSampleCarEventAndGroupingFunc"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "rollup-grouping-funcs-dedicated",
+    "steps": [
+      {
+        "op": "case",
+        "case": "doc-sample-plain"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "skoda",
+          "place": "france",
+          "count": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "skoda",
+          "place": "germany",
+          "count": 75
+        }
+      },
+      {
+        "op": "case",
+        "case": "doc-sample-audit"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "skoda",
+          "place": "france",
+          "count": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "skoda",
+          "place": "germany",
+          "count": 75
+        }
+      },
+      {
+        "op": "case",
+        "case": "doc-sample-model"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "skoda",
+          "place": "france",
+          "count": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportCarEvent",
+        "payload": {
+          "name": "skoda",
+          "place": "germany",
+          "count": 75
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-grouping-funcs-dedicated",
+    "records": [
+      {
+        "case": "doc-sample-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-audit",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-audit",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "rollup-grouping-funcs-dedicated",
+    "records": [
+      {
+        "case": "doc-sample-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-plain",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-audit",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-audit",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "france",
+              "sum(count)": 100
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "doc-sample-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 0,
+              "grouping(name)": 0,
+              "grouping(place)": 0,
+              "name": "skoda",
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 1,
+              "grouping(name)": 0,
+              "grouping(place)": 1,
+              "name": "skoda",
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 2,
+              "grouping(name)": 1,
+              "grouping(place)": 0,
+              "name": {
+                "state": "null"
+              },
+              "place": "germany",
+              "sum(count)": 75
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "gid": 3,
+              "grouping(name)": 1,
+              "grouping(place)": 1,
+              "name": {
+                "state": "null"
+              },
+              "place": {
+                "state": "null"
+              },
+              "sum(count)": 175
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

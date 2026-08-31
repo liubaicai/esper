@@ -745,7 +745,8 @@
     "internal/esper/plan.go",
     "internal/esper/runtime.go",
     "internal/esper/aggregate_test.go",
-    "internal/app/parity/rollup_dimensionality.go"
+    "internal/app/parity/rollup_dimensionality.go",
+    "internal/app/parity/rollup_grouping_funcs.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -782,7 +783,8 @@
     "java-runtime-3f45c2d30f96ffe3c19f",
     "java-runtime-20c08346e2644a7201e5",
     "java-runtime-994120aef6b9ff1c0e75",
-    "java-runtime-71fb38d67af471287089"
+    "java-runtime-71fb38d67af471287089",
+    "java-runtime-52a4f853b6052fb47437"
    ]
   },
   {
@@ -36336,6 +36338,67 @@
     "ResultSetQueryTypeRollupDimensionality ordinals 10, 11, and 17 replay five deterministic listener cases (21 Java/Go records, 0 differences): unbound grouping-set variants, bounded cube and explicit grouping-set variants, and context-partition rollup.",
     "The typed Go surface uses GroupByGroupingSets, GroupByCube, CreateKeyContext, WithContext, Sum, CountAll, Grouping, and GroupingID. The scenario, runner, and Java oracle pin metadata, EPL, payloads, row order, timestamps, grouping nulls, cube masks, and record shapes; strict validators reject malformed fields, duplicate JSON keys, marker mutations, payload errors, and trace mutations."
    ]
+  },
+  {
+   "id": "case.rollup-grouping-funcs-dedicated",
+   "javaRuntimeIds": [
+    "java-runtime-52a4f853b6052fb47437"
+   ],
+   "javaStaticIds": [
+    "java-1ae66c9985dc53282af0"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeDocSampleCarEventAndGroupingFunc"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupGroupingFuncs.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFuncsDedicatedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFuncsDedicatedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFuncsDedicatedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFuncsDedicatedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunRollupGroupingFuncsDedicatedRejectsMalformedRawScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "rollup",
+    "grouping-sets",
+    "grouping-functions",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/rollup-grouping-funcs-dedicated.json",
+    "testdata/parity/rollup-grouping-funcs-dedicated.trace.json",
+    "testdata/parity/rollup-grouping-funcs-dedicated.go.trace.json",
+    "testdata/parity/rollup-grouping-funcs-dedicated.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRollupGroupingFuncsScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-rollup-grouping-funcs.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-52a4f853b6052fb47437"
+   ],
+   "notes": [
+    "ResultSetQueryTypeDocSampleCarEventAndGroupingFunc replays three deterministic fresh compilation paths (plain, @Audit, and eplToModel) with six Java/Go listener records and 0 differences; each callback emits the four grouping-set rows in detail-to-overall order for the two SupportCarEvent inputs.",
+    "The typed Go surface uses GroupByGroupingSets, Sum, Grouping, and GroupingID over SupportCarEvent. The scenario, runner, and Java oracle pin metadata, payloads, grouping nulls, values, order, timestamps, and record shape; strict validators reject malformed fields, duplicate JSON keys, payload errors, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -38994,13 +39057,17 @@
   {
    "capabilityId": "resultset.aggregate-dimensional",
    "caseId": "case.rollup-dimensionality-dedicated"
+  },
+  {
+   "capabilityId": "resultset.aggregate-dimensional",
+   "caseId": "case.rollup-grouping-funcs-dedicated"
   }
  ],
  "summary": {
-"inventoriedCases": 580,
-"implementedCases": 578,
-"differentialVerifiedCases": 193,
-"differentialVerifiedRuntimeIds": 720,
+"inventoriedCases": 581,
+"implementedCases": 579,
+"differentialVerifiedCases": 194,
+"differentialVerifiedRuntimeIds": 721,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39010,14 +39077,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3341,
+"runtimeAssociationCount": 3342,
 "referencedJavaRuntimeIds": 3125,
  "totalJavaRuntimeIds": 4136,
  "unreferencedJavaRuntimeIds": 1011,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
-"totalCases": 580,
+"totalCases": 581,
 "totalCapabilities": 119,
-"differentialVerifiedRuntimeIDs": 720
+"differentialVerifiedRuntimeIDs": 721
  }
 }
