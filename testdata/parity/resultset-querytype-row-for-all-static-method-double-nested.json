@@ -1,0 +1,24 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-row-for-all-static-method-double-nested",
+  "description": "ResultSetQueryTypeRowForAll ordinal 12: nested static method composition with last aggregate.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java",
+  "javaRuntimes": ["java-runtime-f8487c524573a3a2f08c"],
+  "javaNames": ["ResultSetQueryTypeRowForAllStaticMethodDoubleNested"],
+  "javaFlags": [],
+  "javaStaticIds": ["java-421838b50fc1c8eff9f6"],
+  "cases": [{
+    "case": "static-method-double-nested",
+    "ordinal": 12,
+    "runtimeId": "java-runtime-f8487c524573a3a2f08c",
+    "executionName": "ResultSetQueryTypeRowForAllStaticMethodDoubleNested",
+    "observation": "listener",
+    "iteratorSnapshots": 0,
+    "epl": "import com.espertech.esper.regressionlib.suite.resultset.querytype.ResultSetQueryTypeRowForAll$MyHelper;\n@name('s0') select MyHelper.doOuter(MyHelper.doInner(last(theString))) as c0 from SupportBean;\n"
+  }],
+  "steps": [
+    {"op": "case", "case": "static-method-double-nested"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}}
+  ]
+}

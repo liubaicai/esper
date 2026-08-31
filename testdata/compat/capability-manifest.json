@@ -4904,12 +4904,13 @@
     "internal/app/parity/resultset_query_type_row_for_all_having_sum_join.go",
     "internal/app/parity/resultset_query_type_row_for_all_having_avg.go",
     "internal/app/parity/resultset_querytype_row_for_all_select_avg_expr_std_group_by.go",
-    "internal/app/parity/resultset_querytype_row_for_all_select_avg_std_group_by_uni.go"
+    "internal/app/parity/resultset_querytype_row_for_all_select_avg_std_group_by_uni.go",
+    "internal/app/parity/resultset_querytype_row_for_all_static_method_double_nested.go"
    ],
    "phase": 3,
    "status": "differential-verified",
    "remaining": [
-    "row-for-all querytype executions beyond covered ordinals 0-2 and 4-9",
+    "row-for-all querytype executions beyond covered ordinals 0-2, 4-10 and 12",
     "additional output-rate, join and invalid/error-phase combinations"
    ],
    "verification": [
@@ -4927,7 +4928,8 @@
     "java-runtime-dfb97881f562ac33e873",
     "java-runtime-d20a1ee344797d87678b",
     "java-runtime-873d7f4fc2344cd9c631",
-    "java-runtime-de3a01d12a22bb33ee43"
+    "java-runtime-de3a01d12a22bb33ee43",
+    "java-runtime-f8487c524573a3a2f08c"
    ]
   }
  ],
@@ -36203,6 +36205,67 @@
     "ResultSetQueryTypeRowForAllSelectAvgStdGroupByUni replays a deterministic group-window univariate-statistics average (4 Java/Go records, 0 differences): A/1 emits 1, B/3 emits 3, A/3 emits 2, A/10 is reset after its callback, and A/20 emits 15 after per-symbol length(2) eviction.",
     "The typed Go surface uses GroupWindow(symbol, LengthWindow(2)), UnivariateStatistics(price).Average(), and new-only listener output. The bounded aggregate runtime detects univariate-statistics derived-view dependencies recursively so #uni uses the GroupWindow key while ordinary Avg remains row-for-all; strict validators reject malformed or duplicate fields, payload errors, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-row-for-all-static-method-double-nested",
+   "javaRuntimeIds": [
+    "java-runtime-f8487c524573a3a2f08c"
+   ],
+   "javaStaticIds": [
+    "java-421838b50fc1c8eff9f6"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeRowForAllStaticMethodDoubleNested"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllStaticMethodDoubleNestedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllStaticMethodDoubleNestedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllStaticMethodDoubleNestedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllStaticMethodDoubleNestedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllStaticMethodDoubleNestedRejectsMalformedRawScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "row-for-all",
+    "aggregate",
+    "static-method",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-row-for-all-static-method-double-nested.json",
+    "testdata/parity/resultset-querytype-row-for-all-static-method-double-nested.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-static-method-double-nested.go.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-static-method-double-nested.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRowForAllStaticMethodDoubleNestedScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-row-for-all-static-method-double-nested.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f8487c524573a3a2f08c"
+   ],
+   "notes": [
+    "ResultSetQueryTypeRowForAllStaticMethodDoubleNested replays one deterministic SupportBean listener scenario (1 Java/Go record, 0 differences): MyHelper.doOuter(MyHelper.doInner(last(theString))) maps E1 to oiE1io.",
+    "The typed Go surface composes Last[string] with nested Func1 expressions and subscribes before the send. The scenario, runner and Java oracle pin helper EPL, metadata, payload, value, order, timestamp and row shape; strict validators reject malformed fields, duplicate JSON keys, payload errors and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -38853,13 +38916,17 @@
   {
    "capabilityId": "resultset.querytype-row-for-all",
    "caseId": "case.resultset-querytype-row-for-all-select-avg-std-group-by-uni"
+  },
+  {
+   "capabilityId": "resultset.querytype-row-for-all",
+   "caseId": "case.resultset-querytype-row-for-all-static-method-double-nested"
   }
  ],
  "summary": {
- "inventoriedCases": 578,
- "implementedCases": 576,
- "differentialVerifiedCases": 191,
- "differentialVerifiedRuntimeIds": 716,
+ "inventoriedCases": 579,
+ "implementedCases": 577,
+ "differentialVerifiedCases": 192,
+ "differentialVerifiedRuntimeIds": 717,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -38869,14 +38936,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
- "runtimeAssociationCount": 3337,
- "referencedJavaRuntimeIds": 3124,
+ "runtimeAssociationCount": 3338,
+ "referencedJavaRuntimeIds": 3125,
  "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1012,
+ "unreferencedJavaRuntimeIds": 1011,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
- "totalCases": 578,
+ "totalCases": 579,
  "totalCapabilities": 119,
- "differentialVerifiedRuntimeIDs": 716
+ "differentialVerifiedRuntimeIDs": 717
  }
 }
