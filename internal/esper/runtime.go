@@ -17776,12 +17776,13 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	if definition == nil {
 		return ResultBatch{}, NewError(ErrorInvalidRule, "aggregate runtime has no definition")
 	}
-	if len(definition.groupBy) == 0 {
+	if len(definition.groupBy) == 0 && (plan.query.tableTarget != "" || aggregateDefinitionReadsNonKeyEvent(definition)) {
 		if keys := implicitAggregateGroupBy(definition.input); len(keys) > 0 {
-			// Esper's groupwin view partitions a child aggregate per view key.
-			// The fluent Aggregate chain keeps GroupWindow as a retention
-			// specification, so materialize those keys as an implicit runtime
-			// grouping dimension while leaving the public selection unchanged.
+			// A grouped retention is an implicit aggregate dimension when the
+			// projection reads a non-aggregate event property (or when an
+			// into-table materialization needs the retention key). A pure
+			// aggregate projection remains row-for-all across all group-window
+			// partitions, matching Esper's `avg(price)` contract.
 			copyDefinition := *definition
 			copyDefinition.groupBy = keys
 			definition = &copyDefinition

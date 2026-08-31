@@ -4902,12 +4902,13 @@
     "internal/esper/runtime.go",
     "internal/app/parity/resultset_query_type_row_for_all_having_sum.go",
     "internal/app/parity/resultset_query_type_row_for_all_having_sum_join.go",
-    "internal/app/parity/resultset_query_type_row_for_all_having_avg.go"
+    "internal/app/parity/resultset_query_type_row_for_all_having_avg.go",
+    "internal/app/parity/resultset_querytype_row_for_all_select_avg_expr_std_group_by.go"
    ],
    "phase": 3,
    "status": "differential-verified",
    "remaining": [
-    "row-for-all querytype executions beyond covered ordinals 0-2 and 4-8",
+    "row-for-all querytype executions beyond covered ordinals 0-2 and 4-9",
     "additional output-rate, join and invalid/error-phase combinations"
    ],
    "verification": [
@@ -4923,7 +4924,8 @@
     "java-runtime-780e3dede1e586fde738",
     "java-runtime-65e4ba1499cb12f04d8a",
     "java-runtime-dfb97881f562ac33e873",
-    "java-runtime-d20a1ee344797d87678b"
+    "java-runtime-d20a1ee344797d87678b",
+    "java-runtime-873d7f4fc2344cd9c631"
    ]
   }
  ],
@@ -36076,6 +36078,67 @@
     "ResultSetQueryTypeAvgRowForAllWHavingGroupWindow replays one deterministic unique-symbol average with having avg(price) <= 0 (3 Java/Go records, 0 differences): A=-1 emits -1, A=5 is suppressed after unique replacement, B=-6 emits -0.5, positive C averages are suppressed, and C=-2 emits -1.",
     "The typed Go surface uses SupportMarketDataBean with Unique(symbol), Avg(price), Having, and new-only listener output. The scenario and oracle pin metadata, payload, values, order, timestamps, and record shape; strict validators reject malformed or duplicate fields, payload errors, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-row-for-all-select-avg-expr-std-group-by",
+   "javaRuntimeIds": [
+    "java-runtime-873d7f4fc2344cd9c631"
+   ],
+   "javaStaticIds": [
+    "java-d8d6953f53a7a43d2324"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeRowForAllSelectAvgExprStdGroupBy"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgExprStdGroupByDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgExprStdGroupByDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgExprStdGroupByDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgExprStdGroupByCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowForAllSelectAvgExprStdGroupByRejectsMalformedRawScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "row-for-all",
+    "aggregate",
+    "group-window",
+    "istream",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-row-for-all-select-avg-expr-std-group-by.json",
+    "testdata/parity/resultset-querytype-row-for-all-select-avg-expr-std-group-by.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-select-avg-expr-std-group-by.go.trace.json",
+    "testdata/parity/resultset-querytype-row-for-all-select-avg-expr-std-group-by.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-row-for-all-select-avg-expr-std-group-by.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-873d7f4fc2344cd9c631"
+   ],
+   "notes": [
+    "ResultSetQueryTypeRowForAllSelectAvgExprStdGroupBy replays the standard group-window average over SupportMarketDataBean (2 Java/Go records, 0 differences): A=1 emits 1.0 and B=3 emits the global 2.0 row-for-all average across both group-window partitions.",
+    "The typed Go surface uses nullable SupportMarketDataBean fields, GroupWindow(symbol, LengthWindow(2)), Avg(price), and new-only listener output. The scenario and oracle pin metadata, payload, values, order, timestamps, and row shape; strict validators reject malformed or duplicate fields and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -38718,13 +38781,17 @@
   {
    "capabilityId": "resultset.querytype-row-for-all",
    "caseId": "case.resultset-querytype-row-for-all-having-avg-group-window"
+  },
+  {
+   "capabilityId": "resultset.querytype-row-for-all",
+   "caseId": "case.resultset-querytype-row-for-all-select-avg-expr-std-group-by"
   }
  ],
  "summary": {
-  "inventoriedCases": 576,
-  "implementedCases": 574,
-  "differentialVerifiedCases": 189,
-  "differentialVerifiedRuntimeIds": 714,
+  "inventoriedCases": 577,
+  "implementedCases": 575,
+  "differentialVerifiedCases": 190,
+  "differentialVerifiedRuntimeIds": 715,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -38734,14 +38801,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3335,
-  "referencedJavaRuntimeIds": 3122,
+  "runtimeAssociationCount": 3336,
+  "referencedJavaRuntimeIds": 3123,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 1014,
+  "unreferencedJavaRuntimeIds": 1013,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 576,
+  "totalCases": 577,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 714
+  "differentialVerifiedRuntimeIDs": 715
  }
 }

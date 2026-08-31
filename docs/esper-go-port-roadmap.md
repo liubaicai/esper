@@ -3,6 +3,7 @@
 > 文档定位：本文件只维护当前阶段、优先级、remaining 和风险。完整范围与架构见 [实施规划](esper-go-port-implementation-plan.md)，日常步骤见 [执行手册](esper-go-port-runbook.md)，差分、合成数据和验收口径见 [质量策略](esper-go-port-quality-strategy.md)，历史见 [CHANGELOG](../CHANGELOG.md)。统计数字以 `testdata/compat/capability-manifest.json` 的已校验 `summary` 为唯一来源。
 
 ## 0. 实时状态入口
+> 最新补充：Draft 4.285（2026-08-31），新增 `resultset-querytype-row-for-all-select-avg-expr-std-group-by` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRowForAll.java` ordinal 9 的 `ResultSetQueryTypeRowForAllSelectAvgExprStdGroupBy`（runtime `java-runtime-873d7f4fc2344cd9c631`；shared inventory ID `java-00cfc4061ba3a5f163ff`；static candidate `java-d8d6953f53a7a43d2324`；无 flags）：Java/Go 各 2 条 records、0 differences。场景覆盖 `SupportMarketDataBean#groupwin(symbol)#length(2)` 上 `istream avg(price)` 的 row-for-all 全局平均：A=1 输出 1.0、B=3 输出跨 group-window 分区的 2.0；typed Go `GroupWindow`、`Avg` 与严格 scenario/oracle validator 固定 payload、metadata、value/order/time/record-shape 及 mutation rejection；为保留纯聚合 row-for-all 语义，bounded aggregate runtime 仅在投影读取非 key 属性或 into-table 时 materialize 隐式分组；manifest 更新为 577 cases、190 个 differential-verified case、715 个 differential runtime IDs、3336 条 associations（referenced 3123）；capability 119 个（34…
 > 最新补充：Draft 4.284（2026-08-31），新增 `resultset-querytype-row-for-all-having-avg-group-window` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRowForAllHaving.java` ordinal 2 的 `ResultSetQueryTypeAvgRowForAllWHavingGroupWindow`（runtime `java-runtime-d20a1ee344797d87678b`；shared inventory/static ID `java-45a56190252ed051c35f`；无 flags）：Java/Go 各 3 条 records、0 differences。场景覆盖 `SupportMarketDataBean#unique(symbol)` 的 `istream avg(price) <= 0` having：A=-1、A=5 替换后抑制、B=-6、C 正均值抑制、C=-2 恢复输出；typed Go `Unique`、`Avg`、`Having` 与严格 scenario/oracle validator 固定 payload、metadata、value/order/time/record-shape 及 mutation rejection；manifest 更新为 576 cases、189 个 differential-verified case、714 个 differential runtime IDs、3335 条 associations（referenced 3122）；capability 119 个（34 DV）。
 > 最新补充：Draft 4.283（2026-08-29），新增 `resultset-querytype-row-for-all-having-sum-join` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRowForAllHaving.java` ordinal 1 的 `ResultSetQueryTypeRowForAllWHavingSumJoin`（runtime `java-runtime-dfb97881f562ac33e873`；shared inventory `java-45a56190252ed051c35f`；static candidate `java-bf6637bf00f9e0e78f89`，无 flags）：Java/Go 各 3 条 records、0 differences。场景覆盖两个 `SupportBeanString`/`SupportBean` 十秒 time-window 的 key join、`irstream sum(longBoxed) > 10`、t5/t8/t10 新旧 listener 行与双窗口首个到期（t5 new 25、t8 new 20/old 25、t10 old 20）；typed Go `Join`、nullable `LongBoxed`、两个 `TimeWindow`、`Sum`、`Having`、`WithOldStream` 与严格 scenario/oracle validator 固定 join metadata、payload、value/order/time/record-shape；manifest 更新为 575 cases、188 个 differential-verified case、713 个 differential runtime IDs、3334 条 associations（referenced 3121）；capability 119 个（34 DV）。
 > 最新补充：Draft 4.281（2026-08-29），新增 `resultset-aggregate-minmax-named-window-wever` differential-verified 场景，对照固定 Java `ResultSetAggregateMinMax.java` ordinals 2-3 的 `ResultSetAggregateMinMaxNamedWindowWEver{soda=false}` 与 `{soda=true}`（runtime `java-runtime-7d0a94525b0038b397fd`、`java-runtime-840f1ca5610dd00d3ec0`；static candidate `java-09115f6e876ce88a42f9`，flags `EXCLUDEWHENINSTRUMENTED`）：Java/Go 各 8 条 records、0 differences。场景覆盖 public `NamedWindow5m#length(2)` 的 typed `Min`/`Max` 当前极值、`MinEver`/`MaxEver` 历史极值与 FIFO 淘汰，SODA/EPL 双表示路径共享 listener 语义；runner/oracle 严格拒绝缺失/额外/重复字段、flags/metadata 不匹配、非法 payload 与 value/order/null/time/count trace mutation。manifest 更新为 573 cases、186 个 differential-verified case、711 个 differential runtime IDs、3332 条 associations（referenced 3119）；capability 119 个（34 DV）。
@@ -982,17 +983,17 @@
 
 > 最新补充：Draft 4.196（2026-08-20），新增 `expr-core-current-timestamp` differential-verified 场景，对照固定 Java `ExprCoreCurrentTimestamp` 的三个 execution（`ExprCoreCurrentTimestampGet` `java-runtime-c1c1fd3dc31af4864a50`、`ExprCoreCurrentTimestampOM` `java-runtime-96c8b8cb4cf36a523669`、`ExprCoreCurrentTimestampCompile` `java-runtime-5b126fe7fb865be8b293`），三个 isolated case、四条 listener records、0 differences。Go 侧复用类型化 `CurrentTimestamp()` 和虚拟时钟，覆盖未命名 `current_timestamp()` 字段、重复引用、加一运算，以及 100/999/777 毫秒绝对时间；Java boxed Long 元数据和文本编译诊断继续保持差异边界。Java oracle、固定 commit runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 122 个 differential-verified case、373 个 differential runtime IDs。
 
-截至 2026-08-25，manifest v2 的已校验摘要为：
+截至 2026-08-31，manifest v2 的已校验摘要为：
 
 | 维度 | 数值 |
 | --- | --- |
-| Capability | 113 |
-| Case | 552 |
-| Case differential-verified | 163 |
-| Differential-verified runtime | 626 / 4,136 |
-| Runtime 已关联 | 3,251 / 4,136（78.6%） |
-| Runtime 未关联 | 1,089 |
-| Representative scenario | 94 / 94 通过 |
+| Capability | 119 |
+| Case | 577 |
+| Case differential-verified | 190 |
+| Differential-verified runtime | 715 / 4,136 |
+| Runtime 已关联 | 3,123 / 4,136（75.5%） |
+| Runtime 未关联 | 1,013 |
+| Representative scenario | 107 / 107 通过 |
 | Intentionally-different case | 23 |
 | NFR-verified case | 0 |
 | 质量摘要 | Docker passed；stress passed；race passed；performance pending |

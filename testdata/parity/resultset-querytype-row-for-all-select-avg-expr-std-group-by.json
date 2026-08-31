@@ -1,0 +1,25 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-row-for-all-select-avg-expr-std-group-by",
+  "description": "ResultSetQueryTypeRowForAll ordinal 9: average expression with standard group-by.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowForAll.java",
+  "javaRuntimes": ["java-runtime-873d7f4fc2344cd9c631"],
+  "javaNames": ["ResultSetQueryTypeRowForAllSelectAvgExprStdGroupBy"],
+  "javaFlags": [],
+  "javaStaticIds": ["java-d8d6953f53a7a43d2324"],
+  "cases": [{
+    "case": "avg-expr-std-group-by",
+    "ordinal": 9,
+    "runtimeId": "java-runtime-873d7f4fc2344cd9c631",
+    "executionName": "ResultSetQueryTypeRowForAllSelectAvgExprStdGroupBy",
+    "observation": "listener",
+    "iteratorSnapshots": 0,
+    "epl": "@name('s0') select istream avg(price) as aprice from SupportMarketDataBean#groupwin(symbol)#length(2)"
+  }],
+  "steps": [
+    {"op": "case", "case": "avg-expr-std-group-by"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "A", "id": null, "price": 1, "volume": null, "feed": null}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "B", "id": null, "price": 3, "volume": null, "feed": null}}
+  ]
+}
