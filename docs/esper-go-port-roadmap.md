@@ -3,6 +3,7 @@
 > 文档定位：本文件只维护当前阶段、优先级、remaining 和风险。完整范围与架构见 [实施规划](esper-go-port-implementation-plan.md)，日常步骤见 [执行手册](esper-go-port-runbook.md)，差分、合成数据和验收口径见 [质量策略](esper-go-port-quality-strategy.md)，历史见 [CHANGELOG](../CHANGELOG.md)。统计数字以 `testdata/compat/capability-manifest.json` 的已校验 `summary` 为唯一来源。
 
 ## 0. 实时状态入口
+> 最新补充：Draft 4.293（2026-09-01），新增 `resultset.aggregate-access` 的 `resultset-querytype-rollup-orderby-unidirectional` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRollupHavingAndOrderBy.java` ordinals 4-7 的 `ResultSetQueryTypeOrderByTwoCriteriaAsc{join=false}`、`{join=true}`、`ResultSetQueryTypeUnidirectional` 与 `ResultSetQueryTypeOrderByOneCriteriaDesc`（Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes `java-runtime-b09e67f84d7426e94834`、`java-runtime-7859d904aebfc874ac11`、`java-runtime-7f3911bcedf70526d5df`、`java-runtime-2ff9039bfd91c9054507`；static IDs `java-715eae421ccf37a5062a`、`java-24e47ca92d533e352474`、`java-ba719758f9ea057c8d79`；无 flags）：Java/Go 各 8 条 listener records、0 differences。场景覆盖 time-batch rollup 的 Null subtotal、两键升序和单键降序、lastevent join、unidirectional cube 驱动更新及 irstream old/new 行；typed Go 使用 `TimeBatch`、`GroupByRollup`、`GroupByCube`、`Sum`、`WithOldStream`、`OrderBy` 与 `JoinMany`/`Unidirectional`，并修复 runner 侧多键 `OrderBy` 选项覆盖问题。scenario、Java/Go trace、differential evidence、Java oracle/launcher 与 replay/mutation tests 已登记；manifest 更新为 584 cases、582 implemented、197 个 differential-verified case、728 个 differential-verified runtime IDs、3349 条 associations（referenced 3132），capability 119 个（34 个 differential-verified）。
 > 最新补充：Draft 4.292（2026-09-01），新增 `resultset.aggregate-access` 的 `resultset-querytype-rollup-having-iterator` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRollupHavingAndOrderBy.java` ordinals 2-3 的 `ResultSetQueryTypeIteratorWindow{join=false}` 与 `{join=true}`（Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；source `regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupHavingAndOrderBy.java`；runtimes `java-runtime-1ce0d3fc4b6fed76d38d`、`java-runtime-7730d794daee6dac92c7`；shared/static ID `java-efb06d5c38363ea3a5d0`；无 flags）：Java/Go 各 8 条 iterator snapshot records、0 differences。场景覆盖 `SupportBean#length(3)` 的 `rollup(theString)` 叶组与 Null subtotal、FIFO eviction 后的 any-order iterator snapshots，以及可选 `SupportBean_S0#keepall` join；typed Go 使用 `LengthWindow(3)`、`GroupByRollup`、`Sum` 与等价 keepall join，严格 validator 固定 runtime metadata、payload、snapshot order/membership、Null、时间和 record shape，并拒绝 malformed scenario、duplicate keys 与 trace mutation。可重放输入、Java trace、Go trace、differential evidence 分别为 `testdata/parity/resultset-querytype-rollup-having-iterator.json`、`testdata/parity/resultset-querytype-rollup-having-iterator.trace.json`、`testdata/parity/resultset-querytype-rollup-having-iterator.go.trace.json`、`testdata/parity/resultset-querytype-rollup-having-iterator.evidence.json`；manifest 更新为 583 cases、196 个 differential-verified cases、724 个 differential-verified runtime IDs、3345 条 associations（referenced 3128），capability 119 个（34 个 differential-verified）。
 > 最新补充：Draft 4.291（2026-09-01），新增 `resultset.aggregate-dimensional` 的 `rollup-grouping-funcs-faf-dedicated` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRollupGroupingFuncs.java` ordinal 2 的 `ResultSetQueryTypeFAFCarEventAndGroupingFunc`（runtime `java-runtime-e8f49362431d4c33baa8`；shared/static ID `java-1ae66c9985dc53282af0`；execution flag `FIREANDFORGET`）：Java/Go 各 1 条 FAF record、12 条 rows、0 differences。场景覆盖 public `CarWindow#keepall` 的六个 `SupportCarEvent` 插入、`grouping sets((name, place), name, place, ())` 的 detail→name subtotal→place subtotal→overall 顺序、grouping bits、`grouping_id` 和 Null 投影；typed Go 使用 `GroupByGroupingSets`、`Sum`、`Grouping`、`GroupingID` 与 `ExecuteFireAndForget`，严格 scenario/oracle validator 固定 metadata、payload、values/order/time/record-shape，并拒绝 malformed scenario、duplicate keys、payload 与 trace mutation；manifest 更新为 582 cases、195 个 differential-verified case、722 个 differential runtime IDs、3343 条 associations（referenced 3126）。
 > 最新补充：Draft 4.289（2026-08-31），新增 `resultset.aggregate-dimensional` 的 `resultset-querytype-rollup-dimensionality-dedicated` differential-verified 场景，对照固定 Java `ResultSetQueryTypeRollupDimensionality.java` 的 `ResultSetQueryTypeUnboundGroupingSet2LevelUnenclosed` ordinal 10（runtime `java-runtime-20c08346e2644a7201e5`）、`ResultSetQueryTypeBoundCube3Dim` ordinal 11（runtime `java-runtime-994120aef6b9ff1c0e75`）和 `ResultSetQueryTypeContextPartitionAlsoRollup` ordinal 17（runtime `java-runtime-71fb38d67af471287089`），三 execution、五 cases、Java/Go 各 21 条 records、0 differences，无 flags。场景覆盖 unbound grouping-set、bounded cube/显式 grouping-sets、SegmentedByString context-partition rollup；typed Go 使用 `GroupByGroupingSets`、`GroupByCube`、`CreateKeyContext`/`WithContext`、`Sum`、`CountAll`、`Grouping`、`GroupingID`，严格 validator 固定 metadata、payload、行序、时间、subtotal Null、cube masks 与 record shape，并覆盖 malformed/duplicate/marker/payload/trace mutation rejection。已登记 scenario、Java/Go trace、differential evidence、Java oracle/launcher 和 replay/mutation tests；manifest 更新为 580 cases、193 个 differential-verified case、720 个 distinct differential runtime IDs、3341 条 associations（referenced 3125）。剩余为 invalid compile-error diagnostics、超出已验证形式的 combined/nested grouping specifications，以及完整 Context-partition rollup matrix。
@@ -989,20 +990,20 @@
 
 > 最新补充：Draft 4.196（2026-08-20），新增 `expr-core-current-timestamp` differential-verified 场景，对照固定 Java `ExprCoreCurrentTimestamp` 的三个 execution（`ExprCoreCurrentTimestampGet` `java-runtime-c1c1fd3dc31af4864a50`、`ExprCoreCurrentTimestampOM` `java-runtime-96c8b8cb4cf36a523669`、`ExprCoreCurrentTimestampCompile` `java-runtime-5b126fe7fb865be8b293`），三个 isolated case、四条 listener records、0 differences。Go 侧复用类型化 `CurrentTimestamp()` 和虚拟时钟，覆盖未命名 `current_timestamp()` 字段、重复引用、加一运算，以及 100/999/777 毫秒绝对时间；Java boxed Long 元数据和文本编译诊断继续保持差异边界。Java oracle、固定 commit runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 122 个 differential-verified case、373 个 differential runtime IDs。
 
-截至 2026-08-31，manifest v2 的已校验摘要为：
+截至 2026-09-01，manifest v2 的已校验摘要为：
 
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 119 |
-| Case | 580 |
-| Case differential-verified | 193 |
-| Differential-verified runtime | 720 / 4,136 |
-| Runtime 已关联 | 3,125 / 4,136（75.6%） |
-| Runtime 未关联 | 1,011 |
+| Case | 584 |
+| Case differential-verified | 197 |
+| Differential-verified runtime | 728 / 4,136 |
+| Runtime 已关联 | 3,132 / 4,136（75.7%） |
+| Runtime 未关联 | 1,004 |
 | Representative scenario | 107 / 107 通过 |
 | Intentionally-different case | 23 |
 | NFR-verified case | 0 |
-| 质量摘要 | Docker passed；stress passed；race passed；performance pending |
+| 质量摘要 | Docker/stress/race 已通过；performance pending |
 
 该表是阅读便利快照，不应手工推导后继续传播。每次需要最新数字时直接读取 manifest `summary`；只有 manifest 校验通过后才更新本表。
 

@@ -39,6 +39,11 @@ func TestRunHelpSucceeds(t *testing.T) {
 			t.Fatalf("help output omits %q: %s", mode, stderr.String())
 		}
 	}
+	for _, mode := range []string{"resultset-querytype-rollup-orderby-unidirectional", "resultset-querytype-rollup-orderby-unidirectional-diff", "rollup-grouping-funcs-faf-dedicated", "rollup-grouping-funcs-faf-dedicated-diff"} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
 }
 
 func TestRunRollupGroupingFAFDedicatedDirectReplay(t *testing.T) {
@@ -23405,6 +23410,376 @@ func assertResultSetQueryTypeRollupHavingIteratorTrace(t *testing.T, trace compa
 				t.Fatalf("record %d expected row %d %#v not found in any-order rows %#v", index, expectedIndex, expected, record.New)
 			}
 			matched[match] = true
+		}
+	}
+}
+func TestRunResultSetQueryTypeRollupOrderByUnidirectionalDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "resultset-querytype-rollup-orderby-unidirectional.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-rollup-orderby-unidirectional", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetQueryTypeRollupOrderByUnidirectionalTrace(t, trace)
+}
+
+func TestRunResultSetQueryTypeRollupOrderByUnidirectionalDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-rollup-orderby-unidirectional.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-querytype-rollup-orderby-unidirectional-diff",
+		"-scenario", filepath.Join(root, "resultset-querytype-rollup-orderby-unidirectional.json"),
+		"-java-trace", filepath.Join(root, "resultset-querytype-rollup-orderby-unidirectional.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultSetQueryTypeRollupOrderByUnidirectionalJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeRollupOrderByUnidirectionalJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeRollupOrderByUnidirectionalJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeRollupOrderByUnidirectionalJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetQueryTypeRollupOrderByUnidirectionalTrace(t, evidence.JavaTrace)
+	assertResultSetQueryTypeRollupOrderByUnidirectionalTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetQueryTypeRollupOrderByUnidirectionalDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["c2"] = json.Number("999")
+		}},
+		{name: "row-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0], trace.Records[0].New[1] = trace.Records[0].New[1], trace.Records[0].New[0]
+		}},
+		{name: "sequence", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Sequence++
+		}},
+		{name: "case-label", mutate: func(trace *compat.Trace) {
+			trace.Records[4].Case = "wrong-case"
+		}},
+		{name: "time", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:02Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-querytype-rollup-orderby-unidirectional.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-rollup-orderby-unidirectional.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-querytype-rollup-orderby-unidirectional-diff",
+				"-scenario", filepath.Join(root, "resultset-querytype-rollup-orderby-unidirectional.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetQueryTypeRollupOrderByUnidirectionalCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-querytype-rollup-orderby-unidirectional.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-querytype-rollup-orderby-unidirectional.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultSetQueryTypeRollupOrderByUnidirectionalJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeRollupOrderByUnidirectionalJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeRollupOrderByUnidirectionalJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeRollupOrderByUnidirectionalJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	assertResultSetQueryTypeRollupOrderByUnidirectionalTrace(t, javaTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-querytype-rollup-orderby-unidirectional.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetQueryTypeRollupOrderByUnidirectionalScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultSetQueryTypeRollupOrderByUnidirectionalJavaCommit,
+		resultSetQueryTypeRollupOrderByUnidirectionalJavaRuntimeIDs,
+		resultSetQueryTypeRollupOrderByUnidirectionalJavaSources,
+		resultSetQueryTypeRollupOrderByUnidirectionalJavaExecutions,
+		scenario,
+		javaTrace,
+		evidence.JavaTrace,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing canonical comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-rollup-orderby-unidirectional", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetQueryTypeRollupOrderByUnidirectionalTrace(t, goTrace)
+}
+
+func TestRunResultSetQueryTypeRollupOrderByUnidirectionalRejectsMalformedRawScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-rollup-orderby-unidirectional.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "resultset-querytype-rollup-orderby-unidirectional"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "order-by-two-criteria-no-join",`), []byte(`"case": "order-by-two-criteria-no-join", "extra": 0,`), 1)
+		}},
+		{name: "case-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "order-by-two-criteria-no-join",`), []byte(`"case": "order-by-two-criteria-no-join", "case": "order-by-two-criteria-no-join",`), 1)
+		}},
+		{name: "marker-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "order-by-two-criteria-no-join"`+"\n"), []byte(`"case": "order-by-two-criteria-no-join", "extra": 0`+"\n"), 1)
+		}},
+		{name: "marker-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "order-by-two-criteria-no-join"`+"\n"), []byte(`"case": "order-by-two-criteria-no-join", "case": "order-by-two-criteria-no-join"`+"\n"), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"longPrimitive": 100`), []byte(`"longPrimitive": 100, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"longPrimitive": 100`), []byte(`"longPrimitive": 100, "longPrimitive": 100`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "wrong-string", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E2"`), []byte(`"theString": "E9"`), 1)
+		}},
+		{name: "wrong-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 9`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 10.5`), 1)
+		}},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": null`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 4`), []byte(`"ordinal": 5`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-querytype-rollup-orderby-unidirectional", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func assertResultSetQueryTypeRollupOrderByUnidirectionalTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultSetQueryTypeRollupOrderByUnidirectionalID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 8 {
+		t.Fatalf("trace records = %d, want 8", len(trace.Records))
+	}
+	null := func() map[string]any { return map[string]any{"state": "null"} }
+	number := func(value string) json.Number { return json.Number(value) }
+	row := func(c0, c1, c2 any) resultSetQueryTypeRollupOrderByExpectedRow {
+		return resultSetQueryTypeRollupOrderByExpectedRow{c0: c0, c1: c1, c2: c2}
+	}
+	n := null
+	wantNew := [][]resultSetQueryTypeRollupOrderByExpectedRow{
+		{row(n(), n(), number("1000")), row("E1", n(), number("900")), row("E1", number("10"), number("300")), row("E1", number("11"), number("600")), row("E2", n(), number("100")), row("E2", number("10"), number("100"))},
+		{row(n(), n(), number("1800")), row("E1", n(), number("1800")), row("E1", number("10"), number("600")), row("E1", number("11"), number("500")), row("E1", number("12"), number("700")), row("E2", n(), n()), row("E2", number("10"), n())},
+		{row(n(), n(), number("1000")), row("E1", n(), number("900")), row("E1", number("10"), number("300")), row("E1", number("11"), number("600")), row("E2", n(), number("100")), row("E2", number("10"), number("100"))},
+		{row(n(), n(), number("1800")), row("E1", n(), number("1800")), row("E1", number("10"), number("600")), row("E1", number("11"), number("500")), row("E1", number("12"), number("700")), row("E2", n(), n()), row("E2", number("10"), n())},
+		{row("E1", number("10"), number("100")), row("E2", number("20"), number("600")), row("E1", number("11"), number("300")), row("E1", n(), number("400")), row("E2", n(), number("600")), row(n(), number("10"), number("100")), row(n(), number("20"), number("600")), row(n(), number("11"), number("300")), row(n(), n(), number("1000"))},
+		{row("E1", number("10"), number("101")), row("E2", number("20"), number("600")), row("E1", number("11"), number("300")), row("E1", n(), number("401")), row("E2", n(), number("600")), row(n(), number("10"), number("101")), row(n(), number("20"), number("600")), row(n(), number("11"), number("300")), row(n(), n(), number("1001"))},
+		{row("E2", number("10"), number("100")), row("E2", n(), number("100")), row("E1", number("11"), number("600")), row("E1", number("10"), number("300")), row("E1", n(), number("900")), row(n(), n(), number("1000"))},
+		{row("E2", number("10"), n()), row("E2", n(), n()), row("E1", number("11"), number("500")), row("E1", number("10"), number("600")), row("E1", number("12"), number("700")), row("E1", n(), number("1800")), row(n(), n(), number("1800"))},
+	}
+	wantOld := [][]resultSetQueryTypeRollupOrderByExpectedRow{
+		{row(n(), n(), n()), row("E1", n(), n()), row("E1", number("10"), n()), row("E1", number("11"), n()), row("E2", n(), n()), row("E2", number("10"), n())},
+		{row(n(), n(), number("1000")), row("E1", n(), number("900")), row("E1", number("10"), number("300")), row("E1", number("11"), number("600")), row("E1", number("12"), n()), row("E2", n(), number("100")), row("E2", number("10"), number("100"))},
+		{row(n(), n(), n()), row("E1", n(), n()), row("E1", number("10"), n()), row("E1", number("11"), n()), row("E2", n(), n()), row("E2", number("10"), n())},
+		{row(n(), n(), number("1000")), row("E1", n(), number("900")), row("E1", number("10"), number("300")), row("E1", number("11"), number("600")), row("E1", number("12"), n()), row("E2", n(), number("100")), row("E2", number("10"), number("100"))},
+		{row("E2", number("10"), n()), row("E2", n(), n()), row("E1", number("11"), n()), row("E1", number("10"), n()), row("E1", n(), n()), row(n(), n(), n())},
+		{row("E2", number("10"), number("100")), row("E2", n(), number("100")), row("E1", number("11"), number("600")), row("E1", number("10"), number("300")), row("E1", number("12"), n()), row("E1", n(), number("900")), row(n(), n(), number("1000"))},
+	}
+	wantCases := []string{
+		"order-by-two-criteria-no-join", "order-by-two-criteria-no-join",
+		"order-by-two-criteria-join", "order-by-two-criteria-join",
+		"unidirectional-cube", "unidirectional-cube",
+		"order-by-one-criteria-desc", "order-by-one-criteria-desc",
+	}
+	wantTimes := []string{
+		"1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z",
+		"1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z",
+		"1970-01-01T00:00:00Z", "1970-01-01T00:00:00Z",
+		"1970-01-01T00:00:01Z", "1970-01-01T00:00:02Z",
+	}
+	for index, record := range trace.Records {
+		if record.Case != wantCases[index] || record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != uint64(index%2+1) || record.Time != wantTimes[index] {
+			t.Fatalf("record %d metadata = %#v", index, record)
+		}
+		if index < 4 {
+			assertResultSetQueryTypeRollupOrderByUnidirectionalRows(t, index, record.New, wantNew[index])
+			assertResultSetQueryTypeRollupOrderByUnidirectionalRows(t, index, record.Old, wantOld[index])
+		} else if index < 6 {
+			assertResultSetQueryTypeRollupOrderByUnidirectionalRows(t, index, record.New, wantNew[index])
+			if len(record.Old) != 0 {
+				t.Fatalf("record %d old rows = %d, want 0", index, len(record.Old))
+			}
+		} else {
+			assertResultSetQueryTypeRollupOrderByUnidirectionalRows(t, index, record.New, wantNew[index])
+			assertResultSetQueryTypeRollupOrderByUnidirectionalRows(t, index, record.Old, wantOld[index-2])
+		}
+	}
+}
+
+type resultSetQueryTypeRollupOrderByExpectedRow struct {
+	c0 any
+	c1 any
+	c2 any
+}
+
+func assertResultSetQueryTypeRollupOrderByUnidirectionalRows(t *testing.T, recordIndex int, rows []compat.ResultRecord, expected []resultSetQueryTypeRollupOrderByExpectedRow) {
+	t.Helper()
+	if len(rows) != len(expected) {
+		t.Fatalf("record %d row count = %d, want %d", recordIndex, len(rows), len(expected))
+	}
+	for index, actual := range rows {
+		if actual.Kind != "row" || len(actual.Fields) != 3 {
+			t.Fatalf("record %d row %d shape = %#v", recordIndex, index, actual)
+		}
+		want := map[string]any{"c0": expected[index].c0, "c1": expected[index].c1, "c2": expected[index].c2}
+		if !reflect.DeepEqual(actual.Fields, want) {
+			t.Fatalf("record %d row %d = %#v, want %#v", recordIndex, index, actual.Fields, want)
 		}
 	}
 }

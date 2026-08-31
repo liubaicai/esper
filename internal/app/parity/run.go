@@ -25,7 +25,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 	flags.Usage = func() {
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff, resultset-querytype-row-for-all-select-avg-expr-std-group-by and resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-select-avg-std-group-by-uni and resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff, resultset-querytype-row-for-all-static-method-double-nested and resultset-querytype-row-for-all-static-method-double-nested-diff, resultset-querytype-row-for-all-having-avg-group-window and resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum and resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join and resultset-querytype-row-for-all-having-sum-join-diff, resultset-querytype-rollup-having-iterator and resultset-querytype-rollup-having-iterator-diff, rollup-dimensionality and rollup-dimensionality-diff")
-		fmt.Fprintln(stderr, "runner modes include rollup-grouping-funcs-dedicated and rollup-grouping-funcs-dedicated-diff, rollup-grouping-funcs-faf-dedicated and rollup-grouping-funcs-faf-dedicated-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-querytype-rollup-orderby-unidirectional and resultset-querytype-rollup-orderby-unidirectional-diff, rollup-grouping-funcs-dedicated and rollup-grouping-funcs-dedicated-diff, rollup-grouping-funcs-faf-dedicated and rollup-grouping-funcs-faf-dedicated-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -75,6 +75,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadRollupGroupingFAFScenario(file)
 	} else if *mode == "resultset-querytype-rollup-having-iterator" || *mode == "resultset-querytype-rollup-having-iterator-diff" {
 		scenario, err = loadResultSetQueryTypeRollupHavingIteratorScenario(file)
+	} else if *mode == "resultset-querytype-rollup-orderby-unidirectional" || *mode == "resultset-querytype-rollup-orderby-unidirectional-diff" {
+		scenario, err = loadResultSetQueryTypeRollupOrderByUnidirectionalScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -2596,6 +2598,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeRollupHavingIteratorJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultSetQueryTypeRollupHavingIteratorJavaSources),
 				splitMetadata(*javaExecutions, resultSetQueryTypeRollupHavingIteratorJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-querytype-rollup-orderby-unidirectional" || *mode == "resultset-querytype-rollup-orderby-unidirectional-diff" {
+		trace, err := runResultSetQueryTypeRollupOrderByUnidirectionalScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-rollup-orderby-unidirectional-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultSetQueryTypeRollupOrderByUnidirectionalJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeRollupOrderByUnidirectionalJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeRollupOrderByUnidirectionalJavaSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeRollupOrderByUnidirectionalJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

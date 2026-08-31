@@ -890,7 +890,8 @@
     "internal/app/parity/resultset_aggregate_sorted_minmax_by.go",
     "internal/app/parity/resultset_aggregate_sorted_multi_criteria_simple.go",
     "internal/app/parity/resultset_aggregate_sorted_multi_criteria.go",
-    "internal/app/parity/resultset_query_type_rollup_having_iterator.go"
+    "internal/app/parity/resultset_query_type_rollup_having_iterator.go",
+    "internal/app/parity/resultset_querytype_rollup_orderby_unidirectional.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -36468,6 +36469,80 @@
    ]
   },
   {
+   "id": "case.resultset-querytype-rollup-orderby-unidirectional",
+   "javaRuntimeIds": [
+    "java-runtime-b09e67f84d7426e94834",
+    "java-runtime-7859d904aebfc874ac11",
+    "java-runtime-7f3911bcedf70526d5df",
+    "java-runtime-2ff9039bfd91c9054507"
+   ],
+   "javaStaticIds": [
+    "java-715eae421ccf37a5062a",
+    "java-24e47ca92d533e352474",
+    "java-ba719758f9ea057c8d79"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeOrderByTwoCriteriaAsc{join=false}",
+    "ResultSetQueryTypeOrderByTwoCriteriaAsc{join=true}",
+    "ResultSetQueryTypeUnidirectional",
+    "ResultSetQueryTypeOrderByOneCriteriaDesc"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupHavingAndOrderBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupOrderByUnidirectionalDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupOrderByUnidirectionalDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupOrderByUnidirectionalDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupOrderByUnidirectionalCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRollupOrderByUnidirectionalRejectsMalformedRawScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "rollup",
+    "order-by",
+    "time-batch",
+    "join",
+    "unidirectional",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-rollup-orderby-unidirectional.json",
+    "testdata/parity/resultset-querytype-rollup-orderby-unidirectional.trace.json",
+    "testdata/parity/resultset-querytype-rollup-orderby-unidirectional.go.trace.json",
+    "testdata/parity/resultset-querytype-rollup-orderby-unidirectional.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeRollupOrderByUnidirectionalScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-rollup-orderby-unidirectional.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b09e67f84d7426e94834",
+    "java-runtime-7859d904aebfc874ac11",
+    "java-runtime-7f3911bcedf70526d5df",
+    "java-runtime-2ff9039bfd91c9054507"
+   ],
+   "notes": [
+    "ResultSetQueryTypeRollupHavingAndOrderBy ordinals 4-7 replay four deterministic time-batch/order-by and unidirectional-cube listener executions (8 Java/Go records per side, 0 differences), including rollup subtotal rows, two-key ordering, descending ordering, and unidirectional cube updates.",
+    "The typed Go surface uses TimeBatch(1s), GroupByRollup, GroupByCube, Sum, WithOldStream, OrderBy, and JoinMany/Unidirectional over SupportBean and SupportBean_S0. The scenario and oracle pin runtime/static metadata, EPL, payloads, row values/order, timestamps, null rows, and record shape; strict validators reject malformed fields, duplicate JSON keys, payload errors, sequencing mutations, and trace mutations."
+   ]
+  },
+  {
    "id": "case.resultset-querytype-rollup-having-iterator",
    "javaRuntimeIds": [
     "java-runtime-1ce0d3fc4b6fed76d38d",
@@ -39201,13 +39276,17 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-querytype-rollup-having-iterator"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-querytype-rollup-orderby-unidirectional"
   }
  ],
  "summary": {
- "inventoriedCases": 583,
- "implementedCases": 581,
- "differentialVerifiedCases": 196,
- "differentialVerifiedRuntimeIds": 724,
+ "inventoriedCases": 584,
+ "implementedCases": 582,
+ "differentialVerifiedCases": 197,
+ "differentialVerifiedRuntimeIds": 728,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39217,14 +39296,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
-"runtimeAssociationCount": 3345,
-"referencedJavaRuntimeIds": 3128,
+"runtimeAssociationCount": 3349,
+"referencedJavaRuntimeIds": 3132,
  "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1008,
+ "unreferencedJavaRuntimeIds": 1004,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
-"totalCases": 583,
+"totalCases": 584,
 "totalCapabilities": 119,
-"differentialVerifiedRuntimeIDs": 724
+"differentialVerifiedRuntimeIDs": 728
  }
 }
