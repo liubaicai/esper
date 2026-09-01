@@ -1,0 +1,60 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-sorted-first-last",
+  "description": "ResultSetAggregationMethodSorted ordinals 5-6: table-backed sorted first/last event, bucket, and key access with enumeration projections.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodSorted.java",
+  "javaRuntimes": [
+    "java-runtime-2ec322fbd681b83590f1",
+    "java-runtime-b7e36a11fb9b9c982249"
+  ],
+  "javaNames": [
+    "ResultSetAggregateSortedFirstLast",
+    "ResultSetAggregateSortedFirstLastEnumerationAndDot"
+  ],
+  "javaStaticIds": [
+    "java-0ded2b32c81677a9d36f",
+    "java-5eb997e432653280b46b"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "first-last",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-2ec322fbd681b83590f1",
+      "executionName": "ResultSetAggregateSortedFirstLast",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create table MyTable(sortcol sorted(intPrimitive) @type('SupportBean'));\ninto table MyTable select sorted(*) as sortcol from SupportBean;\n@name('s0') select MyTable.sortcol.firstEvent() as fe,MyTable.sortcol.minBy() as minb,MyTable.sortcol.firstEvents() as fes,MyTable.sortcol.firstKey() as fk,MyTable.sortcol.lastEvent() as le,MyTable.sortcol.maxBy() as maxb,MyTable.sortcol.lastEvents() as les,MyTable.sortcol.lastKey() as lk from SupportBean_S0"
+    },
+    {
+      "case": "first-last-dot",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-b7e36a11fb9b9c982249",
+      "executionName": "ResultSetAggregateSortedFirstLastEnumerationAndDot",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create table MyTable(sortcol sorted(intPrimitive) @type('SupportBean'));\ninto table MyTable select sorted(*) as sortcol from SupportBean;\n@name('s0') select MyTable.sortcol.firstEvent().theString as feid,MyTable.sortcol.firstEvent().firstOf() as fefo,MyTable.sortcol.firstEvents().lastOf() as feslo,MyTable.sortcol.lastEvent().theString() as leid,MyTable.sortcol.lastEvent().firstOf() as lefo,MyTable.sortcol.lastEvents().lastOf as leslo from SupportBean_S0"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "first-last"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1a", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1b", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4b", "intPrimitive": 4}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E6a", "intPrimitive": 6}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E6b", "intPrimitive": 6}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E8", "intPrimitive": 8}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E9", "intPrimitive": 9}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "case", "case": "first-last-dot"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1a", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1b", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4b", "intPrimitive": 4}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E6a", "intPrimitive": 6}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E6b", "intPrimitive": 6}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E8", "intPrimitive": 8}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E9", "intPrimitive": 9}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1}}
+  ]
+}

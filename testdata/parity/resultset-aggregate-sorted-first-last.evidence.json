@@ -1,0 +1,395 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-2ec322fbd681b83590f1",
+    "java-runtime-b7e36a11fb9b9c982249"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodSorted.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateSortedFirstLast",
+    "ResultSetAggregateSortedFirstLastEnumerationAndDot"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-sorted-first-last",
+    "steps": [
+      {
+        "op": "case",
+        "case": "first-last"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1a",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1b",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4b",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6a",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6b",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -1
+        }
+      },
+      {
+        "op": "case",
+        "case": "first-last-dot"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1a",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1b",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4b",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6a",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6b",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -1
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-sorted-first-last",
+    "records": [
+      {
+        "case": "first-last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "fe": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1a"
+                },
+                "kind": "row"
+              },
+              "fes": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1a"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1b"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "fk": 1,
+              "le": {
+                "fields": {
+                  "intPrimitive": 9,
+                  "theString": "E9"
+                },
+                "kind": "row"
+              },
+              "les": [
+                {
+                  "fields": {
+                    "intPrimitive": 9,
+                    "theString": "E9"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "lk": 9,
+              "maxb": {
+                "fields": {
+                  "intPrimitive": 9,
+                  "theString": "E9"
+                },
+                "kind": "row"
+              },
+              "minb": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1a"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-dot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "fefo": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1a"
+                },
+                "kind": "row"
+              },
+              "feid": "E1a",
+              "feslo": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1b"
+                },
+                "kind": "row"
+              },
+              "lefo": {
+                "fields": {
+                  "intPrimitive": 9,
+                  "theString": "E9"
+                },
+                "kind": "row"
+              },
+              "leid": "E9",
+              "leslo": {
+                "fields": {
+                  "intPrimitive": 9,
+                  "theString": "E9"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-sorted-first-last",
+    "records": [
+      {
+        "case": "first-last",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "fe": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1a"
+                },
+                "kind": "row"
+              },
+              "fes": [
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1a"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "intPrimitive": 1,
+                    "theString": "E1b"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "fk": 1,
+              "le": {
+                "fields": {
+                  "intPrimitive": 9,
+                  "theString": "E9"
+                },
+                "kind": "row"
+              },
+              "les": [
+                {
+                  "fields": {
+                    "intPrimitive": 9,
+                    "theString": "E9"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "lk": 9,
+              "maxb": {
+                "fields": {
+                  "intPrimitive": 9,
+                  "theString": "E9"
+                },
+                "kind": "row"
+              },
+              "minb": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1a"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "first-last-dot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "fefo": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1a"
+                },
+                "kind": "row"
+              },
+              "feid": "E1a",
+              "feslo": {
+                "fields": {
+                  "intPrimitive": 1,
+                  "theString": "E1b"
+                },
+                "kind": "row"
+              },
+              "lefo": {
+                "fields": {
+                  "intPrimitive": 9,
+                  "theString": "E9"
+                },
+                "kind": "row"
+              },
+              "leid": "E9",
+              "leslo": {
+                "fields": {
+                  "intPrimitive": 9,
+                  "theString": "E9"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

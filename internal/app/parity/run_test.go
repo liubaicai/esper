@@ -396,6 +396,372 @@ func assertResultSetAggregateSortedGroupedTrace(t *testing.T, trace compat.Trace
 	}
 }
 
+func TestRunResultSetAggregateSortedFirstLastDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-first-last",
+		"-scenario", filepath.Join(root, "resultset-aggregate-sorted-first-last.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetAggregateSortedFirstLastTrace(t, trace)
+}
+
+func TestRunResultSetAggregateSortedFirstLastDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-first-last.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-first-last-diff",
+		"-scenario", filepath.Join(root, "resultset-aggregate-sorted-first-last.json"),
+		"-java-trace", filepath.Join(root, "resultset-aggregate-sorted-first-last.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetAggregateSortedFirstLastJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateSortedFirstLastJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateSortedFirstLastSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateSortedFirstLastJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetAggregateSortedFirstLastTrace(t, evidence.JavaTrace)
+	assertResultSetAggregateSortedFirstLastTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetAggregateSortedFirstLastDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["fk"] = json.Number("999")
+		}},
+		{name: "event-row", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["fe"] = map[string]any{"state": "corrupt"}
+		}},
+		{name: "bucket-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["fes"] = []any{
+				map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": 1, "theString": "E1b"}},
+				map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": 1, "theString": "E1a"}},
+			}
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "missing-record", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-aggregate-sorted-first-last.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-first-last.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-sorted-first-last-diff",
+				"-scenario", filepath.Join(root, "resultset-aggregate-sorted-first-last.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateSortedFirstLastCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-first-last.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	goTraceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-first-last.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkedInGoTrace, err := compat.LoadTrace(goTraceFile)
+	closeErr = goTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-first-last.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(checkedInGoTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from evidence Go trace: %#v", differences)
+	}
+	assertResultSetAggregateSortedFirstLastTrace(t, javaTrace)
+	assertResultSetAggregateSortedFirstLastTrace(t, checkedInGoTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-aggregate-sorted-first-last.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateSortedFirstLastScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateSortedFirstLastJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateSortedFirstLastJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateSortedFirstLastSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateSortedFirstLastJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetAggregateSortedFirstLastJavaCommit,
+		resultsetAggregateSortedFirstLastJavaRuntimeIDs,
+		[]string{resultsetAggregateSortedFirstLastSource},
+		resultsetAggregateSortedFirstLastJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-sorted-first-last", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetAggregateSortedFirstLastTrace(t, goTrace)
+}
+
+func TestRunResultSetAggregateSortedFirstLastRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-sorted-first-last.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-sorted-first-last"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-sorted-first-last"`)...), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "first-last",`), []byte(`"case": "first-last", "extra": 0,`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1a", "intPrimitive": 1`), []byte(`"theString": "E1a", "intPrimitive": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1a", "intPrimitive": 1`), []byte(`"theString": "E1a", "intPrimitive": 1, "intPrimitive": 2`), 1)
+		}},
+		{name: "wrong-seed-order", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1b", "intPrimitive": 1`), []byte(`"theString": "E9", "intPrimitive": 1`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1.5`), 1)
+		}},
+		{name: "quoted-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": "1"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-aggregate-sorted-first-last", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateSortedFirstLastRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-sorted-first-last.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		Cases         []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, resultsetAggregateSortedFirstLastJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetAggregateSortedFirstLastJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultsetAggregateSortedFirstLastJavaStaticIDs) || len(document.Cases) != 2 {
+		t.Fatalf("scenario metadata runtimes=%v names=%v staticIDs=%v cases=%d", document.JavaRuntimes, document.JavaNames, document.JavaStaticIDs, len(document.Cases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetAggregateSortedFirstLastCases[index] || entry.Ordinal != resultsetAggregateSortedFirstLastOrdinals[index] ||
+			entry.RuntimeID != resultsetAggregateSortedFirstLastJavaRuntimeIDs[index] || entry.ExecutionName != resultsetAggregateSortedFirstLastJavaExecutions[index] {
+			t.Fatalf("case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertResultSetAggregateSortedFirstLastTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetAggregateSortedFirstLastID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 2 {
+		t.Fatalf("trace records = %d, want 2", len(trace.Records))
+	}
+	firstBucket := []any{
+		map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": json.Number("1"), "theString": "E1a"}},
+		map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": json.Number("1"), "theString": "E1b"}},
+	}
+	lastRow := map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": json.Number("9"), "theString": "E9"}}
+	firstRow := map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": json.Number("1"), "theString": "E1a"}}
+	dotSecond := map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": json.Number("1"), "theString": "E1b"}}
+	for index, record := range trace.Records {
+		if record.Case != resultsetAggregateSortedFirstLastCases[index] || record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != 1 || record.Time != "1970-01-01T00:00:00Z" || len(record.New) != 1 || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", index, record)
+		}
+		row := record.New[0]
+		if row.Kind != "row" {
+			t.Fatalf("record %d row shape = %#v", index, row)
+		}
+		if index == 0 {
+			if len(row.Fields) != 8 {
+				t.Fatalf("record %d row fields = %#v", index, row.Fields)
+			}
+			if !reflect.DeepEqual(row.Fields["fe"], firstRow) || !reflect.DeepEqual(row.Fields["minb"], firstRow) ||
+				!reflect.DeepEqual(row.Fields["fes"], firstBucket) ||
+				!reflect.DeepEqual(row.Fields["le"], lastRow) || !reflect.DeepEqual(row.Fields["maxb"], lastRow) ||
+				!reflect.DeepEqual(row.Fields["les"], []any{lastRow}) ||
+				!reflect.DeepEqual(row.Fields["lk"], json.Number("9")) {
+				t.Fatalf("record %d first-last fields = %#v", index, row.Fields)
+			}
+			continue
+		}
+		if len(row.Fields) != 6 {
+			t.Fatalf("record %d row fields = %#v", index, row.Fields)
+		}
+		if !reflect.DeepEqual(row.Fields["feid"], "E1a") || !reflect.DeepEqual(row.Fields["fefo"], firstRow) ||
+			!reflect.DeepEqual(row.Fields["feslo"], dotSecond) ||
+			!reflect.DeepEqual(row.Fields["leid"], "E9") || !reflect.DeepEqual(row.Fields["lefo"], lastRow) ||
+			!reflect.DeepEqual(row.Fields["leslo"], lastRow) {
+			t.Fatalf("record %d dot fields = %#v", index, row.Fields)
+		}
+	}
+}
+
 func TestRunRollupGroupingFAFDedicatedDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	scenarioPath := filepath.Join(root, "rollup-grouping-funcs-faf-dedicated.json")

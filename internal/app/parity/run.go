@@ -29,7 +29,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-no-data-window and resultset-aggregate-sorted-no-data-window-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-window and resultset-aggregate-window-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-table-access and resultset-aggregate-sorted-table-access-diff")
-		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-grouped and resultset-aggregate-sorted-grouped-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-first-last and resultset-aggregate-sorted-first-last-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -79,6 +79,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetAggregateSortedTableAccessScenario(file)
 	} else if *mode == "resultset-aggregate-sorted-grouped" || *mode == "resultset-aggregate-sorted-grouped-diff" {
 		scenario, err = loadResultSetAggregateSortedGroupedScenario(file)
+	} else if *mode == "resultset-aggregate-sorted-first-last" || *mode == "resultset-aggregate-sorted-first-last-diff" {
+		scenario, err = loadResultSetAggregateSortedFirstLastScenario(file)
 	} else if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
 		scenario, err = loadRollupDimensionalityScenario(file)
 	} else if *mode == "rollup-grouping-funcs-dedicated" || *mode == "rollup-grouping-funcs-dedicated-diff" {
@@ -1056,6 +1058,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaSourceFiles, []string{resultsetAggregateSortedGroupedSource}),
 				splitMetadata(*javaExecutions, resultsetAggregateSortedGroupedJavaExecutions), scenario, trace,
 				normalizeResultSetAggregateSortedGroupedTrace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-sorted-first-last" || *mode == "resultset-aggregate-sorted-first-last-diff" {
+		trace, err := runResultSetAggregateSortedFirstLastScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-sorted-first-last-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetAggregateSortedFirstLastJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateSortedFirstLastJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, []string{resultsetAggregateSortedFirstLastSource}),
+				splitMetadata(*javaExecutions, resultsetAggregateSortedFirstLastJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

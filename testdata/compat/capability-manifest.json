@@ -13888,7 +13888,7 @@
     "java-junit",
     "go-unit"
    ],
-   "difference": "Go now covers the grouped sorted table primary-key selector, binds the target row for TableField and Method projections, and emits a projected row with Null table access for a missing group. The existing sorted table chain covers a representative first/last/key/value path. Java's doc sample, standalone first/last variant, exact invalid compiler diagnostics, full table/property method chain, typed metadata and iterator/type matrix remain open.",
+   "difference": "Go now covers the grouped sorted table primary-key selector, binds the target row for TableField and Method projections, and emits a projected row with Null table access for a missing group; ordinals 5-6 (standalone first/last variant and its enumeration/dot variant) are differentially verified by case.resultset-aggregate-sorted-first-last. The existing sorted table chain covers a representative first/last/key/value path. Java's doc sample, exact invalid compiler diagnostics, full table/property method chain, and typed metadata and iterator/type matrix remain open.",
    "verification": [
     "inventoried",
     "implemented"
@@ -36880,6 +36880,71 @@
     "ResultSetAggregationMethodSorted ordinal 11 replays one deterministic grouped table-backed sorted-access scenario (5 Java/Go listener records, 0 differences): a missing A key, A values 10/20 then duplicate 10 and 21, and B value 100 produce first/last keys null/null, 10/20, 10/21, 10/21, and 100/100.",
     "The typed Go surface uses CreateTable, IntoTable, SortedAccessBy, TableField, Method, EventValue, and OnEvent.SelectFromTableWhere. The scenario, Java oracle, and Go runner pin metadata, payloads, row values/order, timestamps, Null sortcol projection, and record shape; strict validators reject malformed JSON, duplicate keys, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-sorted-first-last",
+   "javaRuntimeIds": [
+    "java-runtime-2ec322fbd681b83590f1",
+    "java-runtime-b7e36a11fb9b9c982249"
+   ],
+   "javaStaticIds": [
+    "java-0ded2b32c81677a9d36f",
+    "java-5eb997e432653280b46b"
+   ],
+   "javaNames": [
+    "ResultSetAggregateSortedFirstLast",
+    "ResultSetAggregateSortedFirstLastEnumerationAndDot"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodSorted.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedFirstLastDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedFirstLastDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedFirstLastDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedFirstLastCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedFirstLastRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedFirstLastRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "sorted",
+    "first-last",
+    "table",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-sorted-first-last.json",
+    "testdata/parity/resultset-aggregate-sorted-first-last.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-first-last.go.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-first-last.evidence.json",
+    "tools/java-oracle/ResultSetAggregationMethodSortedFirstLastScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-sorted-first-last.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2ec322fbd681b83590f1",
+    "java-runtime-b7e36a11fb9b9c982249"
+   ],
+   "notes": [
+    "ResultSetAggregationMethodSorted ordinals 5-6 replay one deterministic table-backed sorted first/last scenario (2 Java/Go listener records, 0 differences): seven seeds with duplicate keys 1,1,4,6,6,8,9 produce firstEvent/minBy/firstEvents/firstKey over the lowest bucket and lastEvent/maxBy/lastEvents/lastKey over the highest bucket, plus dotted first/last event property and enumeration lastOf projections.",
+    "The typed Go surface uses CreateTable, IntoTable, SortedAccessBy, TableField, Method, EnumFirstOf, and EnumLastOf. The scenario, Java oracle, and Go runner pin metadata, payloads, bucket insertion order, row values, timestamps, and record shape; strict validators reject malformed JSON, duplicate keys, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -39570,13 +39635,17 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-sorted-grouped"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-sorted-first-last"
   }
  ],
  "summary": {
- "inventoriedCases": 588,
- "implementedCases": 586,
- "differentialVerifiedCases": 201,
- "differentialVerifiedRuntimeIds": 736,
+ "inventoriedCases": 589,
+ "implementedCases": 587,
+ "differentialVerifiedCases": 202,
+ "differentialVerifiedRuntimeIds": 738,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39586,14 +39655,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
- "runtimeAssociationCount": 3357,
+ "runtimeAssociationCount": 3359,
  "referencedJavaRuntimeIds": 3133,
  "totalJavaRuntimeIds": 4136,
  "unreferencedJavaRuntimeIds": 1003,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
- "totalCases": 588,
+ "totalCases": 589,
  "totalCapabilities": 119,
- "differentialVerifiedRuntimeIDs": 736
+ "differentialVerifiedRuntimeIDs": 738
  }
 }
