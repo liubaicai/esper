@@ -44,6 +44,11 @@ func TestRunHelpSucceeds(t *testing.T) {
 			t.Fatalf("help output omits %q: %s", mode, stderr.String())
 		}
 	}
+	for _, mode := range []string{"resultset-aggregate-window", "resultset-aggregate-window-diff"} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q", mode)
+		}
+	}
 }
 
 func TestRunRollupGroupingFAFDedicatedDirectReplay(t *testing.T) {
@@ -24062,5 +24067,418 @@ func TestRunResultSetAggregateSortedNoDataWindowRejectsQuotedInteger(t *testing.
 	var stdout, stderr bytes.Buffer
 	if code := Run([]string{"-mode", "resultset-aggregate-sorted-no-data-window", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
 		t.Fatalf("quoted integer unexpectedly replayed: stdout=%q stderr=%q", stdout.String(), stderr.String())
+	}
+}
+
+func TestRunResultSetAggregateWindowDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "resultset-aggregate-window.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-window", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetAggregateWindowID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	offset := 0
+	for _, caseName := range resultsetAggregateWindowCases {
+		want := resultsetAggregateWindowExpectedRows(caseName)
+		for index, fields := range want {
+			canonicalWant, err := compat.CanonicalTrace(compat.Trace{
+				Version: compat.ScenarioVersion,
+				ID:      resultsetAggregateWindowID,
+				Records: []compat.TraceRecord{{New: []compat.ResultRecord{{Kind: "row", Fields: fields}}}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want[index] = canonicalWant.Records[0].New[0].Fields
+		}
+		if len(trace.Records) < offset+len(want) {
+			t.Fatalf("trace ended before case %q: records=%d offset=%d want=%d", caseName, len(trace.Records), offset, len(want))
+		}
+		for index, expected := range want {
+			record := trace.Records[offset+index]
+			if record.Case != caseName || record.Operation != "listener" || record.Statement != "s0" ||
+				record.Sequence != uint64(index+1) || record.Time != "1970-01-01T00:00:00Z" || len(record.New) != 1 || len(record.Old) != 0 {
+				t.Fatalf("case %q record %d = %#v", caseName, index, record)
+			}
+			if !reflect.DeepEqual(record.New[0].Fields, expected) {
+				t.Fatalf("case %q record %d fields = %#v, want %#v", caseName, index, record.New[0].Fields, expected)
+			}
+		}
+		offset += len(want)
+	}
+	if offset != len(trace.Records) {
+		t.Fatalf("trace has %d unexpected records after pinned cases", len(trace.Records)-offset)
+	}
+}
+
+func assertResultSetAggregateWindowTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetAggregateWindowID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	offset := 0
+	for _, caseName := range resultsetAggregateWindowCases {
+		want := resultsetAggregateWindowExpectedRows(caseName)
+		for index, fields := range want {
+			canonicalWant, err := compat.CanonicalTrace(compat.Trace{
+				Version: compat.ScenarioVersion,
+				ID:      resultsetAggregateWindowID,
+				Records: []compat.TraceRecord{{New: []compat.ResultRecord{{Kind: "row", Fields: fields}}}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want[index] = canonicalWant.Records[0].New[0].Fields
+		}
+		if len(trace.Records) < offset+len(want) {
+			t.Fatalf("trace ended before case %q: records=%d offset=%d want=%d", caseName, len(trace.Records), offset, len(want))
+		}
+		for index, expected := range want {
+			record := trace.Records[offset+index]
+			if record.Case != caseName || record.Operation != "listener" || record.Statement != "s0" ||
+				record.Sequence != uint64(index+1) || record.Time != "1970-01-01T00:00:00Z" || len(record.New) != 1 || len(record.Old) != 0 {
+				t.Fatalf("case %q record %d = %#v", caseName, index, record)
+			}
+			if !reflect.DeepEqual(record.New[0].Fields, expected) {
+				t.Fatalf("case %q record %d fields = %#v, want %#v", caseName, index, record.New[0].Fields, expected)
+			}
+		}
+		offset += len(want)
+	}
+	if offset != len(trace.Records) {
+		t.Fatalf("trace has %d unexpected records after pinned cases", len(trace.Records)-offset)
+	}
+}
+
+func TestRunResultSetAggregateWindowDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-window.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-window-diff",
+		"-scenario", filepath.Join(root, "resultset-aggregate-window.json"),
+		"-java-trace", filepath.Join(root, "resultset-aggregate-window.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetAggregateWindowJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateWindowJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateWindowSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateWindowJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetAggregateWindowTrace(t, evidence.JavaTrace)
+	assertResultSetAggregateWindowTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetAggregateWindowDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			event, ok := trace.Records[1].New[0].Fields["c0"].(map[string]any)
+			if !ok {
+				panic("c0 is not a normalized event")
+			}
+			fields, ok := event["fields"].(map[string]any)
+			if !ok {
+				panic("c0 fields are not a map")
+			}
+			fields["intPrimitive"] = json.Number("999")
+		}},
+		{name: "null-state", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["c0"] = map[string]any{"state": "not-null"}
+		}},
+		{name: "sequence", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Sequence++
+		}},
+		{name: "time", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "missing-field", mutate: func(trace *compat.Trace) {
+			delete(trace.Records[0].New[0].Fields, "c1")
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-aggregate-window.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-window.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-window-diff",
+				"-scenario", filepath.Join(root, "resultset-aggregate-window.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateWindowCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-window.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	goTraceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-window.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkedInGoTrace, err := compat.LoadTrace(goTraceFile)
+	closeErr = goTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-window.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateWindowJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateWindowJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateWindowSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateWindowJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(checkedInGoTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from evidence Go trace: %#v", differences)
+	}
+	assertResultSetAggregateWindowTrace(t, checkedInGoTrace)
+	assertResultSetAggregateWindowTrace(t, javaTrace)
+	scenarioPath := filepath.Join(root, "resultset-aggregate-window.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateWindowScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetAggregateWindowJavaCommit,
+		resultsetAggregateWindowJavaRuntimeIDs,
+		[]string{resultsetAggregateWindowSource},
+		resultsetAggregateWindowJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-window", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetAggregateWindowTrace(t, goTrace)
+}
+
+func TestRunResultSetAggregateWindowRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-window.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-window"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-window"`)...), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "table-access",`), []byte(`"case": "table-access", "extra": 0,`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1", "intPrimitive": 10`), []byte(`"theString": "E1", "intPrimitive": 10, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1", "intPrimitive": 10`), []byte(`"theString": "E1", "intPrimitive": 10, "intPrimitive": 11`), 1)
+		}},
+		{name: "wrong-case-order", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "table-ident-count"}`), []byte(`{"op": "case", "case": "table-list-reference"}`), 1)
+		}},
+		{name: "unexpected-case-marker", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "table-ident-count"},`), []byte(`{"op": "case", "case": "unexpected"},
+    {"op": "case", "case": "table-ident-count"},`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 10.5`), 1)
+		}},
+		{name: "trailing-case-marker", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte("\n  ]\n}"), []byte(",\n    {\"op\": \"case\", \"case\": \"unexpected\"}\n  ]\n}"), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-aggregate-window", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateWindowRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-window.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, resultsetAggregateWindowJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetAggregateWindowJavaExecutions) || len(document.Cases) != len(resultsetAggregateWindowCases) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v cases=%d", document.JavaRuntimes, document.JavaNames, len(document.Cases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetAggregateWindowCases[index] || entry.Ordinal != resultsetAggregateWindowOrdinals[index] ||
+			entry.RuntimeID != resultsetAggregateWindowJavaRuntimeIDs[index] || entry.ExecutionName != resultsetAggregateWindowJavaExecutions[index] {
+			t.Fatalf("case %d metadata = %#v", index, entry)
+		}
+		if got := resultsetAggregateWindowRuntimeID(entry.Case); got != entry.RuntimeID {
+			t.Fatalf("case %q maps to %q, scenario declares %q", entry.Case, got, entry.RuntimeID)
+		}
+	}
+}
+
+func TestRunResultSetAggregateWindowRejectsRootFieldMutation(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-window.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutated := bytes.Replace(data, []byte(`"steps":`), []byte(`"extra":true,"steps":`), 1)
+	if bytes.Equal(mutated, data) {
+		t.Fatal("root-field mutation did not change scenario")
+	}
+	scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+	if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-window", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+		t.Fatalf("extra root field unexpectedly accepted: stdout=%q", stdout.String())
 	}
 }

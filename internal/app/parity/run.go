@@ -27,6 +27,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-median-and-deviation and resultset-aggregate-median-and-deviation-diff, resultset-aggregate-minmax-no-data-window-subquery and resultset-aggregate-minmax-no-data-window-subquery-diff, resultset-aggregate-minmax-named-window-wever and resultset-aggregate-minmax-named-window-wever-diff, resultset-aggregate-minmax-groupby, resultset-aggregate-minmax-groupby-diff, resultset-aggregate-minmax-groupby-om-viewcompile, resultset-aggregate-minmax-groupby-om-viewcompile-diff, resultset-aggregate-minmax-groupby-join-select-having and resultset-aggregate-minmax-groupby-join-select-having-diff, resultset-querytype-row-for-all-select-avg-expr-std-group-by and resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff, resultset-querytype-row-for-all-select-avg-std-group-by-uni and resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff, resultset-querytype-row-for-all-static-method-double-nested and resultset-querytype-row-for-all-static-method-double-nested-diff, resultset-querytype-row-for-all-having-avg-group-window and resultset-querytype-row-for-all-having-avg-group-window-diff, resultset-querytype-row-for-all-having-sum and resultset-querytype-row-for-all-having-sum-diff, resultset-querytype-row-for-all-having-sum-join and resultset-querytype-row-for-all-having-sum-join-diff, resultset-querytype-rollup-having-iterator and resultset-querytype-rollup-having-iterator-diff, rollup-dimensionality and rollup-dimensionality-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-rollup-orderby-unidirectional and resultset-querytype-rollup-orderby-unidirectional-diff, rollup-grouping-funcs-dedicated and rollup-grouping-funcs-dedicated-diff, rollup-grouping-funcs-faf-dedicated and rollup-grouping-funcs-faf-dedicated-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-no-data-window and resultset-aggregate-sorted-no-data-window-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-window and resultset-aggregate-window-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -70,6 +71,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetAggregateMinMaxNoDataWindowSubqueryScenario(file)
 	} else if *mode == "resultset-aggregate-sorted-no-data-window" || *mode == "resultset-aggregate-sorted-no-data-window-diff" {
 		scenario, err = loadResultSetAggregateSortedNoDataWindowScenario(file)
+	} else if *mode == "resultset-aggregate-window" || *mode == "resultset-aggregate-window-diff" {
+		scenario, err = loadResultSetAggregateWindowScenario(file)
 	} else if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
 		scenario, err = loadRollupDimensionalityScenario(file)
 	} else if *mode == "rollup-grouping-funcs-dedicated" || *mode == "rollup-grouping-funcs-dedicated-diff" {
@@ -2356,6 +2359,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeRowForAllHavingSumJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultSetQueryTypeRowForAllHavingSumJavaSources),
 				splitMetadata(*javaExecutions, resultSetQueryTypeRowForAllHavingSumJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-window" || *mode == "resultset-aggregate-window-diff" {
+		trace, err := runResultSetAggregateWindowScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-window-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetAggregateWindowJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateWindowJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, []string{resultsetAggregateWindowSource}),
+				splitMetadata(*javaExecutions, resultsetAggregateWindowJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

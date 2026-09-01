@@ -1,0 +1,71 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-window",
+  "description": "ResultSetAggregationMethodWindow ordinals 1-3: table window access, first/last property access and list reference.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodWindow.java",
+  "javaRuntimes": [
+    "java-runtime-785f2999e48fbaa6eb77",
+    "java-runtime-9ef8f9a367e788b5afec",
+    "java-runtime-6652f083e2b0f3dffc04"
+  ],
+  "javaNames": [
+    "ResultSetAggregateWindowTableAccess",
+    "ResultSetAggregateWindowTableIdentWCount",
+    "ResultSetAggregateWindowListReference"
+  ],
+  "javaStaticIds": [
+    "java-f881d0116e155d3e9063",
+    "java-804f7ea3bb20de0d35e8",
+      "java-f1014305fc8b701e8ea0"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "table-access",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-785f2999e48fbaa6eb77",
+      "executionName": "ResultSetAggregateWindowTableAccess",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create table MyTable(windowcol window(*) @type('SupportBean')); into table MyTable select window(*) as windowcol from SupportBean#length(2); @name('s0') select MyTable.windowcol.first() as c0, MyTable.windowcol.last() as c1 from SupportBean_S0"
+    },
+    {
+      "case": "table-ident-count",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-9ef8f9a367e788b5afec",
+      "executionName": "ResultSetAggregateWindowTableIdentWCount",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create table MyTable(windowcol window(*) @type('SupportBean')); into table MyTable select window(*) as windowcol from SupportBean; @name('s0') select windowcol.first(intPrimitive) as c0, windowcol.last(intPrimitive) as c1, windowcol.countEvents() as c2 from SupportBean_S0, MyTable"
+    },
+    {
+      "case": "table-list-reference",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-6652f083e2b0f3dffc04",
+      "executionName": "ResultSetAggregateWindowListReference",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create table MyTable(windowcol window(*) @type('SupportBean')); into table MyTable select window(*) as windowcol from SupportBean; @name('s0') select MyTable.windowcol.listReference() as collref from SupportBean_S0"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "table-access"},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "case", "case": "table-ident-count"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 30}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "case", "case": "table-list-reference"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1}}
+  ]
+}
