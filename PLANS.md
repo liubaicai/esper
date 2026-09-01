@@ -85,6 +85,20 @@ scenario; no disjoint asset writer was started).
   engine unit test `TestHavingContainmentValidation` pins the Java sentence.
 - Commit: one semantic commit `feat(resultset): port row-per-group having 5 runtimes` pushed
   to `master`. Do not write a post-push checkpoint-only commit.
+- Prefetched N+1 (Draft 4.301, read-only, NO writes yet): `ResultSetQueryTypeRowPerEvent.java`
+  all 7 executions (ordinals 0-6, shared inventory/static ID `java-1a361248f817f0b81296`, flags
+  empty). Runtime IDs: 0 `java-runtime-5111b05c6bc620b88e15`, 1 `java-runtime-50601d6f0cc0411a9f90`,
+  2 `java-runtime-06c962063c57e3a3adee`, 3 `java-runtime-14d3e2b22e8c3ef00657`,
+  4 `java-runtime-1f1dae3e5953610a77e3`, 5 `java-runtime-9160c96fccf23486d782`,
+  6 `java-runtime-cce782d69a46b20b8609`. Full per-execution contracts from `RpeJavaContract` and
+  wiring/gap analysis from `RpeGoSurface` are in the session transcripts (agents RpeJavaContract /
+  RpeGoSurface; key facts: no blocking API gaps — DistinctAggregate/CountDistinct/Cast for volume
+  *int64, Where pre-filter, JoinEventValue+WindowValues for window(s0.*)+sb, ungrouped having
+  containment exempt, istream selector still fills old arrays internally for listener delivery in
+  ord 6; old rows carry evicted row columns with POST-eviction sums in ord 0/1/5; ord 3 ESPER-571
+  having binds current event; iterator snapshots in ord 0/1 recommended via snapshot op).
+  Implementation mode: `resultset-querytype-row-per-event[-diff]`, plain LoadScenario, runner file
+  `internal/app/parity/resultset_querytype_row_per_event.go` copying the 4.300 exemplar.
 
 - Previous unit (Draft 4.261, implemented, review PASS, pending commit):
   case.variables-use closed EPLVariablesUse at 9/11 executions (101/101
