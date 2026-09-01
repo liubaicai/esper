@@ -1,0 +1,623 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-fabf6dfeea92bd82d953",
+    "java-runtime-b77f112e44eb71ef5269",
+    "java-runtime-8e64b633898a3cf68ed8",
+    "java-runtime-3673c61f7b1a281d9970",
+    "java-runtime-cd60cf2c28460a91c7d1"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowPerGroupHaving.java"
+  ],
+  "javaExecutions": [
+    "ResultSetQueryTypeHavingCount",
+    "ResultSetQueryTypeSumJoin",
+    "ResultSetQueryTypeSumOneView",
+    "ResultSetQueryTypeRowPerGroupBatch",
+    "ResultSetQueryTypeRowPerGroupDefinedExpr"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-row-per-group-having",
+    "steps": [
+      {
+        "op": "case",
+        "case": "having-count"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "sum-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DELL"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "AAA"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 60,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 30,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 30,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 80,
+          "volume": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "sum-one-view"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 60,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 30,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 30,
+          "volume": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "price": 80,
+          "volume": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "batch"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "case",
+        "case": "defined-expr"
+      },
+      {
+        "op": "build-error",
+        "statement": "s0-invalid",
+        "epl": "expression F {v -\u003e v} select sum(intPrimitive) from SupportBean group by theString having count(*) \u003e F(longPrimitive)"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-row-per-group-having",
+    "records": [
+      {
+        "case": "having-count",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 110,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-one-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-one-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-one-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 110,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "y": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "y": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "defined-expr",
+        "operation": "deployed",
+        "statement": "s0-valid",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "defined-expr",
+        "operation": "build-error",
+        "statement": "s0-invalid",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Non-aggregated property 'longPrimitive' in the HAVING clause must occur in the group-by clause [expression F {v -\u003e v} select sum(intPrimitive) from SupportBean group by theString having count(*) \u003e F(longPrimitive)]"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-row-per-group-having",
+    "records": [
+      {
+        "case": "having-count",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 110,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-one-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-one-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 100,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-one-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 110,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "y": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "y": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "defined-expr",
+        "operation": "deployed",
+        "statement": "s0-valid",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "defined-expr",
+        "operation": "build-error",
+        "statement": "s0-invalid",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Non-aggregated property 'longPrimitive' in the HAVING clause must occur in the group-by clause [expression F {v -\u003e v} select sum(intPrimitive) from SupportBean group by theString having count(*) \u003e F(longPrimitive)]"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

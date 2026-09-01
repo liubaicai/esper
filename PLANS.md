@@ -31,18 +31,60 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-09-01; Draft 4.299 (NoAlias statement-metadata parity) is fully implemented and focused-verified; manifest/roadmap/CHANGELOG are updated; independent review, full gates, and commit remain.
-- Baseline: `HEAD` == `origin/master` at `f218529ea` (`feat(resultset): port sorted first-last access 2 runtimes`); Draft 4.299 changes are uncommitted and confined to the no-alias parity surface plus central facts.
-- Closed predecessor (Draft 4.298): `ResultSetAggregationMethodSorted.java` ordinals 5-6 were differentially verified through `resultset-aggregate-sorted-first-last`; review PASS, all gates green, committed and pushed as `f218529ea`.
+- Updated: 2026-09-02; Draft 4.300 (`resultset-querytype-row-per-group-having`) is implemented and
+  differentially verified (Java/Go 11 records each, 0 differences, 5 runtime IDs); manifest summary
+  591 cases / 204 DV cases / 744 DV runtime IDs / 3365 associations. Focused gates pass
+  (`go test ./...` full suite green; targeted esper/compat/parity suites green). `make check` rerun and
+  `make test-race`, independent review, and commit remain.
+- Baseline: `HEAD` == `origin/master` at `dbb434c5e` (`feat(resultset): port no-alias statement metadata`);
+  Draft 4.300 changes are uncommitted and confined to the row-per-group-having parity surface, the
+  shared-core grouped old-row/having-containment fixes, and central facts.
+- Closed predecessor (Draft 4.299): `ResultSetAggregateSortedMinMaxBy.java` ordinal 3 `ResultSetAggregateNoAlias`
+  deploy-only metadata differential; committed and pushed as `dbb434c5e`.
 
 ## Current work unit
-Draft 4.299 is frozen as ordinal 3 `ResultSetAggregateNoAlias` in fixed `ResultSetAggregateSortedMinMaxBy.java` (Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`, runtime `java-runtime-bb6969a66cad8464ae18`, shared static/inventory ID `java-553516b9d01c12a13172`, flags empty). Deploy-only metadata differential: exactly two records per side (deployed s0 acknowledgment + ordered types array), zero listener records, no sends. Java auto-names the five unaliased projections; only the three String-typed columns (`maxby(intPrimitive).theString`, `maxbyever(intPrimitive).theString`) are differential. Representation registration: Java renders whole-event `minby`/`minbyever` outputs and `sorted()` rows as `java.util.Map` while the Go typed API keeps SupportBean event identity; the three non-differential property names are pinned in both runners and the manifest records the difference rationale.
+Draft 4.300 is frozen as the five executions of `ResultSetQueryTypeRowPerGroupHaving.java`
+(ordinals 0-4; runtimes `java-runtime-fabf6dfeea92bd82d953`, `java-runtime-b77f112e44eb71ef5269`,
+`java-runtime-8e64b633898a3cf68ed8`, `java-runtime-3673c61f7b1a281d9970`, `java-runtime-cd60cf2c28460a91c7d1`;
+shared static/inventory ID `java-002a2b5ee61a47346e61`, flags empty). Scenario
+`testdata/parity/resultset-querytype-row-per-group-having.json` (loose shape, 5 cases), Java oracle
+`tools/java-oracle/ResultSetQueryTypeRowPerGroupHavingScenarioOracle.java` with run script, Go runner
+`internal/app/parity/resultset_querytype_row_per_group_having.go`, mode
+`resultset-querytype-row-per-group-having[-diff]`, tests in run_test.go + engine unit test
+`internal/esper/having_containment_parity_test.go`. Engine fixes: (1) grouped row-per-group remove-stream
+rows evaluate the PRE-removal group state (Java selectOldEvents precedes applyAggViewResultKeyedView) so
+the DELL eviction old row reports mySum=100 with having gated at the pre-subtraction sum;
+(2) `validateAggregateHavingContainment` mirrors Java `validateHaving` and fires only for aggregated
+statements (having intPrimitive > 5 over a grouped select stays legal). Representation registration:
+Java `select *` wildcard row == Go explicit full-SupportBean property projection (20 fields,
+charPrimitive `"\u0000"`); declared-expression compile boundary pinned with Java's exact sentence.
 
 ## Delegation checkpoint
-This unit ran serially after the user decision on differential scope (Java/Go Map-vs-Event representation divergence): no safe independent sibling task existed mid-verification and the contract was frozen from in-session probes. Primary owns the Go runner, `internal/compat` deployed-op routing, scenario, Java oracle/launcher, tests, generated traces/evidence, manifest, roadmap, CHANGELOG, validation, review, commit, and push.
+Batch `RpgJavaContract` (java-oracle-scout) + `RpgGoSurface` (scout) ran as parallel read-only scouts;
+both delivered full reports inline (agent local-file writes were unavailable to them). Contract frozen
+in `local://rpg-having-contract.md`. Primary owns shared-core semantics (`internal/esper/plan.go`,
+`internal/esper/runtime.go`), the Go runner, run.go registration, tests, scenario, generated
+traces/evidence, manifest, roadmap, CHANGELOG, validation, review, commit, and push. The Java oracle and
+run script were authored by the primary from the frozen contract after the asset-lane files could not be
+safely delegated (single-writer window had already opened on the shared-core fix needed to compile the
+scenario; no disjoint asset writer was started).
 
 ## Progress
-- Complete independent parity review and full local gates (`make check`, `make test-race`); then one semantic commit pushed to `master`. Do not write a post-push checkpoint-only commit.
+- Independent parity review `RpgReview` (parity-reviewer): verdict PASS, 0 P1/P2 findings,
+  4 P3 notes — (1) javaStaticIds positional alignment: FIXED in this unit (reordered to
+  execution order); (2) grouped multi-leaving-batch old-row cardinality (per-group vs
+  per-leaving) is pre-existing and pinned by no current scenario — dedupe to one old row per
+  group before any future multi-leaving differential unit; (3) isAggregated gate omits
+  order-by aggregates — extend before any having+order-by-aggregate parity unit;
+  (4) defined-expr deployed marker emitted by oracle code instead of a scenario step —
+  cosmetic only, record shape identical.
+- Validation before commit: `go test ./...` full suite green (exit 0); `make check` green
+  (check-layout, vet, all packages); `make test-race` green (parity 201s, esper 422s, compat,
+  manifest suites); differential `resultset-querytype-row-per-group-having-diff` passing with
+  0 differences over 11 records × 2 sides; mutation tests reject 9/9 trace mutations;
+  engine unit test `TestHavingContainmentValidation` pins the Java sentence.
+- Commit: one semantic commit `feat(resultset): port row-per-group having 5 runtimes` pushed
+  to `master`. Do not write a post-push checkpoint-only commit.
 
 - Previous unit (Draft 4.261, implemented, review PASS, pending commit):
   case.variables-use closed EPLVariablesUse at 9/11 executions (101/101

@@ -25952,3 +25952,113 @@ func assertResultSetAggregateSortedMinMaxByNoAliasTrace(t *testing.T, trace comp
 		}
 	}
 }
+
+func TestRunResultSetQueryTypeRowPerGroupHavingDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-per-group-having.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-row-per-group-having.evidence.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-querytype-row-per-group-having-diff",
+		"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-per-group-having.json"),
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if len(evidence.JavaRuntimeIDs) != 5 {
+		t.Fatalf("javaRuntimeIds = %#v", evidence.JavaRuntimeIDs)
+	}
+}
+
+func TestRunResultSetQueryTypeRowPerGroupHavingDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "wildcard-count-gate-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New = nil
+			},
+		},
+		{
+			name: "sum-join-new-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["mySum"] = 999.0
+			},
+		},
+		{
+			name: "pre-subtraction-old-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Old[0].Fields["mySum"] = 70.0
+			},
+		},
+		{
+			name: "old-row-suppressed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Old = nil
+			},
+		},
+		{
+			name: "one-view-old-symbol-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].Old[0].Fields["symbol"] = "IBM"
+			},
+		},
+		{
+			name: "batch-flush-count-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0].Fields["y"] = 2
+			},
+		},
+		{
+			name: "batch-flush-time-boundary-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].Time = "1970-01-01T00:00:02Z"
+			},
+		},
+		{
+			name: "valid-compile-marker-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].Operation = "build-error"
+			},
+		},
+		{
+			name: "invalid-compile-message-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].Value = "some other diagnostic [epl]"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-per-group-having.evidence.json"),
+				test.mutate)
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-querytype-row-per-group-having-diff",
+				"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-per-group-having.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", filepath.Join(t.TempDir(), "e.json"),
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q accepted", test.name)
+			}
+		})
+	}
+}

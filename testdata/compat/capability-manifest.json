@@ -4710,21 +4710,25 @@
    "id": "resultset.aggregate-having",
    "domain": "resultset",
    "level": "G",
-   "summary": "Non-grouped aggregate and non-aggregate HAVING over windows, joins, batch releases, insert-into substreams and unbounded streams, including old-row re-evaluation semantics",
+   "summary": "Non-grouped aggregate and non-aggregate HAVING over windows, joins, batch releases, insert-into substreams and unbounded streams, grouped row-per-group HAVING with pre-removal remove-stream semantics, and the declared-expression having containment boundary",
    "javaRefs": [
-    "ResultSetQueryTypeHaving"
+    "ResultSetQueryTypeHaving",
+    "ResultSetQueryTypeRowPerGroupHaving"
    ],
    "goRefs": [
     "internal/esper/stream.go",
     "internal/esper/runtime.go",
     "internal/esper/plan.go",
-    "internal/app/parity/resultset_query_type_having.go"
+    "internal/app/parity/resultset_query_type_having.go",
+    "internal/app/parity/resultset_querytype_row_per_group_having.go",
+    "internal/esper/having_containment_parity_test.go"
    ],
    "phase": 1,
    "status": "differential-verified",
    "remaining": [
     "StatementJoin plus NoAggregationJoinHaving/Where stay unregistered until Go join-aggregate old/new classification on sliding length(1) windows matches Java (4.241 remaining note)",
-    "grouped HAVING variants live in the dedicated aggregate-dimensional/output-limit suites"
+    "grouped HAVING variants live in the dedicated aggregate-dimensional/output-limit suites",
+    "grouped HAVING row-per-group pre-removal old-row semantics beyond the five pinned executions"
    ],
    "verification": [
     "inventoried",
@@ -30133,6 +30137,74 @@
    ]
   },
   {
+   "id": "case.resultset-querytype-row-per-group-having",
+   "javaRuntimeIds": [
+    "java-runtime-fabf6dfeea92bd82d953",
+    "java-runtime-b77f112e44eb71ef5269",
+    "java-runtime-8e64b633898a3cf68ed8",
+    "java-runtime-3673c61f7b1a281d9970",
+    "java-runtime-cd60cf2c28460a91c7d1"
+   ],
+   "javaStaticIds": [
+    "java-48919918d47a3526f141",
+    "java-94c0559881b740cdd1b3",
+    "java-002a2b5ee61a47346e61",
+    "java-a6fb7393d8648b4f20f3",
+    "java-9b6cdbae736335ae3b66"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeHavingCount",
+    "ResultSetQueryTypeSumJoin",
+    "ResultSetQueryTypeSumOneView",
+    "ResultSetQueryTypeRowPerGroupBatch",
+    "ResultSetQueryTypeRowPerGroupDefinedExpr"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowPerGroupHaving.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowPerGroupHavingDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowPerGroupHavingDiffRejectsTraceMutations",
+    "internal/esper/having_containment_parity_test.go:TestHavingContainmentValidation"
+   ],
+   "tags": [
+    "resultset",
+    "having",
+    "aggregate",
+    "join",
+    "time-batch",
+    "group-by",
+    "irstream",
+    "declared-expression",
+    "compile-invalid",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-row-per-group-having.json",
+    "testdata/parity/resultset-querytype-row-per-group-having.trace.json",
+    "testdata/parity/resultset-querytype-row-per-group-having.go.trace.json",
+    "testdata/parity/resultset-querytype-row-per-group-having.evidence.json"
+   ],
+   "notes": [
+    "All five ResultSetQueryTypeRowPerGroupHaving executions replayed: wildcard row-per-group count gate (count(*) > 2 posts one full SupportBean property row on the third event), irstream sum(price) >= 100 per symbol over length(3) with the SupportBeanString#length(100) join twin, time_batch(1 seconds) count(*) flushes (istream-only old side), and the declared-expression compile boundary.",
+    "Engine fixes: (1) grouped row-per-group remove-stream rows are computed against the PRE-removal group state (Java declares selectOldEvents before applyAggViewResultKeyedView), so the DELL eviction reports mySum=100 with having evaluated at the pre-subtraction sum; (2) having containment mirrors ResultSetProcessorFactoryFactory.validateHaving and fires only for aggregated statements: a having referencing a non-aggregated property outside the group-by is rejected with Java's exact sentence 'Non-aggregated property \\'longPrimitive\\' in the HAVING clause must occur in the group-by clause', while the non-aggregated having over a grouped select (having intPrimitive > 5) stays legal.",
+    "Representation registration: Java select * renders every SupportBean property flat; the Go typed aggregate spells the full property set explicitly with Java property names (identical observable field map; charPrimitive default '\\u0000'). Java wildcard row and Go projected row carry the same 20 fields."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-fabf6dfeea92bd82d953",
+    "java-runtime-b77f112e44eb71ef5269",
+    "java-runtime-8e64b633898a3cf68ed8",
+    "java-runtime-3673c61f7b1a281d9970",
+    "java-runtime-cd60cf2c28460a91c7d1"
+   ]
+  },
+  {
    "id": "case.context-init-term-duration",
    "javaRuntimeIds": [
     "java-runtime-e9c2321d3689d73c463c",
@@ -35707,7 +35779,21 @@
     "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByJoinSelectHavingRejectsMalformedScenarioShape",
     "internal/app/parity/run_test.go:TestRunResultSetAggregateMinMaxGroupByJoinSelectHavingDiffRejectsTraceMutations"
    ],
-   "tags": ["correctness", "resultset", "aggregate", "min", "max", "distinct", "group-by", "join", "having", "null-handling", "window", "java-oracle-trace", "differential"],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "min",
+    "max",
+    "distinct",
+    "group-by",
+    "join",
+    "having",
+    "null-handling",
+    "window",
+    "java-oracle-trace",
+    "differential"
+   ],
    "status": "differential-verified",
    "evidence": [
     "testdata/parity/resultset-aggregate-minmax-groupby-join-select-having.json",
@@ -35716,10 +35802,19 @@
     "testdata/parity/resultset-aggregate-minmax-groupby-join-select-having.evidence.json",
     "tools/java-oracle/ResultSetAggregateMaxMinGroupByJoinSelectHavingScenarioOracle.java",
     "tools/java-oracle/run-resultset-aggregate-minmax-groupby-join-select-having.sh",
-    "java-runtime-inventory", "java-source", "java-oracle", "go-unit", "differential-evidence", "mutation"
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
    ],
    "difference": null,
-   "verification": ["inventoried", "implemented", "differential-verified"],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-802aec9425dc772e3aa5",
     "java-runtime-060f5af73edf420ef45a"
@@ -35824,7 +35919,21 @@
     "internal/app/parity/run_test.go:TestRunResultSetAggregateMedianAndDeviationDiffRejectsTraceMutations",
     "internal/app/parity/run_test.go:TestResultSetAggregateMedianAndDeviationStdDevNaNPoisoning"
    ],
-   "tags": ["correctness", "resultset", "aggregate", "median", "stddev", "avedev", "group-by", "join", "length-window", "null-handling", "java-oracle-trace", "differential", "representative"],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "median",
+    "stddev",
+    "avedev",
+    "group-by",
+    "join",
+    "length-window",
+    "null-handling",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
    "status": "differential-verified",
    "evidence": [
     "testdata/parity/resultset-aggregate-median-and-deviation.json",
@@ -35833,16 +35942,28 @@
     "testdata/parity/resultset-aggregate-median-and-deviation.evidence.json",
     "tools/java-oracle/ResultSetAggregateMedianAndDeviationScenarioOracle.java",
     "tools/java-oracle/run-resultset-aggregate-median-and-deviation.sh",
-    "java-runtime-inventory", "java-source", "java-oracle", "go-unit", "differential-evidence", "mutation"
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
    ],
    "difference": null,
-   "verification": ["inventoried", "implemented", "differential-verified", "representative-verified"],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-101db664ea346721e986",
     "java-runtime-2f533a8a1bc0d93ae649",
     "java-runtime-2667a7eadeb7a458d7ce"
    ],
-   "representativeScenarioIds": ["resultset-aggregate-median-and-deviation"],
+   "representativeScenarioIds": [
+    "resultset-aggregate-median-and-deviation"
+   ],
    "notes": [
     "ResultSetAggregateStmt, ResultSetAggregateStmtJoinOM, and ResultSetAggregateStmtJoin replay one deterministic grouped median/deviation scenario (21 Java/Go records, 0 differences): filtered length(5) irstream median(all), median(distinct), sample stddev, and avedev over the DELL price sequence 10,20,20,90,5,90,30; the two join executions use matching DELL/IBM/AAA seeds.",
     "The typed Go surface uses Median, DistinctAggregate, StdDev, Avedev, GroupBy, and source-indexed JoinField. The Java source's separate NaN-sensitivity redeployment is covered by TestResultSetAggregateMedianAndDeviationStdDevNaNPoisoning; it is intentionally outside the finite JSON trace, while runner and oracle validators reject malformed fields, values, case order, and trace mutations."
@@ -39705,30 +39826,34 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-sorted-minmax-by-no-alias"
+  },
+  {
+   "capabilityId": "resultset.aggregate-having",
+   "caseId": "case.resultset-querytype-row-per-group-having"
   }
  ],
  "summary": {
- "inventoriedCases": 590,
- "implementedCases": 588,
- "differentialVerifiedCases": 203,
- "differentialVerifiedRuntimeIds": 739,
- "intentionallyDifferentCases": 23,
- "representativeVerifiedCases": 104,
- "nfrVerifiedCases": 0,
- "inventoriedCapabilities": 119,
- "implementedCapabilities": 118,
- "differentialVerifiedCapabilities": 34,
- "intentionallyDifferentCapabilities": 8,
- "representativeVerifiedCapabilities": 11,
- "nfrVerifiedCapabilities": 0,
- "runtimeAssociationCount": 3360,
- "referencedJavaRuntimeIds": 3134,
- "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1002,
- "representativeScenarioTotal": 107,
- "representativeScenarioPassing": 107,
- "totalCases": 590,
- "totalCapabilities": 119,
- "differentialVerifiedRuntimeIDs": 739
+  "inventoriedCases": 591,
+  "implementedCases": 589,
+  "differentialVerifiedCases": 204,
+  "differentialVerifiedRuntimeIds": 744,
+  "intentionallyDifferentCases": 23,
+  "representativeVerifiedCases": 104,
+  "nfrVerifiedCases": 0,
+  "inventoriedCapabilities": 119,
+  "implementedCapabilities": 118,
+  "differentialVerifiedCapabilities": 34,
+  "intentionallyDifferentCapabilities": 8,
+  "representativeVerifiedCapabilities": 11,
+  "nfrVerifiedCapabilities": 0,
+  "runtimeAssociationCount": 3365,
+  "referencedJavaRuntimeIds": 3139,
+  "totalJavaRuntimeIds": 4136,
+  "unreferencedJavaRuntimeIds": 997,
+  "representativeScenarioTotal": 107,
+  "representativeScenarioPassing": 107,
+  "totalCases": 591,
+  "totalCapabilities": 119,
+  "differentialVerifiedRuntimeIDs": 744
  }
 }

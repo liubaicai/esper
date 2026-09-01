@@ -4739,8 +4739,90 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 		if err := validateFields(definition.input, definition.having); err != nil {
 			return err
 		}
+		if err := e.validateAggregateHavingContainment(definition); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// validateAggregateHavingContainment mirrors Java's
+// ResultSetProcessorFactoryFactory.validateHaving: for grouped aggregates,
+// every non-aggregated property referenced by the HAVING clause must occur
+// in the group-by clause. Aggregate input properties are exempt (they are
+// the "aggregated properties"); group keys are exempt by definition.
+// The diagnostic spells the first offending reference in Java's format.
+func (e *Environment) validateAggregateHavingContainment(definition *aggregateDefinition) error {
+	// Java calls validateHaving only when the statement is aggregated
+	// (aggregates in the select, having, or order-by) and the group-by
+	// property set is non-empty. A grouped select whose having carries no
+	// aggregate (having intPrimitive > 5 over group by theString) takes the
+	// ResultSetProcessorAggregateGrouped path with no containment rule, so
+	// the plain-property having remains legal there.
+	if len(definition.groupBy) == 0 || definition.having == nil {
+		return nil
+	}
+	aggregated := expressionNodeContainsAggregate(definition.having.node())
+	for _, selection := range definition.selections {
+		aggregated = aggregated || expressionNodeContainsAggregate(selection.Expr.node())
+	}
+	if !aggregated {
+		return nil
+	}
+	// Collect the group-by key fields: plain field references keep their
+	// name; any other key form is treated as an opaque expression.
+	groupKeyFields := make(map[string]struct{})
+	for _, key := range definition.groupBy {
+		if key == nil || key.node() == nil {
+			continue
+		}
+		var keyFields []string
+		key.node().referencedLocalFields(&keyFields)
+		for _, name := range keyFields {
+			groupKeyFields[name] = struct{}{}
+		}
+	}
+	// Aggregate input properties are the properties consumed inside
+	// aggregate functions; they are not "non-aggregated".
+	aggregatedFields := make(map[string]struct{})
+	collectAggregateInputFields(definition.having.node(), aggregatedFields)
+	// Every remaining plain field reference must be a group key.
+	var havingFields []string
+	definition.having.node().referencedLocalFields(&havingFields)
+	for _, name := range havingFields {
+		if _, aggregated := aggregatedFields[name]; aggregated {
+			continue
+		}
+		if _, grouped := groupKeyFields[name]; grouped {
+			continue
+		}
+		return NewError(ErrorInvalidRule, "Non-aggregated property '"+name+"' in the HAVING clause must occur in the group-by clause")
+	}
+	return nil
+}
+
+// collectAggregateInputFields walks the expression tree and records plain
+// field references that sit inside an aggregate node's arguments. Aggregate
+// boundaries stop the descent into their children (their inputs are the
+// aggregated properties); nested aggregate detection mirrors
+// expressionNodeIsAggregate.
+func collectAggregateInputFields(node *exprNode, aggregated map[string]struct{}) {
+	if node == nil {
+		return
+	}
+	if expressionNodeIsAggregate(node) {
+		for _, child := range node.children {
+			var fields []string
+			child.referencedLocalFields(&fields)
+			for _, name := range fields {
+				aggregated[name] = struct{}{}
+			}
+		}
+		return
+	}
+	for _, child := range node.children {
+		collectAggregateInputFields(child, aggregated)
+	}
 }
 
 func (e *Environment) validateJoinAggregateFields(definition *joinDefinition, expression Expr) error {

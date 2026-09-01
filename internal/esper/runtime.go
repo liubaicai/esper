@@ -17956,13 +17956,23 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 						key:    key,
 					})
 				} else {
-					// Grouped paths bind the old row to each leaving event and
-					// the post-update aggregate; suppress it when HAVING fails.
+					// Java ResultSetProcessorRowPerGroupImpl computes the old
+					// rows BEFORE applyAggViewResultKeyedView runs (selectOld
+					// Events is declared ahead of the apply call in
+					// processViewResultCodegen), so the having gate and the
+					// projected values observe the PRE-removal group state:
+					// the leaving event's contribution is still included
+					// (pinned by ResultSetQueryTypeRowPerGroupHaving: the
+					// DELL old row reports sum(price)=100, the value before
+					// the length(3) eviction subtracts the leaving 10).
 					for _, leaving := range delta.oldEvents {
-						_, leaveVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
-						if leaveVisible {
+						preEvents := make([]Event, 0, len(group.events)+1)
+						preEvents = append(preEvents, group.events...)
+						preEvents = append(preEvents, leaving)
+						preValues, preVisible := evaluateAggregateGroup(definition, preEvents, group.everEvents, nil, false, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+						if preVisible {
 							oldEntries = append(oldEntries, aggregateResultEntry{
-								result: resultRow(newRow(plan.resultSchema, group.previous)),
+								result: resultRow(newRow(plan.resultSchema, preValues)),
 								group:  group,
 								key:    key,
 							})
