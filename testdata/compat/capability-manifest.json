@@ -893,7 +893,8 @@
     "internal/app/parity/resultset_query_type_rollup_having_iterator.go",
     "internal/app/parity/resultset_querytype_rollup_orderby_unidirectional.go",
     "internal/app/parity/resultset_aggregate_sorted_no_data_window.go",
-    "internal/app/parity/resultset_aggregate_window.go"
+    "internal/app/parity/resultset_aggregate_window.go",
+    "internal/app/parity/resultset_aggregate_sorted_table_access.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -928,7 +929,10 @@
     "java-runtime-7730d794daee6dac92c7",
     "java-runtime-785f2999e48fbaa6eb77",
     "java-runtime-9ef8f9a367e788b5afec",
-    "java-runtime-6652f083e2b0f3dffc04"
+    "java-runtime-6652f083e2b0f3dffc04",
+    "java-runtime-d7d60fec056d6eb16659",
+    "java-runtime-0c0e45c751e3cafeb454",
+    "java-runtime-2117ba8232651a61a058"
    ],
    "representativeScenarioIds": [
     "aggregate-firstlastwindow-ext",
@@ -36743,6 +36747,77 @@
     "ResultSetAggregationMethodWindow ordinals 1-3 replay one deterministic table/window-access scenario (6 Java/Go listener records per side, 0 differences): length(2) table first/last access, keep-all table first/last property access with count, and list-reference values.",
     "The typed Go surface uses EventValue, WindowAccessBy, IntoTable, TableField, Method, Property, LengthWindow, KeepAll, and an OnEvent table trigger. The scenario, Java oracle, and Go runner pin metadata, payloads, row values/order, timestamps, Nulls, and record shape; strict validators reject malformed fields, duplicate JSON keys, payload errors, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-sorted-table-access",
+   "javaRuntimeIds": [
+    "java-runtime-d7d60fec056d6eb16659",
+    "java-runtime-0c0e45c751e3cafeb454",
+    "java-runtime-2117ba8232651a61a058"
+   ],
+   "javaStaticIds": [
+    "java-ad219f9a27aebc7885fc",
+    "java-4b989f8ba297c8e8d426",
+    "java-db7b9e752ef9e4000cc5"
+   ],
+   "javaNames": [
+    "ResultSetAggregateSortedGetContainsCounts",
+    "ResultSetAggregateSortedSubmapEventsBetween",
+    "ResultSetAggregateSortedNavigableMapReference"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodSorted.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedTableAccessDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedTableAccessDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedTableAccessDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedTableAccessCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedTableAccessRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedTableAccessRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "sorted",
+    "access",
+    "table",
+    "listener",
+    "submap",
+    "navigable-map",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-sorted-table-access.json",
+    "testdata/parity/resultset-aggregate-sorted-table-access.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-table-access.go.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-table-access.evidence.json",
+    "tools/java-oracle/ResultSetAggregationMethodSortedTableAccessScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-sorted-table-access.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d7d60fec056d6eb16659",
+    "java-runtime-0c0e45c751e3cafeb454",
+    "java-runtime-2117ba8232651a61a058"
+   ],
+   "notes": [
+    "ResultSetAggregationMethodSorted ordinals 7-9 replay one deterministic table-backed sorted-access scenario (325 Java/Go listener records per side, 0 differences): get/contains/counts (12), inclusive eventsBetween/subMap ranges (312), and detached navigableMapReference (1), including duplicate-key buckets and missing-key Nulls.",
+    "The typed Go surface uses CreateTable, IntoTable, SortedAccessBy, TableField, Method, EventValue, and OnEvent.SelectFromTableWhere. The scenario, Java oracle, and Go runner pin runtime/static metadata, exact payloads, values/order/time/shape, and reject malformed JSON, duplicate keys, non-boolean range flags, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -39425,13 +39500,17 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-window"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-sorted-table-access"
   }
 ],
  "summary": {
- "inventoriedCases": 586,
- "implementedCases": 584,
- "differentialVerifiedCases": 199,
- "differentialVerifiedRuntimeIds": 732,
+ "inventoriedCases": 587,
+ "implementedCases": 585,
+ "differentialVerifiedCases": 200,
+ "differentialVerifiedRuntimeIds": 735,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39441,14 +39520,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
- "runtimeAssociationCount": 3353,
+ "runtimeAssociationCount": 3356,
  "referencedJavaRuntimeIds": 3133,
  "totalJavaRuntimeIds": 4136,
  "unreferencedJavaRuntimeIds": 1003,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
- "totalCases": 586,
+ "totalCases": 587,
  "totalCapabilities": 119,
- "differentialVerifiedRuntimeIDs": 732
+ "differentialVerifiedRuntimeIDs": 735
  }
 }

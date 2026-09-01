@@ -24482,3 +24482,395 @@ func TestRunResultSetAggregateWindowRejectsRootFieldMutation(t *testing.T) {
 		t.Fatalf("extra root field unexpectedly accepted: stdout=%q", stdout.String())
 	}
 }
+func TestRunResultSetAggregateSortedTableAccessDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-table-access",
+		"-scenario", filepath.Join(root, "resultset-aggregate-sorted-table-access.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetAggregateSortedTableAccessTraceContract(t, trace)
+}
+
+func TestRunResultSetAggregateSortedTableAccessDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-table-access.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-table-access-diff",
+		"-scenario", filepath.Join(root, "resultset-aggregate-sorted-table-access.json"),
+		"-java-trace", filepath.Join(root, "resultset-aggregate-sorted-table-access.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetAggregateSortedTableAccessJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateSortedTableAccessJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateSortedTableAccessSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateSortedTableAccessJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetAggregateSortedTableAccessTraceContract(t, evidence.JavaTrace)
+	assertResultSetAggregateSortedTableAccessTraceContract(t, evidence.GoTrace)
+}
+
+func TestRunResultSetAggregateSortedTableAccessDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["cnte"] = json.Number("999")
+		}},
+		{name: "null-state", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["ge"] = map[string]any{"state": "not-null"}
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "missing-record", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-aggregate-sorted-table-access.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-table-access.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-sorted-table-access-diff",
+				"-scenario", filepath.Join(root, "resultset-aggregate-sorted-table-access.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateSortedTableAccessCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-table-access.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	goTraceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-table-access.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkedInGoTrace, err := compat.LoadTrace(goTraceFile)
+	closeErr = goTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-table-access.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateSortedTableAccessJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateSortedTableAccessJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateSortedTableAccessSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateSortedTableAccessJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(checkedInGoTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from evidence Go trace: %#v", differences)
+	}
+	assertResultSetAggregateSortedTableAccessTraceContract(t, javaTrace)
+	assertResultSetAggregateSortedTableAccessTraceContract(t, checkedInGoTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-aggregate-sorted-table-access.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateSortedTableAccessScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetAggregateSortedTableAccessJavaCommit,
+		resultsetAggregateSortedTableAccessJavaRuntimeIDs,
+		[]string{resultsetAggregateSortedTableAccessSource},
+		resultsetAggregateSortedTableAccessJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-table-access",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetAggregateSortedTableAccessTraceContract(t, goTrace)
+}
+
+func TestRunResultSetAggregateSortedTableAccessRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-sorted-table-access.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-sorted-table-access"`)
+			replacement := []byte(`"id": "resultset-aggregate-sorted-table-access", "id": "resultset-aggregate-sorted-table-access"`)
+			return bytes.Replace(data, needle, replacement, 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "get-contains-counts",`), []byte(`"case": "get-contains-counts", "extra": 0,`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1a", "intPrimitive": 1`), []byte(`"theString": "E1a", "intPrimitive": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1a", "intPrimitive": 1`), []byte(`"theString": "E1a", "intPrimitive": 1, "intPrimitive": 2`), 1)
+		}},
+		{name: "wrong-case-order", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "submap-events-between"}`), []byte(`{"op": "case", "case": "navigable-map-reference"}`), 1)
+		}},
+		{name: "unexpected-case-marker", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "submap-events-between"},`), []byte(`{"op": "case", "case": "unexpected"},
+    {"op": "case", "case": "submap-events-between"},`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1.5`), 1)
+		}},
+
+		{name: "null-boolean", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"fromInclusive": false`), []byte(`"fromInclusive": null`), 1)
+		}},
+		{name: "quoted-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": "1"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "resultset-aggregate-sorted-table-access",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateSortedTableAccessRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-sorted-table-access.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		Cases         []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, resultsetAggregateSortedTableAccessJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetAggregateSortedTableAccessJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultsetAggregateSortedTableAccessJavaStaticIDs) ||
+		len(document.Cases) != len(resultsetAggregateSortedTableAccessCases) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v staticIDs=%v cases=%d", document.JavaRuntimes, document.JavaNames, document.JavaStaticIDs, len(document.Cases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetAggregateSortedTableAccessCases[index] ||
+			entry.Ordinal != resultsetAggregateSortedTableAccessOrdinals[index] ||
+			entry.RuntimeID != resultsetAggregateSortedTableAccessJavaRuntimeIDs[index] ||
+			entry.ExecutionName != resultsetAggregateSortedTableAccessJavaExecutions[index] {
+			t.Fatalf("case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertResultSetAggregateSortedTableAccessTraceContract(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetAggregateSortedTableAccessID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 325 {
+		t.Fatalf("trace records = %d, want 325", len(trace.Records))
+	}
+	caseCounts := map[string]int{}
+	caseSequences := map[string]uint64{}
+	for index, record := range trace.Records {
+		caseCounts[record.Case]++
+		caseSequences[record.Case]++
+		if record.Operation != "listener" || record.Statement != "s0" || record.Sequence != caseSequences[record.Case] ||
+			record.Time != "1970-01-01T00:00:00Z" || len(record.New) != 1 || len(record.Old) != 0 || record.New[0].Kind != "row" {
+			t.Fatalf("record %d metadata/shape = %#v", index, record)
+		}
+	}
+	wantCounts := map[string]int{
+		"get-contains-counts":     12,
+		"submap-events-between":   312,
+		"navigable-map-reference": 1,
+	}
+	if !reflect.DeepEqual(caseCounts, wantCounts) {
+		t.Fatalf("case counts = %#v, want %#v", caseCounts, wantCounts)
+	}
+	get := trace.Records[:12]
+	canonicalGet, err := compat.CanonicalTrace(compat.Trace{
+		Version: compat.ScenarioVersion,
+		ID:      resultsetAggregateSortedTableAccessID,
+		Records: get,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	get = canonicalGet.Records
+	if !reflect.DeepEqual(get[0].New[0].Fields["ge"], map[string]any{"state": "null"}) ||
+		get[0].New[0].Fields["ck"] != false || get[0].New[0].Fields["cnte"] != json.Number("7") || get[0].New[0].Fields["cntk"] != json.Number("5") {
+		t.Fatalf("empty get probe = %#v", get[0].New[0].Fields)
+	}
+	if get[1].New[0].Fields["geid"] != "E1a" || get[1].New[0].Fields["ck"] != true {
+		t.Fatalf("duplicate-key get probe = %#v", get[1].New[0].Fields)
+	}
+	submap := trace.Records[12 : 12+312]
+	if !reflect.DeepEqual(submap[0].New[0].Fields["eb"], []any{}) ||
+		!reflect.DeepEqual(submap[0].New[0].Fields["sm"], map[string]any{"kind": "row", "fields": map[string]any{}}) {
+		t.Fatalf("empty submap probe = %#v", submap[0].New[0].Fields)
+	}
+	navigable := trace.Records[324].New[0].Fields["nmr"]
+	navigableRow, ok := navigable.(map[string]any)
+	if !ok || navigableRow["kind"] != "row" {
+		t.Fatalf("navigable map shape = %#v", navigable)
+	}
+	navigableFields, ok := navigableRow["fields"].(map[string]any)
+	if !ok || len(navigableFields) != 5 {
+		t.Fatalf("navigable map fields = %#v", navigable)
+	}
+	for _, key := range []string{"1", "4", "6", "8", "9"} {
+		if _, ok := navigableFields[key]; !ok {
+			t.Fatalf("navigable map omits key %q: %#v", key, navigableFields)
+		}
+	}
+}
