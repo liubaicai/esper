@@ -1,0 +1,41 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-sorted-grouped",
+  "description": "ResultSetAggregationMethodSorted ordinal 11: grouped table-backed sorted collection selector with first/last key access.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodSorted.java",
+  "javaRuntimes": [
+    "java-runtime-3ffe177eb6a90acb699a"
+  ],
+  "javaNames": [
+    "ResultSetAggregateSortedGrouped"
+  ],
+  "javaStaticIds": [
+    "java-5a1abe9fb7420df7353d"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "grouped",
+      "ordinal": 11,
+      "runtimeId": "java-runtime-3ffe177eb6a90acb699a",
+      "executionName": "ResultSetAggregateSortedGrouped",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create table MyTable(k0 string primary key, sortcol sorted(intPrimitive) @type('SupportBean'));\ninto table MyTable select sorted(*) as sortcol from SupportBean group by theString;\n@name('s0') select MyTable[p00].sortcol.sorted() as sortcol,MyTable[p00].sortcol.firstKey() as firstkey,MyTable[p00].sortcol.lastKey() as lastkey from SupportBean_S0"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "grouped"},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1, "p00": "A"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 20}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1, "p00": "A"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 21}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1, "p00": "A"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "B", "intPrimitive": 100}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1, "p00": "A"}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": -1, "p00": "B"}}
+  ]
+}

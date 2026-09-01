@@ -29,6 +29,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-no-data-window and resultset-aggregate-sorted-no-data-window-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-window and resultset-aggregate-window-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-table-access and resultset-aggregate-sorted-table-access-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-grouped and resultset-aggregate-sorted-grouped-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -76,6 +77,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetAggregateWindowScenario(file)
 	} else if *mode == "resultset-aggregate-sorted-table-access" || *mode == "resultset-aggregate-sorted-table-access-diff" {
 		scenario, err = loadResultSetAggregateSortedTableAccessScenario(file)
+	} else if *mode == "resultset-aggregate-sorted-grouped" || *mode == "resultset-aggregate-sorted-grouped-diff" {
+		scenario, err = loadResultSetAggregateSortedGroupedScenario(file)
 	} else if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
 		scenario, err = loadRollupDimensionalityScenario(file)
 	} else if *mode == "rollup-grouping-funcs-dedicated" || *mode == "rollup-grouping-funcs-dedicated-diff" {
@@ -1036,6 +1039,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetAggregateSortedTableAccessJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, []string{resultsetAggregateSortedTableAccessSource}),
 				splitMetadata(*javaExecutions, resultsetAggregateSortedTableAccessJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-sorted-grouped" || *mode == "resultset-aggregate-sorted-grouped-diff" {
+		trace, err := runResultSetAggregateSortedGroupedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-sorted-grouped-diff" {
+			return runDifferentialModeWithGoNormalizer(stdout, stderr, *javaTracePath, *evidencePath, resultsetAggregateSortedGroupedJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateSortedGroupedJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, []string{resultsetAggregateSortedGroupedSource}),
+				splitMetadata(*javaExecutions, resultsetAggregateSortedGroupedJavaExecutions), scenario, trace,
+				normalizeResultSetAggregateSortedGroupedTrace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
@@ -2881,6 +2901,16 @@ func runDifferentialMode(stdout, stderr io.Writer, javaTracePath, evidencePath, 
 }
 
 func runDifferentialModeWithNormalizer(stdout, stderr io.Writer, javaTracePath, evidencePath, javaCommit string, runtimeIDs, sourceFiles, executions []string, scenario compat.Scenario, goTrace compat.Trace, normalize func(compat.Trace) compat.Trace) int {
+	return runDifferentialModeWithNormalizers(stdout, stderr, javaTracePath, evidencePath, javaCommit,
+		runtimeIDs, sourceFiles, executions, scenario, goTrace, normalize, normalize)
+}
+
+func runDifferentialModeWithGoNormalizer(stdout, stderr io.Writer, javaTracePath, evidencePath, javaCommit string, runtimeIDs, sourceFiles, executions []string, scenario compat.Scenario, goTrace compat.Trace, normalize func(compat.Trace) compat.Trace) int {
+	return runDifferentialModeWithNormalizers(stdout, stderr, javaTracePath, evidencePath, javaCommit,
+		runtimeIDs, sourceFiles, executions, scenario, goTrace, nil, normalize)
+}
+
+func runDifferentialModeWithNormalizers(stdout, stderr io.Writer, javaTracePath, evidencePath, javaCommit string, runtimeIDs, sourceFiles, executions []string, scenario compat.Scenario, goTrace compat.Trace, normalizeJava, normalizeGo func(compat.Trace) compat.Trace) int {
 	if javaTracePath == "" {
 		return fail(stderr, fmt.Errorf("Java trace path is required for differential mode"))
 	}
@@ -2896,9 +2926,11 @@ func runDifferentialModeWithNormalizer(stdout, stderr io.Writer, javaTracePath, 
 	if closeErr != nil {
 		return fail(stderr, closeErr)
 	}
-	if normalize != nil {
-		javaTrace = normalize(javaTrace)
-		goTrace = normalize(goTrace)
+	if normalizeJava != nil {
+		javaTrace = normalizeJava(javaTrace)
+	}
+	if normalizeGo != nil {
+		goTrace = normalizeGo(goTrace)
 	}
 	evidence, err := compat.NewDifferentialEvidence(javaCommit, runtimeIDs, sourceFiles, executions, scenario, javaTrace, goTrace)
 	if err != nil {

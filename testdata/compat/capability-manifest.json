@@ -894,7 +894,8 @@
     "internal/app/parity/resultset_querytype_rollup_orderby_unidirectional.go",
     "internal/app/parity/resultset_aggregate_sorted_no_data_window.go",
     "internal/app/parity/resultset_aggregate_window.go",
-    "internal/app/parity/resultset_aggregate_sorted_table_access.go"
+    "internal/app/parity/resultset_aggregate_sorted_table_access.go",
+    "internal/app/parity/resultset_aggregate_sorted_grouped.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -36818,6 +36819,67 @@
     "ResultSetAggregationMethodSorted ordinals 7-9 replay one deterministic table-backed sorted-access scenario (325 Java/Go listener records per side, 0 differences): get/contains/counts (12), inclusive eventsBetween/subMap ranges (312), and detached navigableMapReference (1), including duplicate-key buckets and missing-key Nulls.",
     "The typed Go surface uses CreateTable, IntoTable, SortedAccessBy, TableField, Method, EventValue, and OnEvent.SelectFromTableWhere. The scenario, Java oracle, and Go runner pin runtime/static metadata, exact payloads, values/order/time/shape, and reject malformed JSON, duplicate keys, non-boolean range flags, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-sorted-grouped",
+   "javaRuntimeIds": [
+    "java-runtime-3ffe177eb6a90acb699a"
+   ],
+   "javaStaticIds": [
+    "java-5a1abe9fb7420df7353d"
+   ],
+   "javaNames": [
+    "ResultSetAggregateSortedGrouped"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregationMethodSorted.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedGroupedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedGroupedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedGroupedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedGroupedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedGroupedRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedGroupedRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "sorted",
+    "grouped",
+    "table",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-sorted-grouped.json",
+    "testdata/parity/resultset-aggregate-sorted-grouped.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-grouped.go.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-grouped.evidence.json",
+    "tools/java-oracle/ResultSetAggregationMethodSortedGroupedScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-sorted-grouped.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-3ffe177eb6a90acb699a"
+   ],
+   "notes": [
+    "ResultSetAggregationMethodSorted ordinal 11 replays one deterministic grouped table-backed sorted-access scenario (5 Java/Go listener records, 0 differences): a missing A key, A values 10/20 then duplicate 10 and 21, and B value 100 produce first/last keys null/null, 10/20, 10/21, 10/21, and 100/100.",
+    "The typed Go surface uses CreateTable, IntoTable, SortedAccessBy, TableField, Method, EventValue, and OnEvent.SelectFromTableWhere. The scenario, Java oracle, and Go runner pin metadata, payloads, row values/order, timestamps, Null sortcol projection, and record shape; strict validators reject malformed JSON, duplicate keys, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -39504,13 +39566,17 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-sorted-table-access"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-sorted-grouped"
   }
-],
+ ],
  "summary": {
- "inventoriedCases": 587,
- "implementedCases": 585,
- "differentialVerifiedCases": 200,
- "differentialVerifiedRuntimeIds": 735,
+ "inventoriedCases": 588,
+ "implementedCases": 586,
+ "differentialVerifiedCases": 201,
+ "differentialVerifiedRuntimeIds": 736,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39520,14 +39586,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
- "runtimeAssociationCount": 3356,
+ "runtimeAssociationCount": 3357,
  "referencedJavaRuntimeIds": 3133,
  "totalJavaRuntimeIds": 4136,
  "unreferencedJavaRuntimeIds": 1003,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
- "totalCases": 587,
+ "totalCases": 588,
  "totalCapabilities": 119,
- "differentialVerifiedRuntimeIDs": 735
+ "differentialVerifiedRuntimeIDs": 736
  }
 }
