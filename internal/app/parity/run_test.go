@@ -25585,3 +25585,370 @@ func assertResultSetAggregateSortedTableAccessTraceContract(t *testing.T, trace 
 		}
 	}
 }
+
+func TestRunResultSetAggregateSortedMinMaxByNoAliasDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-minmax-by-no-alias",
+		"-scenario", filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetAggregateSortedMinMaxByNoAliasTrace(t, trace)
+}
+
+func TestRunResultSetAggregateSortedMinMaxByNoAliasDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-minmax-by-no-alias.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-sorted-minmax-by-no-alias-diff",
+		"-scenario", filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.json"),
+		"-java-trace", filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetAggregateSortedMinMaxByNoAliasJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateSortedMinMaxByNoAliasJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateSortedMinMaxByNoAliasJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateSortedMinMaxByNoAliasJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetAggregateSortedMinMaxByNoAliasTrace(t, evidence.JavaTrace)
+	assertResultSetAggregateSortedMinMaxByNoAliasTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetAggregateSortedMinMaxByNoAliasDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	// LoadTrace JSON round-trips types values as []interface{} of
+	// map[string]interface{}; mutations use the generic shape.
+	typesEntries := func(trace *compat.Trace) []map[string]any {
+		raw, ok := trace.Records[1].Value.([]interface{})
+		if !ok {
+			t.Fatalf("types value = %#v", trace.Records[1].Value)
+		}
+		entries := make([]map[string]any, 0, len(raw))
+		for _, item := range raw {
+			entry, ok := item.(map[string]any)
+			if !ok {
+				t.Fatalf("types entry = %#v", item)
+			}
+			entries = append(entries, entry)
+		}
+		return entries
+	}
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "deployed-absent", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[1:]
+		}},
+		{name: "operation-drift", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Operation = "listener"
+		}},
+		{name: "types-name-drift", mutate: func(trace *compat.Trace) {
+			typesEntries(trace)[0]["name"] = "maxby(intPrimitive)"
+		}},
+		{name: "types-token-drift", mutate: func(trace *compat.Trace) {
+			typesEntries(trace)[1]["type"] = "Object"
+		}},
+		{name: "types-entry-added", mutate: func(trace *compat.Trace) {
+			entries := typesEntries(trace)
+			extended := append([]any{}, make([]any, len(entries))...)
+			for index, entry := range entries {
+				extended[index] = entry
+			}
+			extended = append(extended, map[string]any{"name": "minby(intPrimitive)", "type": "SupportBean"})
+			trace.Records[1].Value = extended
+		}},
+		{name: "types-order-swap", mutate: func(trace *compat.Trace) {
+			entries := typesEntries(trace)
+			trace.Records[1].Value = []any{entries[1], entries[0]}
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-sorted-minmax-by-no-alias.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-sorted-minmax-by-no-alias-diff",
+				"-scenario", filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateSortedMinMaxByNoAliasCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	traceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	javaTrace, err := compat.LoadTrace(traceFile)
+	closeErr := traceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	goTraceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkedInGoTrace, err := compat.LoadTrace(goTraceFile)
+	closeErr = goTraceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr = evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(checkedInGoTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from evidence Go trace: %#v", differences)
+	}
+	assertResultSetAggregateSortedMinMaxByNoAliasTrace(t, javaTrace)
+	assertResultSetAggregateSortedMinMaxByNoAliasTrace(t, checkedInGoTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateSortedMinMaxByNoAliasScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateSortedMinMaxByNoAliasJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateSortedMinMaxByNoAliasJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetAggregateSortedMinMaxByNoAliasJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateSortedMinMaxByNoAliasJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetAggregateSortedMinMaxByNoAliasJavaCommit,
+		resultsetAggregateSortedMinMaxByNoAliasJavaRuntimeIDs,
+		resultsetAggregateSortedMinMaxByNoAliasJavaSources,
+		resultsetAggregateSortedMinMaxByNoAliasJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-aggregate-sorted-minmax-by-no-alias", "-scenario", scenarioPath}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	goTrace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, goTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetAggregateSortedMinMaxByNoAliasTrace(t, goTrace)
+}
+
+func TestRunResultSetAggregateSortedMinMaxByNoAliasRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-sorted-minmax-by-no-alias.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-sorted-minmax-by-no-alias"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-sorted-minmax-by-no-alias"`)...), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "no-alias",`), []byte(`"case": "no-alias", "extra": 0,`), 1)
+		}},
+		{name: "observation-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"observation": "statement-metadata"`), []byte(`"observation": "listener"`), 1)
+		}},
+		{name: "ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 3`), []byte(`"ordinal": 4`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`sorted(intPrimitive asc, theString desc) from SupportBean#time(10)`), []byte(`sorted(intPrimitive desc) from SupportBean#time(10)`), 1)
+		}},
+		{name: "step-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "types", "statement": "s0"`), []byte(`"op": "types", "statement": "s0", "extra": 0`), 1)
+		}},
+		{name: "step-order", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "deployed", "statement": "s0"},
+    {"op": "types", "statement": "s0"}`),
+				[]byte(`{"op": "types", "statement": "s0"},
+    {"op": "deployed", "statement": "s0"}`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-aggregate-sorted-minmax-by-no-alias", "-scenario", scenarioPath}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateSortedMinMaxByNoAliasRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-sorted-minmax-by-no-alias.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		Cases         []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, resultsetAggregateSortedMinMaxByNoAliasJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetAggregateSortedMinMaxByNoAliasJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, []string{resultsetAggregateSortedMinMaxByNoAliasStaticID}) || len(document.Cases) != 1 {
+		t.Fatalf("scenario metadata runtimes=%v names=%v staticIDs=%v cases=%d", document.JavaRuntimes, document.JavaNames, document.JavaStaticIDs, len(document.Cases))
+	}
+	entry := document.Cases[0]
+	if entry.Case != resultsetAggregateSortedMinMaxByNoAliasCase || entry.Ordinal != 3 ||
+		entry.RuntimeID != resultsetAggregateSortedMinMaxByNoAliasRuntimeID || entry.ExecutionName != resultsetAggregateSortedMinMaxByNoAliasExecution {
+		t.Fatalf("case metadata = %#v", entry)
+	}
+}
+
+func assertResultSetAggregateSortedMinMaxByNoAliasTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetAggregateSortedMinMaxByNoAliasID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 2 {
+		t.Fatalf("trace records = %d, want 2", len(trace.Records))
+	}
+	deployed := trace.Records[0]
+	if deployed.Case != resultsetAggregateSortedMinMaxByNoAliasCase || deployed.Operation != "deployed" ||
+		deployed.Statement != "s0" || deployed.Sequence != 0 || deployed.Time != "" ||
+		len(deployed.New) != 0 || len(deployed.Old) != 0 || deployed.Value != nil {
+		t.Fatalf("deployed record = %#v", deployed)
+	}
+	types := trace.Records[1]
+	if types.Case != resultsetAggregateSortedMinMaxByNoAliasCase || types.Operation != "types" ||
+		types.Statement != "s0" || types.Sequence != 0 || types.Time != "" ||
+		len(types.New) != 0 || len(types.Old) != 0 {
+		t.Fatalf("types record = %#v", types)
+	}
+	raw, ok := types.Value.([]interface{})
+	if !ok {
+		t.Fatalf("types value = %#v", types.Value)
+	}
+	want := []map[string]any{
+		{"name": "maxby(intPrimitive).theString", "type": "String"},
+		{"name": "maxbyever(intPrimitive).theString", "type": "String"},
+	}
+	if len(raw) != len(want) {
+		t.Fatalf("types entries = %#v", raw)
+	}
+	for index, item := range raw {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			t.Fatalf("types entry %d = %#v", index, item)
+		}
+		if !reflect.DeepEqual(entry, want[index]) {
+			t.Fatalf("types entry %d = %#v, want %#v", index, entry, want[index])
+		}
+	}
+}

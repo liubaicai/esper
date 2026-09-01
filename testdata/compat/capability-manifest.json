@@ -36945,6 +36945,68 @@
     "ResultSetAggregationMethodSorted ordinals 5-6 replay one deterministic table-backed sorted first/last scenario (2 Java/Go listener records, 0 differences): seven seeds with duplicate keys 1,1,4,6,6,8,9 produce firstEvent/minBy/firstEvents/firstKey over the lowest bucket and lastEvent/maxBy/lastEvents/lastKey over the highest bucket, plus dotted first/last event property and enumeration lastOf projections.",
     "The typed Go surface uses CreateTable, IntoTable, SortedAccessBy, TableField, Method, EnumFirstOf, and EnumLastOf. The scenario, Java oracle, and Go runner pin metadata, payloads, bucket insertion order, row values, timestamps, and record shape; strict validators reject malformed JSON, duplicate keys, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-sorted-minmax-by-no-alias",
+   "javaRuntimeIds": [
+    "java-runtime-bb6969a66cad8464ae18"
+   ],
+   "javaStaticIds": [
+    "java-553516b9d01c12a13172"
+   ],
+   "javaNames": [
+    "ResultSetAggregateNoAlias"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByNoAliasDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByNoAliasDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByNoAliasDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByNoAliasCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByNoAliasRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateSortedMinMaxByNoAliasRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "sorted",
+    "minby",
+    "maxby",
+    "statement-metadata",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-sorted-minmax-by-no-alias.json",
+    "testdata/parity/resultset-aggregate-sorted-minmax-by-no-alias.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-minmax-by-no-alias.go.trace.json",
+    "testdata/parity/resultset-aggregate-sorted-minmax-by-no-alias.evidence.json",
+    "tools/java-oracle/ResultSetAggregateSortedMinMaxByNoAliasScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-sorted-minmax-by-no-alias.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-bb6969a66cad8464ae18"
+   ],
+   "notes": [
+    "ResultSetAggregateSortedMinMaxBy ordinal 3 replays one deploy-only statement-metadata scenario (2 Java/Go records each, 0 differences): the deployment is acknowledged and the ordered property names/types cover the three String-typed differential columns maxby(intPrimitive).theString and maxbyever(intPrimitive).theString; no events are sent and no listener records exist.",
+    "Representation registration: Java renders whole-event minby/minbyever outputs and sorted() rows as java.util.Map (map-underlying render), while the Go typed API keeps the SupportBean event identity (Event, []Event); those three property names are pinned in both runners and registered as Go-vs-Java representation differences rather than differential fields.",
+    "The typed Go surface uses TimeWindow, Aggregate, Alias with the exact Java auto-generated names, Property, MaxBy, MinBy, MaxByEver, MinByEver, and SortedEvents. Scenario, Java oracle, and Go runner pin metadata, ordered names, differential type tokens, and record shape; strict validators reject malformed JSON, duplicate keys, extra/missing steps, and trace mutations."
+   ]
   }
  ],
  "mappings": [
@@ -39639,13 +39701,17 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-sorted-first-last"
+  },
+  {
+   "capabilityId": "resultset.aggregate-access",
+   "caseId": "case.resultset-aggregate-sorted-minmax-by-no-alias"
   }
  ],
  "summary": {
- "inventoriedCases": 589,
- "implementedCases": 587,
- "differentialVerifiedCases": 202,
- "differentialVerifiedRuntimeIds": 738,
+ "inventoriedCases": 590,
+ "implementedCases": 588,
+ "differentialVerifiedCases": 203,
+ "differentialVerifiedRuntimeIds": 739,
  "intentionallyDifferentCases": 23,
  "representativeVerifiedCases": 104,
  "nfrVerifiedCases": 0,
@@ -39655,14 +39721,14 @@
  "intentionallyDifferentCapabilities": 8,
  "representativeVerifiedCapabilities": 11,
  "nfrVerifiedCapabilities": 0,
- "runtimeAssociationCount": 3359,
- "referencedJavaRuntimeIds": 3133,
+ "runtimeAssociationCount": 3360,
+ "referencedJavaRuntimeIds": 3134,
  "totalJavaRuntimeIds": 4136,
- "unreferencedJavaRuntimeIds": 1003,
+ "unreferencedJavaRuntimeIds": 1002,
  "representativeScenarioTotal": 107,
  "representativeScenarioPassing": 107,
- "totalCases": 589,
+ "totalCases": 590,
  "totalCapabilities": 119,
- "differentialVerifiedRuntimeIDs": 738
+ "differentialVerifiedRuntimeIDs": 739
  }
 }

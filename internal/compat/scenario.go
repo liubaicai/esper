@@ -379,7 +379,7 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
-		case "faf", "deploy", "undeploy", "undeploy-all", "read-variable", "set-variable", "types":
+		case "faf", "deploy", "undeploy", "undeploy-all", "read-variable", "set-variable", "types", "deployed":
 			handler := handlers[step.Op]
 			if handler == nil {
 				return trace, fmt.Errorf("compat: no %s handler for step %q", step.Op, step.Statement)

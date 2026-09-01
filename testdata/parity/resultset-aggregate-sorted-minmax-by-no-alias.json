@@ -1,0 +1,33 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-sorted-minmax-by-no-alias",
+  "description": "ResultSetAggregateSortedMinMaxBy ordinal 3: unaliased min-by/max-by and sorted projections auto-name their output columns; the deployment is acknowledged and the ordered property names/types are recorded without any events.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java",
+  "javaRuntimes": [
+    "java-runtime-bb6969a66cad8464ae18"
+  ],
+  "javaNames": [
+    "ResultSetAggregateNoAlias"
+  ],
+  "javaStaticIds": [
+    "java-553516b9d01c12a13172"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "no-alias",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-bb6969a66cad8464ae18",
+      "executionName": "ResultSetAggregateNoAlias",
+      "observation": "statement-metadata",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select maxby(intPrimitive).theString, minby(intPrimitive),maxbyever(intPrimitive).theString, minbyever(intPrimitive),sorted(intPrimitive asc, theString desc) from SupportBean#time(10)"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "no-alias"},
+    {"op": "deployed", "statement": "s0"},
+    {"op": "types", "statement": "s0"}
+  ]
+}

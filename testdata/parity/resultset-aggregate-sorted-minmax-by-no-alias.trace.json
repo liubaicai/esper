@@ -1,0 +1,1 @@
+{"version":"esper-parity/v1","id":"resultset-aggregate-sorted-minmax-by-no-alias","records":[{"case":"no-alias","operation":"deployed","statement":"s0","sequence":0},{"case":"no-alias","operation":"types","statement":"s0","sequence":0,"value":[{"name":"maxby(intPrimitive).theString","type":"String"},{"name":"maxbyever(intPrimitive).theString","type":"String"}]}]}
