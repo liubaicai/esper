@@ -26062,3 +26062,127 @@ func TestRunResultSetQueryTypeRowPerGroupHavingDiffRejectsTraceMutations(t *test
 		})
 	}
 }
+
+func TestRunResultSetQueryTypeRowPerEventDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-per-event.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-row-per-event.evidence.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-querytype-row-per-event-diff",
+		"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-per-event.json"),
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if len(evidence.JavaRuntimeIDs) != 7 {
+		t.Fatalf("javaRuntimeIds = %#v", evidence.JavaRuntimeIDs)
+	}
+}
+
+func TestRunResultSetQueryTypeRowPerEventDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "sum-post-eviction-old-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].Old[0].Fields["mySum"] = 10
+			},
+		},
+		{
+			name: "sum-evicted-row-column-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].Old[0].Fields["longPrimitive"] = 4
+			},
+		},
+		{
+			name: "join-twin-old-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].Old = nil
+			},
+		},
+		{
+			name: "trigger-event-tuple-count-collapsed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].New = trace.Records[12].New[:1]
+			},
+		},
+		{
+			name: "trigger-event-window-snapshot-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].New[0].Fields["rows"] = []any{}
+			},
+		},
+		{
+			name: "esper571-having-gate-suppressed-row-fabricated",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case: "unagg-having", Operation: "listener", Statement: "s0",
+					Sequence: 4, Time: "1970-01-01T00:00:00Z",
+					New: []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"val": 25}}},
+				})
+			},
+		},
+		{
+			name: "where-filtered-row-fabricated",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records, compat.TraceRecord{
+					Case: "sum-avg-where", Operation: "listener", Statement: "s0",
+					Sequence: 3, Time: "1970-01-01T00:00:00Z",
+					New: []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"mySum": 10020}}},
+				})
+			},
+		},
+		{
+			name: "distinct-sum-dedup-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[20].New[0].Fields["volSum"] = 20000
+			},
+		},
+		{
+			name: "null-symbol-count-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[26].New[0].Fields["countDistinctSymbol"] = 3
+			},
+		},
+		{
+			name: "unbounded-old-null-pair-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[25].Old[0].Fields["avgVolume"] = 100
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-per-event.evidence.json"),
+				test.mutate)
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-querytype-row-per-event-diff",
+				"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-row-per-event.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", filepath.Join(t.TempDir(), "e.json"),
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q accepted", test.name)
+			}
+		})
+	}
+}

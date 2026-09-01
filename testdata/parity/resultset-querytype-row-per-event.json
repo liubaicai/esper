@@ -1,0 +1,88 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-querytype-row-per-event",
+ "description": "Row-per-event result sets replaying ResultSetQueryTypeRowPerEvent executions over SupportBean/SupportBeanString/SupportMarketDataBean/SupportBean_S0: irstream sum with evicted-row old columns carrying post-eviction sums (view and join twins), window(s0.*)+trigger-bean join rows, ESPER-571 ungrouped max having against an unaggregated current-event property, sum/avg with a pre-view where filter, sum(distinct) over a length(3) window and avg/count(distinct) over an unbounded stream with null old-side rendering",
+ "javaRuntimes": [
+  "java-runtime-5111b05c6bc620b88e15",
+  "java-runtime-50601d6f0cc0411a9f90",
+  "java-runtime-06c962063c57e3a3adee",
+  "java-runtime-14d3e2b22e8c3ef00657",
+  "java-runtime-1f1dae3e5953610a77e3",
+  "java-runtime-9160c96fccf23486d782",
+  "java-runtime-cce782d69a46b20b8609"
+ ],
+ "cases": [
+  {
+   "case": "sum-one-view",
+   "runtimeId": "java-runtime-5111b05c6bc620b88e15"
+  },
+  {
+   "case": "sum-join",
+   "runtimeId": "java-runtime-50601d6f0cc0411a9f90"
+  },
+  {
+   "case": "trigger-event",
+   "runtimeId": "java-runtime-06c962063c57e3a3adee"
+  },
+  {
+   "case": "unagg-having",
+   "runtimeId": "java-runtime-14d3e2b22e8c3ef00657"
+  },
+  {
+   "case": "sum-avg-where",
+   "runtimeId": "java-runtime-1f1dae3e5953610a77e3"
+  },
+  {
+   "case": "distinct-sum",
+   "runtimeId": "java-runtime-9160c96fccf23486d782"
+  },
+  {
+   "case": "distinct-nullable",
+   "runtimeId": "java-runtime-cce782d69a46b20b8609"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "sum-one-view"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": 10, "longPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": 15, "longPrimitive": 2}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": -5, "longPrimitive": 3}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": -2, "longPrimitive": 4}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": 100, "longPrimitive": 5}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": 1000, "longPrimitive": 6}},
+  {"op": "case", "case": "sum-join"},
+  {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KEY"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": 10, "longPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": 15, "longPrimitive": 2}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": -5, "longPrimitive": 3}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": -2, "longPrimitive": 4}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": 100, "longPrimitive": 5}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "KEY", "intBoxed": 0, "longBoxed": 1000, "longPrimitive": 6}},
+  {"op": "case", "case": "trigger-event"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "K1", "p01": "V1"}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 2, "p00": "K1", "p01": "V2"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "K1"}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "K1", "p01": "V3"}},
+  {"op": "case", "case": "unagg-having"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "intBoxed": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10, "intBoxed": 11}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 15, "intBoxed": 11}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 20, "intBoxed": 11}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 25, "intBoxed": 25}},
+  {"op": "case", "case": "sum-avg-where"},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "GE", "price": 0, "volume": 10}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "price": 0, "volume": 20}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "XXX", "price": 0, "volume": 10000}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "price": 0, "volume": 30}},
+  {"op": "case", "case": "distinct-sum"},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 0, "volume": 10000}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 0, "volume": 10000}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DELL", "price": 0, "volume": 20000}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "price": 0, "volume": 1000}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "price": 0, "volume": 1000}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "price": 0, "volume": 1000}},
+  {"op": "case", "case": "distinct-nullable"},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "ONE", "price": 0, "volume": 100}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": null, "price": 0, "volume": null}},
+  {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "Two", "price": 0, "volume": null}}
+ ]
+}

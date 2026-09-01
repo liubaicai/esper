@@ -19299,7 +19299,7 @@ func expressionTreeReadsCurrentEvent(expression Expr) bool {
 		if expressionNodeIsAggregate(node) {
 			return false
 		}
-		if node.kind == "field" || node.kind == "join-field" {
+		if node.kind == "field" || node.kind == "join-field" || node.kind == "join-event" {
 			return true
 		}
 		for _, child := range node.children {

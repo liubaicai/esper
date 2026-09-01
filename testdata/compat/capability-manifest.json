@@ -4152,7 +4152,8 @@
     "ResultSetAggregateMinNoGroupSelectHaving",
     "ResultSetAggregateMedianAndDeviation",
     "ResultSetAggregateMinMaxNoDataWindowSubquery",
-    "ResultSetAggregateMinMaxNamedWindowWEver"
+    "ResultSetAggregateMinMaxNamedWindowWEver",
+    "ResultSetQueryTypeRowPerEvent"
    ],
    "goRefs": [
     "internal/esper/resultset_aggregate_parity_test.go",
@@ -4208,14 +4209,14 @@
     "internal/app/parity/resultset_aggregate_minmax_no_data_window_subquery.go",
     "internal/app/parity/resultset_aggregate_minmax_named_window_wever.go",
     "internal/esper/expr.go",
-    "internal/esper/runtime.go"
+    "internal/esper/runtime.go",
+    "internal/app/parity/resultset_querytype_row_per_event.go"
    ],
    "phase": 2,
    "status": "differential-verified",
    "remaining": [
     "ResultSetOrderBy* suites",
-    "ResultSetOutputLimit* suites",
-    "ResultSetQueryType* suites"
+    "ResultSetOutputLimit* suites"
    ],
    "verification": [
     "inventoried",
@@ -30137,6 +30138,82 @@
    ]
   },
   {
+   "id": "case.resultset-querytype-row-per-event",
+   "javaRuntimeIds": [
+    "java-runtime-5111b05c6bc620b88e15",
+    "java-runtime-50601d6f0cc0411a9f90",
+    "java-runtime-06c962063c57e3a3adee",
+    "java-runtime-14d3e2b22e8c3ef00657",
+    "java-runtime-1f1dae3e5953610a77e3",
+    "java-runtime-9160c96fccf23486d782",
+    "java-runtime-cce782d69a46b20b8609"
+   ],
+   "javaStaticIds": [
+    "java-1a361248f817f0b81296",
+    "java-7d58340c8817c9bfb25e",
+    "java-8dd67a080a802003aaa8",
+    "java-e24ebbd3fbf82c30ea82",
+    "java-282eb4e43b87f9a56d65",
+    "java-bd1527f8f8cd1b5ed493",
+    "java-1bb7052967b0e94389eb"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeRowPerEventSumOneView",
+    "ResultSetQueryTypeRowPerEventSumJoin",
+    "ResultSetQueryTypeAggregatedSelectTriggerEvent",
+    "ResultSetQueryTypeAggregatedSelectUnaggregatedHaving",
+    "ResultSetQueryTypeSumAvgWithWhere",
+    "ResultSetQueryTypeRowPerEventDistinct",
+    "ResultSetQueryTypeRowPerEventDistinctNullable"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRowPerEvent.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowPerEventDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeRowPerEventDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "join",
+    "window-access",
+    "having",
+    "where",
+    "distinct",
+    "unbounded",
+    "irstream",
+    "row-per-event",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-row-per-event.json",
+    "testdata/parity/resultset-querytype-row-per-event.trace.json",
+    "testdata/parity/resultset-querytype-row-per-event.go.trace.json",
+    "testdata/parity/resultset-querytype-row-per-event.evidence.json"
+   ],
+   "notes": [
+    "All seven ResultSetQueryTypeRowPerEvent executions replayed: irstream longPrimitive/sum(longBoxed) over length(3) with view and SupportBeanString join twins where old rows carry the evicted row's own longPrimitive with the post-eviction sum, window(s0.*)+trigger-bean keepall join emitting one row per matching tuple (sb window-latest, rows the full S0 window snapshot), ESPER-571 ungrouped max having against the unaggregated current-event intBoxed with total suppression, sum/avg where symbol='IBM' pre-view filtering (filtered events never enter the window), sum(distinct volume) over length(3) and irstream avg(distinct volume)/count(distinct symbol) over an unbounded stream with previous-state old rows (avg null / count 0 on the first pair).",
+    "Engine fix: expressionTreeReadsCurrentEvent now recognizes join-event columns so an ungrouped join aggregate with an unaggregated current-tuple column routes to Java's ResultSetProcessorRowPerEvent shape (one row per input tuple with the access aggregate evaluated over the window).",
+    "Representation registration: whole-bean sb and window(s0.*) rows render through the underlying bean's full property map (20 SupportBean fields, charPrimitive \\u0000); Java oracle renders underlying-bean object arrays generically. Null symbol/volume use pointer schema fields so count(distinct) skips them exactly like Java's ifRefNull gate."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5111b05c6bc620b88e15",
+    "java-runtime-50601d6f0cc0411a9f90",
+    "java-runtime-06c962063c57e3a3adee",
+    "java-runtime-14d3e2b22e8c3ef00657",
+    "java-runtime-1f1dae3e5953610a77e3",
+    "java-runtime-9160c96fccf23486d782",
+    "java-runtime-cce782d69a46b20b8609"
+   ]
+  },
+  {
    "id": "case.resultset-querytype-row-per-group-having",
    "javaRuntimeIds": [
     "java-runtime-fabf6dfeea92bd82d953",
@@ -39830,13 +39907,17 @@
   {
    "capabilityId": "resultset.aggregate-having",
    "caseId": "case.resultset-querytype-row-per-group-having"
+  },
+  {
+   "capabilityId": "resultset.aggregate-group-by",
+   "caseId": "case.resultset-querytype-row-per-event"
   }
  ],
  "summary": {
-  "inventoriedCases": 591,
-  "implementedCases": 589,
-  "differentialVerifiedCases": 204,
-  "differentialVerifiedRuntimeIds": 744,
+  "inventoriedCases": 592,
+  "implementedCases": 590,
+  "differentialVerifiedCases": 205,
+  "differentialVerifiedRuntimeIds": 751,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -39846,14 +39927,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3365,
-  "referencedJavaRuntimeIds": 3139,
+  "runtimeAssociationCount": 3372,
+  "referencedJavaRuntimeIds": 3146,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 997,
+  "unreferencedJavaRuntimeIds": 990,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 591,
+  "totalCases": 592,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 744
+  "differentialVerifiedRuntimeIDs": 751
  }
 }

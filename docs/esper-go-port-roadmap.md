@@ -1,3 +1,13 @@
+> 最新补充：Draft 4.301（2026-09-02），新增 `resultset.aggregate-group-by` 的
+> `resultset-querytype-row-per-event` differential-verified 场景，对照固定 Java
+> `ResultSetQueryTypeRowPerEvent.java` 全部 7 个 execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；shared static/inventory ID
+> `java-1a361248f817f0b81296`；无 flags）：Java/Go 各 28 条 records、0 differences。场景覆盖
+> irstream sum 的视图/join 孪生与淘汰后旧行、`window(s0.*)`+`sb` keepall join 的逐元组行、
+> ESPER-571 无分组 having 绑定当前事件、where 预视图过滤、distinct 聚合窗口/无界矩阵。
+> 引擎修复：`expressionTreeReadsCurrentEvent` 识别 join-event 列使无分组 join 聚合路由到
+> Java `ResultSetProcessorRowPerEvent` 形状。manifest 更新为 592 cases、205 DV、751 DV
+> runtime IDs、3372 associations；capability 118 个（34 DV）。
 > 最新补充：Draft 4.300（2026-09-02），新增 `resultset.aggregate-having` 的
 > `resultset-querytype-row-per-group-having` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeRowPerGroupHaving.java` 全部 5 个 execution（Java commit

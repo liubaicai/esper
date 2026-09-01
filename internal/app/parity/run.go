@@ -31,6 +31,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-table-access and resultset-aggregate-sorted-table-access-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-minmax-by-no-alias and resultset-aggregate-sorted-minmax-by-no-alias-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-row-per-group-having and resultset-querytype-row-per-group-having-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-querytype-row-per-event and resultset-querytype-row-per-event-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -2531,6 +2532,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetQueryTypeRowPerGroupHavingJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetQueryTypeRowPerGroupHavingJavaSources),
 				splitMetadata(*javaExecutions, resultsetQueryTypeRowPerGroupHavingJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-querytype-row-per-event" || *mode == "resultset-querytype-row-per-event-diff" {
+		trace, err := runResultsetQueryTypeRowPerEventScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-row-per-event-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetQueryTypeRowPerEventJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetQueryTypeRowPerEventJavaSources),
+				splitMetadata(*javaExecutions, resultsetQueryTypeRowPerEventJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

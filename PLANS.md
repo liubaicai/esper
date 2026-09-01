@@ -31,74 +31,59 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-09-02; Draft 4.300 (`resultset-querytype-row-per-group-having`) is implemented and
-  differentially verified (Java/Go 11 records each, 0 differences, 5 runtime IDs); manifest summary
-  591 cases / 204 DV cases / 744 DV runtime IDs / 3365 associations. Focused gates pass
-  (`go test ./...` full suite green; targeted esper/compat/parity suites green). `make check` rerun and
-  `make test-race`, independent review, and commit remain.
-- Baseline: `HEAD` == `origin/master` at `dbb434c5e` (`feat(resultset): port no-alias statement metadata`);
-  Draft 4.300 changes are uncommitted and confined to the row-per-group-having parity surface, the
-  shared-core grouped old-row/having-containment fixes, and central facts.
-- Closed predecessor (Draft 4.299): `ResultSetAggregateSortedMinMaxBy.java` ordinal 3 `ResultSetAggregateNoAlias`
-  deploy-only metadata differential; committed and pushed as `dbb434c5e`.
+- Updated: 2026-09-02; Draft 4.301 (`resultset-querytype-row-per-event`) is implemented and
+  differentially verified (Java/Go 28 records each, 0 differences, 7 runtime IDs); manifest summary
+  592 cases / 205 DV cases / 751 DV runtime IDs / 3372 associations. Gates green: `make check`,
+  `make test-race` (parity 202s, esper 419s), full `go test ./...`. Independent review PASS with
+  3 P3 notes (static-ID list expanded to the 7 per-execution IDs afterwards; oracle reflection
+  ordering immaterial under CanonicalTrace map comparison; 365-day window comment documented).
+  Commit remains.
+- Baseline: `HEAD` == `origin/master` at `80bb5235a` (prefetch checkpoint); Draft 4.301 changes
+  are uncommitted and confined to the row-per-event parity surface, the shared-core
+  expressionTreeReadsCurrentEvent join-event recognition, and central facts.
+- Closed predecessor (Draft 4.300): `ResultSetQueryTypeRowPerGroupHaving.java` ordinals 0-4
+  differential-verified; committed and pushed as `575e4a7ba`.
 
 ## Current work unit
-Draft 4.300 is frozen as the five executions of `ResultSetQueryTypeRowPerGroupHaving.java`
-(ordinals 0-4; runtimes `java-runtime-fabf6dfeea92bd82d953`, `java-runtime-b77f112e44eb71ef5269`,
-`java-runtime-8e64b633898a3cf68ed8`, `java-runtime-3673c61f7b1a281d9970`, `java-runtime-cd60cf2c28460a91c7d1`;
-shared static/inventory ID `java-002a2b5ee61a47346e61`, flags empty). Scenario
-`testdata/parity/resultset-querytype-row-per-group-having.json` (loose shape, 5 cases), Java oracle
-`tools/java-oracle/ResultSetQueryTypeRowPerGroupHavingScenarioOracle.java` with run script, Go runner
-`internal/app/parity/resultset_querytype_row_per_group_having.go`, mode
-`resultset-querytype-row-per-group-having[-diff]`, tests in run_test.go + engine unit test
-`internal/esper/having_containment_parity_test.go`. Engine fixes: (1) grouped row-per-group remove-stream
-rows evaluate the PRE-removal group state (Java selectOldEvents precedes applyAggViewResultKeyedView) so
-the DELL eviction old row reports mySum=100 with having gated at the pre-subtraction sum;
-(2) `validateAggregateHavingContainment` mirrors Java `validateHaving` and fires only for aggregated
-statements (having intPrimitive > 5 over a grouped select stays legal). Representation registration:
-Java `select *` wildcard row == Go explicit full-SupportBean property projection (20 fields,
-charPrimitive `"\u0000"`); declared-expression compile boundary pinned with Java's exact sentence.
+Draft 4.301 is frozen as all 7 executions of `ResultSetQueryTypeRowPerEvent.java`
+(ordinals 0-6; runtimes `java-runtime-5111b05c6bc620b88e15`, `java-runtime-50601d6f0cc0411a9f90`,
+`java-runtime-06c962063c57e3a3adee`, `java-runtime-14d3e2b22e8c3ef00657`,
+`java-runtime-1f1dae3e5953610a77e3`, `java-runtime-9160c96fccf23486d782`,
+`java-runtime-cce782d69a46b20b8609`; per-execution static IDs `java-1a361248f817f0b81296`,
+`java-7d58340c8817c9bfb25e`, `java-8dd67a080a802003aaa8`, `java-e24ebbd3fbf82c30ea82`,
+`java-282eb4e43b87f9a56d65`, `java-bd1527f8f8cd1b5ed493`, `java-1bb7052967b0e94389eb`; flags empty).
+Scenario `testdata/parity/resultset-querytype-row-per-event.json` (7 cases), Java oracle
+`tools/java-oracle/ResultSetQueryTypeRowPerEventScenarioOracle.java` with run script, Go runner
+`internal/app/parity/resultset_querytype_row_per_event.go`, mode
+`resultset-querytype-row-per-event[-diff]`, 2 tests in run_test.go. Engine fix:
+`expressionTreeReadsCurrentEvent` recognizes `join-event` columns so an ungrouped join aggregate
+with an unaggregated current-tuple column routes to Java `ResultSetProcessorRowPerEvent`
+(one row per input tuple). Representation registration: whole-bean `sb` and `window(s0.*)` rows
+render through the underlying bean's full 20-property map (charPrimitive `"\u0000"`); null
+symbol/volume are pointer schema fields so `count(distinct)`/distinct dedup skips them exactly
+like Java's `ifRefNull` gate; ungrouped having binding the current event (ESPER-571) and
+pre-view `where` filtering are pinned.
 
 ## Delegation checkpoint
-Batch `RpgJavaContract` (java-oracle-scout) + `RpgGoSurface` (scout) ran as parallel read-only scouts;
-both delivered full reports inline (agent local-file writes were unavailable to them). Contract frozen
-in `local://rpg-having-contract.md`. Primary owns shared-core semantics (`internal/esper/plan.go`,
-`internal/esper/runtime.go`), the Go runner, run.go registration, tests, scenario, generated
-traces/evidence, manifest, roadmap, CHANGELOG, validation, review, commit, and push. The Java oracle and
-run script were authored by the primary from the frozen contract after the asset-lane files could not be
-safely delegated (single-writer window had already opened on the shared-core fix needed to compile the
-scenario; no disjoint asset writer was started).
+Draft 4.301 batch `RpeJavaContract` (java-oracle-scout) + `RpeGoSurface` (scout) ran as parallel
+read-only scouts during the Draft 4.300 review window; both delivered reports inline. Primary owns
+all implementation, central facts, validation, review, commit, and push. Reviewer `RpeReview`
+(parity-reviewer) verified the integrated diff read-only.
 
 ## Progress
-- Independent parity review `RpgReview` (parity-reviewer): verdict PASS, 0 P1/P2 findings,
-  4 P3 notes — (1) javaStaticIds positional alignment: FIXED in this unit (reordered to
-  execution order); (2) grouped multi-leaving-batch old-row cardinality (per-group vs
-  per-leaving) is pre-existing and pinned by no current scenario — dedupe to one old row per
-  group before any future multi-leaving differential unit; (3) isAggregated gate omits
-  order-by aggregates — extend before any having+order-by-aggregate parity unit;
-  (4) defined-expr deployed marker emitted by oracle code instead of a scenario step —
-  cosmetic only, record shape identical.
-- Validation before commit: `go test ./...` full suite green (exit 0); `make check` green
-  (check-layout, vet, all packages); `make test-race` green (parity 201s, esper 422s, compat,
-  manifest suites); differential `resultset-querytype-row-per-group-having-diff` passing with
-  0 differences over 11 records × 2 sides; mutation tests reject 9/9 trace mutations;
-  engine unit test `TestHavingContainmentValidation` pins the Java sentence.
-- Commit: one semantic commit `feat(resultset): port row-per-group having 5 runtimes` pushed
-  to `master`. Do not write a post-push checkpoint-only commit.
-- Prefetched N+1 (Draft 4.301, read-only, NO writes yet): `ResultSetQueryTypeRowPerEvent.java`
-  all 7 executions (ordinals 0-6, shared inventory/static ID `java-1a361248f817f0b81296`, flags
-  empty). Runtime IDs: 0 `java-runtime-5111b05c6bc620b88e15`, 1 `java-runtime-50601d6f0cc0411a9f90`,
-  2 `java-runtime-06c962063c57e3a3adee`, 3 `java-runtime-14d3e2b22e8c3ef00657`,
-  4 `java-runtime-1f1dae3e5953610a77e3`, 5 `java-runtime-9160c96fccf23486d782`,
-  6 `java-runtime-cce782d69a46b20b8609`. Full per-execution contracts from `RpeJavaContract` and
-  wiring/gap analysis from `RpeGoSurface` are in the session transcripts (agents RpeJavaContract /
-  RpeGoSurface; key facts: no blocking API gaps — DistinctAggregate/CountDistinct/Cast for volume
-  *int64, Where pre-filter, JoinEventValue+WindowValues for window(s0.*)+sb, ungrouped having
-  containment exempt, istream selector still fills old arrays internally for listener delivery in
-  ord 6; old rows carry evicted row columns with POST-eviction sums in ord 0/1/5; ord 3 ESPER-571
-  having binds current event; iterator snapshots in ord 0/1 recommended via snapshot op).
-  Implementation mode: `resultset-querytype-row-per-event[-diff]`, plain LoadScenario, runner file
-  `internal/app/parity/resultset_querytype_row_per_event.go` copying the 4.300 exemplar.
+- Independent parity review `RpeReview`: verdict PASS, 0 P1/P2 findings, 3 P3 notes —
+  (1) per-execution javaStaticIds listed (applied, matching static-manifest.json);
+  (2) oracle normalizeBean reflection order immaterial under CanonicalTrace map comparison;
+  (3) unagg-having 365-day window is a documented surrogate for Java #time(1) with no clock
+  advancement on either side.
+- Validation before commit: `make check` green; `make test-race` green (parity 202s, esper 419s);
+  differential `resultset-querytype-row-per-event-diff` passing with 0 differences over 28
+  records × 2 sides; mutation tests reject 10/10 trace mutations.
+- Commit: one semantic commit `feat(resultset): port row-per-event result sets 7 runtimes`
+  pushed to `master`. Do not write a post-push checkpoint-only commit.
+- Next unit selection: reopen N+1 prefetch when this unit is committed (candidates:
+  `ResultSetQueryTypeAggregateGroupedHaving.java` 4 executions, `ResultSetOutputLimitRowLimit.java`
+  7 uncovered, `ResultSetOrderByAggregateGrouped.java` 8 uncovered, epl/infra P1 domains).
 
 - Previous unit (Draft 4.261, implemented, review PASS, pending commit):
   case.variables-use closed EPLVariablesUse at 9/11 executions (101/101

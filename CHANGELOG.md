@@ -1,3 +1,25 @@
+> 最新补充：Draft 4.301（2026-09-02），新增 `resultset.aggregate-group-by` 的
+> `resultset-querytype-row-per-event` differential-verified 场景，对照固定 Java
+> `ResultSetQueryTypeRowPerEvent.java` 全部 7 个 execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes `java-runtime-5111b05c6bc620b88e15`、
+> `java-runtime-50601d6f0cc0411a9f90`、`java-runtime-06c962063c57e3a3adee`、
+> `java-runtime-14d3e2b22e8c3ef00657`、`java-runtime-1f1dae3e5953610a77e3`、
+> `java-runtime-9160c96fccf23486d782`、`java-runtime-cce782d69a46b20b8609`；shared
+> static/inventory ID `java-1a361248f817f0b81296`；无 flags）：Java/Go 各 28 条 records、
+> 0 differences。场景覆盖 irstream `longPrimitive`/`sum(longBoxed)` over length(3) 的视图与
+> `SupportBeanString` join 孪生（旧行携带被淘汰行自身的 longPrimitive 与淘汰后 mySum）、
+> `window(s0.*)`+`sb` keepall join（SB 方向每个匹配元组一行、S0 方向 sb 绑定窗口最新
+> SupportBean、rows 为全窗口快照）、ESPER-571 无分组 `max having max > intBoxed`（非聚合
+> 属性绑定当前事件、门控失败完全静默）、`sum/avg where symbol='IBM'` 预视图过滤（被过滤
+> 事件不进窗口、不淘汰）、`sum(distinct volume)` over length(3) 与无界
+> `avg(distinct volume)`/`count(distinct symbol)`（每次发送配对前一状态旧行，首个配对为
+> avg null/count 0；null volume/symbol 不贡献）。引擎修复：`expressionTreeReadsCurrentEvent`
+> 识别 join-event 列，使带非聚合当前元组列的无分组 join 聚合路由到 Java
+> `ResultSetProcessorRowPerEvent` 形状（每个输入元组一行）。表示登记：整 bean 列与
+> window(s0.*) 行以底层 bean 全属性映射渲染（20 字段、charPrimitive `"\u0000"`）；null
+> symbol/volume 以指针 schema 字段表达使 count(distinct) 与 Java `ifRefNull` 门控一致跳过。
+> manifest 更新为 592 cases、205 个 differential-verified case、751 个 differential runtime
+> IDs、3372 条 associations（referenced 3146）；capability 118 个（34 DV）。
 > 最新补充：Draft 4.300（2026-09-02），新增 `resultset.aggregate-having` 的
 > `resultset-querytype-row-per-group-having` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeRowPerGroupHaving.java` 全部 5 个 execution（Java commit
