@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.302（2026-09-02），新增 `resultset.aggregate-having` 的
+> `resultset-querytype-aggregate-grouped-having` differential-verified 场景，对照固定 Java
+> `ResultSetQueryTypeAggregateGroupedHaving.java` 全部 4 个 execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes `java-runtime-1474d172cf4f2a19b5d7`、
+> `java-runtime-88a7913c4758d8de0bc9`、`java-runtime-dbe24180b80fd3c64d66`、
+> `java-runtime-aafa294bfd2a1104befd`；shared inventory/static ID
+> `java-29aa3ed4e339f5786c1f`，specific static candidates `java-cc01f532a81e94885155`、
+> `java-a24c796fd8d8a7f7d632`；无 flags）：Java/Go 各 6 条 listener records、0 differences。
+> 场景覆盖 `length_batch(3)` 分组 `count(*) > 1` 的 wildcard 与 join 逐事件冲刷、
+> `irstream sum(price) >= 50` 的单视图/join 孪生、预扣除 remove-stream 旧行，以及
+> `where` 在 `#length(3)` 之后的 unmatched-symbol 淘汰边界；typed Go 使用
+> `LengthBatch`、`LengthWindow`、`Filter`、`GroupBy`、`CountAll`、`Sum`、`Having`、
+> `JoinMany`、`JoinField`、`WithOldStream` 与显式 SupportBean 属性投影。运行时修复将
+> grouped aggregate 的非 key 事件绑定新行按 Java per-event 形状发送，并保持原有旧行分类。
+> manifest 更新为 593 cases、206 个 differential-verified case、755 个 differential runtime
+> IDs、3376 条 associations（referenced 3150）；capability 119 个（34 DV）。
+
 > 最新补充：Draft 4.301（2026-09-02），新增 `resultset.aggregate-group-by` 的
 > `resultset-querytype-row-per-event` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeRowPerEvent.java` 全部 7 个 execution（Java commit
@@ -1168,12 +1185,11 @@
 
 重点领域：
 
-- epl 剩余 412 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
-- infra 剩余 248 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
+- epl 剩余 305 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- infra 剩余 196 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
-- resultset 聚合高级特性（filtered、math-context、访问聚合、rollup 组合）。
+- resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
 - context 分区 selector、嵌套、生命周期、事务边界。
-- infra 表/命名窗口剩余 mutation/merge/transaction 场景。
 - expression 剩余类型、函数、脚本、枚举集合高级组合。
 - event、expr、resultset、context、view 和 rowrecog 的未关联 runtime 按当前清单继续拆分。
 - multithread 并发测试仍有 56 个未关联 runtime；它们优先进入 race/stress 里程碑，而不是仅做静态映射。
@@ -1194,19 +1210,18 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-
-- 处理 approved-difference 与明确不适用项。
-- 补充 static-manifest.json 和 source-test-manifest.json。
-- 完整 Java/Go 行为差分审计。
-- 竞态、模糊、内存、性能基准。
-- 用户文档、API 参考、examples/ 扩展。
-- `master` 上完成最终验收并发布。
-## 5. 剩余工作优先级
+- epl 剩余 305 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- infra 剩余 196 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
+- join 与 outer join 复杂链、unidirectional、Context Join。
+- resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
+- context 分区 selector、嵌套、生命周期、事务边界。
+- expression 剩余类型、函数、脚本、枚举集合高级组合。
+- event、expr、resultset、context、view 和 rowrecog 的未关联 runtime 按当前清单继续拆分。
 
 ### 5.1 P0 — 立即完成
 
 1. 完成全量 `go test`、race、vet、布局和 diff 门禁，并将结果回写 Manifest v2。
-2. 扩展 persisted differential evidence。当前有 147 个 differential-verified case（466 个 runtime）和 94/94 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
+2. 扩展 persisted differential evidence。当前有 206 个 differential-verified case（755 个 runtime）和 107/107 个通过的 representative scenario；下一步优先转换共享 runtime 和高风险状态能力，不在路线图手写完整场景名称列表。
 3. 按未关联 runtime 和行为风险拆分下一批 epl/infra/expr/resultset/context 切片。
 4. 外部服务 fixture 已本地验证（2026-08-14 MySQL/Kafka/RabbitMQ 全部门控 round-trip 通过）；暂不建设 CI，后续按执行手册定期本地 Docker 重放，并保持普通测试中的显式环境型 skip。
 5. 已建立环境门控 stress 基线（`ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'`）；已实现 `windowHistoryByEventRequired` 按需构建 `historyByEvent`，基线从 42.6s 降至 18.45s；继续优化剩余 filter/window/aggregate/join 热点后再宣称 NFR。
@@ -1217,21 +1232,20 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 412 | subselect、insertinto、database、dataflow、方法源 |
-| infra | 248 | 表、Named Window、mutation、transaction |
-| resultset | 198 | 聚合、输出、排序、分组 |
-| expr | 172 | 表达式函数、类型、脚本、枚举集合 |
-| context | 45 | Context 分区、嵌套、生命周期 |
-| view | 40 | 视图高级组合 |
-| event | 170 | 事件表示和 Serde 完整矩阵 |
+| epl | 305 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 196 | 表、Named Window、mutation、transaction |
+| event | 151 | 事件表示和 Serde 完整矩阵 |
+| expr | 102 | 表达式函数、类型、脚本、枚举集合 |
+| resultset | 70 | 聚合、输出、排序、分组 |
 | multithread | 56 | 并发回归 |
+| context | 45 | Context 分区、嵌套、生命周期 |
 | rowrecog | 34 | Match Recognize |
+| view | 27 | 视图高级组合 |
 
 ### 5.3 P2 — 清单与能力拆分
 
 - 将 epl/expr/resultset 等粗粒度 capability 拆分为更细 case，便于追踪。
 - 填充 static-manifest.json 与 source-test-manifest.json。
-- 对 intentionally-different case 写出并维护书面差异理由。
 
 ### 5.4 P3 — 验收与工程化
 
@@ -1248,23 +1262,22 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 412 | subselect、insertinto、database、dataflow、方法源 |
-| infra | 248 | 表、Named Window、mutation、transaction |
-| resultset | 198 | 聚合、输出、排序、分组 |
-| expr | 172 | 表达式函数、类型、脚本、枚举集合 |
-| event | 170 | 事件表示和 Serde 完整矩阵 |
+| epl | 305 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 196 | 表、Named Window、mutation、transaction |
+| event | 151 | 事件表示和 Serde 完整矩阵 |
+| expr | 102 | 表达式函数、类型、脚本、枚举集合 |
+| resultset | 70 | 聚合、输出、排序、分组 |
 | context | 45 | Context 分区、嵌套、生命周期 |
-| view | 40 | 视图高级组合 |
 | multithread | 56 | 并发回归 |
 | rowrecog | 34 | Match Recognize |
-
+| view | 27 | 视图高级组合 |
 ### 6.2 清单与追踪遗漏
 
 - static-manifest.json 目前几乎为空，需要把静态/编译期候选登记进去。
 - source-test-manifest.json 目前几乎为空，需要把非 Regression 源资产（单元测试、集成测试）登记进去。
 - epl/expr/resultset 等 capability 拆分过粗，需要继续细分为可验收的 case。
-- 18 个 intentionally-different case 需要保持书面差异理由和测试证据。
-- 当前未关联的 1,235 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
+- 23 个 intentionally-different case 需要保持书面差异理由和测试证据。
+- 当前未关联的 986 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
 
 ### 6.3 能力与边界遗漏
 

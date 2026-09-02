@@ -31,18 +31,39 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-09-02; Draft 4.301 (`resultset-querytype-row-per-event`) is implemented and
-  differentially verified (Java/Go 28 records each, 0 differences, 7 runtime IDs); manifest summary
-  592 cases / 205 DV cases / 751 DV runtime IDs / 3372 associations. Gates green: `make check`,
-  `make test-race` (parity 202s, esper 419s), full `go test ./...`. Independent review PASS with
-  3 P3 notes (static-ID list expanded to the 7 per-execution IDs afterwards; oracle reflection
-  ordering immaterial under CanonicalTrace map comparison; 365-day window comment documented).
-  Commit remains.
-- Baseline: `HEAD` == `origin/master` at `80bb5235a` (prefetch checkpoint); Draft 4.301 changes
-  are uncommitted and confined to the row-per-event parity surface, the shared-core
-  expressionTreeReadsCurrentEvent join-event recognition, and central facts.
-- Closed predecessor (Draft 4.300): `ResultSetQueryTypeRowPerGroupHaving.java` ordinals 0-4
-  differential-verified; committed and pushed as `575e4a7ba`.
+- Updated: 2026-09-02; Draft 4.302 (`resultset-querytype-aggregate-grouped-having`) is implemented and differentially verified. All four Java executions replay through the checked-in scenario, Java/Go traces, and passing evidence; full gates, independent review, commit, and push remain.
+- Baseline: `HEAD` == `origin/master` at `dbb434c5e`; the active Draft 4.302 worktree changes cover the grouped-having parity runner/oracle/scenario, `run.go`, `run_test.go`, the shared aggregate dispatch changes in `internal/esper/runtime.go`, the manifest, and this checkpoint.
+- Closed predecessor (Draft 4.301): `ResultSetQueryTypeRowPerEvent.java` all 7 executions were differentially verified and committed/pushed as `dbb434c5e`.
+
+## Current work unit
+Draft 4.302 is frozen as all four executions of `ResultSetQueryTypeAggregateGroupedHaving.java`
+(ordinals 0-3; runtimes `java-runtime-1474d172cf4f2a19b5d7`, `java-runtime-88a7913c4758d8de0bc9`,
+`java-runtime-dbe24180b80fd3c64d66`, `java-runtime-aafa294bfd2a1104befd`; shared inventory/static ID
+`java-29aa3ed4e339f5786c1f`, specific static candidates `java-cc01f532a81e94885155` and
+`java-a24c796fd8d8a7f7d632`; flags empty). The fixed Java source is
+`/root/app/esper/regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeAggregateGroupedHaving.java`.
+The scenario is `testdata/parity/resultset-querytype-aggregate-grouped-having.json`, oracle
+`tools/java-oracle/ResultSetQueryTypeAggregateGroupedHavingScenarioOracle.java`, and Go runner
+`internal/app/parity/resultset_querytype_aggregate_grouped_having.go` with modes
+`resultset-querytype-aggregate-grouped-having[-diff]`. Java applies `where` after `#length(3)`;
+the Go market-data plan therefore retains all events in the window before filtering, preserving
+unmatched-symbol eviction and the pre-removal old-row contract.
+
+## Delegation checkpoint
+Draft 4.302 read-only scouts `GroupedHavingJava` (java-oracle-scout) and `GroupedHavingGo`
+(scout) completed concurrently. They confirmed the four source-order runtime mappings above,
+the grouped count/sum old/new contract, the strict loader/test/evidence gaps, and the
+filter-before-window regression. Primary owns shared semantics, runner integration, generated
+trace/evidence, central facts, validation, review, commit, and push; no subagent may modify those.
+
+- The strict grouped scenario loader, four typed replay plans, post-window filter ordering, and mutation/replay assertions are implemented.
+- Targeted validation is green: `go test ./internal/app/parity -run 'TestRunResultSetQueryTypeAggregateGroupedHaving' -count=1 -timeout 180s`; `go test ./internal/compat -run 'TestCapabilityManifest' -count=1`; `jq empty testdata/compat/capability-manifest.json`; and `git diff --check`.
+- Checked-in Java/Go traces and evidence report passing with zero differences; the checked-in replay test compares both traces and the generated Go replay. Manifest accounting is updated to 593 cases, 206 differential-verified cases, 755 differential runtime IDs, 3376 runtime associations, and 3150 referenced runtimes.
+- Full local gates pass via `make check`: layout, `go vet ./...`, `go test ./... -count=1 -timeout 240s`, and the complete package suite.
+- Independent parity review `GroupedHavingFinalReview` passed with no concrete defects; it verified the four runtime mappings, checked-in traces/evidence, strict scenario validation, filter/window ordering, grouped old/new semantics, and manifest inventory resolution.
+- The unit is ready for one semantic commit and direct push; do not write a post-push checkpoint-only commit because Git owns the final commit identity.
+
+## Prior outcomes
 
 ## Current work unit
 Draft 4.301 is frozen as all 7 executions of `ResultSetQueryTypeRowPerEvent.java`

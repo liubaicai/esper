@@ -26186,3 +26186,314 @@ func TestRunResultSetQueryTypeRowPerEventDiffRejectsTraceMutations(t *testing.T)
 		})
 	}
 }
+func TestRunResultSetQueryTypeAggregateGroupedHavingRejectsMalformedStrictScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-querytype-aggregate-grouped-having.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-querytype-aggregate-grouped-having"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-querytype-aggregate-grouped-having"`)...), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "groupby-having-nojoin",`), []byte(`"case": "groupby-having-nojoin", "extra": 0,`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 0`), []byte(`"ordinal": 9`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-1474d172cf4f2a19b5d7"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"id": 1`), []byte(`"id": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"id": 1`), []byte(`"id": 1, "id": 2`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			path := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(path, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", "resultset-querytype-aggregate-grouped-having", "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetQueryTypeAggregateGroupedHavingMetadataRuntimeMapping(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-aggregate-grouped-having.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != resultsetQueryTypeAggregateGroupedHavingID || document.JavaCommit != resultsetQueryTypeAggregateGroupedHavingJavaCommit {
+		t.Fatalf("scenario identity = %#v", document)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, resultsetQueryTypeAggregateGroupedHavingJavaRuntimeIDs) || !reflect.DeepEqual(document.JavaNames, resultsetQueryTypeAggregateGroupedHavingJavaExecutions) || len(document.JavaStaticIDs) == 0 || len(document.JavaFlags) != 0 {
+		t.Fatalf("scenario Java metadata runtimes=%v names=%v staticIDs=%v flags=%v", document.JavaRuntimes, document.JavaNames, document.JavaStaticIDs, document.JavaFlags)
+	}
+	if len(document.Cases) != 4 {
+		t.Fatalf("cases = %d, want 4", len(document.Cases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetQueryTypeAggregateGroupedHavingCases[index] || entry.Ordinal != index || entry.RuntimeID != resultsetQueryTypeAggregateGroupedHavingJavaRuntimeIDs[index] || entry.ExecutionName != resultsetQueryTypeAggregateGroupedHavingJavaExecutions[index] || entry.Observation != "listener" || entry.IteratorSnapshots != 0 || entry.EPL == "" {
+			t.Fatalf("case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func TestRunResultSetQueryTypeAggregateGroupedHavingDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "record-mutation", mutate: func(trace *compat.Trace) { trace.Records[0].Case = "wrong-case" }},
+		{name: "value-mutation", mutate: func(trace *compat.Trace) { trace.Records[2].New[0].Fields["mySum"] = json.Number("999") }},
+		{name: "old-stream-mutation", mutate: func(trace *compat.Trace) { trace.Records[3].Old = nil }},
+		{name: "unmatched-symbol-eviction", mutate: func(trace *compat.Trace) { trace.Records[3].Old[0].Fields["symbol"] = "IBM" }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t, filepath.Join(root, "resultset-querytype-aggregate-grouped-having.trace.json"), test.mutate)
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{"-mode", "resultset-querytype-aggregate-grouped-having-diff", "-scenario", filepath.Join(root, "resultset-querytype-aggregate-grouped-having.json"), "-java-trace", javaTracePath, "-evidence", filepath.Join(t.TempDir(), "evidence.json")}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetQueryTypeAggregateGroupedHavingDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTracePath := filepath.Join(root, "resultset-querytype-aggregate-grouped-having.trace.json")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-aggregate-grouped-having.evidence.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-querytype-aggregate-grouped-having-diff",
+		"-scenario", filepath.Join(root, "resultset-querytype-aggregate-grouped-having.json"),
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetQueryTypeAggregateGroupedHavingJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetQueryTypeAggregateGroupedHavingJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetQueryTypeAggregateGroupedHavingJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetQueryTypeAggregateGroupedHavingJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultsetQueryTypeAggregateGroupedHavingTrace(t, evidence.JavaTrace)
+	assertResultsetQueryTypeAggregateGroupedHavingTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetQueryTypeAggregateGroupedHavingCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, "resultset-querytype-aggregate-grouped-having.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, "resultset-querytype-aggregate-grouped-having.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-querytype-aggregate-grouped-having.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in Java trace differs from evidence: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from evidence: %#v", differences)
+	}
+	assertResultsetQueryTypeAggregateGroupedHavingTrace(t, javaTrace)
+	assertResultsetQueryTypeAggregateGroupedHavingTrace(t, goTrace)
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-mode", "resultset-querytype-aggregate-grouped-having", "-scenario", filepath.Join(root, "resultset-querytype-aggregate-grouped-having.json")}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from replay: %#v", differences)
+	}
+}
+
+func loadTraceFile(path string) (compat.Trace, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	trace, loadErr := compat.LoadTrace(file)
+	closeErr := file.Close()
+	if loadErr != nil {
+		return compat.Trace{}, loadErr
+	}
+	if closeErr != nil {
+		return compat.Trace{}, closeErr
+	}
+	return trace, nil
+}
+
+func assertResultsetQueryTypeAggregateGroupedHavingTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetQueryTypeAggregateGroupedHavingID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 6 {
+		t.Fatalf("trace records = %d, want 6", len(trace.Records))
+	}
+	for index, record := range trace.Records {
+		if record.Operation != "listener" || record.Statement != "s0" || record.Sequence != 1 && record.Sequence != 2 || record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d metadata = %#v", index, record)
+		}
+	}
+	if trace.Records[0].Case != "groupby-having-nojoin" || len(trace.Records[0].New) != 2 || len(trace.Records[0].Old) != 0 {
+		t.Fatalf("nojoin record = %#v", trace.Records[0])
+	}
+	assertGroupedHavingWildcardRow(t, trace.Records[0].New[0], "E2", 20)
+	assertGroupedHavingWildcardRow(t, trace.Records[0].New[1], "E2", 21)
+	if trace.Records[1].Case != "groupby-having-join" || len(trace.Records[1].New) != 2 || len(trace.Records[1].Old) != 0 {
+		t.Fatalf("join record = %#v", trace.Records[1])
+	}
+	assertGroupedHavingProjectedRow(t, trace.Records[1].New[0], "E2", 20)
+	assertGroupedHavingProjectedRow(t, trace.Records[1].New[1], "E2", 21)
+	if trace.Records[2].Case != "sum-one-view" || len(trace.Records[2].New) != 1 || len(trace.Records[2].Old) != 0 {
+		t.Fatalf("sum new record 2 = %#v", trace.Records[2])
+	}
+	assertGroupedHavingSumRow(t, trace.Records[2].New[0], "DELL", 20000, 103)
+	if trace.Records[4].Case != "sum-join" || len(trace.Records[4].New) != 1 || len(trace.Records[4].Old) != 0 {
+		t.Fatalf("sum new record 4 = %#v", trace.Records[4])
+	}
+	assertGroupedHavingSumRow(t, trace.Records[4].New[0], "DELL", 20000, 103)
+	if trace.Records[3].Case != "sum-one-view" || len(trace.Records[3].New) != 0 || len(trace.Records[3].Old) != 1 {
+		t.Fatalf("sum old record 3 = %#v", trace.Records[3])
+	}
+	assertGroupedHavingSumRow(t, trace.Records[3].Old[0], "DELL", 10000, 54)
+	if trace.Records[5].Case != "sum-join" || len(trace.Records[5].New) != 0 || len(trace.Records[5].Old) != 1 {
+		t.Fatalf("sum old record 5 = %#v", trace.Records[5])
+	}
+	assertGroupedHavingSumRow(t, trace.Records[5].Old[0], "DELL", 10000, 54)
+}
+
+func assertGroupedHavingWildcardRow(t *testing.T, row compat.ResultRecord, theString string, intPrimitive int64) {
+	t.Helper()
+	if row.Kind != "row" || len(row.Fields) != 20 || row.Fields["theString"] != theString {
+		t.Fatalf("wildcard row = %#v", row)
+	}
+	value, ok := row.Fields["intPrimitive"].(json.Number)
+	if !ok {
+		t.Fatalf("wildcard intPrimitive type = %T", row.Fields["intPrimitive"])
+	}
+	got, err := value.Int64()
+	if err != nil || got != intPrimitive {
+		t.Fatalf("wildcard intPrimitive = %v (err=%v), want %d", value, err, intPrimitive)
+	}
+	if row.Fields["charPrimitive"] != "\u0000" {
+		t.Fatalf("wildcard charPrimitive = %#v", row.Fields["charPrimitive"])
+	}
+}
+
+func assertGroupedHavingProjectedRow(t *testing.T, row compat.ResultRecord, theString string, intPrimitive int64) {
+	t.Helper()
+	if row.Kind != "row" || len(row.Fields) != 2 || row.Fields["theString"] != theString {
+		t.Fatalf("projected row = %#v", row)
+	}
+	value, ok := row.Fields["intPrimitive"].(json.Number)
+	if !ok {
+		t.Fatalf("projected intPrimitive type = %T", row.Fields["intPrimitive"])
+	}
+	got, err := value.Int64()
+	if err != nil || got != intPrimitive {
+		t.Fatalf("projected intPrimitive = %v (err=%v), want %d", value, err, intPrimitive)
+	}
+}
+
+func assertGroupedHavingSumRow(t *testing.T, row compat.ResultRecord, symbol string, volume, sum int64) {
+	t.Helper()
+	if row.Kind != "row" || len(row.Fields) != 3 || row.Fields["symbol"] != symbol {
+		t.Fatalf("sum row = %#v", row)
+	}
+	for name, want := range map[string]int64{"volume": volume, "mySum": sum} {
+		value, ok := row.Fields[name].(json.Number)
+		if !ok {
+			t.Fatalf("%s type = %T", name, row.Fields[name])
+		}
+		got, err := value.Int64()
+		if err != nil || got != want {
+			t.Fatalf("%s = %v (err=%v), want %d", name, value, err, want)
+		}
+	}
+}

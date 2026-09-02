@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.302（2026-09-02），新增 `resultset.aggregate-having` 的
+> `resultset-querytype-aggregate-grouped-having` differential-verified 场景，对照固定 Java
+> `ResultSetQueryTypeAggregateGroupedHaving.java` 全部 4 个 execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes `java-runtime-1474d172cf4f2a19b5d7`、
+> `java-runtime-88a7913c4758d8de0bc9`、`java-runtime-dbe24180b80fd3c64d66`、
+> `java-runtime-aafa294bfd2a1104befd`；shared inventory/static ID
+> `java-29aa3ed4e339f5786c1f`，specific static candidates `java-cc01f532a81e94885155`、
+> `java-a24c796fd8d8a7f7d632`；无 flags）：Java/Go 各 6 条 listener records、0 differences。
+> 场景覆盖 `length_batch(3)` 分组 `count(*) > 1` 的 wildcard 与 join 逐事件冲刷（失败组静默）、
+> `irstream sum(price) >= 50` 的单视图/join 孪生、预扣除 remove-stream 旧行，以及 `where`
+> 在 `#length(3)` 之后导致 unmatched `XXX` 消耗窗口并淘汰 `DELL49` 的顺序边界。typed Go
+> 使用 `LengthBatch`、`LengthWindow`、`Filter`、`GroupBy`、`CountAll`、`Sum`、`Having`、
+> `JoinMany`、`JoinField`、`WithOldStream` 与显式 SupportBean 属性投影；运行时修复 grouped
+> aggregate 非 key 事件绑定新行的 Java per-event 形状，同时保持旧行分类。manifest 更新为
+> 593 cases、206 个 differential-verified case、755 个 differential runtime IDs、3376 条
+> associations（referenced 3150）；capability 119 个（34 DV）。
+
 > 最新补充：Draft 4.301（2026-09-02），新增 `resultset.aggregate-group-by` 的
 > `resultset-querytype-row-per-event` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeRowPerEvent.java` 全部 7 个 execution（Java commit

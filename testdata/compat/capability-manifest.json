@@ -4711,10 +4711,11 @@
    "id": "resultset.aggregate-having",
    "domain": "resultset",
    "level": "G",
-   "summary": "Non-grouped aggregate and non-aggregate HAVING over windows, joins, batch releases, insert-into substreams and unbounded streams, grouped row-per-group HAVING with pre-removal remove-stream semantics, and the declared-expression having containment boundary",
+   "summary": "Non-grouped aggregate and non-aggregate HAVING over windows, joins, batch releases, insert-into substreams and unbounded streams, grouped row-per-group and grouped per-event batch HAVING with pre-removal remove-stream semantics, and the declared-expression having containment boundary",
    "javaRefs": [
     "ResultSetQueryTypeHaving",
-    "ResultSetQueryTypeRowPerGroupHaving"
+    "ResultSetQueryTypeRowPerGroupHaving",
+    "ResultSetQueryTypeAggregateGroupedHaving"
    ],
    "goRefs": [
     "internal/esper/stream.go",
@@ -4722,13 +4723,15 @@
     "internal/esper/plan.go",
     "internal/app/parity/resultset_query_type_having.go",
     "internal/app/parity/resultset_querytype_row_per_group_having.go",
-    "internal/esper/having_containment_parity_test.go"
+    "internal/esper/having_containment_parity_test.go",
+    "internal/app/parity/resultset_querytype_aggregate_grouped_having.go",
+    "internal/app/parity/run_test.go"
    ],
    "phase": 1,
    "status": "differential-verified",
    "remaining": [
     "StatementJoin plus NoAggregationJoinHaving/Where stay unregistered until Go join-aggregate old/new classification on sliding length(1) windows matches Java (4.241 remaining note)",
-    "grouped HAVING variants live in the dedicated aggregate-dimensional/output-limit suites",
+    "additional grouped HAVING variants live in the dedicated aggregate-dimensional/output-limit suites",
     "grouped HAVING row-per-group pre-removal old-row semantics beyond the five pinned executions"
    ],
    "verification": [
@@ -4743,7 +4746,11 @@
     "java-runtime-2aa18c37135a5c99514b",
     "java-runtime-4fe38de65dec8bcdf586",
     "java-runtime-0e551e1e4b7e85c94b37",
-    "java-runtime-77aeed87d8b7920a1bcf"
+    "java-runtime-77aeed87d8b7920a1bcf",
+    "java-runtime-1474d172cf4f2a19b5d7",
+    "java-runtime-88a7913c4758d8de0bc9",
+    "java-runtime-dbe24180b80fd3c64d66",
+    "java-runtime-aafa294bfd2a1104befd"
    ]
   },
   {
@@ -37205,6 +37212,79 @@
     "Representation registration: Java renders whole-event minby/minbyever outputs and sorted() rows as java.util.Map (map-underlying render), while the Go typed API keeps the SupportBean event identity (Event, []Event); those three property names are pinned in both runners and registered as Go-vs-Java representation differences rather than differential fields.",
     "The typed Go surface uses TimeWindow, Aggregate, Alias with the exact Java auto-generated names, Property, MaxBy, MinBy, MaxByEver, MinByEver, and SortedEvents. Scenario, Java oracle, and Go runner pin metadata, ordered names, differential type tokens, and record shape; strict validators reject malformed JSON, duplicate keys, extra/missing steps, and trace mutations."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-aggregate-grouped-having",
+   "javaRuntimeIds": [
+    "java-runtime-1474d172cf4f2a19b5d7",
+    "java-runtime-88a7913c4758d8de0bc9",
+    "java-runtime-dbe24180b80fd3c64d66",
+    "java-runtime-aafa294bfd2a1104befd"
+   ],
+   "javaStaticIds": [
+    "java-29aa3ed4e339f5786c1f",
+    "java-cc01f532a81e94885155",
+    "java-a24c796fd8d8a7f7d632"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeGroupByHaving{join=false}",
+    "ResultSetQueryTypeGroupByHaving{join=true}",
+    "ResultSetQueryTypeSumOneView",
+    "ResultSetQueryTypeSumJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeAggregateGroupedHaving.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeAggregateGroupedHavingDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeAggregateGroupedHavingDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeAggregateGroupedHavingCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeAggregateGroupedHavingRejectsMalformedStrictScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeAggregateGroupedHavingMetadataRuntimeMapping"
+   ],
+   "tags": [
+    "resultset",
+    "querytype",
+    "aggregate",
+    "grouped",
+    "having",
+    "join",
+    "length-batch",
+    "where",
+    "irstream",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-aggregate-grouped-having.json",
+    "testdata/parity/resultset-querytype-aggregate-grouped-having.trace.json",
+    "testdata/parity/resultset-querytype-aggregate-grouped-having.go.trace.json",
+    "testdata/parity/resultset-querytype-aggregate-grouped-having.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeAggregateGroupedHavingScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-aggregate-grouped-having.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "notes": [
+    "All four ResultSetQueryTypeAggregateGroupedHaving executions replayed through one shared scenario (6 Java/Go listener records each, 0 differences): length_batch(3) grouped count(*) > 1 wildcard and SupportBean_S0 join flushes emit one row per passing batch event, while the failing E1 group is suppressed; irstream sum(price) >= 50 view and SupportBeanString join twins emit DELL new rows and pre-subtraction old rows.",
+    "The market-data plans retain every event in length(3) before applying the Java where predicate, so an unmatched XXX event consumes retention capacity and the following IBM event evicts DELL49; the old-row trace pins that window/filter ordering. The grouped batch path classifies aggregate selections with non-key event bindings and emits per-event new rows, while row-per-group and remove-stream paths retain their existing state pairing.",
+    "Typed Go uses LengthBatch, LengthWindow, Filter, GroupBy, CountAll, Sum, Having, JoinMany, JoinField, WithOldStream and explicit SupportBean property selections. Strict scenario metadata and payload validation pins the Java commit, source, runtime/name/static-ID mappings, exact EPL and 26-step input; mutation tests reject trace value, record, old-stream and eviction changes."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1474d172cf4f2a19b5d7",
+    "java-runtime-88a7913c4758d8de0bc9",
+    "java-runtime-dbe24180b80fd3c64d66",
+    "java-runtime-aafa294bfd2a1104befd"
+   ]
   }
  ],
  "mappings": [
@@ -39911,13 +39991,17 @@
   {
    "capabilityId": "resultset.aggregate-group-by",
    "caseId": "case.resultset-querytype-row-per-event"
+  },
+  {
+   "capabilityId": "resultset.aggregate-having",
+   "caseId": "case.resultset-querytype-aggregate-grouped-having"
   }
  ],
  "summary": {
-  "inventoriedCases": 592,
-  "implementedCases": 590,
-  "differentialVerifiedCases": 205,
-  "differentialVerifiedRuntimeIds": 751,
+  "inventoriedCases": 593,
+  "implementedCases": 591,
+  "differentialVerifiedCases": 206,
+  "differentialVerifiedRuntimeIds": 755,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -39927,14 +40011,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3372,
-  "referencedJavaRuntimeIds": 3146,
+  "runtimeAssociationCount": 3376,
+  "referencedJavaRuntimeIds": 3150,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 990,
+  "unreferencedJavaRuntimeIds": 986,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 592,
+  "totalCases": 593,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 751
+  "differentialVerifiedRuntimeIDs": 755
  }
 }

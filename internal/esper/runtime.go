@@ -18095,13 +18095,14 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			}
 		}
 		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
-		if aggregateGroupedRowPerEvent {
-			// Java ResultSetProcessorAggregateGroupedImpl: one new row per
-			// incoming event of this group (plain columns bound to that
-			// event, aggregates over the post-update group state). A group
-			// touched only by leaving events posts no new row. The
-			// current-binding evaluation above only feeds the
-			// previous/emitted bookkeeping below.
+		// Java ResultSetProcessorAggregateGroupedImpl.generateOutputBatched
+		// ViewUnkeyed loops over every new event of the batch and evaluates
+		// the having per event (post-apply state, plain columns bound to that
+		// event), so grouped aggregates always emit one row per new event on
+		// the insert stream — not one row per group. The old-row shape keeps
+		// the row-per-group classification (previous-row pairing) above.
+		groupedPerEventNew := !tableSource && len(definition.groupBy) > 0 && len(groupingSets) == 1 && aggregateDefinitionReadsNonKeyEvent(definition) && plan.query.contextName == ""
+		if groupedPerEventNew {
 			for _, current := range delta.newEvents {
 				currentKey := aggregateGroupKey(definition.groupBy, group.groupingSet, current, now, r.variables)
 				if currentKey != key {
@@ -19257,7 +19258,7 @@ func aggregateDefinitionReadsNonKeyEvent(definition *aggregateDefinition) bool {
 		}
 		return false
 	}
-	hasAggregate := false
+	hasAggregate := definition.having != nil && expressionNodeContainsAggregate(definition.having.node())
 	readsNonKeyEvent := false
 	for _, selection := range definition.selections {
 		hasAggregate = hasAggregate || isAggregateExpression(selection.Expr)
@@ -19285,9 +19286,6 @@ func aggregateDefinitionSnapshotRowForEvent(definition *aggregateDefinition) boo
 // partition rather than the event whose arrival caused the aggregate update;
 // they must therefore keep the normal one-row-per-group result shape.
 func expressionTreeReadsCurrentEvent(expression Expr) bool {
-	if expression == nil || expression.node() == nil {
-		return false
-	}
 	var visit func(*exprNode) bool
 	visit = func(node *exprNode) bool {
 		if node == nil {
@@ -19299,7 +19297,7 @@ func expressionTreeReadsCurrentEvent(expression Expr) bool {
 		if expressionNodeIsAggregate(node) {
 			return false
 		}
-		if node.kind == "field" || node.kind == "join-field" || node.kind == "join-event" {
+		if node.kind == "field" || node.kind == "join-field" || node.kind == "join-event" || node.kind == "event-value" {
 			return true
 		}
 		for _, child := range node.children {
