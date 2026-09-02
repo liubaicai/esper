@@ -33,6 +33,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-row-per-group-having and resultset-querytype-row-per-group-having-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-row-per-event and resultset-querytype-row-per-event-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-aggregate-grouped-having and resultset-querytype-aggregate-grouped-having-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-filter-named-parameter and resultset-aggregate-filter-named-parameter-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -88,6 +89,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetAggregateSortedFirstLastScenario(file)
 	} else if *mode == "resultset-aggregate-sorted-minmax-by-no-alias" || *mode == "resultset-aggregate-sorted-minmax-by-no-alias-diff" {
 		scenario, err = loadResultSetAggregateSortedMinMaxByNoAliasScenario(file)
+	} else if *mode == "resultset-aggregate-filter-named-parameter" || *mode == "resultset-aggregate-filter-named-parameter-diff" {
+		scenario, err = loadResultSetAggregateFilterNamedParameterScenario(file)
 	} else if *mode == "rollup-dimensionality" || *mode == "rollup-dimensionality-diff" {
 		scenario, err = loadRollupDimensionalityScenario(file)
 	} else if *mode == "rollup-grouping-funcs-dedicated" || *mode == "rollup-grouping-funcs-dedicated-diff" {
@@ -2859,6 +2862,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, subselectAggregatedJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, subselectAggregatedJavaSources),
 				splitMetadata(*javaExecutions, subselectAggregatedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-filter-named-parameter" || *mode == "resultset-aggregate-filter-named-parameter-diff" {
+		trace, err := runResultSetAggregateFilterNamedParameterScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-filter-named-parameter-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateFilterNamedParameterJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, []string{resultsetAggregateFilterNamedParameterSource}),
+				splitMetadata(*javaExecutions, resultsetAggregateFilterNamedParameterJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

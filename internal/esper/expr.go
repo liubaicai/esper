@@ -5285,6 +5285,14 @@ func Rate(interval time.Duration, predicate ...Expression[bool]) AggregateExpres
 		if !hasLeave {
 			return Null()
 		}
+		// AggregatorRateEver only becomes reportable after an old point is
+		// removed. A stale point in the ever-state at the exact boundary is
+		// not itself a removal: unbound streams remain null until a later
+		// matching point supplies a non-zero rate (or a window leave makes the
+		// zero result observable).
+		if count == 0 && !ctx.IsLeaving {
+			return Null()
+		}
 		return Present(float64(count) / interval.Seconds())
 	})
 }

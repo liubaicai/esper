@@ -37285,6 +37285,80 @@
     "java-runtime-dbe24180b80fd3c64d66",
     "java-runtime-aafa294bfd2a1104befd"
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-filter-named-parameter",
+   "javaRuntimeIds": [
+    "java-runtime-7bc068fcf2ea07b9c1f7",
+    "java-runtime-dd319218418ee0418b21",
+    "java-runtime-4b24ef27ade0eae24258",
+    "java-runtime-3d732054eac8d5b8ba14"
+   ],
+   "javaStaticIds": [
+    "java-0c29efb6d43971aba5c4"
+   ],
+   "javaNames": [
+    "ResultSetAggregateMethodAggLeaving",
+    "ResultSetAggregateMethodAggNth",
+    "ResultSetAggregateMethodAggRateUnbound",
+    "ResultSetAggregateMethodAggRateBound"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilterNamedParameterDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilterNamedParameterDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilterNamedParameterDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilterNamedParameterCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilterNamedParameterRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilterNamedParameterRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "aggregate",
+    "filter",
+    "named-parameter",
+    "leaving",
+    "nth",
+    "rate",
+    "window",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-filter-named-parameter.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter.trace.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter.go.trace.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter.evidence.json",
+    "tools/java-oracle/ResultSetAggregateFilterNamedParameterScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-filter-named-parameter.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7bc068fcf2ea07b9c1f7",
+    "java-runtime-dd319218418ee0418b21",
+    "java-runtime-4b24ef27ade0eae24258",
+    "java-runtime-3d732054eac8d5b8ba14"
+   ],
+   "notes": [
+    "ResultSetAggregateFilterNamedParameter ordinals 4-7 replay one deterministic filtered-aggregate scenario (24 Java/Go listener records per side, 0 differences): length(2) leaving reports only evicted events, keep-all nth returns the zero-based reverse qualifying history, virtual-time rate pins the exact one-second boundary, and timestamp/quantity rate reports the first length-window eviction values.",
+    "The typed Go surface uses LengthWindow, Leaving, FilterAggregate, Nth, Rate, RateByTimestamp, and RateQuantityByTimestamp. The scenario and oracle pin the Java commit, source, runtime/name/static-ID mappings, exact EPL, payloads, virtual time, listener lifecycle, and record shape.",
+    "Strict validators reject malformed JSON, duplicate keys, extra or missing steps, and trace value, order, Null, time, and count mutations; the unbound filtered-rate boundary keeps Null when stale ever-state has no actual leave."
+   ]
   }
  ],
  "mappings": [
@@ -39995,13 +40069,17 @@
   {
    "capabilityId": "resultset.aggregate-having",
    "caseId": "case.resultset-querytype-aggregate-grouped-having"
+  },
+  {
+   "capabilityId": "resultset.aggregate-filtered",
+   "caseId": "case.resultset-aggregate-filter-named-parameter"
   }
  ],
  "summary": {
-  "inventoriedCases": 593,
-  "implementedCases": 591,
-  "differentialVerifiedCases": 206,
-  "differentialVerifiedRuntimeIds": 755,
+  "inventoriedCases": 594,
+  "implementedCases": 592,
+  "differentialVerifiedCases": 207,
+  "differentialVerifiedRuntimeIds": 759,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40011,14 +40089,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3376,
-  "referencedJavaRuntimeIds": 3150,
+  "runtimeAssociationCount": 3380,
+  "referencedJavaRuntimeIds": 3151,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 986,
+  "unreferencedJavaRuntimeIds": 985,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 593,
+  "totalCases": 594,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 755
+  "differentialVerifiedRuntimeIDs": 759
  }
 }

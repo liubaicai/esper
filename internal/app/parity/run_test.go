@@ -26497,3 +26497,353 @@ func assertGroupedHavingSumRow(t *testing.T, row compat.ResultRecord, symbol str
 		}
 	}
 }
+func TestRunResultSetAggregateFilterNamedParameterDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-filter-named-parameter",
+		"-scenario", filepath.Join(root, "resultset-aggregate-filter-named-parameter.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetAggregateFilterNamedParameterTrace(t, trace)
+}
+
+func TestRunResultSetAggregateFilterNamedParameterDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-filter-named-parameter.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-filter-named-parameter-diff",
+		"-scenario", filepath.Join(root, "resultset-aggregate-filter-named-parameter.json"),
+		"-java-trace", filepath.Join(root, "resultset-aggregate-filter-named-parameter.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetAggregateFilterNamedParameterJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateFilterNamedParameterJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateFilterNamedParameterSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateFilterNamedParameterJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetAggregateFilterNamedParameterTrace(t, evidence.JavaTrace)
+	assertResultSetAggregateFilterNamedParameterTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetAggregateFilterNamedParameterDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[3].New[0].Fields["c1"] = false
+		}},
+		{name: "null-state", mutate: func(trace *compat.Trace) {
+			trace.Records[13].New[0].Fields["c0"] = json.Number("0")
+		}},
+		{name: "record-order", mutate: func(trace *compat.Trace) {
+			trace.Records[0], trace.Records[1] = trace.Records[1], trace.Records[0]
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[12].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-aggregate-filter-named-parameter.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-filter-named-parameter.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-filter-named-parameter-diff",
+				"-scenario", filepath.Join(root, "resultset-aggregate-filter-named-parameter.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateFilterNamedParameterCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, "resultset-aggregate-filter-named-parameter.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, "resultset-aggregate-filter-named-parameter.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-aggregate-filter-named-parameter.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from evidence Go trace: %#v", differences)
+	}
+	assertResultSetAggregateFilterNamedParameterTrace(t, javaTrace)
+	assertResultSetAggregateFilterNamedParameterTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-aggregate-filter-named-parameter.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetAggregateFilterNamedParameterScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.JavaCommit != resultsetAggregateFilterNamedParameterJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateFilterNamedParameterJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateFilterNamedParameterSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateFilterNamedParameterJavaExecutions) {
+		t.Fatalf("checked-in evidence Java metadata = %#v", evidence)
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetAggregateFilterNamedParameterJavaCommit,
+		resultsetAggregateFilterNamedParameterJavaRuntimeIDs,
+		[]string{resultsetAggregateFilterNamedParameterSource},
+		resultsetAggregateFilterNamedParameterJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-aggregate-filter-named-parameter",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in Go trace differs from replay: %#v", differences)
+	}
+	assertResultSetAggregateFilterNamedParameterTrace(t, replayed)
+}
+
+func TestRunResultSetAggregateFilterNamedParameterRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-aggregate-filter-named-parameter.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "resultset-aggregate-filter-named-parameter"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "resultset-aggregate-filter-named-parameter"`)...), 1)
+		}},
+		{name: "case-metadata", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 4`), []byte(`"ordinal": 5`), 1)
+		}},
+		{name: "step-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "leaving"}`), []byte(`{"op": "case", "case": "leaving", "extra": 0}`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1", "intPrimitive": 2`), []byte(`"theString": "E1", "intPrimitive": 2, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1", "intPrimitive": 2`), []byte(`"theString": "E1", "intPrimitive": 2, "intPrimitive": 3`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 2`), []byte(`"intPrimitive": 2.5`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "resultset-aggregate-filter-named-parameter",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetAggregateFilterNamedParameterRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-filter-named-parameter.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, resultsetAggregateFilterNamedParameterJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetAggregateFilterNamedParameterJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, []string{resultsetAggregateFilterNamedParameterStaticID}) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(resultsetAggregateFilterNamedParameterCases) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v staticIDs=%v flags=%v cases=%d", document.JavaRuntimes, document.JavaNames, document.JavaStaticIDs, document.JavaFlags, len(document.Cases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetAggregateFilterNamedParameterCases[index] ||
+			entry.Ordinal != resultsetAggregateFilterNamedParameterOrdinals[index] ||
+			entry.RuntimeID != resultsetAggregateFilterNamedParameterJavaRuntimeIDs[index] ||
+			entry.ExecutionName != resultsetAggregateFilterNamedParameterJavaExecutions[index] ||
+			entry.Observation != "listener" || entry.IteratorSnapshots != 0 ||
+			entry.EPL != resultsetAggregateFilterNamedParameterCaseEPLs[index] {
+			t.Fatalf("case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertResultSetAggregateFilterNamedParameterTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetAggregateFilterNamedParameterID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 24 {
+		t.Fatalf("trace records = %d, want 24", len(trace.Records))
+	}
+	caseCounts := map[string]int{}
+	caseSequences := map[string]uint64{}
+	for index, record := range trace.Records {
+		caseCounts[record.Case]++
+		caseSequences[record.Case]++
+		if record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != caseSequences[record.Case] || len(record.New) != 1 || len(record.Old) != 0 ||
+			record.New[0].Kind != "row" {
+			t.Fatalf("record %d metadata/shape = %#v", index, record)
+		}
+	}
+	wantCounts := map[string]int{"leaving": 4, "nth": 7, "rate-unbound": 5, "rate-bound": 8}
+	if !reflect.DeepEqual(caseCounts, wantCounts) {
+		t.Fatalf("case counts = %#v, want %#v", caseCounts, wantCounts)
+	}
+	null := map[string]any{"state": "null"}
+	leaving := trace.Records[:4]
+	wantLeaving := []map[string]any{
+		{"c0": false, "c1": false}, {"c0": false, "c1": false},
+		{"c0": false, "c1": true}, {"c0": true, "c1": true},
+	}
+	for index, record := range leaving {
+		if !reflect.DeepEqual(record.New[0].Fields, wantLeaving[index]) {
+			t.Fatalf("leaving record %d = %#v", index, record.New[0].Fields)
+		}
+	}
+	nth := trace.Records[4:11]
+	wantNth := []any{null, null, null, json.Number("1"), json.Number("1"), json.Number("2"), json.Number("2")}
+	for index, record := range nth {
+		if !reflect.DeepEqual(record.New[0].Fields["c0"], wantNth[index]) {
+			t.Fatalf("nth record %d = %#v", index, record.New[0].Fields)
+		}
+	}
+	rateUnbound := trace.Records[11:16]
+	wantRateUnbound := []any{null, null, null, json.Number("1"), json.Number("2")}
+	for index, record := range rateUnbound {
+		if !reflect.DeepEqual(record.New[0].Fields["c0"], wantRateUnbound[index]) {
+			t.Fatalf("rate-unbound record %d = %#v", index, record.New[0].Fields)
+		}
+	}
+	rateBound := trace.Records[16:]
+	wantRateBound := []struct{ rate, quantity any }{
+		{null, null}, {null, null}, {null, null}, {null, null}, {null, null}, {null, null},
+		{json.Number("6"), json.Number("28")}, {json.Number("3.75"), json.Number("31.25")},
+	}
+	for index, record := range rateBound {
+		fields := record.New[0].Fields
+		if !reflect.DeepEqual(fields["myrate"], wantRateBound[index].rate) ||
+			!reflect.DeepEqual(fields["myqtyrate"], wantRateBound[index].quantity) {
+			t.Fatalf("rate-bound record %d = %#v", index, fields)
+		}
+	}
+}

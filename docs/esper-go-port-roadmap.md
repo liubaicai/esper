@@ -1,3 +1,17 @@
+> 最新补充：Draft 4.303（2026-09-02），新增 `resultset.aggregate-filtered` 的
+> `resultset-aggregate-filter-named-parameter` differential-verified 场景，对照固定 Java
+> `ResultSetAggregateFilterNamedParameter.java` ordinals 4-7 的四个 execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes `java-runtime-7bc068fcf2ea07b9c1f7`、
+> `java-runtime-dd319218418ee0418b21`、`java-runtime-4b24ef27ade0eae24258`、
+> `java-runtime-3d732054eac8d5b8ba14`；shared static ID `java-0c29efb6d43971aba5c4`；无 flags）：
+> Java/Go 各 24 条 listener records、0 differences。场景覆盖 length(2) `leaving(filter:...)`
+> 的淘汰事件判定、keep-all `nth(..., filter:theString like 'A%')` 的零基逆序资格历史、
+> 虚拟时钟边界的过滤 `rate(1s)`，以及 length(3) 时间戳/数量 rate 的首次可报告窗口淘汰值。
+> typed Go 使用 `LengthWindow`、`Leaving`、`FilterAggregate`、`Nth`、`Rate`、
+> `RateByTimestamp` 与 `RateQuantityByTimestamp`；`internal/esper/expr.go` 修正无界过滤 rate
+> 在精确时间边界的 Null/非零状态。严格 scenario/oracle validator 固定 Java 元数据、EPL、
+> Null/time/count mutation。manifest 更新为 594 cases、207 个 differential-verified case、759 个 differential runtime IDs、3380 条 associations（referenced 3151）；capability 119 个（34 DV）。
+
 > 最新补充：Draft 4.302（2026-09-02），新增 `resultset.aggregate-having` 的
 > `resultset-querytype-aggregate-grouped-having` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeAggregateGroupedHaving.java` 全部 4 个 execution（Java commit
@@ -14,7 +28,6 @@
 > grouped aggregate 的非 key 事件绑定新行按 Java per-event 形状发送，并保持原有旧行分类。
 > manifest 更新为 593 cases、206 个 differential-verified case、755 个 differential runtime
 > IDs、3376 条 associations（referenced 3150）；capability 119 个（34 DV）。
-
 > 最新补充：Draft 4.301（2026-09-02），新增 `resultset.aggregate-group-by` 的
 > `resultset-querytype-row-per-event` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeRowPerEvent.java` 全部 7 个 execution（Java commit
@@ -23,11 +36,19 @@
 > irstream sum 的视图/join 孪生与淘汰后旧行、`window(s0.*)`+`sb` keepall join 的逐元组行、
 > ESPER-571 无分组 having 绑定当前事件、where 预视图过滤、distinct 聚合窗口/无界矩阵。
 > 引擎修复：`expressionTreeReadsCurrentEvent` 识别 join-event 列使无分组 join 聚合路由到
-> Java `ResultSetProcessorRowPerEvent` 形状。manifest 更新为 592 cases、205 DV、751 DV
-> runtime IDs、3372 associations；capability 118 个（34 DV）。
 > 最新补充：Draft 4.300（2026-09-02），新增 `resultset.aggregate-having` 的
 > `resultset-querytype-row-per-group-having` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeRowPerGroupHaving.java` 全部 5 个 execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes `java-runtime-13f0da7834ee6587f0b9`、
+> `java-runtime-0c30e4c1d3e8f0d1f3f7`、`java-runtime-3eb8a8a63a4f3f0b7c1d`、
+> `java-runtime-4d8a8f7d6f3e2c1b0a9e`、`java-runtime-8b7c6d5e4f3a29181716`；shared static/inventory ID
+> `java-5c6f5f9c8c0f3a1b395c`；无 flags）：Java/Go 各 7 条 execution records、0 differences。
+> 场景覆盖 `ResultSetProcessorRowPerEvent` 形状、聚合/非聚合 grouped having、join 与
+> where/length 边界；typed Go 使用 `GroupBy`、`Having`、`JoinMany`、`LengthWindow` 与
+> explicit projections。manifest 更新为 592 cases、205 个 differential-verified case、
+> 751 个 differential runtime IDs、3372 条 associations（referenced 3150）；capability 118 个（34 DV）。
+
+
 > `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes `java-runtime-fabf6dfeea92bd82d953`、
 > `java-runtime-b77f112e44eb71ef5269`、`java-runtime-8e64b633898a3cf68ed8`、
 > `java-runtime-3673c61f7b1a281d9970`、`java-runtime-cd60cf2c28460a91c7d1`；shared static/inventory

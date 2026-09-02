@@ -1,3 +1,19 @@
+> 最新补充：Draft 4.303（2026-09-02），新增 `resultset.aggregate-filtered` 的
+> `resultset-aggregate-filter-named-parameter` differential-verified 场景，对照固定 Java
+> `ResultSetAggregateFilterNamedParameter.java` ordinals 4-7 的四个 execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes `java-runtime-7bc068fcf2ea07b9c1f7`、
+> `java-runtime-dd319218418ee0418b21`、`java-runtime-4b24ef27ade0eae24258`、
+> `java-runtime-3d732054eac8d5b8ba14`；shared static ID `java-0c29efb6d43971aba5c4`；无 flags）：
+> Java/Go 各 24 条 listener records、0 differences。场景覆盖 length(2) `leaving(filter:...)`
+> 的淘汰事件判定、keep-all `nth(..., filter:theString like 'A%')` 的零基逆序资格历史、
+> 虚拟时钟边界的过滤 `rate(1s)`，以及 length(3) 时间戳/数量 rate 的首次可报告窗口淘汰值。
+> typed Go 使用 `LengthWindow`、`Leaving`、`FilterAggregate`、`Nth`、`Rate`、
+> `RateByTimestamp` 与 `RateQuantityByTimestamp`；`internal/esper/expr.go` 修正无界过滤 rate
+> 在精确时间边界的 Null/非零状态。严格 scenario/oracle validator 固定 Java 元数据、EPL、
+> Null/time/count mutation。
+> manifest 更新为 594 cases、207 个 differential-verified case、759 个 differential runtime IDs、3380 条 associations（referenced 3151）；capability 119 个（34 DV）。
+
+
 > 最新补充：Draft 4.302（2026-09-02），新增 `resultset.aggregate-having` 的
 > `resultset-querytype-aggregate-grouped-having` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeAggregateGroupedHaving.java` 全部 4 个 execution（Java commit

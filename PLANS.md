@@ -31,41 +31,22 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-09-02; Draft 4.302 (`resultset-querytype-aggregate-grouped-having`) is implemented and differentially verified. All four Java executions replay through the checked-in scenario, Java/Go traces, and passing evidence; full gates, independent review, commit, and push remain.
-- Baseline: `HEAD` == `origin/master` at `dbb434c5e`; the active Draft 4.302 worktree changes cover the grouped-having parity runner/oracle/scenario, `run.go`, `run_test.go`, the shared aggregate dispatch changes in `internal/esper/runtime.go`, the manifest, and this checkpoint.
-- Closed predecessor (Draft 4.301): `ResultSetQueryTypeRowPerEvent.java` all 7 executions were differentially verified and committed/pushed as `dbb434c5e`.
+- Updated: 2026-09-02; Draft 4.303 (`resultset-aggregate-filter-named-parameter`) is the active uncommitted work unit. Its implementation, parity assets, generated trace/evidence files, and central manifest registration are present; final validation, review follow-up, commit, and push remain.
+- Baseline: `HEAD` == `origin/master` at `dbb434c5e`; the worktree contains only Draft 4.303 implementation, parity assets, generated traces/evidence, central fact updates, and checkpoint-document edits.
+- Closed predecessor (Draft 4.302): `ResultSetQueryTypeAggregateGroupedHaving.java` all 4 executions were differentially verified and committed/pushed as `83d6eb8e7`.
 
 ## Current work unit
-Draft 4.302 is frozen as all four executions of `ResultSetQueryTypeAggregateGroupedHaving.java`
-(ordinals 0-3; runtimes `java-runtime-1474d172cf4f2a19b5d7`, `java-runtime-88a7913c4758d8de0bc9`,
-`java-runtime-dbe24180b80fd3c64d66`, `java-runtime-aafa294bfd2a1104befd`; shared inventory/static ID
-`java-29aa3ed4e339f5786c1f`, specific static candidates `java-cc01f532a81e94885155` and
-`java-a24c796fd8d8a7f7d632`; flags empty). The fixed Java source is
-`/root/app/esper/regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeAggregateGroupedHaving.java`.
-The scenario is `testdata/parity/resultset-querytype-aggregate-grouped-having.json`, oracle
-`tools/java-oracle/ResultSetQueryTypeAggregateGroupedHavingScenarioOracle.java`, and Go runner
-`internal/app/parity/resultset_querytype_aggregate_grouped_having.go` with modes
-`resultset-querytype-aggregate-grouped-having[-diff]`. Java applies `where` after `#length(3)`;
-the Go market-data plan therefore retains all events in the window before filtering, preserving
-unmatched-symbol eviction and the pre-removal old-row contract.
+Draft 4.303 covers ordinals 4-7 of `ResultSetAggregateFilterNamedParameter.java`: `ResultSetAggregateMethodAggLeaving`, `ResultSetAggregateMethodAggNth`, `ResultSetAggregateMethodAggRateUnbound`, and `ResultSetAggregateMethodAggRateBound`; Java runtimes are `java-runtime-7bc068fcf2ea07b9c1f7`, `java-runtime-dd319218418ee0418b21`, `java-runtime-4b24ef27ade0eae24258`, and `java-runtime-3d732054eac8d5b8ba14`; shared static ID `java-0c29efb6d43971aba5c4`; flags empty.
+The fixed Java source is `/root/app/esper/regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java`. The scenario is `testdata/parity/resultset-aggregate-filter-named-parameter.json`, oracle `tools/java-oracle/ResultSetAggregateFilterNamedParameterScenarioOracle.java`, and Go runner `internal/app/parity/resultset_aggregate_filter_named_parameter.go` with modes `resultset-aggregate-filter-named-parameter[-diff]`.
+The observable contract is four fresh `@name('s0')` listener lifecycles: length(2) `Leaving` evaluates only evicted events (`E1(2)`, `E2(1)`, `E3(3)`, `E4(4)` => `false,false`; `false,false`; `false,true`; `true,true`); keep-all filtered `Nth` is zero-based reverse qualifying history (`X1`, `X2`, `A3`, `A4`, `X3`, `A5`, `X4` => `null`, `null`, `null`, `1`, `1`, `2`, `2`); virtual-time unbound filtered `Rate(1s)` has X1/A1 null at t=0, then X2 null/A2 1/A3 2 at t=1s; length(3) timestamp/quantity rate emits nulls through A3, then A4 `(6,28)` and A5 `(3.75,31.25)`. Every send emits one new row; milestones emit none; Java inspects no old stream.
 
 ## Delegation checkpoint
-Draft 4.302 read-only scouts `GroupedHavingJava` (java-oracle-scout) and `GroupedHavingGo`
-(scout) completed concurrently. They confirmed the four source-order runtime mappings above,
-the grouped count/sum old/new contract, the strict loader/test/evidence gaps, and the
-filter-before-window regression. Primary owns shared semantics, runner integration, generated
-trace/evidence, central facts, validation, review, commit, and push; no subagent may modify those.
-
-- The strict grouped scenario loader, four typed replay plans, post-window filter ordering, and mutation/replay assertions are implemented.
-- Targeted validation is green: `go test ./internal/app/parity -run 'TestRunResultSetQueryTypeAggregateGroupedHaving' -count=1 -timeout 180s`; `go test ./internal/compat -run 'TestCapabilityManifest' -count=1`; `jq empty testdata/compat/capability-manifest.json`; and `git diff --check`.
-- Checked-in Java/Go traces and evidence report passing with zero differences; the checked-in replay test compares both traces and the generated Go replay. Manifest accounting is updated to 593 cases, 206 differential-verified cases, 755 differential runtime IDs, 3376 runtime associations, and 3150 referenced runtimes.
-- Full local gates pass via `make check`: layout, `go vet ./...`, `go test ./... -count=1 -timeout 240s`, and the complete package suite.
-- Independent parity review `GroupedHavingFinalReview` passed with no concrete defects; it verified the four runtime mappings, checked-in traces/evidence, strict scenario validation, filter/window ordering, grouped old/new semantics, and manifest inventory resolution.
-- The unit is ready for one semantic commit and direct push; do not write a post-push checkpoint-only commit because Git owns the final commit identity.
-
+Draft 4.303 scouts `NamedFilterJava` (`java-oracle-scout`) and `NamedFilterGo` (`scout`) completed concurrently. They confirmed the source-order runtime mapping, four input/output sequences, virtual-clock and length-window boundaries, and that existing typed `Leaving`, `FilterAggregate`/`Nth`, and rate APIs were sufficient apart from the narrow rate-boundary repair. The primary owns the parity runner, mode dispatch, generated traces/evidence, manifest, roadmap, CHANGELOG, validation, commit, and push. A file-disjoint `parity-asset-worker` was permitted only for the Java oracle launcher/source and scenario input; it did not write generated traces/evidence or central facts.
+- Contract frozen; implementation and assets are present. `internal/esper/expr.go` keeps unbound filtered `Rate` Null at an exact virtual-time boundary when stale ever-state has no actual leave; actual leave still exposes zero, and timestamp rate behavior is unchanged.
+- Targeted validation passed: `go test ./internal/app/parity -run '^TestRunResultSetAggregateFilterNamedParameter' -count=1 -timeout 180s`, affected `internal/esper` aggregate/rate tests, `go test ./internal/compat -count=1`, `go run ./cmd/parity -mode resultset-aggregate-filter-named-parameter-diff` (0 differences), pinned Java oracle regeneration with byte-identical trace, manifest `jq`/counter checks, and `git diff --check`.
+- Independent review `NamedFilterReview-2`: initial FAIL for missing manifest registration; repaired case/mapping/counters and received follow-up PASS with no P0/P1/P2 findings. Full `make check` passed: layout, vet, and `go test ./... -count=1 -timeout 240s` (all packages green).
+- The manifest, roadmap, and CHANGELOG now register Draft 4.303 with 594 cases, 592 implemented, 207 differential-verified, 759 differential runtime IDs, 3380 associations, and 3151 referenced runtimes. Commit and push remain.
 ## Prior outcomes
-
-## Current work unit
 Draft 4.301 is frozen as all 7 executions of `ResultSetQueryTypeRowPerEvent.java`
 (ordinals 0-6; runtimes `java-runtime-5111b05c6bc620b88e15`, `java-runtime-50601d6f0cc0411a9f90`,
 `java-runtime-06c962063c57e3a3adee`, `java-runtime-14d3e2b22e8c3ef00657`,
@@ -823,10 +804,11 @@ correlated-array normalization and its separate swapped-row acceptance test.
       8 columns, runtime `java-runtime-2fcd2094aaf18ca4ce03`).
 - [x] Confirm scout reports match the frozen contract; adjust if they
       surface gaps.
-- [x] Implement `cast-generic` end-to-end: oracle case + payload builders +
-      TraceWriter List/Map/Optional rendering, scenario fixture send, Go
-      runner case + decode + normalizer, run_test 49->51.
-- [x] Pinned Java trace; zero-difference diff; mutations (4 generic
+   "remaining": [
+    "all aggregate/access-method families",
+    "Java named filter-parameter EPL syntax/registration and exact compiler diagnostics, plus MathContext/BigDecimal scale and rounding policy",
+    "aggregate state/index reuse and full Java trace parity"
+   ],
       mutations added); evidence.
 - [x] Full gates green (`make check`), `GenericReview` parity review APPROVED
       (one P2 fixed: evidence javaRuntimeIds/javaExecutions + Go fallback
