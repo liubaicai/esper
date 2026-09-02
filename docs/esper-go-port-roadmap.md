@@ -1,3 +1,19 @@
+> 最新补充：Draft 4.305（2026-09-03），新增 `resultset.aggregate-local-group` 的
+> `resultset-querytype-local-group-by` differential-verified 场景，对照固定 Java
+> `ResultSetQueryTypeLocalGroupBy.java` ordinal 13 的 `ResultSetLocalGroupedMultiLevelAccess`
+> execution（Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtime
+> `java-runtime-87b3bcfdf164bc939fe5`；static ID `java-b0b3444c9ac5a1297cd0`；无 flags）：
+> Java/Go 各 1 条 listener snapshot record、3 条有序新行、0 differences。场景固定
+> `SupportBean#keepall`、外层 `group by theString,intPrimitive`、五个 `window(*)`
+> local `group_by` 维度以及 10 秒 snapshot；typed Go 使用 `KeepAll`、`GroupBy`、
+> `LocalGroupBy`、`WindowEvents`、`OutputSnapshotEvery` 与 `OrderBy`，完整保留
+> SupportBean 事件身份及各维度到达顺序。严格 scenario/oracle validator 固定 Java
+> 元数据、EPL、payload、timer boundary、listener shape、完整事件字段和 value/order/time/
+> record-count mutation；ordinal 14、row-remove、multikey/plugin、join/context/table/FAF
+> 与 planning/invalid executions 仍列为 remaining。manifest 更新为 596 cases、209 个
+> differential-verified case、761 个 differential runtime IDs、3382 条 associations
+> （referenced 3151）；capability 119 个（35 DV）。
+
 > 最新补充：Draft 4.304（2026-09-02），新增 `resultset.aggregate-filtered` 的
 > `resultset-aggregate-filtered-w-math-context` differential-verified 场景，对照固定 Java
 > `ResultSetAggregateFilteredWMathContext.java` ordinal 0 的 `ResultSetAggregateFilteredWMathContext`

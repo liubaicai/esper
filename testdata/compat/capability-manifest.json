@@ -957,18 +957,24 @@
     "internal/esper/plan.go",
     "internal/esper/runtime.go",
     "internal/esper/aggregate_test.go",
-    "internal/esper/aggregate_local_group_test.go"
+    "internal/esper/aggregate_local_group_test.go",
+    "internal/app/parity/resultset_querytype_local_group_by.go",
+    "internal/app/parity/run_test.go"
    ],
    "phase": 3,
    "status": "implemented",
    "remaining": [
-    "local access/enumeration combinations, multikey array keys and plugin aggregates",
+    "additional local access/enumeration combinations, multikey array keys and plugin aggregates",
     "row-remove, context/join/FAF/table combinations",
     "complete planning and invalid-rule parity"
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-87b3bcfdf164bc939fe5"
    ]
   },
   {
@@ -37419,6 +37425,66 @@
     "ResultSetAggregateFilteredWMathContext replayed through one deterministic scenario (3 Java/Go listener records per side, 0 differences): compiler MathContext precision 2 with HALF_UP rounds the unbounded BigDecimal average, and scale-discarding inputs 0, 0, and 1 produce new-only rows 0, 0, and 0.33.",
     "The typed Go environment configures WithDecimalMathContext and AvgExact over big.Rat; the scenario and oracle pin the Java commit, source, runtime/static/name references, exact EPL, payloads, and listener-only observation."
    ]
+  },
+  {
+   "id": "case.resultset-querytype-local-group-by",
+   "javaRuntimeIds": [
+    "java-runtime-87b3bcfdf164bc939fe5"
+   ],
+   "javaNames": [
+    "ResultSetLocalGroupedMultiLevelAccess"
+   ],
+   "javaStaticIds": [
+    "java-b0b3444c9ac5a1297cd0"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupByDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupByDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupByDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupByCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupByRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupByRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "aggregate",
+    "local-group-by",
+    "window",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-local-group-by.json",
+    "testdata/parity/resultset-querytype-local-group-by.trace.json",
+    "testdata/parity/resultset-querytype-local-group-by.go.trace.json",
+    "testdata/parity/resultset-querytype-local-group-by.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeLocalGroupByScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-local-group-by.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-87b3bcfdf164bc939fe5"
+   ],
+   "notes": [
+    "ResultSetQueryTypeLocalGroupBy ordinal 13 replays one deterministic scenario (one Java/Go listener snapshot with three ordered rows, 0 differences): grouped multi-level local window access preserves SupportBean identity and keepall arrival order for exact, per-theString, per-intPrimitive, and ungrouped local keys.",
+    "Typed Go uses GroupBy, WindowEvents, and LocalGroupBy with a 10-second snapshot; strict scenario/oracle validators pin Java metadata, EPL, payload order, timer boundary, listener shape, full SupportBean properties, and mutation rejection."
+   ]
   }
  ],
  "mappings": [
@@ -40137,30 +40203,34 @@
   {
    "capabilityId": "resultset.aggregate-filtered",
    "caseId": "case.resultset-aggregate-filter-named-parameter"
+  },
+  {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-by"
   }
  ],
  "summary": {
-  "inventoriedCases": 595,
-  "implementedCases": 593,
-  "differentialVerifiedCases": 208,
-  "differentialVerifiedRuntimeIds": 760,
+  "inventoriedCases": 596,
+  "implementedCases": 594,
+  "differentialVerifiedCases": 209,
+  "differentialVerifiedRuntimeIds": 761,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 119,
   "implementedCapabilities": 118,
-  "differentialVerifiedCapabilities": 34,
+  "differentialVerifiedCapabilities": 35,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3381,
+  "runtimeAssociationCount": 3382,
   "referencedJavaRuntimeIds": 3151,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 985,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 595,
+  "totalCases": 596,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 760
+  "differentialVerifiedRuntimeIDs": 761
  }
 }

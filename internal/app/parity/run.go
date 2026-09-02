@@ -32,6 +32,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-sorted-minmax-by-no-alias and resultset-aggregate-sorted-minmax-by-no-alias-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-row-per-group-having and resultset-querytype-row-per-group-having-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-row-per-event and resultset-querytype-row-per-event-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-by and resultset-querytype-local-group-by-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-aggregate-grouped-having and resultset-querytype-aggregate-grouped-having-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-filter-named-parameter and resultset-aggregate-filter-named-parameter-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-filtered-w-math-context and resultset-aggregate-filtered-w-math-context-diff")
@@ -104,6 +105,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetQueryTypeRollupHavingIteratorScenario(file)
 	} else if *mode == "resultset-querytype-rollup-orderby-unidirectional" || *mode == "resultset-querytype-rollup-orderby-unidirectional-diff" {
 		scenario, err = loadResultSetQueryTypeRollupOrderByUnidirectionalScenario(file)
+	} else if *mode == "resultset-querytype-local-group-by" || *mode == "resultset-querytype-local-group-by-diff" {
+		scenario, err = loadResultSetQueryTypeLocalGroupByScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -2557,6 +2560,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetQueryTypeRowPerEventJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetQueryTypeRowPerEventJavaSources),
 				splitMetadata(*javaExecutions, resultsetQueryTypeRowPerEventJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-querytype-local-group-by" || *mode == "resultset-querytype-local-group-by-diff" {
+		trace, err := runResultSetQueryTypeLocalGroupByScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-local-group-by-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeLocalGroupByJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeLocalGroupByJavaSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeLocalGroupByJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
