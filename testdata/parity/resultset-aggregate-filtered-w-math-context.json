@@ -1,0 +1,26 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-filtered-w-math-context",
+  "description": "ResultSetAggregateFilteredWMathContext ordinal 0: compiler MathContext precision 2 HALF_UP rounds an unbounded BigDecimal average; scale-discarding inputs 0, 0, and 1 produce new-only listener rows 0, 0, and 0.33.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilteredWMathContext.java",
+  "javaRuntimes": ["java-runtime-fa8b6d5d6fb58a905f23"],
+  "javaNames": ["ResultSetAggregateFilteredWMathContext"],
+  "javaStaticIds": ["java-aba2cfbf41a3be9809f1"],
+  "javaFlags": [],
+  "cases": [{
+    "case": "resultset-aggregate-filtered-w-math-context",
+    "ordinal": 0,
+    "runtimeId": "java-runtime-fa8b6d5d6fb58a905f23",
+    "executionName": "ResultSetAggregateFilteredWMathContext",
+    "observation": "listener",
+    "iteratorSnapshots": 0,
+    "epl": "@name('s0') select avg(bigdec) as c0 from SupportBeanNumeric"
+  }],
+  "steps": [
+    {"op": "case", "case": "resultset-aggregate-filtered-w-math-context"},
+    {"op": "send", "eventType": "SupportBeanNumeric", "payload": {"bigint": null, "bigdec": "0"}},
+    {"op": "send", "eventType": "SupportBeanNumeric", "payload": {"bigint": null, "bigdec": "0"}},
+    {"op": "send", "eventType": "SupportBeanNumeric", "payload": {"bigint": null, "bigdec": "1"}}
+  ]
+}

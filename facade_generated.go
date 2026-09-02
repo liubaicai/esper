@@ -2481,6 +2481,11 @@ func EnumerationMetadata(expression Expr) (EnumMethodMetadata, bool) {
 // registrations. It is safe to share for concurrent Plan construction.
 type Environment = internalengine.Environment
 
+// EnvironmentOption configures one Environment at construction time.
+// Options are applied before the Environment is returned, so the resulting
+// catalog can be shared safely without exposing mutable configuration state.
+type EnvironmentOption = internalengine.EnvironmentOption
+
 func Equal[T comparable](left, right Expression[T]) Expression[bool] {
 	return internalengine.Equal[T](left, right)
 }
@@ -4124,8 +4129,8 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 	return internalengine.NewEngine(env, options...)
 }
 
-func NewEnvironment() *Environment {
-	return internalengine.NewEnvironment()
+func NewEnvironment(options ...EnvironmentOption) *Environment {
+	return internalengine.NewEnvironment(options...)
 }
 
 func NewError(code ErrorCode, message string) error {
@@ -7740,6 +7745,14 @@ func WithClock(clock *VirtualClock) EngineOption {
 
 func WithContext(name string) QueryOption {
 	return internalengine.WithContext(name)
+}
+
+// WithDecimalMathContext configures significant-digit rounding for exact
+// decimal AvgExact aggregates evaluated by Engines using the Environment.
+// The value is copied when NewEnvironment applies this option. Invalid
+// contexts are retained as construction diagnostics and rejected by Build.
+func WithDecimalMathContext(context DecimalMathContext) EnvironmentOption {
+	return internalengine.WithDecimalMathContext(context)
 }
 
 // WithDeploymentID selects an explicit deployment identity. The value must

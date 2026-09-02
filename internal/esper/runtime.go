@@ -18979,7 +18979,14 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 			current = everEvents[0]
 		}
 	}
-	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), History: append([]Event(nil), events...), IsLeaving: leaving, Engine: aggregateEngineFromVariables(variables), Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateMultiPluginStates: multiPluginStates, aggregateEvaluation: true}
+	engine := aggregateEngineFromVariables(variables)
+	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), History: append([]Event(nil), events...), IsLeaving: leaving, Engine: engine, Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateMultiPluginStates: multiPluginStates, aggregateEvaluation: true}
+	if engine != nil && engine.env != nil {
+		if context, configured := engine.env.decimalMathContextSnapshot(); configured {
+			ctx.decimalMathContext = context
+			ctx.decimalMathContextSet = true
+		}
+	}
 	if len(definition.groupBy) > 0 {
 		groupingEvent := current
 		if groupingEvent.Schema().Name() == "" {

@@ -46,28 +46,88 @@ type Environment struct {
 	savedDataflows        map[string]DataflowDefinition
 	expressions           map[string]ExpressionDefinition
 	extensions            *extensionRegistry
+	// decimalMathContext is immutable after construction. The separate flag
+	// distinguishes an explicitly configured unlimited context from the
+	// unconfigured environment, whose plans intentionally retain the legacy
+	// exact aggregate identity and behavior.
+	decimalMathContext     DecimalMathContext
+	decimalMathContextSet  bool
+	environmentOptionError string
 }
 
-func NewEnvironment() *Environment {
-	return &Environment{
-		schemas:               make(map[string]Schema),
-		typeToName:            make(map[reflect.Type][]string),
-		variables:             make(map[string]VariableDefinition),
-		aggregatePlugins:      make(map[string]aggregatePluginDefinition),
-		aggregateMultiPlugins: make(map[string]aggregateMultiPluginDefinition),
-		enumPlugins:           make(map[string]enumPluginDefinition),
-		dateTimePlugins:       make(map[string]dateTimePluginDefinition),
-		scripts:               make(map[string]scriptDefinition),
-		modules:               make(map[string]moduleDefinition),
-		moduleObjects:         make(map[string]string),
-		tables:                make(map[string]TableDefinition),
-		namedWindows:          make(map[string]NamedWindowDefinition),
-		contexts:              make(map[string]ContextDefinition),
-		dataflows:             make(map[string]DataflowDefinition),
-		savedDataflows:        make(map[string]DataflowDefinition),
-		expressions:           make(map[string]ExpressionDefinition),
-		extensions:            newExtensionRegistry(),
+// EnvironmentOption configures one Environment at construction time.
+// Options are applied before the Environment is returned, so the resulting
+// catalog can be shared safely without exposing mutable configuration state.
+type EnvironmentOption func(*environmentConfig)
+
+type environmentConfig struct {
+	decimalMathContext     DecimalMathContext
+	decimalMathContextSet  bool
+	environmentOptionError string
+}
+
+// WithDecimalMathContext configures significant-digit rounding for exact
+// decimal AvgExact aggregates evaluated by Engines using the Environment.
+// The value is copied when NewEnvironment applies this option. Invalid
+// contexts are retained as construction diagnostics and rejected by Build.
+func WithDecimalMathContext(context DecimalMathContext) EnvironmentOption {
+	return func(config *environmentConfig) {
+		config.decimalMathContext = context
+		config.decimalMathContextSet = true
+		config.environmentOptionError = ""
+		if err := context.validate(); err != nil {
+			config.environmentOptionError = err.Error()
+		}
 	}
+}
+
+func NewEnvironment(options ...EnvironmentOption) *Environment {
+	config := environmentConfig{}
+	for _, option := range options {
+		if option != nil {
+			option(&config)
+		}
+	}
+	return &Environment{
+		schemas:                make(map[string]Schema),
+		typeToName:             make(map[reflect.Type][]string),
+		variables:              make(map[string]VariableDefinition),
+		aggregatePlugins:       make(map[string]aggregatePluginDefinition),
+		aggregateMultiPlugins:  make(map[string]aggregateMultiPluginDefinition),
+		enumPlugins:            make(map[string]enumPluginDefinition),
+		dateTimePlugins:        make(map[string]dateTimePluginDefinition),
+		scripts:                make(map[string]scriptDefinition),
+		modules:                make(map[string]moduleDefinition),
+		moduleObjects:          make(map[string]string),
+		tables:                 make(map[string]TableDefinition),
+		namedWindows:           make(map[string]NamedWindowDefinition),
+		contexts:               make(map[string]ContextDefinition),
+		dataflows:              make(map[string]DataflowDefinition),
+		savedDataflows:         make(map[string]DataflowDefinition),
+		expressions:            make(map[string]ExpressionDefinition),
+		extensions:             newExtensionRegistry(),
+		decimalMathContext:     config.decimalMathContext,
+		decimalMathContextSet:  config.decimalMathContextSet,
+		environmentOptionError: config.environmentOptionError,
+	}
+}
+
+func (e *Environment) decimalMathContextSnapshot() (DecimalMathContext, bool) {
+	if e == nil {
+		return DecimalMathContext{}, false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.decimalMathContext, e.decimalMathContextSet
+}
+
+func (e *Environment) environmentOptionErrorMessage() string {
+	if e == nil {
+		return ""
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.environmentOptionError
 }
 
 func (e *Environment) RegisterSchema(schema Schema) error {
@@ -545,6 +605,9 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	if e == nil {
 		return Plan{}, NewError(ErrorInvalidRule, "nil environment")
 	}
+	if optionError := e.environmentOptionErrorMessage(); optionError != "" {
+		return Plan{}, NewError(ErrorInvalidRule, "environment decimal math context: "+optionError)
+	}
 	if query.env == nil || query.env != e {
 		return Plan{}, NewError(ErrorDependency, "query belongs to a different or nil environment")
 	}
@@ -746,6 +809,9 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 		parameterDescriptions = append(parameterDescriptions, name+":"+typeDescription)
 	}
 	canonicalParts = append(canonicalParts, "parameters("+strings.Join(parameterDescriptions, ",")+")")
+	if context, configured := e.decimalMathContextSnapshot(); configured {
+		canonicalParts = append(canonicalParts, "environment-math-context("+context.description()+")")
+	}
 	for _, schema := range e.Schemas() {
 		fields := make([]string, 0, len(schema.fields))
 		for _, field := range schema.fields {

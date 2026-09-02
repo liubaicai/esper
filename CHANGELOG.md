@@ -1,3 +1,16 @@
+> 最新补充：Draft 4.304（2026-09-02），新增 `resultset.aggregate-filtered` 的
+> `resultset-aggregate-filtered-w-math-context` differential-verified 场景，对照固定 Java
+> `ResultSetAggregateFilteredWMathContext.java` ordinal 0 的 `ResultSetAggregateFilteredWMathContext`
+> execution（Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtime
+> `java-runtime-fa8b6d5d6fb58a905f23`；static ID `java-aba2cfbf41a3be9809f1`；无 flags）：
+> Java/Go 各 3 条 listener records、0 differences。场景固定 compiler MathContext precision 2
+> `HALF_UP`、source helper 丢弃 `setScale` 后的 BigDecimal `0`、`0`、`1`，观察 unbounded
+> `avg(bigdec)` 的 `0`、`0`、`0.33` 新行；typed Go 使用环境级 `WithDecimalMathContext`、
+> `AvgExact` 与 `big.Rat`，并以 plan identity/invalid-option 测试固定配置边界。严格
+> scenario/oracle validator 固定 Java 元数据、EPL、payload、listener shape 与 mutation。
+> manifest 更新为 595 cases、208 个 differential-verified case、760 个 differential runtime
+> IDs、3381 条 associations（referenced 3151）；capability 119 个（34 DV）。
+
 > 最新补充：Draft 4.303（2026-09-02），新增 `resultset.aggregate-filtered` 的
 > `resultset-aggregate-filter-named-parameter` differential-verified 场景，对照固定 Java
 > `ResultSetAggregateFilterNamedParameter.java` ordinals 4-7 的四个 execution（Java commit

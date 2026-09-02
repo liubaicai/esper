@@ -1899,7 +1899,7 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 			if err != nil {
 				return ResultBatch{}, err
 			}
-			evaluation := EvalContext{Event: event, Group: []Event{tableEvent}, Now: now, Variables: variables}
+			evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{tableEvent}, Now: now, Variables: variables}
 			matched, ok := boolValue(definition.where.eval(evaluation))
 			if !ok || !matched {
 				continue
@@ -1912,7 +1912,7 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 		}
 		return result, nil
 	}
-	evaluation := EvalContext{Event: event, Now: now, Variables: variables}
+	evaluation := EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}
 	keys, err := evaluateTriggerKeys(definition.keys, evaluation)
 	if err != nil {
 		return ResultBatch{}, err
@@ -1932,6 +1932,7 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 	}
 	projected := make([]Value, 0, len(definition.selections))
 	evaluation = EvalContext{
+		Engine:     engine,
 		Event:      tableEvent,
 		OuterEvent: event,
 		Group:      []Event{tableEvent},
@@ -1966,7 +1967,7 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 		if err := contextErr(ctx); err != nil {
 			return ResultBatch{}, err
 		}
-		evaluation := EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+		evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
 		if definition.where != nil {
 			matched, isBool := boolValue(definition.where.eval(evaluation))
 			if !isBool || !matched {
@@ -1976,7 +1977,7 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 		matched = append(matched, candidate)
 	}
 	if len(definition.groupByKeys) > 0 {
-		return groupedSelectNamedWindowResult(definition, event, now, variables, matched, resultSchema, result), nil
+		return groupedSelectNamedWindowResult(definition, engine, event, now, variables, matched, resultSchema, result), nil
 	}
 	for _, candidate := range matched {
 		if len(definition.selections) == 0 {
@@ -1984,7 +1985,7 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 			continue
 		}
 		values := make([]Value, 0, len(definition.selections))
-		evaluation := EvalContext{Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
+		evaluation := EvalContext{Engine: engine, Event: event, Group: []Event{candidate}, Now: now, Variables: variables}
 		for _, selection := range definition.selections {
 			values = append(values, selection.Expr.eval(evaluation))
 		}
@@ -1999,7 +2000,7 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 // through the groupingValues overrides, so plain Field projections read the
 // group's key value at present levels and null at coarser levels — the same
 // contract the live aggregate pipeline implements via aggregateGroupContext.
-func groupedSelectNamedWindowResult(definition *triggerDefinition, trigger Event, now time.Time, variables map[string]Value, matched []Event, resultSchema Schema, result ResultBatch) ResultBatch {
+func groupedSelectNamedWindowResult(definition *triggerDefinition, engine *Engine, trigger Event, now time.Time, variables map[string]Value, matched []Event, resultSchema Schema, result ResultBatch) ResultBatch {
 	keys := definition.groupByKeys
 	levels := rollupKeyLevels(len(keys))
 	for _, level := range levels {
@@ -2018,7 +2019,7 @@ func groupedSelectNamedWindowResult(definition *triggerDefinition, trigger Event
 		var order []*group
 		index := make(map[string]*group)
 		for _, candidate := range matched {
-			evaluation := EvalContext{Event: candidate, Group: []Event{candidate}, Now: now, Variables: variables}
+			evaluation := EvalContext{Engine: engine, Event: candidate, Group: []Event{candidate}, Now: now, Variables: variables}
 			keyValues := make([]any, 0, len(level))
 			for _, keyIndex := range level {
 				keyValues = append(keyValues, keys[keyIndex].eval(evaluation).Any())
@@ -2037,13 +2038,13 @@ func groupedSelectNamedWindowResult(definition *triggerDefinition, trigger Event
 			// plain fields read the group key through groupingValues and any
 			// other field from the representative row; aggregate inputs
 			// iterate every group row through groupEventContext.
-			evaluation := EvalContext{Event: grp.events[0], Group: grp.events, Now: now, Variables: variables, aggregateEvaluation: true}
+			evaluation := EvalContext{Engine: engine, Event: grp.events[0], Group: grp.events, Now: now, Variables: variables, aggregateEvaluation: true}
 			evaluation.groupingValues = make(map[string]Value, len(keys))
 			evaluation.groupingPresent = make(map[string]bool, len(keys))
 			for keyIndex, keyExpr := range keys {
 				key := groupingExpressionKey(keyExpr)
 				if _, ok := present[keyIndex]; ok {
-					evaluation.groupingValues[key] = keyExpr.eval(EvalContext{Event: grp.events[0], Now: now, Variables: variables})
+					evaluation.groupingValues[key] = keyExpr.eval(EvalContext{Engine: engine, Event: grp.events[0], Now: now, Variables: variables})
 					evaluation.groupingPresent[key] = true
 				} else {
 					evaluation.groupingValues[key] = Null()

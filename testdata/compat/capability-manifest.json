@@ -13618,7 +13618,7 @@
     "java-baseline",
     "go-unit"
    ],
-   "difference": "Go now covers the Java filtered scalar family (avedev/avg/min/max/median/stddev/sum), max/min-ever, distinct counting, null predicate exclusion, singleton stddev Null semantics, scalar/access aggregate reuse and stateful Leaving. The explicit SumExact/AvgExact/MinExact/MaxExact and LessExact family now covers filtered big.Int/big.Rat arithmetic without float64 rounding, including the Java BigInteger/BigDecimal window trace and large-integer boundary. Java named filter-parameter registration/syntax, MathContext and BigDecimal scale/rounding policy, plugin methods, joins/tables and complete invalid-rule parity remain open.",
+   "difference": "Go now covers the Java filtered scalar family (avedev/avg/min/max/median/stddev/sum), max/min-ever, distinct counting, null predicate exclusion, singleton stddev Null semantics, scalar/access aggregate reuse and stateful Leaving. The explicit SumExact/AvgExact/MinExact/MaxExact and LessExact family now covers filtered big.Int/big.Rat arithmetic without float64 rounding, including the Java BigInteger/BigDecimal window trace and large-integer boundary. The dedicated MathContext scenario now verifies compiler precision-2 HALF_UP rounding for unbounded BigDecimal average. Java named filter-parameter registration/syntax, BigDecimal scale policy, plugin methods, joins/tables and complete invalid-rule parity remain open.",
    "verification": [
     "inventoried",
     "implemented"
@@ -37359,6 +37359,66 @@
     "The typed Go surface uses LengthWindow, Leaving, FilterAggregate, Nth, Rate, RateByTimestamp, and RateQuantityByTimestamp. The scenario and oracle pin the Java commit, source, runtime/name/static-ID mappings, exact EPL, payloads, virtual time, listener lifecycle, and record shape.",
     "Strict validators reject malformed JSON, duplicate keys, extra or missing steps, and trace value, order, Null, time, and count mutations; the unbound filtered-rate boundary keeps Null when stale ever-state has no actual leave."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-filtered-w-math-context",
+   "javaRuntimeIds": [
+    "java-runtime-fa8b6d5d6fb58a905f23"
+   ],
+   "javaNames": [
+    "ResultSetAggregateFilteredWMathContext"
+   ],
+   "javaStaticIds": [
+    "java-aba2cfbf41a3be9809f1"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilteredWMathContext.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilteredWMathContextDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilteredWMathContextDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilteredWMathContextDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilteredWMathContextCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilteredWMathContextRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateFilteredWMathContextRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "filter",
+    "math-context",
+    "bigdecimal",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-filtered-w-math-context.json",
+    "testdata/parity/resultset-aggregate-filtered-w-math-context.trace.json",
+    "testdata/parity/resultset-aggregate-filtered-w-math-context.go.trace.json",
+    "testdata/parity/resultset-aggregate-filtered-w-math-context.evidence.json",
+    "tools/java-oracle/ResultSetAggregateFilteredWMathContextScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-filtered-w-math-context.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-fa8b6d5d6fb58a905f23"
+   ],
+   "notes": [
+    "ResultSetAggregateFilteredWMathContext replayed through one deterministic scenario (3 Java/Go listener records per side, 0 differences): compiler MathContext precision 2 with HALF_UP rounds the unbounded BigDecimal average, and scale-discarding inputs 0, 0, and 1 produce new-only rows 0, 0, and 0.33.",
+    "The typed Go environment configures WithDecimalMathContext and AvgExact over big.Rat; the scenario and oracle pin the Java commit, source, runtime/static/name references, exact EPL, payloads, and listener-only observation."
+   ]
   }
  ],
  "mappings": [
@@ -37709,6 +37769,10 @@
   {
    "capabilityId": "resultset.aggregate-filtered",
    "caseId": "case.aggregate-filtered"
+  },
+  {
+   "capabilityId": "resultset.aggregate-filtered",
+   "caseId": "case.resultset-aggregate-filtered-w-math-context"
   },
   {
    "capabilityId": "resultset.aggregate-filtered",
@@ -40076,10 +40140,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 594,
-  "implementedCases": 592,
-  "differentialVerifiedCases": 207,
-  "differentialVerifiedRuntimeIds": 759,
+  "inventoriedCases": 595,
+  "implementedCases": 593,
+  "differentialVerifiedCases": 208,
+  "differentialVerifiedRuntimeIds": 760,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40089,14 +40153,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3380,
+  "runtimeAssociationCount": 3381,
   "referencedJavaRuntimeIds": 3151,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 985,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 594,
+  "totalCases": 595,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 759
+  "differentialVerifiedRuntimeIDs": 760
  }
 }

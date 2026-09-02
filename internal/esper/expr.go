@@ -251,7 +251,12 @@ type EvalContext struct {
 	// absent from the public builder API; subquery expressions use it to obtain
 	// a consistent named-window/table snapshot.
 	Engine *Engine
-	Group  []Event
+	// decimalMathContext is copied into aggregate evaluation contexts by the
+	// runtime. Direct expression evaluation leaves it unset and therefore
+	// retains exact unlimited AvgExact semantics.
+	decimalMathContext    DecimalMathContext
+	decimalMathContextSet bool
+	Group                 []Event
 	// GroupTags parallels Group with the pattern-match tag map of each group
 	// event. Pattern-stream aggregates (for example sum(sb.intPrimitive) over
 	// a pattern) evaluate their input per group event with that event's own
@@ -379,12 +384,14 @@ type EvalContext struct {
 // aggregate over the pattern match stream.
 func (ctx EvalContext) groupEventContext(event Event, index int) EvalContext {
 	result := EvalContext{
-		Event:      event,
-		OuterEvent: ctx.OuterEvent,
-		Engine:     ctx.Engine,
-		Now:        ctx.Now,
-		Variables:  ctx.Variables,
-		Parameters: ctx.Parameters,
+		Event:                 event,
+		OuterEvent:            ctx.OuterEvent,
+		Engine:                ctx.Engine,
+		decimalMathContext:    ctx.decimalMathContext,
+		decimalMathContextSet: ctx.decimalMathContextSet,
+		Now:                   ctx.Now,
+		Variables:             ctx.Variables,
+		Parameters:            ctx.Parameters,
 	}
 	if index >= 0 && index < len(ctx.GroupTags) {
 		result.Tags = ctx.GroupTags[index]
@@ -4329,6 +4336,18 @@ func AvgExact[T ExactNumeric](expression Expression[T]) AggregateExpression[big.
 			return Null()
 		}
 		average := new(big.Rat).Quo(total, new(big.Rat).SetInt64(count))
+		configured := ctx.decimalMathContextSet
+		context := ctx.decimalMathContext
+		if !configured && ctx.Engine != nil && ctx.Engine.env != nil {
+			context, configured = ctx.Engine.env.decimalMathContextSnapshot()
+		}
+		if configured {
+			rounded, err := roundDecimalRat(average, context)
+			if err != nil {
+				return Null()
+			}
+			average = rounded
+		}
 		return Present(*average)
 	})
 }
