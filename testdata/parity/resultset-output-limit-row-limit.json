@@ -1,0 +1,59 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-output-limit-row-limit",
+  "description": "ResultSetOutputLimitRowLimit ordinals 1 and 3: length-batch wildcard row limit with old/new streams and SODA round-trip.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java",
+  "javaRuntimes": ["java-runtime-840e283d8ac639591083", "java-runtime-20d0d1451ce549bf53b5"],
+  "javaNames": ["ResultSetBatchNoOffsetNoOrder", "ResultSetBatchOffsetNoOrderOM"],
+  "javaStaticIds": ["java-2d2f2a8e404c07c322c6", "java-789d7de75e91392eb5e1"],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "batch-no-offset-no-order",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-840e283d8ac639591083",
+      "executionName": "ResultSetBatchNoOffsetNoOrder",
+      "observation": "listener+iterator",
+      "iteratorSnapshots": 6,
+      "epl": "@name('s0') select irstream * from SupportBean#length_batch(3) limit 1"
+    },
+    {
+      "case": "batch-offset-no-order-om",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-20d0d1451ce549bf53b5",
+      "executionName": "ResultSetBatchOffsetNoOrderOM",
+      "observation": "listener+iterator+soda",
+      "iteratorSnapshots": 6,
+      "epl": "select irstream * from SupportBean#length_batch(3) limit 1"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "batch-no-offset-no-order"},
+    {"op": "snapshot", "case": "batch-no-offset-no-order", "statement": "s0"},
+    {"op": "send", "case": "batch-no-offset-no-order", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "snapshot", "case": "batch-no-offset-no-order", "statement": "s0"},
+    {"op": "send", "case": "batch-no-offset-no-order", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "snapshot", "case": "batch-no-offset-no-order", "statement": "s0"},
+    {"op": "send", "case": "batch-no-offset-no-order", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+    {"op": "snapshot", "case": "batch-no-offset-no-order", "statement": "s0"},
+    {"op": "send", "case": "batch-no-offset-no-order", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 4}},
+    {"op": "snapshot", "case": "batch-no-offset-no-order", "statement": "s0"},
+    {"op": "send", "case": "batch-no-offset-no-order", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 5}},
+    {"op": "snapshot", "case": "batch-no-offset-no-order", "statement": "s0"},
+    {"op": "send", "case": "batch-no-offset-no-order", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 6}},
+    {"op": "case", "case": "batch-offset-no-order-om"},
+    {"op": "snapshot", "case": "batch-offset-no-order-om", "statement": "s0"},
+    {"op": "send", "case": "batch-offset-no-order-om", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "snapshot", "case": "batch-offset-no-order-om", "statement": "s0"},
+    {"op": "send", "case": "batch-offset-no-order-om", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "snapshot", "case": "batch-offset-no-order-om", "statement": "s0"},
+    {"op": "send", "case": "batch-offset-no-order-om", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+    {"op": "snapshot", "case": "batch-offset-no-order-om", "statement": "s0"},
+    {"op": "send", "case": "batch-offset-no-order-om", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 4}},
+    {"op": "snapshot", "case": "batch-offset-no-order-om", "statement": "s0"},
+    {"op": "send", "case": "batch-offset-no-order-om", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 5}},
+    {"op": "snapshot", "case": "batch-offset-no-order-om", "statement": "s0"},
+    {"op": "send", "case": "batch-offset-no-order-om", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 6}}
+  ]
+}

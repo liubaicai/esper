@@ -27164,6 +27164,358 @@ func assertResultSetAggregateFilteredWMathContextTrace(t *testing.T, trace compa
 		}
 	}
 }
+func TestRunResultsetOutputLimitRowLimitDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	scenarioPath := filepath.Join(root, "resultset-output-limit-row-limit.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-output-limit-row-limit",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultsetOutputLimitRowLimitTrace(t, trace)
+}
+
+func TestRunResultsetOutputLimitRowLimitDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-limit.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-output-limit-row-limit-diff",
+		"-scenario", filepath.Join(root, "resultset-output-limit-row-limit.json"),
+		"-java-trace", filepath.Join(root, "resultset-output-limit-row-limit.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetOutputLimitRowLimitJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetOutputLimitRowLimitJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetOutputLimitRowLimitJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetOutputLimitRowLimitJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultsetOutputLimitRowLimitTrace(t, evidence.JavaTrace)
+	assertResultsetOutputLimitRowLimitTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultsetOutputLimitRowLimitDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New[0].Fields["intPrimitive"] = json.Number("99")
+		}},
+		{name: "old-new-order", mutate: func(trace *compat.Trace) {
+			trace.Records[3].New, trace.Records[3].Old = trace.Records[3].Old, trace.Records[3].New
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:0]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-output-limit-row-limit.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-limit.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-output-limit-row-limit-diff",
+				"-scenario", filepath.Join(root, "resultset-output-limit-row-limit.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultsetOutputLimitRowLimitCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, "resultset-output-limit-row-limit.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, "resultset-output-limit-row-limit.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-output-limit-row-limit.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from checked-in trace: %#v", differences)
+	}
+	assertResultsetOutputLimitRowLimitTrace(t, javaTrace)
+	assertResultsetOutputLimitRowLimitTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-output-limit-row-limit.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultsetOutputLimitRowLimitScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetOutputLimitRowLimitJavaCommit,
+		resultsetOutputLimitRowLimitJavaRuntimeIDs,
+		resultsetOutputLimitRowLimitJavaSources,
+		resultsetOutputLimitRowLimitJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-output-limit-row-limit",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultsetOutputLimitRowLimitTrace(t, replayed)
+}
+
+func TestRunResultsetOutputLimitRowLimitRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-output-limit-row-limit.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "resultset-output-limit-row-limit"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1, "intPrimitive": 2`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "null-string", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1"`), []byte(`"theString": null`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 1`), []byte(`"intPrimitive": 1.5`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "resultset-output-limit-row-limit",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultsetOutputLimitRowLimitRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-limit.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != resultsetOutputLimitRowLimitID ||
+		document.Description != resultsetOutputLimitRowLimitDescription || document.JavaCommit != resultsetOutputLimitRowLimitJavaCommit ||
+		document.JavaSource != resultsetOutputLimitRowLimitSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, resultsetOutputLimitRowLimitJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetOutputLimitRowLimitJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultsetOutputLimitRowLimitJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != 2 {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetOutputLimitRowLimitCases[index] || entry.Ordinal != resultsetOutputLimitRowLimitOrdinals[index] ||
+			entry.RuntimeID != resultsetOutputLimitRowLimitJavaRuntimeIDs[index] ||
+			entry.ExecutionName != resultsetOutputLimitRowLimitJavaExecutions[index] ||
+			entry.IteratorSnapshots != 6 || entry.EPL != resultsetOutputLimitRowLimitEPLs[index] {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertResultsetOutputLimitRowLimitTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetOutputLimitRowLimitID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 16 {
+		t.Fatalf("trace records = %d, want 16", len(trace.Records))
+	}
+	listenerIndex := 0
+	caseListeners := map[string]int{}
+	for index, record := range trace.Records {
+		if record.Operation == "snapshot" {
+			if record.Sequence != 0 {
+				t.Fatalf("snapshot record %d sequence = %d", index, record.Sequence)
+			}
+			continue
+		}
+		if record.Operation != "listener" || len(record.New) != 1 {
+			t.Fatalf("listener record %d = %#v", index, record)
+		}
+		expectedSequence := uint64(caseListeners[record.Case] + 1)
+		if record.Sequence != expectedSequence {
+			t.Fatalf("listener record %d sequence = %d, want %d", index, record.Sequence, expectedSequence)
+		}
+		caseListeners[record.Case]++
+		if listenerIndex%2 == 0 {
+			if len(record.Old) != 0 || record.New[0].Fields["theString"] != "E1" {
+				t.Fatalf("first listener record %d = %#v", index, record)
+			}
+		} else {
+			if len(record.Old) != 1 || record.New[0].Fields["theString"] != "E4" || record.Old[0].Fields["theString"] != "E1" {
+				t.Fatalf("second listener record %d = %#v", index, record)
+			}
+		}
+		listenerIndex++
+	}
+	if listenerIndex != 4 || len(caseListeners) != 2 {
+		t.Fatalf("listener records = %d by case = %#v, want 4 across 2 cases", listenerIndex, caseListeners)
+	}
+	for caseName, count := range caseListeners {
+		if count != 2 {
+			t.Fatalf("listener records for %q = %d, want 2", caseName, count)
+		}
+	}
+}
 func TestRunResultSetQueryTypeLocalGroupByDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	scenarioPath := filepath.Join(root, "resultset-querytype-local-group-by.json")

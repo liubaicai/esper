@@ -1016,7 +1016,10 @@
     "internal/esper/stream.go",
     "internal/esper/runtime.go",
     "internal/esper/output_test.go",
-    "internal/esper/snapshot_test.go"
+    "internal/esper/snapshot_test.go",
+    "internal/esper/resultset_output_limit_row_limit_parity_test.go",
+    "internal/app/parity/resultset_output_limit_row_limit.go",
+    "internal/app/parity/run_test.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -37485,6 +37488,73 @@
     "ResultSetQueryTypeLocalGroupBy ordinal 13 replays one deterministic scenario (one Java/Go listener snapshot with three ordered rows, 0 differences): grouped multi-level local window access preserves SupportBean identity and keepall arrival order for exact, per-theString, per-intPrimitive, and ungrouped local keys.",
     "Typed Go uses GroupBy, WindowEvents, and LocalGroupBy with a 10-second snapshot; strict scenario/oracle validators pin Java metadata, EPL, payload order, timer boundary, listener shape, full SupportBean properties, and mutation rejection."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-limit",
+   "javaRuntimeIds": [
+    "java-runtime-840e283d8ac639591083",
+    "java-runtime-20d0d1451ce549bf53b5"
+   ],
+   "javaNames": [
+    "ResultSetBatchNoOffsetNoOrder",
+    "ResultSetBatchOffsetNoOrderOM"
+   ],
+   "javaStaticIds": [
+    "java-2d2f2a8e404c07c322c6",
+    "java-789d7de75e91392eb5e1"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitRuntimeIDMappingMatchesScenario",
+    "internal/esper/resultset_output_limit_row_limit_parity_test.go:TestResultSetOutputLimitRowLimitLengthBatchParity"
+   ],
+   "tags": [
+    "correctness",
+    "output",
+    "row-limit",
+    "length-batch",
+    "listener",
+    "iterator",
+    "soda",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-limit.json",
+    "testdata/parity/resultset-output-limit-row-limit.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit.go.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowLimitScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-limit.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-840e283d8ac639591083",
+    "java-runtime-20d0d1451ce549bf53b5"
+   ],
+   "notes": [
+    "ResultSetOutputLimitRowLimit ordinals 1 and 3 replay one deterministic six-event length_batch(3) scenario per execution (16 Java/Go records per side, four listener records and twelve iterator snapshots, 0 differences): limit 1 is applied at batch flush, with new E1 then new E4 plus old E1 in order.",
+    "The typed Go runner uses LengthBatch, WithOldStream, Limit, listener replay, and iterator snapshots; the ordinal 3 oracle pins the SODA toEPL round-trip. Strict scenario/oracle validators pin Java metadata, runtime/static/name references, payload order, listener shape, old/new values, and value/ordering/time/record-count mutations."
+   ]
   }
  ],
  "mappings": [
@@ -40207,13 +40277,17 @@
   {
    "capabilityId": "resultset.aggregate-local-group",
    "caseId": "case.resultset-querytype-local-group-by"
+  },
+  {
+   "capabilityId": "output.when-basic",
+   "caseId": "case.resultset-output-limit-row-limit"
   }
  ],
  "summary": {
-  "inventoriedCases": 596,
-  "implementedCases": 594,
-  "differentialVerifiedCases": 209,
-  "differentialVerifiedRuntimeIds": 761,
+  "inventoriedCases": 597,
+  "implementedCases": 595,
+  "differentialVerifiedCases": 210,
+  "differentialVerifiedRuntimeIds": 763,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40223,14 +40297,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3382,
-  "referencedJavaRuntimeIds": 3151,
+  "runtimeAssociationCount": 3384,
+  "referencedJavaRuntimeIds": 3153,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 985,
+  "unreferencedJavaRuntimeIds": 983,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 596,
+  "totalCases": 597,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 761
+  "differentialVerifiedRuntimeIDs": 763
  }
 }

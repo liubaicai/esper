@@ -1,3 +1,19 @@
+> 最新补充：Draft 4.306（2026-09-03），新增 `output.when-basic` 的
+> `resultset-output-limit-row-limit` differential-verified 场景，对照固定 Java
+> `ResultSetOutputLimitRowLimit.java` ordinals 1 和 3 的
+> `ResultSetBatchNoOffsetNoOrder`、`ResultSetBatchOffsetNoOrderOM` executions
+>（Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes
+> `java-runtime-840e283d8ac639591083`、`java-runtime-20d0d1451ce549bf53b5`；static IDs
+> `java-2d2f2a8e404c07c322c6`、`java-789d7de75e91392eb5e1`；无 flags）：Java/Go
+> 各 16 条 records、0 differences。场景固定 wildcard `irstream`
+> `length_batch(3) limit 1` 的 listener + iterator 边界，第二 execution 额外固定
+> SODA `toEPL()` 与 EPL-to-model 编译；E1/E2/E3 冲刷 new E1，E4/E5/E6 冲刷
+> new E4 + old E1。typed Go 使用 `LengthBatch`、`WithOldStream`、`Limit` 和
+> iterator replay；严格 scenario/oracle validator 固定 Java 元数据、payload、旧新顺序、
+> batch flush、时间和 value/old-new/time/record-count mutation。manifest 更新为 597
+> cases、210 个 differential-verified case、763 个 differential runtime IDs、3384 条
+> associations（referenced 3153）；capability 119 个（35 DV）。
+
 > 最新补充：Draft 4.305（2026-09-03），新增 `resultset.aggregate-local-group` 的
 > `resultset-querytype-local-group-by` differential-verified 场景，对照固定 Java
 > `ResultSetQueryTypeLocalGroupBy.java` ordinal 13 的 `ResultSetLocalGroupedMultiLevelAccess`
