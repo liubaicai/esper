@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 
 	esper "github.com/liubaicai/esper"
 	"github.com/liubaicai/esper/internal/compat"
@@ -44,6 +45,24 @@ var (
 	}
 )
 
+const (
+	resultsetOutputLimitRowLimitNegativeRowcountID          = "resultset-output-limit-row-limit-negative-rowcount"
+	resultsetOutputLimitRowLimitNegativeRowcountDescription = "ResultSetOutputLimitRowLimit ordinal 7: grouped snapshot negative rowcount with offset."
+	resultsetOutputLimitRowLimitNegativeRowcountSource      = resultsetOutputLimitRowLimitSource
+	resultsetOutputLimitRowLimitNegativeRowcountRuntimeID   = "java-runtime-6bf4cf3ded03c9ff57fa"
+	resultsetOutputLimitRowLimitNegativeRowcountStaticID    = "java-0109d52ee4e8b36575b9"
+	resultsetOutputLimitRowLimitNegativeRowcountExecution   = "ResultSetGroupedSnapshotNegativeRowcount"
+	resultsetOutputLimitRowLimitNegativeRowcountCase        = "grouped-snapshot-negative-rowcount"
+	resultsetOutputLimitRowLimitNegativeRowcountEPL         = "@name('s0') select theString, sum(intPrimitive) as mysum from SupportBean#length(5) group by theString output snapshot every 10 seconds order by sum(intPrimitive) desc limit -1 offset 1"
+)
+
+var (
+	resultsetOutputLimitRowLimitNegativeRowcountJavaRuntimeIDs = []string{resultsetOutputLimitRowLimitNegativeRowcountRuntimeID}
+	resultsetOutputLimitRowLimitNegativeRowcountJavaStaticIDs  = []string{resultsetOutputLimitRowLimitNegativeRowcountStaticID}
+	resultsetOutputLimitRowLimitNegativeRowcountJavaSources    = []string{resultsetOutputLimitRowLimitNegativeRowcountSource}
+	resultsetOutputLimitRowLimitNegativeRowcountJavaExecutions = []string{resultsetOutputLimitRowLimitNegativeRowcountExecution}
+)
+
 type resultsetOutputLimitRowLimitBean struct {
 	TheString       string   `esper:"theString"`
 	BoolPrimitive   bool     `esper:"boolPrimitive"`
@@ -65,6 +84,11 @@ type resultsetOutputLimitRowLimitBean struct {
 	BigDecimal      *float64 `esper:"bigDecimal"`
 	BigInteger      *int64   `esper:"bigInteger"`
 	EnumValue       *string  `esper:"enumValue"`
+}
+
+type resultsetOutputLimitRowLimitNegativeRowcountBean struct {
+	TheString    string `esper:"theString"`
+	IntPrimitive int    `esper:"intPrimitive"`
 }
 
 func loadResultsetOutputLimitRowLimitScenario(reader io.Reader) (compat.Scenario, error) {
@@ -417,4 +441,219 @@ func decodeResultsetOutputLimitRowLimitInteger(raw json.RawMessage, name string)
 		return 0, fmt.Errorf("%s must be an integer JSON number", name)
 	}
 	return int(value), nil
+}
+func loadResultsetOutputLimitRowLimitNegativeRowcountScenario(reader io.Reader) (compat.Scenario, error) {
+	if reader == nil {
+		return compat.Scenario{}, fmt.Errorf("%s scenario reader is required", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	raw, err := io.ReadAll(reader)
+	if err != nil {
+		return compat.Scenario{}, fmt.Errorf("read %s scenario: %w", resultsetOutputLimitRowLimitNegativeRowcountID, err)
+	}
+	if err := rejectResultsetOutputLimitRowLimitDuplicateKeys(raw); err != nil {
+		return compat.Scenario{}, fmt.Errorf("decode %s scenario: %w", resultsetOutputLimitRowLimitNegativeRowcountID, err)
+	}
+	var root map[string]json.RawMessage
+	if err := strictObject(raw, &root); err != nil {
+		return compat.Scenario{}, fmt.Errorf("decode %s scenario: %w", resultsetOutputLimitRowLimitNegativeRowcountID, err)
+	}
+	if err := requireResultsetOutputLimitRowLimitFields(root,
+		"version", "id", "description", "javaCommit", "javaSource", "javaRuntimes",
+		"javaNames", "javaStaticIds", "javaFlags", "cases", "steps"); err != nil {
+		return compat.Scenario{}, err
+	}
+	var metadata struct {
+		Version     string `json:"version"`
+		ID          string `json:"id"`
+		Description string `json:"description"`
+		JavaCommit  string `json:"javaCommit"`
+		JavaSource  string `json:"javaSource"`
+	}
+	if err := json.Unmarshal(raw, &metadata); err != nil {
+		return compat.Scenario{}, fmt.Errorf("decode %s metadata: %w", resultsetOutputLimitRowLimitNegativeRowcountID, err)
+	}
+	if metadata.Version != compat.ScenarioVersion || metadata.ID != resultsetOutputLimitRowLimitNegativeRowcountID ||
+		metadata.Description != resultsetOutputLimitRowLimitNegativeRowcountDescription || metadata.JavaCommit != resultsetOutputLimitRowLimitJavaCommit ||
+		metadata.JavaSource != resultsetOutputLimitRowLimitNegativeRowcountSource {
+		return compat.Scenario{}, fmt.Errorf("%s scenario metadata is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	if err := validateResultsetOutputLimitRowLimitStringArray(root["javaRuntimes"], resultsetOutputLimitRowLimitNegativeRowcountJavaRuntimeIDs, "javaRuntimes"); err != nil {
+		return compat.Scenario{}, err
+	}
+	if err := validateResultsetOutputLimitRowLimitStringArray(root["javaNames"], resultsetOutputLimitRowLimitNegativeRowcountJavaExecutions, "javaNames"); err != nil {
+		return compat.Scenario{}, err
+	}
+	if err := validateResultsetOutputLimitRowLimitStringArray(root["javaStaticIds"], resultsetOutputLimitRowLimitNegativeRowcountJavaStaticIDs, "javaStaticIds"); err != nil {
+		return compat.Scenario{}, err
+	}
+	if err := validateResultsetOutputLimitRowLimitStringArray(root["javaFlags"], nil, "javaFlags"); err != nil {
+		return compat.Scenario{}, err
+	}
+	var rawCases []json.RawMessage
+	if err := json.Unmarshal(root["cases"], &rawCases); err != nil || len(rawCases) != 1 {
+		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly one case", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	var caseObject map[string]json.RawMessage
+	if err := strictObject(rawCases[0], &caseObject); err != nil {
+		return compat.Scenario{}, fmt.Errorf("scenario case: %w", err)
+	}
+	if err := requireResultsetOutputLimitRowLimitFields(caseObject, "case", "ordinal", "runtimeId", "executionName", "observation", "iteratorSnapshots", "epl"); err != nil {
+		return compat.Scenario{}, fmt.Errorf("scenario case: %w", err)
+	}
+	var entry struct {
+		Case              string `json:"case"`
+		Ordinal           int    `json:"ordinal"`
+		RuntimeID         string `json:"runtimeId"`
+		ExecutionName     string `json:"executionName"`
+		Observation       string `json:"observation"`
+		IteratorSnapshots int    `json:"iteratorSnapshots"`
+		EPL               string `json:"epl"`
+	}
+	if err := json.Unmarshal(rawCases[0], &entry); err != nil || entry.Case != resultsetOutputLimitRowLimitNegativeRowcountCase ||
+		entry.Ordinal != 7 || entry.RuntimeID != resultsetOutputLimitRowLimitNegativeRowcountRuntimeID ||
+		entry.ExecutionName != resultsetOutputLimitRowLimitNegativeRowcountExecution || entry.Observation != "listener+iterator" ||
+		entry.IteratorSnapshots != 1 || entry.EPL != resultsetOutputLimitRowLimitNegativeRowcountEPL {
+		return compat.Scenario{}, fmt.Errorf("%s scenario case metadata is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	var rawSteps []json.RawMessage
+	if err := json.Unmarshal(root["steps"], &rawSteps); err != nil || len(rawSteps) != 8 {
+		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly eight steps", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	steps := make([]compat.Step, len(rawSteps))
+	for index, rawStep := range rawSteps {
+		var object map[string]json.RawMessage
+		if err := strictObject(rawStep, &object); err != nil {
+			return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
+		}
+		var operation string
+		if err := json.Unmarshal(object["op"], &operation); err != nil {
+			return compat.Scenario{}, fmt.Errorf("scenario step %d op must be a string", index)
+		}
+		expected := []string{"op", "case"}
+		switch operation {
+		case "case":
+		case "advance-time":
+			expected = []string{"op", "at"}
+		case "snapshot":
+			expected = []string{"op", "case", "statement", "mode"}
+		case "send":
+			expected = []string{"op", "case", "eventType", "payload"}
+		default:
+			return compat.Scenario{}, fmt.Errorf("scenario step %d has unsupported op %q", index, operation)
+		}
+		if err := requireResultsetOutputLimitRowLimitFields(object, expected...); err != nil {
+			return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
+		}
+		if err := json.Unmarshal(rawStep, &steps[index]); err != nil {
+			return compat.Scenario{}, fmt.Errorf("scenario step %d has invalid types: %w", index, err)
+		}
+	}
+	scenario := compat.Scenario{Version: metadata.Version, ID: metadata.ID, Steps: steps}
+	if err := validateResultsetOutputLimitRowLimitNegativeRowcountScenario(scenario); err != nil {
+		return compat.Scenario{}, err
+	}
+	return scenario, nil
+}
+
+func validateResultsetOutputLimitRowLimitNegativeRowcountScenario(scenario compat.Scenario) error {
+	if err := scenario.Validate(); err != nil {
+		return err
+	}
+	if scenario.ID != resultsetOutputLimitRowLimitNegativeRowcountID || len(scenario.Steps) != 8 {
+		return fmt.Errorf("%s scenario shape is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	if scenario.Steps[0].Op != "case" || scenario.Steps[0].Case != resultsetOutputLimitRowLimitNegativeRowcountCase {
+		return fmt.Errorf("%s case marker is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	if scenario.Steps[1].Op != "advance-time" || scenario.Steps[1].At != "1970-01-01T00:00:01Z" {
+		return fmt.Errorf("%s initial time is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	if scenario.Steps[2].Op != "snapshot" || scenario.Steps[2].Case != resultsetOutputLimitRowLimitNegativeRowcountCase || scenario.Steps[2].Statement != "s0" || scenario.Steps[2].Mode != "ordered" {
+		return fmt.Errorf("%s initial snapshot is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	wantNames := []string{"E1", "E2", "E3", "E1"}
+	wantValues := []int{10, 5, 20, 30}
+	for index := range wantNames {
+		step := scenario.Steps[3+index]
+		if step.Op != "send" || step.Case != resultsetOutputLimitRowLimitNegativeRowcountCase || step.EventType != "SupportBean" {
+			return fmt.Errorf("%s event %d is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID, index)
+		}
+		value, err := decodeResultsetOutputLimitRowLimitNegativeRowcountValue(step)
+		if err != nil {
+			return fmt.Errorf("%s event %d: %w", resultsetOutputLimitRowLimitNegativeRowcountID, index, err)
+		}
+		if value.TheString != wantNames[index] || value.IntPrimitive != wantValues[index] {
+			return fmt.Errorf("%s event %d payload is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID, index)
+		}
+	}
+	if scenario.Steps[7].Op != "advance-time" || scenario.Steps[7].At != "1970-01-01T00:00:11Z" {
+		return fmt.Errorf("%s final time is not pinned", resultsetOutputLimitRowLimitNegativeRowcountID)
+	}
+	return nil
+}
+
+func runResultsetOutputLimitRowLimitNegativeRowcountScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
+	if err := validateResultsetOutputLimitRowLimitNegativeRowcountScenario(scenario); err != nil {
+		return compat.Trace{}, err
+	}
+	env := esper.NewEnvironment()
+	if _, err := esper.RegisterStruct[resultsetOutputLimitRowLimitNegativeRowcountBean](env, "SupportBean"); err != nil {
+		return compat.Trace{}, err
+	}
+	theString := esper.Field[resultsetOutputLimitRowLimitNegativeRowcountBean, string]("theString")
+	intPrimitive := esper.Field[resultsetOutputLimitRowLimitNegativeRowcountBean, int]("intPrimitive")
+	plan, err := env.Build(esper.From[resultsetOutputLimitRowLimitNegativeRowcountBean](env, "SupportBean").Window(esper.LengthWindow(5)).GroupBy(theString).Select(
+		esper.Alias("theString", theString),
+		esper.Alias("mysum", esper.Sum[int](intPrimitive)),
+	).Query(esper.StatementName("s0"), esper.WithOutput(esper.OutputSnapshotEvery(10*time.Second)),
+		esper.OrderBy(esper.Descending(esper.ResultField[int]("mysum"))), esper.Limit(-1), esper.Offset(1)))
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	engine, statement, err := deployParityStatementWithRuntime(ctx, env, plan, resultsetOutputLimitRowLimitNegativeRowcountRuntimeID)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+	caseScenario, err := scenarioForCase(scenario, resultsetOutputLimitRowLimitNegativeRowcountCase)
+	if err != nil {
+		return compat.Trace{}, err
+	}
+	return compat.ReplayWithStatements(ctx, engine, statement, caseScenario, decodeResultsetOutputLimitRowLimitNegativeRowcountPayload, func(name string) (*esper.Statement, error) {
+		if name != statement.Name() {
+			return nil, fmt.Errorf("unknown %s statement %q", resultsetOutputLimitRowLimitNegativeRowcountID, name)
+		}
+		return statement, nil
+	})
+}
+
+func decodeResultsetOutputLimitRowLimitNegativeRowcountPayload(step compat.Step) (any, error) {
+	value, err := decodeResultsetOutputLimitRowLimitNegativeRowcountValue(step)
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+func decodeResultsetOutputLimitRowLimitNegativeRowcountValue(step compat.Step) (resultsetOutputLimitRowLimitNegativeRowcountBean, error) {
+	if step.EventType != "SupportBean" {
+		return resultsetOutputLimitRowLimitNegativeRowcountBean{}, fmt.Errorf("unsupported event type %q", step.EventType)
+	}
+	var fields map[string]json.RawMessage
+	if err := strictObject(step.Payload, &fields); err != nil {
+		return resultsetOutputLimitRowLimitNegativeRowcountBean{}, err
+	}
+	if err := requireResultsetOutputLimitRowLimitFields(fields, "theString", "intPrimitive"); err != nil {
+		return resultsetOutputLimitRowLimitNegativeRowcountBean{}, err
+	}
+	var value resultsetOutputLimitRowLimitNegativeRowcountBean
+	if err := json.Unmarshal(fields["theString"], &value.TheString); err != nil {
+		return value, fmt.Errorf("theString must be a string")
+	}
+	var err error
+	value.IntPrimitive, err = decodeResultsetOutputLimitRowLimitInteger(fields["intPrimitive"], "intPrimitive")
+	if err != nil {
+		return value, err
+	}
+	return value, nil
 }

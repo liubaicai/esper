@@ -1,3 +1,16 @@
+> 最新补充：Draft 4.308（2026-09-03），新增 `output.when-basic` 的
+> `resultset-output-limit-row-limit-negative-rowcount` differential-verified 场景，对照固定 Java
+> `ResultSetOutputLimitRowLimit.java` ordinal 7 的 `ResultSetGroupedSnapshotNegativeRowcount` execution
+>（Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtime
+> `java-runtime-6bf4cf3ded03c9ff57fa`；static ID `java-0109d52ee4e8b36575b9`；无 flags）：Java/Go
+> 各 2 条 records、0 differences。场景固定 1 秒部署前 timer、空 iterator snapshot、E1/10、E2/5、E3/20、E1/30
+> 四个事件，以及 11 秒 grouped snapshot listener；descending `sum(intPrimitive)`、`limit -1` unlimited 与 `offset 1`
+> 的结果为 E3/20、E2/5。typed Go 使用 `LengthWindow`、`GroupBy`、`Sum`、`OutputSnapshotEvery`、descending
+> `OrderBy`、`Limit(-1)` 和 `Offset(1)`；strict scenario/oracle validator 固定 Java 元数据、exact EPL、payload
+> 顺序、timer boundary、listener/iterator shape，以及 value/order/time/record-count mutation；Go validation
+> 同时保持 negative offset rejection。manifest 更新为 599 cases、212 个 differential-verified case、766 个
+> differential runtime IDs、3387 条 associations（referenced 3156）；capability 119 个（35 DV）。
+
 > 最新补充：Draft 4.307（2026-09-03），新增 `output.when-basic` 的
 > `resultset-output-limit-row-limit-context-grouped` differential-verified 场景，对照固定 Java
 > `ResultSetOutputLimitRowLimit.java` ordinals 0 和 4 的

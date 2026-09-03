@@ -1019,6 +1019,7 @@
     "internal/esper/snapshot_test.go",
     "internal/esper/resultset_output_limit_row_limit_parity_test.go",
     "internal/app/parity/resultset_output_limit_row_limit.go",
+    "internal/esper/resultset_output_limit_row_limit_negative_rowcount_parity_test.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 1,
@@ -37624,6 +37625,70 @@
     "ResultSetOutputLimitRowLimit ordinals 1 and 3 replay one deterministic six-event length_batch(3) scenario per execution (16 Java/Go records per side, four listener records and twelve iterator snapshots, 0 differences): limit 1 is applied at batch flush, with new E1 then new E4 plus old E1 in order.",
     "The typed Go runner uses LengthBatch, WithOldStream, Limit, listener replay, and iterator snapshots; the ordinal 3 oracle pins the SODA toEPL round-trip. Strict scenario/oracle validators pin Java metadata, runtime/static/name references, payload order, listener shape, old/new values, and value/ordering/time/record-count mutations."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-limit-negative-rowcount",
+   "javaRuntimeIds": [
+    "java-runtime-6bf4cf3ded03c9ff57fa"
+   ],
+   "javaNames": [
+    "ResultSetGroupedSnapshotNegativeRowcount"
+   ],
+   "javaStaticIds": [
+    "java-0109d52ee4e8b36575b9"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitNegativeRowcountDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitNegativeRowcountDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitNegativeRowcountDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitNegativeRowcountCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitNegativeRowcountRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitNegativeRowcountRuntimeIDMappingMatchesScenario",
+    "internal/esper/resultset_output_limit_row_limit_negative_rowcount_parity_test.go:TestResultSetOutputLimitRowLimitNegativeRowcountParity"
+   ],
+   "tags": [
+    "correctness",
+    "output",
+    "row-limit",
+    "negative-rowcount",
+    "offset",
+    "aggregate",
+    "listener",
+    "iterator",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-limit-negative-rowcount.json",
+    "testdata/parity/resultset-output-limit-row-limit-negative-rowcount.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit-negative-rowcount.go.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit-negative-rowcount.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowLimitNegativeRowcountScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-limit-negative-rowcount.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6bf4cf3ded03c9ff57fa"
+   ],
+   "notes": [
+    "ResultSetOutputLimitRowLimit ordinal 7 replays one deterministic grouped snapshot scenario (2 Java/Go records per side, one initial iterator snapshot and one listener record, 0 differences): limit -1 is unlimited, descending aggregate order is retained, and offset 1 removes the highest E1/40 group so the listener receives E3/20 then E2/5.",
+    "The typed Go surface uses LengthWindow, GroupBy, Sum, OutputSnapshotEvery, descending OrderBy, Limit(-1) and Offset(1); top-level negative limits are accepted while negative offsets remain rejected. Strict scenario/oracle validators pin Java metadata, exact EPL, payload order, timer boundary, listener/iterator shape, and value/order/time/record-count mutations."
+   ]
   }
  ],
  "mappings": [
@@ -40354,13 +40419,17 @@
   {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit-context-grouped"
+  },
+  {
+   "capabilityId": "output.when-basic",
+   "caseId": "case.resultset-output-limit-row-limit-negative-rowcount"
   }
  ],
  "summary": {
-  "inventoriedCases": 598,
-  "implementedCases": 596,
-  "differentialVerifiedCases": 211,
-  "differentialVerifiedRuntimeIds": 765,
+  "inventoriedCases": 599,
+  "implementedCases": 597,
+  "differentialVerifiedCases": 212,
+  "differentialVerifiedRuntimeIds": 766,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40370,14 +40439,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3386,
-  "referencedJavaRuntimeIds": 3155,
+  "runtimeAssociationCount": 3387,
+  "referencedJavaRuntimeIds": 3156,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 981,
+  "unreferencedJavaRuntimeIds": 980,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 598,
+  "totalCases": 599,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 765
+  "differentialVerifiedRuntimeIDs": 766
  }
 }

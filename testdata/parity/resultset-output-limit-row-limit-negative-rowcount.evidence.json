@@ -1,0 +1,147 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-6bf4cf3ded03c9ff57fa"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java"
+  ],
+  "javaExecutions": [
+    "ResultSetGroupedSnapshotNegativeRowcount"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-limit-negative-rowcount",
+    "steps": [
+      {
+        "op": "case",
+        "case": "grouped-snapshot-negative-rowcount"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "grouped-snapshot-negative-rowcount",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "grouped-snapshot-negative-rowcount",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouped-snapshot-negative-rowcount",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouped-snapshot-negative-rowcount",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "grouped-snapshot-negative-rowcount",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-limit-negative-rowcount",
+    "records": [
+      {
+        "case": "grouped-snapshot-negative-rowcount",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z"
+      },
+      {
+        "case": "grouped-snapshot-negative-rowcount",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 20,
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "theString": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-limit-negative-rowcount",
+    "records": [
+      {
+        "case": "grouped-snapshot-negative-rowcount",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z"
+      },
+      {
+        "case": "grouped-snapshot-negative-rowcount",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 20,
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mysum": 5,
+              "theString": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -47,8 +47,8 @@ func (e *Environment) validateTypedQuerySyntax(query Query) error {
 			return NewError(ErrorInvalidRule, fmt.Sprintf("module use %d cannot be blank", index))
 		}
 	}
-	if query.limit < 0 || query.offset < 0 {
-		return NewError(ErrorInvalidRule, "limit and offset cannot be negative")
+	if query.offset < 0 {
+		return NewError(ErrorInvalidRule, "offset cannot be negative")
 	}
 	if err := validateOutputPolicy(query.output); err != nil {
 		return err

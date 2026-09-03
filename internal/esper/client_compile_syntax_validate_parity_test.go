@@ -51,7 +51,7 @@ func TestClientCompileSyntaxMessagesTypedBoundaryMatchesEsper(t *testing.T) {
 		{name: "blank alias", query: Select(base, Alias(" ", Literal(1))).Query(), text: "non-blank alias"},
 		{name: "nil select expression", query: Select(base, Alias("value", nil)).Query(), text: "is nil"},
 		{name: "invalid expression constructor", query: Select(base, Alias("value", Concat())).Query(), text: "at least one operand"},
-		{name: "negative limit", query: base.Query(Limit(-1)), text: "cannot be negative"},
+		{name: "negative offset", query: base.Query(Offset(-1)), text: "cannot be negative"},
 		{name: "blank statement name", query: base.Query(StatementName(" ")), text: "statement name"},
 		{name: "blank context name", query: base.Query(WithContext(" ")), text: "context name"},
 		{name: "invalid output count", query: base.Query(WithOutput(OutputEvery(0))), text: "output count"},
@@ -61,6 +61,9 @@ func TestClientCompileSyntaxMessagesTypedBoundaryMatchesEsper(t *testing.T) {
 		if err == nil || !errors.Is(err, ErrorInvalidRule) || !strings.Contains(err.Error(), test.text) {
 			t.Fatalf("%s error = %v", test.name, err)
 		}
+	}
+	if err := env.ValidateSyntax(base.Query(Limit(-1))); err != nil {
+		t.Fatalf("negative limit should be accepted as unlimited: %v", err)
 	}
 
 	other := NewEnvironment()

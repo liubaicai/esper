@@ -36,6 +36,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-aggregate-grouped-having and resultset-querytype-aggregate-grouped-having-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-context-grouped and resultset-output-limit-row-limit-context-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit and resultset-output-limit-row-limit-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-negative-rowcount and resultset-output-limit-row-limit-negative-rowcount-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-filter-named-parameter and resultset-aggregate-filter-named-parameter-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-filtered-w-math-context and resultset-aggregate-filtered-w-math-context-diff")
 		flags.PrintDefaults()
@@ -113,6 +114,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOutputLimitRowLimitContextGroupedScenario(file)
 	} else if *mode == "resultset-output-limit-row-limit" || *mode == "resultset-output-limit-row-limit-diff" {
 		scenario, err = loadResultsetOutputLimitRowLimitScenario(file)
+	} else if *mode == "resultset-output-limit-row-limit-negative-rowcount" || *mode == "resultset-output-limit-row-limit-negative-rowcount-diff" {
+		scenario, err = loadResultsetOutputLimitRowLimitNegativeRowcountScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -2614,6 +2617,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowLimitJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowLimitJavaSources),
 				splitMetadata(*javaExecutions, resultsetOutputLimitRowLimitJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-row-limit-negative-rowcount" || *mode == "resultset-output-limit-row-limit-negative-rowcount-diff" {
+		trace, err := runResultsetOutputLimitRowLimitNegativeRowcountScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-row-limit-negative-rowcount-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitRowLimitJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowLimitNegativeRowcountJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowLimitNegativeRowcountJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitRowLimitNegativeRowcountJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

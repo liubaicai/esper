@@ -49,6 +49,11 @@ func TestRunHelpSucceeds(t *testing.T) {
 			t.Fatalf("help output omits %q", mode)
 		}
 	}
+	for _, mode := range []string{"resultset-output-limit-row-limit", "resultset-output-limit-row-limit-diff", "resultset-output-limit-row-limit-negative-rowcount", "resultset-output-limit-row-limit-negative-rowcount-diff"} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q", mode)
+		}
+	}
 }
 
 func TestRunResultSetAggregateSortedGroupedDirectReplay(t *testing.T) {
@@ -27514,6 +27519,354 @@ func assertResultsetOutputLimitRowLimitTrace(t *testing.T, trace compat.Trace) {
 		if count != 2 {
 			t.Fatalf("listener records for %q = %d, want 2", caseName, count)
 		}
+	}
+}
+
+func assertResultsetOutputLimitRowLimitNegativeRowcountTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetOutputLimitRowLimitNegativeRowcountID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 2 {
+		t.Fatalf("trace records = %d, want 2", len(trace.Records))
+	}
+	snapshot := trace.Records[0]
+	if snapshot.Case != resultsetOutputLimitRowLimitNegativeRowcountCase || snapshot.Operation != "snapshot" || snapshot.Statement != "s0" || snapshot.Sequence != 0 || snapshot.Time != "1970-01-01T00:00:01Z" || len(snapshot.New) != 0 || len(snapshot.Old) != 0 {
+		t.Fatalf("initial snapshot = %#v", snapshot)
+	}
+	listener := trace.Records[1]
+	if listener.Case != resultsetOutputLimitRowLimitNegativeRowcountCase || listener.Operation != "listener" || listener.Statement != "s0" || listener.Sequence != 1 || listener.Time != "1970-01-01T00:00:11Z" || len(listener.New) != 2 || len(listener.Old) != 0 {
+		t.Fatalf("listener = %#v", listener)
+	}
+	for index, expected := range []struct {
+		name string
+		sum  string
+	}{{name: "E3", sum: "20"}, {name: "E2", sum: "5"}} {
+		row := listener.New[index]
+		if row.Kind != "row" || len(row.Fields) != 2 || row.Fields["theString"] != expected.name || row.Fields["mysum"] != json.Number(expected.sum) {
+			t.Fatalf("listener row %d = %#v", index, row)
+		}
+	}
+}
+
+func TestRunResultsetOutputLimitRowLimitNegativeRowcountDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-output-limit-row-limit-negative-rowcount",
+		"-scenario", filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultsetOutputLimitRowLimitNegativeRowcountTrace(t, trace)
+}
+
+func TestRunResultsetOutputLimitRowLimitNegativeRowcountDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-limit-negative-rowcount.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-output-limit-row-limit-negative-rowcount-diff",
+		"-scenario", filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.json"),
+		"-java-trace", filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetOutputLimitRowLimitJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetOutputLimitRowLimitNegativeRowcountJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultsetOutputLimitRowLimitNegativeRowcountJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetOutputLimitRowLimitNegativeRowcountJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultsetOutputLimitRowLimitNegativeRowcountTrace(t, evidence.JavaTrace)
+	assertResultsetOutputLimitRowLimitNegativeRowcountTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultsetOutputLimitRowLimitNegativeRowcountDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "value", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New[0].Fields["mysum"] = json.Number("999")
+		}},
+		{name: "order", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New[0], trace.Records[1].New[1] = trace.Records[1].New[1], trace.Records[1].New[0]
+		}},
+		{name: "time-boundary", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Time = "1970-01-01T00:00:10Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-limit-negative-rowcount.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-output-limit-row-limit-negative-rowcount-diff",
+				"-scenario", filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultsetOutputLimitRowLimitNegativeRowcountCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from checked-in trace: %#v", differences)
+	}
+	assertResultsetOutputLimitRowLimitNegativeRowcountTrace(t, javaTrace)
+	assertResultsetOutputLimitRowLimitNegativeRowcountTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultsetOutputLimitRowLimitNegativeRowcountScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetOutputLimitRowLimitJavaCommit,
+		resultsetOutputLimitRowLimitNegativeRowcountJavaRuntimeIDs,
+		resultsetOutputLimitRowLimitNegativeRowcountJavaSources,
+		resultsetOutputLimitRowLimitNegativeRowcountJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-output-limit-row-limit-negative-rowcount",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultsetOutputLimitRowLimitNegativeRowcountTrace(t, replayed)
+}
+
+func TestRunResultsetOutputLimitRowLimitNegativeRowcountRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-output-limit-row-limit-negative-rowcount.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "resultset-output-limit-row-limit-negative-rowcount"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "grouped-snapshot-negative-rowcount",`), []byte(`"case": "grouped-snapshot-negative-rowcount", "extra": 0,`), 1)
+		}},
+		{name: "case-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "grouped-snapshot-negative-rowcount",`), []byte(`"case": "grouped-snapshot-negative-rowcount", "case": "grouped-snapshot-negative-rowcount",`), 1)
+		}},
+		{name: "marker-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "grouped-snapshot-negative-rowcount"}`), []byte(`{"op": "case", "case": "grouped-snapshot-negative-rowcount", "extra": 0}`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 10, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 10, "intPrimitive": 11`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "wrong-string", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1"`), []byte(`"theString": "E9"`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 10`), []byte(`"intPrimitive": 10.5`), 1)
+		}},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": null`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 7`), []byte(`"ordinal": 8`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "resultset-output-limit-row-limit-negative-rowcount",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultsetOutputLimitRowLimitNegativeRowcountRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-limit-negative-rowcount.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != resultsetOutputLimitRowLimitNegativeRowcountID ||
+		document.Description != resultsetOutputLimitRowLimitNegativeRowcountDescription || document.JavaCommit != resultsetOutputLimitRowLimitJavaCommit ||
+		document.JavaSource != resultsetOutputLimitRowLimitNegativeRowcountSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, resultsetOutputLimitRowLimitNegativeRowcountJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetOutputLimitRowLimitNegativeRowcountJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultsetOutputLimitRowLimitNegativeRowcountJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != 1 {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	entry := document.Cases[0]
+	if entry.Case != resultsetOutputLimitRowLimitNegativeRowcountCase || entry.Ordinal != 7 || entry.RuntimeID != resultsetOutputLimitRowLimitNegativeRowcountRuntimeID ||
+		entry.ExecutionName != resultsetOutputLimitRowLimitNegativeRowcountExecution || entry.Observation != "listener+iterator" || entry.IteratorSnapshots != 1 || entry.EPL != resultsetOutputLimitRowLimitNegativeRowcountEPL {
+		t.Fatalf("scenario case metadata = %#v", entry)
 	}
 }
 func TestRunResultSetQueryTypeLocalGroupByDirectReplay(t *testing.T) {

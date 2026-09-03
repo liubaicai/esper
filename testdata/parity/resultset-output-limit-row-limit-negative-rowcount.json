@@ -1,0 +1,30 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-output-limit-row-limit-negative-rowcount",
+  "description": "ResultSetOutputLimitRowLimit ordinal 7: grouped snapshot negative rowcount with offset.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java",
+  "javaRuntimes": ["java-runtime-6bf4cf3ded03c9ff57fa"],
+  "javaNames": ["ResultSetGroupedSnapshotNegativeRowcount"],
+  "javaStaticIds": ["java-0109d52ee4e8b36575b9"],
+  "javaFlags": [],
+  "cases": [{
+    "case": "grouped-snapshot-negative-rowcount",
+    "ordinal": 7,
+    "runtimeId": "java-runtime-6bf4cf3ded03c9ff57fa",
+    "executionName": "ResultSetGroupedSnapshotNegativeRowcount",
+    "observation": "listener+iterator",
+    "iteratorSnapshots": 1,
+    "epl": "@name('s0') select theString, sum(intPrimitive) as mysum from SupportBean#length(5) group by theString output snapshot every 10 seconds order by sum(intPrimitive) desc limit -1 offset 1"
+  }],
+  "steps": [
+    {"op": "case", "case": "grouped-snapshot-negative-rowcount"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:01Z"},
+    {"op": "snapshot", "case": "grouped-snapshot-negative-rowcount", "statement": "s0", "mode": "ordered"},
+    {"op": "send", "case": "grouped-snapshot-negative-rowcount", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "send", "case": "grouped-snapshot-negative-rowcount", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 5}},
+    {"op": "send", "case": "grouped-snapshot-negative-rowcount", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 20}},
+    {"op": "send", "case": "grouped-snapshot-negative-rowcount", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 30}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:11Z"}
+  ]
+}

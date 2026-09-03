@@ -1989,8 +1989,8 @@ func (e *Environment) validateContextLifecycleExpression(expression Expr) error 
 }
 
 func (e *Environment) validateQueryModifiers(query Query) error {
-	if query.limit < 0 || query.offset < 0 {
-		return fmt.Errorf("limit and offset cannot be negative")
+	if query.offset < 0 {
+		return fmt.Errorf("offset cannot be negative")
 	}
 	if query.rowRecog != nil && query.output.Kind == OutputSnapshotPolicy {
 		return fmt.Errorf("snapshot output is not yet supported for match-recognize queries")

@@ -567,25 +567,59 @@ func runResultsetOutputLimitRowLimitContextGroupedGrouped(ctx context.Context, s
 		return compat.Trace{}, err
 	}
 	defer func() { _ = engine.Close(context.Background()) }()
-	listenerRecords := 0
-	trace, err := compat.ReplayWithStatements(ctx, engine, statement, scenario, func(step compat.Step) (any, error) {
-		return decodeResultsetOutputLimitRowLimitContextGroupedBean(step)
-	}, func(name string) (*esper.Statement, error) {
-		if name != statement.Name() {
-			return nil, fmt.Errorf("unknown statement %q", name)
-		}
-		return statement, nil
-	})
-	if err != nil {
+	// Java attaches a listener to this iterator-only execution but never
+	// observes listener output. Subscribe without recording so the Go trace
+	// retains only the explicit iterator snapshots.
+	if _, err := statement.Subscribe(func(_ context.Context, _ esper.ResultBatch) error { return nil }); err != nil {
 		return compat.Trace{}, err
 	}
-	for _, record := range trace.Records {
-		if record.Operation == "listener" {
-			listenerRecords++
+	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
+	caseName := ""
+	for _, step := range scenario.Steps {
+		if err := ctx.Err(); err != nil {
+			return trace, err
+		}
+		if step.Op == "case" {
+			caseName = step.Case
+			continue
+		}
+		if step.Case != caseName {
+			return trace, fmt.Errorf("fully grouped step case %q is not active", step.Case)
+		}
+		switch step.Op {
+		case "send":
+			payload, err := decodeResultsetOutputLimitRowLimitContextGroupedBean(step)
+			if err != nil {
+				return trace, err
+			}
+			if err := engine.Send(ctx, step.EventType, payload); err != nil {
+				return trace, err
+			}
+		case "snapshot":
+			if step.Statement != statement.Name() || step.Mode != "ordered" {
+				return trace, fmt.Errorf("fully grouped snapshot metadata is not pinned")
+			}
+			result, err := statement.Snapshot(ctx)
+			if err != nil {
+				return trace, err
+			}
+			rows := compat.NormalizeResults(result.Batch.New)
+			if rows == nil {
+				rows = []compat.ResultRecord{}
+			}
+			trace.Records = append(trace.Records, compat.TraceRecord{
+				Case: caseName, Operation: "snapshot", Statement: statement.Name(),
+				Time: engine.Now().UTC().Format("2006-01-02T15:04:05Z07:00"), New: rows,
+			})
+		default:
+			return trace, fmt.Errorf("unsupported fully grouped step %q", step.Op)
 		}
 	}
-	if listenerRecords != 0 {
-		return compat.Trace{}, fmt.Errorf("fully grouped iterator emitted %d listener records", listenerRecords)
+	if caseName != resultsetOutputLimitRowLimitContextGroupedGroupedCase {
+		return trace, fmt.Errorf("fully grouped case marker is not pinned")
+	}
+	if len(trace.Records) != 6 {
+		return trace, fmt.Errorf("fully grouped iterator produced %d snapshots, want 6", len(trace.Records))
 	}
 	return trace, nil
 }

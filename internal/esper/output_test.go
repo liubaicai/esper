@@ -120,8 +120,11 @@ func TestDistinctOrderLimitAndOffsetModifiers(t *testing.T) {
 	if !ok || event.Underlying().(runtimeTestTrade).Price != 3 {
 		t.Fatalf("ordered result = %#v", ordered.New[0].Underlying())
 	}
-	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(Limit(-1))); err == nil {
-		t.Fatal("negative limit was accepted")
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(Offset(-1))); err == nil {
+		t.Fatal("negative offset was accepted")
+	}
+	if _, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(Limit(-1))); err != nil {
+		t.Fatalf("negative limit should be accepted as unlimited: %v", err)
 	}
 }
 
