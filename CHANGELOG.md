@@ -1,3 +1,21 @@
+> 最新补充：Draft 4.307（2026-09-03），新增 `output.when-basic` 的
+> `resultset-output-limit-row-limit-context-grouped` differential-verified 场景，对照固定 Java
+> `ResultSetOutputLimitRowLimit.java` ordinals 0 和 4 的
+> `ResultSetLimitOneWithOrderOptimization`、`ResultSetFullyGroupedOrdered` executions
+>（Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtimes
+> `java-runtime-0a4f187046b734b5dc9a`、`java-runtime-19d52dc587ea246a3e07`；static IDs
+> `java-3f5845fdac39997e9b3d`、`java-bf49a03f52cc732a2cf6`；无 flags）：Java/Go
+> 各 30 条 records、0 differences。场景固定 order-optimized `length_batch(10)`/`length_batch(5)`
+> limit-one 的 ordered listener + iterator 边界，以及 `StartS0EndS1` keepall
+> `output snapshot when terminated` 的 3 次单键/多键状态重置；ordinal 4 固定
+> `length(5)` grouped `sum(intPrimitive)` 的 order-by-aggregate limit 2 迭代器替换、淘汰与排序。
+> typed Go 使用 `LengthBatch`、`KeepAll`、`CreateInitiatedTerminatedContext`、
+> `OutputSnapshotWhenTerminated`、`GroupBy`、`Sum`、`OrderBy` 和 `Limit`；严格
+> scenario/oracle validator 固定 Java 元数据、生命周期边界、payload 顺序、listener/iterator
+> records、aggregate replacement/eviction 以及 value/order/state/time/record-count mutation。
+> manifest 更新为 598 cases、211 个 differential-verified case、765 个 differential runtime IDs、
+> 3386 条 associations（referenced 3155）；capability 119 个（35 DV）。
+
 > 最新补充：Draft 4.306（2026-09-03），新增 `output.when-basic` 的
 > `resultset-output-limit-row-limit` differential-verified 场景，对照固定 Java
 > `ResultSetOutputLimitRowLimit.java` ordinals 1 和 3 的

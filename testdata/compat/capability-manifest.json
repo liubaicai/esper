@@ -37490,6 +37490,75 @@
    ]
   },
   {
+   "id": "case.resultset-output-limit-row-limit-context-grouped",
+   "javaRuntimeIds": [
+    "java-runtime-0a4f187046b734b5dc9a",
+    "java-runtime-19d52dc587ea246a3e07"
+   ],
+   "javaNames": [
+    "ResultSetLimitOneWithOrderOptimization",
+    "ResultSetFullyGroupedOrdered"
+   ],
+   "javaStaticIds": [
+    "java-3f5845fdac39997e9b3d",
+    "java-bf49a03f52cc732a2cf6"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitContextGroupedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitContextGroupedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitContextGroupedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitContextGroupedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitContextGroupedRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitContextGroupedRuntimeIDMappingMatchesScenario",
+    "internal/esper/resultset_output_limit_row_limit_context_grouped_parity_test.go:TestResultSetOutputLimitRowLimitContextAndBatchParity",
+    "internal/esper/resultset_output_limit_row_limit_context_grouped_parity_test.go:TestResultSetOutputLimitRowLimitFullyGroupedIteratorParity"
+   ],
+   "tags": [
+    "correctness",
+    "output",
+    "row-limit",
+    "order-by",
+    "context",
+    "group-by",
+    "listener",
+    "iterator",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-limit-context-grouped.json",
+    "testdata/parity/resultset-output-limit-row-limit-context-grouped.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit-context-grouped.go.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit-context-grouped.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowLimitContextGroupedScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-limit-context-grouped.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0a4f187046b734b5dc9a",
+    "java-runtime-19d52dc587ea246a3e07"
+   ],
+   "notes": [
+    "ResultSetOutputLimitRowLimit ordinals 0 and 4 replay one deterministic scenario (30 Java/Go records per side, 18 iterator snapshots and 12 listener records, 0 differences): order-optimized limit-one batches sort before selecting the first row, initiated/terminated contexts emit only their sorted limited row at S1 and reset state, and the fully grouped length window orders aggregate rows by sum before applying limit 2.",
+    "The typed Go surface uses LengthBatch, KeepAll, CreateInitiatedTerminatedContext, OutputSnapshotWhenTerminated, GroupBy, Sum, OrderBy and Limit. Strict scenario/oracle validators pin Java metadata, lifecycle boundaries, payload order, listener and iterator records, aggregate replacement/eviction, and value/order/state/time/record-count mutations."
+   ]
+  },
+  {
    "id": "case.resultset-output-limit-row-limit",
    "javaRuntimeIds": [
     "java-runtime-840e283d8ac639591083",
@@ -40281,13 +40350,17 @@
   {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit"
+  },
+  {
+   "capabilityId": "output.when-basic",
+   "caseId": "case.resultset-output-limit-row-limit-context-grouped"
   }
  ],
  "summary": {
-  "inventoriedCases": 597,
-  "implementedCases": 595,
-  "differentialVerifiedCases": 210,
-  "differentialVerifiedRuntimeIds": 763,
+  "inventoriedCases": 598,
+  "implementedCases": 596,
+  "differentialVerifiedCases": 211,
+  "differentialVerifiedRuntimeIds": 765,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40297,14 +40370,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3384,
-  "referencedJavaRuntimeIds": 3153,
+  "runtimeAssociationCount": 3386,
+  "referencedJavaRuntimeIds": 3155,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 983,
+  "unreferencedJavaRuntimeIds": 981,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 597,
+  "totalCases": 598,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 763
+  "differentialVerifiedRuntimeIDs": 765
  }
 }

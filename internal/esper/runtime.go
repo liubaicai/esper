@@ -10253,6 +10253,7 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
 	}
+	result.New = orderResultsWithSelections(result.New, plan.query.orderBy, plan.query.selections, now, r.variables)
 	result.New = applyResultWindow(result.New, plan.query)
 	if !result.empty() {
 		result.Sequence = r.seq.Add(1)
@@ -19385,6 +19386,10 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 	}
 	if plan.query.distinct {
 		newResults, oldResults = r.applyDistinct(plan.query, newResults, oldResults)
+	}
+	if !deferOutputResultWindow(plan.query.output) {
+		newResults = orderResultsWithSelections(newResults, plan.query.orderBy, plan.query.selections, now, r.variables)
+		oldResults = orderResultsWithSelections(oldResults, plan.query.orderBy, plan.query.selections, now, r.variables)
 	}
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
 		batch.New = newResults
