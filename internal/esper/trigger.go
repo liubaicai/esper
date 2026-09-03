@@ -699,6 +699,10 @@ func (q TriggerQuery) Query(options ...QueryOption) Query {
 		orderBy:                    append([]SortKey(nil), spec.orderBy...),
 		limit:                      spec.limit,
 		offset:                     spec.offset,
+		limitExpr:                  spec.limitExpr,
+		offsetExpr:                 spec.offsetExpr,
+		limitExprSet:               spec.limitExprSet,
+		offsetExprSet:              spec.offsetExprSet,
 		statementPriority:          spec.statementPriority,
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
@@ -1796,8 +1800,8 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 			result.New = orderResults(result.New, s.plan.query.orderBy, now, runtime.variables)
 			result.Old = orderResults(result.Old, s.plan.query.orderBy, now, runtime.variables)
 		}
-		result.New = applyResultWindow(result.New, s.plan.query)
-		result.Old = applyResultWindow(result.Old, s.plan.query)
+		result.New = applyResultWindow(result.New, s.plan.query, runtime.variables)
+		result.Old = applyResultWindow(result.Old, s.plan.query, runtime.variables)
 	}
 	result = runtime.applyOutput(s.plan.query.output, result, false, now, s.plan)
 	if s.plan.query.distinct && !result.empty() {

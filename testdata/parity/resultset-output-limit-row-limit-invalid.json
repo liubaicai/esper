@@ -1,0 +1,27 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-output-limit-row-limit-invalid",
+  "description": "ResultSetOutputLimitRowLimit ordinal 8: invalid variable row-limit compile diagnostics.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java",
+  "javaRuntimes": ["java-runtime-1d2703c5e4976fa0dd90"],
+  "javaNames": ["ResultSetInvalid"],
+  "javaStaticIds": ["java-b2d63277ca12f283120d"],
+  "javaFlags": [],
+  "cases": [{
+    "case": "invalid-variable-row-limit",
+    "ordinal": 8,
+    "runtimeId": "java-runtime-1d2703c5e4976fa0dd90",
+    "executionName": "ResultSetInvalid",
+    "observation": "compile-only",
+    "iteratorSnapshots": 0,
+    "epl": "select * from SupportBean limit myrows"
+  }],
+  "steps": [
+    {"op": "case", "case": "invalid-variable-row-limit"},
+    {"op": "build-error", "statement": "limit-myrows", "epl": "select * from SupportBean limit myrows", "expectError": "Limit clause requires a variable of numeric type [select * from SupportBean limit myrows]"},
+    {"op": "build-error", "statement": "offset-myrows", "epl": "select * from SupportBean limit 1, myrows", "expectError": "Limit clause requires a variable of numeric type [select * from SupportBean limit 1, myrows]"},
+    {"op": "build-error", "statement": "limit-dummy", "epl": "select * from SupportBean limit dummy", "expectError": "Limit clause variable by name 'dummy' has not been declared [select * from SupportBean limit dummy]"},
+    {"op": "build-error", "statement": "offset-dummy", "epl": "select * from SupportBean limit 1,dummy", "expectError": "Limit clause variable by name 'dummy' has not been declared [select * from SupportBean limit 1,dummy]"}
+  ]
+}

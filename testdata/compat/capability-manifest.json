@@ -1010,16 +1010,21 @@
     "ResultSetOutputLimitCrontabWhen",
     "ResultSetOutputLimitAfter",
     "ResultSetOutputLimitAggregateGrouped",
-    "ResultSetOutputLimitRowForAll"
+    "ResultSetOutputLimitRowForAll",
+    "ResultSetInvalid"
    ],
    "goRefs": [
     "internal/esper/stream.go",
+    "internal/esper/plan.go",
     "internal/esper/runtime.go",
+    "internal/esper/rowrecog.go",
+    "internal/esper/trigger.go",
     "internal/esper/output_test.go",
     "internal/esper/snapshot_test.go",
     "internal/esper/resultset_output_limit_row_limit_parity_test.go",
     "internal/app/parity/resultset_output_limit_row_limit.go",
     "internal/esper/resultset_output_limit_row_limit_negative_rowcount_parity_test.go",
+    "internal/app/parity/resultset_output_limit_row_limit_invalid.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 1,
@@ -37689,6 +37694,65 @@
     "ResultSetOutputLimitRowLimit ordinal 7 replays one deterministic grouped snapshot scenario (2 Java/Go records per side, one initial iterator snapshot and one listener record, 0 differences): limit -1 is unlimited, descending aggregate order is retained, and offset 1 removes the highest E1/40 group so the listener receives E3/20 then E2/5.",
     "The typed Go surface uses LengthWindow, GroupBy, Sum, OutputSnapshotEvery, descending OrderBy, Limit(-1) and Offset(1); top-level negative limits are accepted while negative offsets remain rejected. Strict scenario/oracle validators pin Java metadata, exact EPL, payload order, timer boundary, listener/iterator shape, and value/order/time/record-count mutations."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-limit-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-1d2703c5e4976fa0dd90"
+   ],
+   "javaNames": [
+    "ResultSetInvalid"
+   ],
+   "javaStaticIds": [
+    "java-b2d63277ca12f283120d"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitInvalidDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitInvalidDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitInvalidDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitInvalidCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitInvalidRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitInvalidRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "output",
+    "row-limit",
+    "compile-diagnostic",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-limit-invalid.json",
+    "testdata/parity/resultset-output-limit-row-limit-invalid.java.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit-invalid.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit-invalid.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowLimitInvalidScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-limit-invalid.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1d2703c5e4976fa0dd90"
+   ],
+   "notes": [
+    "ResultSetOutputLimitRowLimit ordinal 8 replays four ordered compile-rejected probes for numeric and unknown variable row limits (Java/Go each emit four records, 0 differences). No statement deploys or emits events.",
+    "The typed Go replay uses LimitExpression and OffsetExpression with registered-variable validation; strict scenario/oracle validators pin the fixed Java metadata, exact diagnostics, build-error phase, probe order, and value/order/record-count mutations."
+   ]
   }
  ],
  "mappings": [
@@ -40423,13 +40487,17 @@
   {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit-negative-rowcount"
+  },
+  {
+   "capabilityId": "output.when-basic",
+   "caseId": "case.resultset-output-limit-row-limit-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 599,
-  "implementedCases": 597,
-  "differentialVerifiedCases": 212,
-  "differentialVerifiedRuntimeIds": 766,
+  "inventoriedCases": 600,
+  "implementedCases": 598,
+  "differentialVerifiedCases": 213,
+  "differentialVerifiedRuntimeIds": 767,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40439,14 +40507,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3387,
-  "referencedJavaRuntimeIds": 3156,
+  "runtimeAssociationCount": 3388,
+  "referencedJavaRuntimeIds": 3157,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 980,
+  "unreferencedJavaRuntimeIds": 979,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 599,
+  "totalCases": 600,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 766
+  "differentialVerifiedRuntimeIDs": 767
  }
 }

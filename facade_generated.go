@@ -3541,6 +3541,14 @@ func Limit(count int) QueryOption {
 	return internalengine.Limit(count)
 }
 
+// LimitExpression applies an analyzable, integral expression as the result-set limit.
+// The expression is evaluated against the statement's current variable and parameter
+// snapshot when results are windowed. A negative value means unlimited, while zero
+// suppresses all rows; null and missing values are treated as unlimited.
+func LimitExpression(expression Expr) QueryOption {
+	return internalengine.LimitExpression(expression)
+}
+
 func LinearRegression[X Numeric, Y Numeric](x Expression[X], y Expression[Y]) LinearRegressionExpression[X, Y] {
 	return internalengine.LinearRegression[X, Y](x, y)
 }
@@ -4595,6 +4603,12 @@ type Numeric = internalengine.Numeric
 
 func Offset(count int) QueryOption {
 	return internalengine.Offset(count)
+}
+
+// OffsetExpression applies an analyzable, integral expression as the result-set
+// offset. Null, missing, and non-positive values are treated as zero at runtime.
+func OffsetExpression(expression Expr) QueryOption {
+	return internalengine.OffsetExpression(expression)
 }
 
 func OnCompare(left, right Expr, comparison JoinComparison) JoinCondition {

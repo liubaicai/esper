@@ -325,6 +325,10 @@ func (q RowRecogQuery) Query(options ...QueryOption) Query {
 		orderBy:                    append([]SortKey(nil), spec.orderBy...),
 		limit:                      spec.limit,
 		offset:                     spec.offset,
+		limitExpr:                  spec.limitExpr,
+		offsetExpr:                 spec.offsetExpr,
+		limitExprSet:               spec.limitExprSet,
+		offsetExprSet:              spec.offsetExprSet,
 		statementPriority:          spec.statementPriority,
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
@@ -645,8 +649,8 @@ func (r *statementRuntime) rowRecogBatch(delta eventDelta, plan Plan, now time.T
 		}
 		batch.New = orderRowRecogResults(batch.New, plan.query.orderBy, now, r.variables)
 		batch.Old = orderRowRecogResults(batch.Old, plan.query.orderBy, now, r.variables)
-		batch.New = applyResultWindow(batch.New, plan.query)
-		batch.Old = applyResultWindow(batch.Old, plan.query)
+		batch.New = applyResultWindow(batch.New, plan.query, r.variables)
+		batch.Old = applyResultWindow(batch.Old, plan.query, r.variables)
 		batch.Sequence = r.seq.Add(1)
 	}
 	if rowRecogBatchWindowNode(definition.input) != nil {
@@ -2558,6 +2562,10 @@ func (r *statementRuntime) snapshotQuery(plan Plan, now time.Time, variables map
 		result := ResultBatch{Time: now}
 		if plan.query.iterableUnbound && r.patternState != nil {
 			result.New = append([]Result(nil), r.patternState.iterableRows...)
+			if len(plan.query.orderBy) > 0 {
+				result.New = orderRowRecogResults(result.New, plan.query.orderBy, now, variables)
+			}
+			result.New = applyResultWindow(result.New, plan.query, variables)
 		}
 		return result
 	}
@@ -2589,6 +2597,10 @@ func (r *statementRuntime) snapshotQuery(plan Plan, now time.Time, variables map
 			}
 		}
 		result.New = append(result.New, resultRow(newRow(plan.resultSchema, values)))
+		// The iterator boundary is the evaluation point for result modifiers;
+		// use the current (possibly context-partitioned) variable snapshot.
+		result.New = orderResults(result.New, plan.query.orderBy, now, variables)
+		result.New = applyResultWindow(result.New, plan.query, variables)
 		return result
 	}
 	return r.snapshotBatch(plan, now)
@@ -2652,7 +2664,7 @@ func (r *statementRuntime) snapshotRowRecog(plan Plan, now time.Time, variables 
 		result.New = unique
 	}
 	result.New = orderRowRecogResults(result.New, plan.query.orderBy, now, variables)
-	result.New = applyResultWindow(result.New, plan.query)
+	result.New = applyResultWindow(result.New, plan.query, variables)
 	return result
 }
 

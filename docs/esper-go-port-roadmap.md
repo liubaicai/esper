@@ -1,3 +1,16 @@
+> 最新补充：Draft 4.309（2026-09-04），新增 `output.when-basic` 的
+> `resultset-output-limit-row-limit-invalid` differential-verified 场景，对照固定 Java
+> `ResultSetOutputLimitRowLimit.java` ordinal 8 的 `ResultSetInvalid` execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtime `java-runtime-1d2703c5e4976fa0dd90`；
+> static ID `java-b2d63277ca12f283120d`；无 flags）：Java/Go 各 4 条 compile-rejected records、0 differences。
+> 场景按固定 `RegressionPath` 先注册 string `myrows = 'abc'`，再依次验证 numeric-type 与 unknown-variable
+> 的 limit/offset 诊断；无 statement deploy 或事件输出。typed Go 新增 `LimitExpression`/`OffsetExpression`
+> 类型安全链式入口，并修复动态 modifier 在 deferred output、grouped/trigger iterator snapshot 的当前变量
+> 快照、排序和 result-window 边界语义；严格 scenario/oracle validator 固定 metadata、exact diagnostics、
+> build-error phase、probe 顺序及 value/order/record-count mutation。manifest 更新为 600 cases、213 个
+> differential-verified case、767 个 differential runtime IDs、3388 条 associations（referenced 3157）；
+> capability 119 个（35 DV）。
+
 > 最新补充：Draft 4.308（2026-09-03），新增 `output.when-basic` 的
 > `resultset-output-limit-row-limit-negative-rowcount` differential-verified 场景，对照固定 Java
 > `ResultSetOutputLimitRowLimit.java` ordinal 7 的 `ResultSetGroupedSnapshotNegativeRowcount` execution

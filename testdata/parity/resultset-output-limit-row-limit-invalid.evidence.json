@@ -1,0 +1,125 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-1d2703c5e4976fa0dd90"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java"
+  ],
+  "javaExecutions": [
+    "ResultSetInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-limit-invalid",
+    "steps": [
+      {
+        "op": "case",
+        "case": "invalid-variable-row-limit"
+      },
+      {
+        "op": "build-error",
+        "statement": "limit-myrows",
+        "expectError": "Limit clause requires a variable of numeric type [select * from SupportBean limit myrows]",
+        "epl": "select * from SupportBean limit myrows"
+      },
+      {
+        "op": "build-error",
+        "statement": "offset-myrows",
+        "expectError": "Limit clause requires a variable of numeric type [select * from SupportBean limit 1, myrows]",
+        "epl": "select * from SupportBean limit 1, myrows"
+      },
+      {
+        "op": "build-error",
+        "statement": "limit-dummy",
+        "expectError": "Limit clause variable by name 'dummy' has not been declared [select * from SupportBean limit dummy]",
+        "epl": "select * from SupportBean limit dummy"
+      },
+      {
+        "op": "build-error",
+        "statement": "offset-dummy",
+        "expectError": "Limit clause variable by name 'dummy' has not been declared [select * from SupportBean limit 1,dummy]",
+        "epl": "select * from SupportBean limit 1,dummy"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-limit-invalid",
+    "records": [
+      {
+        "case": "invalid-variable-row-limit",
+        "operation": "compile-rejected",
+        "statement": "limit-myrows",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Limit clause requires a variable of numeric type [select * from SupportBean limit myrows]"
+      },
+      {
+        "case": "invalid-variable-row-limit",
+        "operation": "compile-rejected",
+        "statement": "offset-myrows",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Limit clause requires a variable of numeric type [select * from SupportBean limit 1, myrows]"
+      },
+      {
+        "case": "invalid-variable-row-limit",
+        "operation": "compile-rejected",
+        "statement": "limit-dummy",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Limit clause variable by name 'dummy' has not been declared [select * from SupportBean limit dummy]"
+      },
+      {
+        "case": "invalid-variable-row-limit",
+        "operation": "compile-rejected",
+        "statement": "offset-dummy",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Limit clause variable by name 'dummy' has not been declared [select * from SupportBean limit 1,dummy]"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-limit-invalid",
+    "records": [
+      {
+        "case": "invalid-variable-row-limit",
+        "operation": "compile-rejected",
+        "statement": "limit-myrows",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Limit clause requires a variable of numeric type [select * from SupportBean limit myrows]"
+      },
+      {
+        "case": "invalid-variable-row-limit",
+        "operation": "compile-rejected",
+        "statement": "offset-myrows",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Limit clause requires a variable of numeric type [select * from SupportBean limit 1, myrows]"
+      },
+      {
+        "case": "invalid-variable-row-limit",
+        "operation": "compile-rejected",
+        "statement": "limit-dummy",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Limit clause variable by name 'dummy' has not been declared [select * from SupportBean limit dummy]"
+      },
+      {
+        "case": "invalid-variable-row-limit",
+        "operation": "compile-rejected",
+        "statement": "offset-dummy",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Limit clause variable by name 'dummy' has not been declared [select * from SupportBean limit 1,dummy]"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

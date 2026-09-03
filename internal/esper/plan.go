@@ -1989,6 +1989,35 @@ func (e *Environment) validateContextLifecycleExpression(expression Expr) error 
 }
 
 func (e *Environment) validateQueryModifiers(query Query) error {
+	validateExpression := func(expression Expr, label string) error {
+		if expression == nil || isNilReflectValue(reflect.ValueOf(expression)) || expression.node() == nil {
+			return NewError(ErrorInvalidRule, label+" expression is nil")
+		}
+		var names []string
+		expression.node().referencedVariables(&names)
+		for _, name := range names {
+			if _, exists := e.Variable(name); !exists {
+				return fmt.Errorf("Limit clause variable by name '%s' has not been declared", name)
+			}
+		}
+		if err := e.validateExprVariables(expression); err != nil {
+			return err
+		}
+		if !isIntegralType(expression.Type()) {
+			return NewError(ErrorTypeMismatch, "Limit clause requires a variable of numeric type")
+		}
+		return nil
+	}
+	if query.limitExprSet {
+		if err := validateExpression(query.limitExpr, "limit"); err != nil {
+			return err
+		}
+	}
+	if query.offsetExprSet {
+		if err := validateExpression(query.offsetExpr, "offset"); err != nil {
+			return err
+		}
+	}
 	if query.offset < 0 {
 		return fmt.Errorf("offset cannot be negative")
 	}
@@ -3394,13 +3423,33 @@ func visitPatternDefinitionExpressions(definition *patternDefinition, visit func
 	}
 	return visitPatternNodeExpressions(definition.root, visit)
 }
-
 func visitQueryExpressions(environment *Environment, query Query, visit func(Expr) error) error {
+	originalVisit := visit
+	visit = func(expression Expr) error {
+		// A typed-nil expression can be stored in an interface by a fluent
+		// option. Skip it during broad traversal so the owning validator can
+		// report the option-specific ErrorInvalidRule instead of panicking on
+		// a value-receiver method call.
+		if expression != nil && isNilReflectValue(reflect.ValueOf(expression)) {
+			return nil
+		}
+		return originalVisit(expression)
+	}
 	if err := visitCronScheduleExpressions(query.output.Cron, visit); err != nil {
 		return err
 	}
 	if err := visit(query.output.When); err != nil {
 		return err
+	}
+	if query.limitExprSet {
+		if err := visit(query.limitExpr); err != nil {
+			return err
+		}
+	}
+	if query.offsetExprSet {
+		if err := visit(query.offsetExpr); err != nil {
+			return err
+		}
 	}
 	for _, assignment := range query.output.Then {
 		if err := visit(assignment.Expr); err != nil {

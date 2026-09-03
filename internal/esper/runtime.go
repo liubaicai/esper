@@ -10254,7 +10254,7 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 		result.New = distinctSnapshotResults(result.New)
 	}
 	result.New = orderResultsWithSelections(result.New, plan.query.orderBy, plan.query.selections, now, r.variables)
-	result.New = applyResultWindow(result.New, plan.query)
+	result.New = applyResultWindow(result.New, plan.query, r.variables)
 	if !result.empty() {
 		result.Sequence = r.seq.Add(1)
 	}
@@ -10367,7 +10367,7 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
 	}
-	result.New = applyResultWindow(result.New, plan.query)
+	result.New = applyResultWindow(result.New, plan.query, r.variables)
 	return result
 }
 
@@ -10506,6 +10506,12 @@ func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now ti
 		result.New = append(result.New, resultRow(newRow(plan.resultSchema, values)))
 		result.outputKeysNew = append(result.outputKeysNew, key)
 	}
+	orderSelections := plan.query.selections
+	if len(definition.selections) > 0 {
+		orderSelections = definition.selections
+	}
+	result.New, result.outputKeysNew = orderResultsWithSelectionsSide(result.New, result.outputKeysNew, plan.query.orderBy, orderSelections, now, r.variables)
+	result.New, result.outputKeysNew = applyResultWindowSide(result.New, result.outputKeysNew, plan.query, r.variables)
 	return result
 }
 
@@ -10733,7 +10739,7 @@ func (r *statementRuntime) snapshotAggregateStateBatchInternal(plan Plan, now ti
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
 	}
-	result.New = applyResultWindow(result.New, plan.query)
+	result.New = applyResultWindow(result.New, plan.query, r.variables)
 	return result
 }
 
@@ -10825,7 +10831,7 @@ func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBat
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
 	}
-	result.New = applyResultWindow(result.New, plan.query)
+	result.New = applyResultWindow(result.New, plan.query, r.variables)
 	return result
 }
 
@@ -11062,8 +11068,8 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 		}
 		batch.New = orderResultsWithSelections(batch.New, plans[0].query.orderBy, orderSelections, now, r.variables)
 		batch.Old = orderResultsWithSelections(batch.Old, plans[0].query.orderBy, orderSelections, now, r.variables)
-		batch.New = applyResultWindow(batch.New, plans[0].query)
-		batch.Old = applyResultWindow(batch.Old, plans[0].query)
+		batch.New = applyResultWindow(batch.New, plans[0].query, r.variables)
+		batch.Old = applyResultWindow(batch.Old, plans[0].query, r.variables)
 	}
 	if len(plans) > 0 && len(plans[0].query.orderBy) > 0 {
 		batch.New = orderRowRecogResults(batch.New, plans[0].query.orderBy, now, r.variables)
@@ -17454,8 +17460,8 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
 		if !deferOutputResultWindow(plan.query.output) {
-			batch.New = applyResultWindow(batch.New, plan.query)
-			batch.Old = applyResultWindow(batch.Old, plan.query)
+			batch.New = applyResultWindow(batch.New, plan.query, r.variables)
+			batch.Old = applyResultWindow(batch.Old, plan.query, r.variables)
 		}
 		batch.Sequence = r.seq.Add(1)
 	}
@@ -17583,7 +17589,7 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
 		if !deferOutputResultWindow(plan.query.output) {
-			batch.New = applyResultWindow(batch.New, plan.query)
+			batch.New = applyResultWindow(batch.New, plan.query, r.variables)
 		}
 		batch.Sequence = r.seq.Add(1)
 	}
@@ -17684,8 +17690,8 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
 		if !deferOutputResultWindow(plan.query.output) {
-			batch.New = applyResultWindow(batch.New, plan.query)
-			batch.Old = applyResultWindow(batch.Old, plan.query)
+			batch.New = applyResultWindow(batch.New, plan.query, r.variables)
+			batch.Old = applyResultWindow(batch.Old, plan.query, r.variables)
 		}
 		batch.Sequence = r.seq.Add(1)
 	}
@@ -18238,8 +18244,8 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 		}
 		if !deferOutputResultWindow(plan.query.output) {
-			batch.New = applyResultWindow(batch.New, plan.query)
-			batch.Old = applyResultWindow(batch.Old, plan.query)
+			batch.New = applyResultWindow(batch.New, plan.query, r.variables)
+			batch.Old = applyResultWindow(batch.Old, plan.query, r.variables)
 		}
 		batch.Sequence = r.seq.Add(1)
 	}
@@ -19394,13 +19400,13 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
 		batch.New = newResults
 		if !deferOutputResultWindow(plan.query.output) {
-			batch.New = applyResultWindow(batch.New, plan.query)
+			batch.New = applyResultWindow(batch.New, plan.query, r.variables)
 		}
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
 		batch.Old = oldResults
 		if !deferOutputResultWindow(plan.query.output) {
-			batch.Old = applyResultWindow(batch.Old, plan.query)
+			batch.Old = applyResultWindow(batch.Old, plan.query, r.variables)
 		}
 	}
 	if !batch.empty() || batch.forced {
@@ -19447,8 +19453,8 @@ func (r *statementRuntime) joinBatch(delta joinDelta, plan Plan, now time.Time) 
 		batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
 	}
 	if !deferOutputResultWindow(plan.query.output) {
-		batch.New = applyResultWindow(batch.New, plan.query)
-		batch.Old = applyResultWindow(batch.Old, plan.query)
+		batch.New = applyResultWindow(batch.New, plan.query, r.variables)
+		batch.Old = applyResultWindow(batch.Old, plan.query, r.variables)
 	}
 	if !batch.empty() {
 		batch.Sequence = r.seq.Add(1)
@@ -19853,22 +19859,140 @@ func (r *statementRuntime) applyDistinct(query Query, newResults, oldResults []R
 	return newOutput, oldOutput
 }
 
-func applyResultWindow(results []Result, query Query) []Result {
-	if len(results) == 0 {
+func applyResultWindow(results []Result, query Query, variables map[string]Value) []Result {
+	start, end := resultWindowBounds(len(results), query, variables)
+	if start >= end {
 		return nil
 	}
-	start := query.offset
-	if start >= len(results) {
-		return nil
+	return append([]Result(nil), results[start:end]...)
+}
+
+// applyResultWindowSide applies a result window while retaining aggregate
+// output keys. Keys are private runtime metadata and must remain positional
+// with rows for deferred grouped-output processing.
+func applyResultWindowSide(results []Result, keys []string, query Query, variables map[string]Value) ([]Result, []string) {
+	start, end := resultWindowBounds(len(results), query, variables)
+	if start >= end {
+		return nil, nil
+	}
+	windowed := append([]Result(nil), results[start:end]...)
+	if len(keys) != len(results) {
+		return windowed, nil
+	}
+	return windowed, append([]string(nil), keys[start:end]...)
+}
+
+func resultWindowBounds(resultCount int, query Query, variables map[string]Value) (start, end int) {
+	if resultCount <= 0 {
+		return 0, 0
+	}
+	start = query.offset
+	if query.offsetExprSet {
+		start = resolveResultWindowOffset(evalResultWindowExpression(query.offsetExpr, variables))
 	}
 	if start < 0 {
 		start = 0
 	}
-	end := len(results)
-	if query.limit > 0 && start+query.limit < end {
+	if start >= resultCount {
+		return resultCount, resultCount
+	}
+	end = resultCount
+	if query.limitExprSet {
+		if limit, limited := resolveResultWindowLimit(evalResultWindowExpression(query.limitExpr, variables)); limited {
+			if limit == 0 {
+				return start, start
+			}
+			if limit < end-start {
+				end = start + limit
+			}
+		}
+	} else if query.limit > 0 && query.limit < end-start {
 		end = start + query.limit
 	}
-	return append([]Result(nil), results[start:end]...)
+	return start, end
+}
+
+func evalResultWindowExpression(expression Expr, variables map[string]Value) Value {
+	if expression == nil || isNilReflectValue(reflect.ValueOf(expression)) || expression.node() == nil {
+		return Missing()
+	}
+	return expression.eval(EvalContext{Variables: variables, Parameters: parameterValuesFromVariables(variables)})
+}
+
+// resultWindowInteger preserves integral values while resolving a typed
+// modifier. Build-time validation guarantees the expression's declared type
+// is integral; reflective conversion still handles null/missing safely and
+// avoids overflowing int when a wider unsigned value is supplied.
+func resultWindowInteger(value Value) (signed int64, unsigned uint64, isUnsigned bool, ok bool) {
+	if !value.IsPresent() {
+		return 0, 0, false, false
+	}
+	reflected := reflect.ValueOf(value.Any())
+	for reflected.IsValid() && (reflected.Kind() == reflect.Pointer || reflected.Kind() == reflect.Interface) {
+		if reflected.IsNil() {
+			return 0, 0, false, false
+		}
+		reflected = reflected.Elem()
+	}
+	if !reflected.IsValid() {
+		return 0, 0, false, false
+	}
+	switch reflected.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return reflected.Int(), 0, false, true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return 0, reflected.Uint(), true, true
+	default:
+		return 0, 0, false, false
+	}
+}
+
+func resultWindowMaxInt() int {
+	return int(^uint(0) >> 1)
+}
+
+func resolveResultWindowOffset(value Value) int {
+	signed, unsigned, isUnsigned, ok := resultWindowInteger(value)
+	if !ok {
+		return 0
+	}
+	maxInt := resultWindowMaxInt()
+	if isUnsigned {
+		if unsigned > uint64(maxInt) {
+			return maxInt
+		}
+		return int(unsigned)
+	}
+	if signed <= 0 {
+		return 0
+	}
+	if uint64(signed) > uint64(maxInt) {
+		return maxInt
+	}
+	return int(signed)
+}
+
+func resolveResultWindowLimit(value Value) (int, bool) {
+	signed, unsigned, isUnsigned, ok := resultWindowInteger(value)
+	if !ok {
+		// Esper treats null/missing variable row limits as unlimited.
+		return 0, false
+	}
+	maxInt := resultWindowMaxInt()
+	if isUnsigned {
+		if unsigned > uint64(maxInt) {
+			return maxInt, true
+		}
+		return int(unsigned), true
+	}
+	if signed < 0 {
+		// Negative dynamic limits mean unlimited in Esper.
+		return 0, false
+	}
+	if uint64(signed) > uint64(maxInt) {
+		return maxInt, true
+	}
+	return int(signed), true
 }
 
 // deferOutputResultWindow keeps row-limit candidates intact while a batched
@@ -19901,17 +20025,31 @@ func orderResults(results []Result, keys []SortKey, now time.Time, variables map
 // row must sort by its own frozen aggregate value; re-evaluation would see
 // one shared live group and tie every comparison away.
 func orderResultsWithSelections(results []Result, keys []SortKey, selections []Selection, now time.Time, variables map[string]Value) []Result {
-	if len(results) < 2 || len(keys) == 0 {
-		return results
+	ordered, _ := orderResultsWithSelectionsSide(results, nil, keys, selections, now, variables)
+	return ordered
+}
+
+// orderResultsWithSelectionsSide preserves private per-result keys while
+// applying the same row-local ordering used by listener output. Aggregate
+// iterator snapshots need these keys to remain positional when a result
+// window is applied after ordering.
+func orderResultsWithSelectionsSide(results []Result, outputKeys []string, sortKeys []SortKey, selections []Selection, now time.Time, variables map[string]Value) ([]Result, []string) {
+	if len(results) < 2 || len(sortKeys) == 0 {
+		return results, outputKeys
 	}
-	keyColumns := resolveOrderByKeyColumns(keys, selections)
-	ordered := append([]Result(nil), results...)
-	sort.SliceStable(ordered, func(left, right int) bool {
-		leftContext := resultOrderContext(ordered[left], now, variables)
-		rightContext := resultOrderContext(ordered[right], now, variables)
-		leftRow, leftHasRow := ordered[left].Row()
-		rightRow, rightHasRow := ordered[right].Row()
-		for index, key := range keys {
+	keyColumns := resolveOrderByKeyColumns(sortKeys, selections)
+	order := make([]int, len(results))
+	for index := range order {
+		order[index] = index
+	}
+	sort.SliceStable(order, func(left, right int) bool {
+		leftResult := results[order[left]]
+		rightResult := results[order[right]]
+		leftContext := resultOrderContext(leftResult, now, variables)
+		rightContext := resultOrderContext(rightResult, now, variables)
+		leftRow, leftHasRow := leftResult.Row()
+		rightRow, rightHasRow := rightResult.Row()
+		for index, key := range sortKeys {
 			var comparison int
 			var ok bool
 			if index < len(keyColumns) && keyColumns[index] != "" && leftHasRow && rightHasRow {
@@ -19929,7 +20067,18 @@ func orderResultsWithSelections(results []Result, keys []SortKey, selections []S
 		}
 		return false
 	})
-	return ordered
+	orderedResults := make([]Result, len(order))
+	var orderedKeys []string
+	if len(outputKeys) == len(results) {
+		orderedKeys = make([]string, len(order))
+	}
+	for index, source := range order {
+		orderedResults[index] = results[source]
+		if orderedKeys != nil {
+			orderedKeys[index] = outputKeys[source]
+		}
+	}
+	return orderedResults, orderedKeys
 }
 
 // resolveOrderByKeyColumns maps each order-by key to a projected column name

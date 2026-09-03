@@ -758,6 +758,10 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		orderBy:                    append([]SortKey(nil), spec.orderBy...),
 		limit:                      spec.limit,
 		offset:                     spec.offset,
+		limitExpr:                  spec.limitExpr,
+		offsetExpr:                 spec.offsetExpr,
+		limitExprSet:               spec.limitExprSet,
+		offsetExprSet:              spec.offsetExprSet,
 		indexHints:                 append([]indexHint(nil), spec.indexHints...),
 		statementPriority:          spec.statementPriority,
 		statementPrioritySet:       spec.statementPrioritySet,
@@ -1263,6 +1267,12 @@ func (u UpdateStreamQuery) Query(options ...QueryOption) Query {
 	query.statementUserObject = spec.statementUserObject
 	query.statementMetadata = cloneStatementMetadata(spec.statementMetadata)
 	query.contextName = spec.contextName
+	query.limit = spec.limit
+	query.offset = spec.offset
+	query.limitExpr = spec.limitExpr
+	query.offsetExpr = spec.offsetExpr
+	query.limitExprSet = spec.limitExprSet
+	query.offsetExprSet = spec.offsetExprSet
 	query.statementPriority = spec.statementPriority
 	query.statementPrioritySet = spec.statementPrioritySet
 	query.statementDrop = spec.statementDrop
@@ -1371,6 +1381,12 @@ func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments
 		output:               spec.output,
 		contextName:          spec.contextName,
 		onDemand:             &onDemandDefinition{action: action, predicate: predicate, assignments: append([]TableAssignment(nil), assignments...)},
+		limit:                spec.limit,
+		offset:               spec.offset,
+		limitExpr:            spec.limitExpr,
+		offsetExpr:           spec.offsetExpr,
+		limitExprSet:         spec.limitExprSet,
+		offsetExprSet:        spec.offsetExprSet,
 		indexHints:           append([]indexHint(nil), spec.indexHints...),
 		statementPriority:    spec.statementPriority,
 		statementPrioritySet: spec.statementPrioritySet,
@@ -1574,6 +1590,10 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 		orderBy:                    append([]SortKey(nil), spec.orderBy...),
 		limit:                      spec.limit,
 		offset:                     spec.offset,
+		limitExpr:                  spec.limitExpr,
+		offsetExpr:                 spec.offsetExpr,
+		limitExprSet:               spec.limitExprSet,
+		offsetExprSet:              spec.offsetExprSet,
 		indexHints:                 append([]indexHint(nil), spec.indexHints...),
 		statementPriority:          spec.statementPriority,
 		statementPrioritySet:       spec.statementPrioritySet,
@@ -2833,6 +2853,10 @@ type querySpec struct {
 	orderBy                    []SortKey
 	limit                      int
 	offset                     int
+	limitExpr                  Expr
+	offsetExpr                 Expr
+	limitExprSet               bool
+	offsetExprSet              bool
 	allowNoSink                bool
 	indexHints                 []indexHint
 	statementPriority          int
@@ -3038,14 +3062,43 @@ func OrderBy(keys ...SortKey) QueryOption {
 	return func(spec *querySpec) { spec.orderBy = append([]SortKey(nil), keys...) }
 }
 
+// LimitExpression applies an analyzable, integral expression as the result-set limit.
+// The expression is evaluated against the statement's current variable and parameter
+// snapshot when results are windowed. A negative value means unlimited, while zero
+// suppresses all rows; null and missing values are treated as unlimited.
+func LimitExpression(expression Expr) QueryOption {
+	return func(spec *querySpec) {
+		spec.limitExpr = expression
+		spec.limitExprSet = true
+		spec.limit = 0
+	}
+}
+
+// OffsetExpression applies an analyzable, integral expression as the result-set
+// offset. Null, missing, and non-positive values are treated as zero at runtime.
+func OffsetExpression(expression Expr) QueryOption {
+	return func(spec *querySpec) {
+		spec.offsetExpr = expression
+		spec.offsetExprSet = true
+		spec.offset = 0
+	}
+}
+
 func Limit(count int) QueryOption {
-	return func(spec *querySpec) { spec.limit = count }
+	return func(spec *querySpec) {
+		spec.limit = count
+		spec.limitExpr = nil
+		spec.limitExprSet = false
+	}
 }
 
 func Offset(count int) QueryOption {
-	return func(spec *querySpec) { spec.offset = count }
+	return func(spec *querySpec) {
+		spec.offset = count
+		spec.offsetExpr = nil
+		spec.offsetExprSet = false
+	}
 }
-
 func newQuery(env *Environment, node *streamNode, selections []Selection, options ...QueryOption) Query {
 	spec := querySpec{selector: SelectIStream, selections: append([]Selection(nil), selections...), output: OutputAll()}
 	for _, option := range options {
@@ -3053,7 +3106,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, limitExpr: spec.limitExpr, offsetExpr: spec.offsetExpr, limitExprSet: spec.limitExprSet, offsetExprSet: spec.offsetExprSet, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -3108,6 +3161,10 @@ type Query struct {
 	orderBy                    []SortKey
 	limit                      int
 	offset                     int
+	limitExpr                  Expr
+	offsetExpr                 Expr
+	limitExprSet               bool
+	offsetExprSet              bool
 	indexHints                 []indexHint
 	statementPriority          int
 	statementPrioritySet       bool
@@ -3364,13 +3421,27 @@ func appendQueryModifiers(parts []string, query Query) []string {
 		}
 		parts = append(parts, "order-by("+strings.Join(keys, ",")+")")
 	}
-	if query.offset > 0 {
+	if query.offsetExprSet {
+		parts = append(parts, "offset-expr("+queryModifierExpressionDescription(query.offsetExpr)+")")
+	} else if query.offset > 0 {
 		parts = append(parts, fmt.Sprintf("offset(%d)", query.offset))
 	}
-	if query.limit > 0 {
+	if query.limitExprSet {
+		parts = append(parts, "limit-expr("+queryModifierExpressionDescription(query.limitExpr)+")")
+	} else if query.limit > 0 {
 		parts = append(parts, fmt.Sprintf("limit(%d)", query.limit))
 	}
 	return parts
+}
+
+func queryModifierExpressionDescription(expression Expr) string {
+	if expression == nil || isNilReflectValue(reflect.ValueOf(expression)) {
+		return "<nil>"
+	}
+	if expression.node() == nil {
+		return "<nil>"
+	}
+	return expression.Description()
 }
 
 func joinDefinitionSources(definition *joinDefinition) []*streamNode {

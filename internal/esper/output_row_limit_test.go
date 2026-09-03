@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -102,6 +103,7 @@ func TestOutputEveryTimeAppliesOrderLimitToAggregateInterval(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+
 	if err := engine.AdvanceTime(context.Background(), time.Unix(11, 0).UTC()); err != nil {
 		t.Fatal(err)
 	}
@@ -171,6 +173,21 @@ func TestOutputSnapshotEveryAppliesGroupedOrderLimitMatchesEsper(t *testing.T) {
 		row, ok := batches[0].New[index].Row()
 		if !ok || row.Get("symbol").Any() != expected.symbol || row.Get("sum").Any() != expected.sum {
 			t.Fatalf("output snapshot grouped row %d = %#v, want %#v", index, row, expected)
+		}
+	}
+}
+func TestResultWindowModifiersRejectTypedNilExpressions(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	var typedNil *typedExpr[int]
+	for _, option := range []QueryOption{
+		LimitExpression(typedNil),
+		OffsetExpression(typedNil),
+	} {
+		_, err := env.Build(From[runtimeTestTrade](env, "Trade").Query(option))
+		if err == nil || !errors.Is(err, ErrorInvalidRule) {
+			t.Fatalf("typed-nil result-window modifier error = %v", err)
 		}
 	}
 }
