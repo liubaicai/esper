@@ -31,24 +31,24 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-09-04; Draft 4.309 (`resultset-output-limit-row-limit-invalid`) targets fixed Java `ResultSetOutputLimitRowLimit.java` ordinal 8 (`ResultSetInvalid`). The typed result-window modifier surface and shared runtime repairs are integrated. Pinned Java and Go traces were regenerated, differential evidence is passing with four compile-rejected records per side and zero differences, focused replay/mutation/typed-modifier tests pass, `make check` is green, and `DynamicModifierReview3-2` returned strict PASS. Manifest, roadmap, CHANGELOG, and README updates are included; commit and push remain.
-- Baseline: Draft 4.308 (`resultset-output-limit-row-limit-negative-rowcount`) is committed and pushed at `76d0fc432`; its one runtime has zero-difference evidence and passed targeted output-limit validation.
+- Updated: 2026-09-04; Draft 4.310 (`resultset-output-limit-row-limit-variable`) targets fixed Java `ResultSetOutputLimitRowLimit.java` ordinal 9 (`ResultSetLengthOffsetVariable`). The Java contract is frozen from commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`: runtime `java-runtime-c591e5e05eb22cddfd00`, static ID `java-299a17bb6319c7f2e6de`, no flags. Three deployments share `int myrows=2` and `int myoffset=1`; an `on SupportBeanNumeric set myrows=intOne, myoffset=intTwo` trigger changes them. Each `SupportBean#length(5) output every 5 events` query uses wildcard new-stream rows and dynamic limit/offset. Java/Go match 21 iterator snapshots and 2 listener flushes per deployment across initial, updated, nullable, negative, zero, and oversized values; setter events do not count toward output batches. The comma, keyword, and SODA forms are represented by one typed Go plan because EPL is not the public API.
+- Baseline: Draft 4.309 (`resultset-output-limit-row-limit-invalid`) is committed and pushed at `507eedfde`; its one runtime has zero-difference evidence and passed full local gates.
+- Validation: targeted parity tests, affected Esper tests, `./scripts/check-layout.sh`, `go vet ./...`, ordinal-nine race tests, manifest artifact validation, and `make check` all pass. `Ordinal9ParityReview` independently returned PASS with zero P1/P2 findings; checked-in Java/Go traces each contain 69 records and differential evidence has status `passing` with zero differences.
 ## Current work unit
-Ordinal 8 is compile-error-only. At fixed Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`, source lines 281-294, `ResultSetInvalid` registers string variable `myrows = 'abc'` in a shared `RegressionPath`, then rejects four ordered statements: `select * from SupportBean limit myrows`, `select * from SupportBean limit 1, myrows`, `select * from SupportBean limit dummy`, and `select * from SupportBean limit 1,dummy`. Expected diagnostics are the fixed Java messages recorded in `testdata/parity/resultset-output-limit-row-limit-invalid.json`; no statement deploys or emits events. The Go replay uses typed `LimitExpression`/`OffsetExpression`, validates registered-variable type and existence at build time, and preserves dynamic modifier evaluation at output/iterator boundaries for ordinal 9.
+Ordinal 9 uses `SupportBeanNumeric` nullable `Integer` fields as the setter source. The observable contract is: each run sends E1..E10, snapshots the iterator after every send, then probes setters `(2,3),(-1,0),(10,0),(6,3),(1,1),(2,1),(1,2),(6,6),(1,4),(null,null),(null,2),(2,null),(-1,4),(-1,0),(0,0)`. Iterator rows are the current length-window arrival order after offset/limit resolution: initial values produce E2; E3; E2/E3; E2/E3; E3/E4; then E6/E7, E4..E8, E5..E9, E9/E10; setter-only probes produce E7, E7/E8, E8, empty, E10, E6..E10, E8..E10, E6/E7, E10, E6..E10, empty. OutputEvery(5) emits only at E5 with E2/E3 and E10 with E9/E10, no old rows; there are two listener batches per run and no timers. Null/missing limit is unlimited, negative limit is unlimited, zero limit is empty, and null/non-positive offset resolves to zero.
 ## Delegation checkpoint
-Ordinal-8 read-only scouts `Ordinal8JavaScout-3` (`java-oracle-scout`) and `Ordinal8GoScout-3` (`scout`) completed concurrently. Java froze execution `ResultSetInvalid`, static ID `java-b2d63277ca12f283120d`, runtime `java-runtime-1d2703c5e4976fa0dd90`, and the four exact diagnostics. Go froze the typed modifier surface and existing compile-error replay protocol. Reviewer `DynamicModifierReview2` identified grouped and trigger iterator gaps; `DynamicModifierCoreFix` repaired them in shared runtime code, and `DynamicModifierReview3-2` confirmed strict PASS after focused validation. Primary owns central facts and delivery.
+Ordinal-9 read-only scouts `Ordinal9JavaScout` (`java-oracle-scout`) and `Ordinal9GoScout` (`scout`) completed concurrently. Java froze the execution/runtime/static IDs, exact source setup, three-run lifecycle, 21 snapshots per run, 2 listener flushes per run, nullable setter sequence, and dynamic window semantics. Go confirmed `RegisterVariable`, `SetVariables`, `VariableRef`, `LimitExpression`, `OffsetExpression`, `LengthWindow`, and `OutputEvery` are sufficient with no shared-core gap. Primary owns `PLANS.md`, run.go/run_test.go, manifest, traces/evidence, roadmap, CHANGELOG, README, validation, review, commit and push. Asset ownership is disjoint: `Ordinal9JavaAssets` may write only the new Java oracle, shell script, and scenario JSON; `Ordinal9GoAssets` may write only the new Go parity runner and independent semantic parity test. Neither may write central facts or generated traces/evidence.
 ## Progress
-- [x] Freeze ordinal-eight Java/Go contracts.
-- [x] Add typed dynamic modifier validation surface.
-- [x] Add ordinal-eight parity assets.
-- [x] Repair dynamic modifier runtime and identity semantics.
-- [x] Wire compile diagnostic replay mutations.
-- [x] Repair reviewer-identified iterator and action result-window gaps.
-- [x] Generate ordinal-eight traces and zero-difference evidence.
-- [x] Update manifest, roadmap, and CHANGELOG.
-- [ ] Run full gates, independent review, commit, and push.
+ - [x] Freeze ordinal-nine Java/Go contracts.
+ - [x] Define ordinal-nine scenario and file ownership.
+ - [x] Add variable-backed row-limit parity assets.
+ - [x] Add ordinal-nine semantic regression tests.
+ - [x] Generate ordinal-nine traces and zero-difference evidence.
+ - [x] Update ordinal-nine manifest and documentation.
+ - [x] Run full gates and independent parity review.
+ - [ ] Commit and push ordinal-nine work unit.
 ## Next work unit
-After ordinal 8 delivery, continue `ResultSetOutputLimitRowLimit.java` ordinal 9 `ResultSetLengthOffsetVariable` with runtime `java-runtime-c591e5e05eb22cddfd00`, static ID `java-299a17bb6319c7f2e6de`, and variable-backed limit/offset iterator/output semantics.
+After ordinal 9 delivery, continue from the remaining `resultset` output/querytype executions selected by the roadmap and manifest; do not claim complete Esper parity.
 ## Prior outcomes
 Draft 4.301 is frozen as all 7 executions of `ResultSetQueryTypeRowPerEvent.java`
 (ordinals 0-6; runtimes `java-runtime-5111b05c6bc620b88e15`, `java-runtime-50601d6f0cc0411a9f90`,

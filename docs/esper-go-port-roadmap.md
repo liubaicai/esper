@@ -1,3 +1,17 @@
+> 最新补充：Draft 4.310（2026-09-04），新增 `output.when-basic` 的
+> `resultset-output-limit-row-limit-variable` differential-verified 场景，对照固定 Java
+> `ResultSetOutputLimitRowLimit.java` ordinal 9 的 `ResultSetLengthOffsetVariable` execution
+>（Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；runtime
+> `java-runtime-c591e5e05eb22cddfd00`；static ID `java-299a17bb6319c7f2e6de`；无 flags）：Java/Go
+> 各 69 条 records、0 differences，覆盖 comma、keyword 和 SODA 三个部署形式，每个形式 21 条 iterator
+> snapshot 与 2 条 output-every-5 listener flush。场景固定 `myrows`/`myoffset` 的 nullable Integer setter
+> 序列、length(5) 窗口、E1-E10 事件以及负数、零值、null 和 oversized limit/offset；setter 事件不计入输出批次。
+> typed Go 使用 `RegisterVariable`、`SetVariables`、`VariableRef`、`LimitExpression`、`OffsetExpression`、
+> `LengthWindow` 与 `OutputEvery`；严格 scenario/oracle validator 固定 Java 元数据、payload 顺序、
+> listener/iterator shape 和 value/order/null/time/record-count mutation。manifest 更新为 601 cases、214 个
+> differential-verified case、768 个 differential runtime IDs、3391 条 associations（referenced 3158）；
+> capability 119 个（35 DV）。
+
 > 最新补充：Draft 4.309（2026-09-04），新增 `output.when-basic` 的
 > `resultset-output-limit-row-limit-invalid` differential-verified 场景，对照固定 Java
 > `ResultSetOutputLimitRowLimit.java` ordinal 8 的 `ResultSetInvalid` execution（Java commit

@@ -1011,7 +1011,8 @@
     "ResultSetOutputLimitAfter",
     "ResultSetOutputLimitAggregateGrouped",
     "ResultSetOutputLimitRowForAll",
-    "ResultSetInvalid"
+    "ResultSetInvalid",
+    "ResultSetLengthOffsetVariable"
    ],
    "goRefs": [
     "internal/esper/stream.go",
@@ -1025,10 +1026,11 @@
     "internal/app/parity/resultset_output_limit_row_limit.go",
     "internal/esper/resultset_output_limit_row_limit_negative_rowcount_parity_test.go",
     "internal/app/parity/resultset_output_limit_row_limit_invalid.go",
+    "internal/app/parity/resultset_output_limit_row_limit_variable.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 1,
-   "status": "implemented",
+   "status": "differential-verified",
    "remaining": [
     "context initiated/terminated lifecycle output and custom-access/table restrictions",
     "snapshot-after combinations beyond the current-state source slice",
@@ -1036,7 +1038,15 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1d2703c5e4976fa0dd90",
+    "java-runtime-0a4f187046b734b5dc9a",
+    "java-runtime-19d52dc587ea246a3e07",
+    "java-runtime-6bf4cf3ded03c9ff57fa",
+    "java-runtime-c591e5e05eb22cddfd00"
    ]
   },
   {
@@ -37753,6 +37763,76 @@
     "ResultSetOutputLimitRowLimit ordinal 8 replays four ordered compile-rejected probes for numeric and unknown variable row limits (Java/Go each emit four records, 0 differences). No statement deploys or emits events.",
     "The typed Go replay uses LimitExpression and OffsetExpression with registered-variable validation; strict scenario/oracle validators pin the fixed Java metadata, exact diagnostics, build-error phase, probe order, and value/order/record-count mutations."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-limit-variable",
+   "javaRuntimeIds": [
+    "java-runtime-c591e5e05eb22cddfd00",
+    "java-runtime-c591e5e05eb22cddfd00",
+    "java-runtime-c591e5e05eb22cddfd00"
+   ],
+   "javaNames": [
+    "ResultSetLengthOffsetVariable",
+    "ResultSetLengthOffsetVariable",
+    "ResultSetLengthOffsetVariable"
+   ],
+   "javaStaticIds": [
+    "java-299a17bb6319c7f2e6de",
+    "java-299a17bb6319c7f2e6de",
+    "java-299a17bb6319c7f2e6de"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowLimit.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitVariableDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitVariableDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitVariableDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitVariableCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitVariableRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitRowLimitVariableRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "output",
+    "row-limit",
+    "variable",
+    "offset",
+    "nullable",
+    "listener",
+    "iterator",
+    "soda",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-limit-variable.json",
+    "testdata/parity/resultset-output-limit-row-limit-variable.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit-variable.go.trace.json",
+    "testdata/parity/resultset-output-limit-row-limit-variable.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowLimitVariableScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-limit-variable.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c591e5e05eb22cddfd00"
+   ],
+   "notes": [
+    "ResultSetOutputLimitRowLimit ordinal 9 replays three equivalent deployment forms (69 Java/Go records per side: 63 iterator snapshots and 6 listener records, 0 differences) with dynamic variable-backed limit and offset.",
+    "The scenario drives SupportBean E1-E10 through a length(5) window, updates nullable Integer myrows/myoffset through SupportBeanNumeric, and covers initial, negative, zero, null and oversized values. The typed Go runner uses RegisterVariable, SetVariables, VariableRef, LimitExpression, OffsetExpression, LengthWindow and OutputEvery; strict scenario/oracle validators pin Java metadata, payload order, listener/iterator shape, and value/order/null/time/record-count mutations."
+   ]
   }
  ],
  "mappings": [
@@ -40491,30 +40571,34 @@
   {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit-invalid"
+  },
+  {
+   "capabilityId": "output.when-basic",
+   "caseId": "case.resultset-output-limit-row-limit-variable"
   }
  ],
  "summary": {
-  "inventoriedCases": 600,
-  "implementedCases": 598,
-  "differentialVerifiedCases": 213,
-  "differentialVerifiedRuntimeIds": 767,
+  "inventoriedCases": 601,
+  "implementedCases": 599,
+  "differentialVerifiedCases": 214,
+  "differentialVerifiedRuntimeIds": 768,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 119,
   "implementedCapabilities": 118,
-  "differentialVerifiedCapabilities": 35,
+  "differentialVerifiedCapabilities": 36,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3388,
-  "referencedJavaRuntimeIds": 3157,
+  "runtimeAssociationCount": 3391,
+  "referencedJavaRuntimeIds": 3158,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 979,
+  "unreferencedJavaRuntimeIds": 978,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 600,
+  "totalCases": 601,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 767
+  "differentialVerifiedRuntimeIDs": 768
  }
 }
