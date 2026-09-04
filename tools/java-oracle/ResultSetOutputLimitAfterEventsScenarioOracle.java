@@ -30,23 +30,33 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 /**
- * Direct Esper 9.0.0 oracle for the ResultSetOutputLimitAfter event-count
- * after-gate executions.  Part one replays ResultSetDirectNumberOfEvents: the
- * keepall window with "output after 3 events" arms on E1 through E3 without
- * any listener callback, then E4 and E5 each deliver exactly one new-only row
- * carrying theString.  Part two replays ResultSetOutputWhenThen: three boolean
- * variables and the s0 statement deploy as one module, E1 through E3 stay
- * silent while myvar0 is false, setting myvar0 through the variable service
- * arms the gate, E4 delivers exactly one new-only row projecting the a.*
- * underlying event, and the when-then clause must have flipped myvar1 and
- * myvar2 to true; the two read-variable steps then record both values.
+ * Direct Esper 9.0.0 oracle for the ResultSetOutputLimitAfter event-count and
+ * time-period after-gate executions.  Part one replays
+ * ResultSetDirectNumberOfEvents: the keepall window with "output after 3
+ * events" arms on E1 through E3 without any listener callback, then E4 and E5
+ * each deliver exactly one new-only row carrying theString.  Part two replays
+ * ResultSetOutputWhenThen: three boolean variables and the s0 statement deploy
+ * as one module, E1 through E3 stay silent while myvar0 is false, setting
+ * myvar0 through the variable service arms the gate, E4 delivers exactly one
+ * new-only row projecting the a.* underlying event, and the when-then clause
+ * must have flipped myvar1 and myvar2 to true; the two read-variable steps
+ * then record both values.  Part three replays ResultSetDirectTimePeriod: the
+ * keepall window with "output after 20 seconds" follows the scenario
+ * advance-time steps, stays silent for the E1 through E3 sends at times 1,
+ * 6000, and 19999, and then delivers E4 at time 20000 and E5 at time 21000 as
+ * single new-only rows.  Part four replays ResultSetEveryPolicy: "output after
+ * 20 seconds every 5 seconds" stays silent for the E1 through E4 sends at
+ * times 1, 6000, 16000, and 20000 plus the E5 send at 24999, the advance to
+ * 25000 fires the schedule with E4 and E5 in order, and the advance to 30000
+ * fires the next schedule with E6.
  */
 public final class ResultSetOutputLimitAfterEventsScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
     private static final String ID = "output-after-events";
     private static final String DESCRIPTION =
-            "ResultSetOutputLimitAfter event-count after-gate: direct after-3-events delivery and the "
-                    + "when-then variable side-effect form.";
+            "ResultSetOutputLimitAfter event-count and time-period after-gates: direct after-3-events "
+                    + "delivery, the when-then variable side-effect form, after-20-seconds boundary, and "
+                    + "after-20-seconds-every-5-seconds anchoring.";
     private static final String JAVA_COMMIT = "9e1b9f1cc9117fea4bf33ab043762c045d73839c";
     private static final String JAVA_SOURCE =
             "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/"
@@ -54,25 +64,36 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
 
     private static final String[] RUNTIME_IDS = {
             "java-runtime-34bfe3c4c56f505d50cd",
-            "java-runtime-499038c2c0fca09551c1"
+            "java-runtime-499038c2c0fca09551c1",
+            "java-runtime-77a5ebb703ccb5fdbf63",
+            "java-runtime-88c88732359bcd33f9cd"
     };
     private static final String[] EXECUTION_NAMES = {
             "ResultSetDirectNumberOfEvents",
-            "ResultSetOutputWhenThen"
+            "ResultSetOutputWhenThen",
+            "ResultSetDirectTimePeriod",
+            "ResultSetEveryPolicy"
     };
     private static final String[] STATIC_IDS = {
             "java-aacc84310d1fab722e9f",
-            "java-310737339ed16858a1fc"
+            "java-310737339ed16858a1fc",
+            "java-a71efa831c6880fb5722",
+            "java-8e3b0bae1be282e4a000"
     };
     private static final String[] CASES = {
             "after-3-events",
-            "after-3-events-when-then"
+            "after-3-events-when-then",
+            "after-20-seconds",
+            "after-20-seconds-every-5"
     };
-    private static final int[] ORDINALS = {3, 6};
+    private static final int[] ORDINALS = {3, 6, 4, 1};
     private static final String[] SCENARIO_EPLS = {
             "@name('s0') select theString from SupportBean#keepall output after 3 events",
             "@Name('s0') select a.* from SupportBean#time(10) a output after 3 events when myvar0=true "
-                    + "then set myvar1=true, myvar2=true"
+                    + "then set myvar1=true, myvar2=true",
+            "@name('s0') select theString from SupportBean#keepall output after 20 seconds",
+            "@name('s0') select theString from SupportBean#keepall output after 0 days 0 hours 0 minutes "
+                    + "20 seconds 0 milliseconds every 0 days 0 hours 0 minutes 5 seconds 0 milliseconds"
     };
     private static final String[] DEPLOY_MODULES = {
             SCENARIO_EPLS[0],
@@ -81,23 +102,63 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
                     + "create variable boolean myvar2 = false;\n"
                     + "@Name('s0')\n"
                     + "select a.* from SupportBean#time(10) a output after 3 events when myvar0=true "
-                    + "then set myvar1=true, myvar2=true"
+                    + "then set myvar1=true, myvar2=true",
+            SCENARIO_EPLS[2],
+            SCENARIO_EPLS[3]
     };
 
     private static final String[][] CASE_SEND_STRINGS = {
             {"E1", "E2", "E3", "E4", "E5"},
-            {"E1", "E2", "E3", "E4"}
+            {"E1", "E2", "E3", "E4"},
+            {"E1", "E2", "E3", "E4", "E5"},
+            {"E1", "E2", "E3", "E4", "E5", "E6"}
+    };
+    private static final String[][] CASE_ADVANCE_TIMES = {
+            {},
+            {},
+            {
+                    "1970-01-01T00:00:00.001Z",
+                    "1970-01-01T00:00:06Z",
+                    "1970-01-01T00:00:19.999Z",
+                    "1970-01-01T00:00:20Z",
+                    "1970-01-01T00:00:21Z"
+            },
+            {
+                    "1970-01-01T00:00:00.001Z",
+                    "1970-01-01T00:00:06Z",
+                    "1970-01-01T00:00:16Z",
+                    "1970-01-01T00:00:20Z",
+                    "1970-01-01T00:00:24.999Z",
+                    "1970-01-01T00:00:25Z",
+                    "1970-01-01T00:00:27Z",
+                    "1970-01-01T00:00:30Z"
+            }
     };
     private static final String[][] EXPECTED_FIELDS = {
             {"theString"},
-            {"intPrimitive", "theString"}
+            {"intPrimitive", "theString"},
+            {"theString"},
+            {"theString"}
     };
     private static final Object[][][] EXPECTED_NEW_ROWS = {
             {{"E4"}, {"E5"}},
-            {{0, "E4"}}
+            {{0, "E4"}},
+            {{"E4"}, {"E5"}},
+            {{"E4", "E5"}, {"E6"}}
     };
-    private static final int[] EXPECTED_CALLBACKS = {2, 1};
-    private static final long[] EXPECTED_TIMES = {0L, 0L};
+    private static final int[][] EXPECTED_ROW_COUNTS = {
+            {1, 1},
+            {1},
+            {1, 1},
+            {2, 1}
+    };
+    private static final int[] EXPECTED_CALLBACKS = {2, 1, 2, 2};
+    private static final long[][] EXPECTED_CALLBACK_TIMES = {
+            {0L, 0L},
+            {0L},
+            {20000L, 21000L},
+            {25000L, 30000L}
+    };
     private static final Pattern INTEGER_SYNTAX = Pattern.compile("-?(?:0|[1-9][0-9]*)");
 
     private ResultSetOutputLimitAfterEventsScenarioOracle() {
@@ -122,8 +183,8 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
         for (int index = 0; index < CASES.length; index++) {
             runCase(index, caseDefinitions.get(index).asObject(), allSteps, records);
         }
-        if (records.size() != 5) {
-            throw new IllegalStateException("expected five records, got " + records.size());
+        if (records.size() != 9) {
+            throw new IllegalStateException("expected nine records, got " + records.size());
         }
 
         JsonObject root = new JsonObject();
@@ -156,7 +217,7 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
                     expectedCallbacks);
             statement.addListener(listener);
             String deploymentId = deployment.getDeploymentId();
-            replay(allSteps, caseName, deploymentId, runtime, records);
+            replay(caseIndex, allSteps, caseName, deploymentId, runtime, records);
             if (caseIndex == 1) {
                 assertVariableTrue(caseName, deploymentId, runtime, "myvar1");
                 assertVariableTrue(caseName, deploymentId, runtime, "myvar2");
@@ -192,8 +253,9 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
         return EXPECTED_CALLBACKS[caseIndex];
     }
 
-    private static void replay(JsonArray allSteps, String caseName, String deploymentId,
-                               EPRuntime runtime, JsonArray records) throws Exception {
+    private static void replay(int caseIndex, JsonArray allSteps, String caseName,
+                               String deploymentId, EPRuntime runtime, JsonArray records)
+            throws Exception {
         boolean inCase = false;
         for (JsonValue stepValue : allSteps) {
             JsonObject step = object(stepValue, "step");
@@ -209,6 +271,14 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
                 sendEvent(runtime, step, caseName);
                 continue;
             }
+            if ("advance-time".equals(operation)) {
+                if (caseIndex < 2) {
+                    throw new IllegalArgumentException("advance-time is not allowed in case "
+                            + caseName);
+                }
+                advanceTime(runtime, step, caseName);
+                continue;
+            }
             if ("set-variable".equals(operation)) {
                 setVariable(step, caseName, deploymentId, runtime);
                 continue;
@@ -220,6 +290,12 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
             throw new IllegalArgumentException("unsupported operation " + operation
                     + " in case " + caseName);
         }
+    }
+
+    private static void advanceTime(EPRuntime runtime, JsonObject step, String caseName) {
+        requireFields(step, "op", "at");
+        Instant instant = Instant.parse(string(step, "at"));
+        runtime.getEventService().advanceTime(instant.toEpochMilli());
     }
 
     private static void setVariable(JsonObject step, String caseName, String deploymentId,
@@ -296,7 +372,7 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
 
         JsonArray cases = array(scenario.get("cases"), "cases");
         if (cases.size() != CASES.length) {
-            throw new IllegalArgumentException("scenario must contain exactly two cases");
+            throw new IllegalArgumentException("scenario must contain exactly four cases");
         }
         for (int index = 0; index < CASES.length; index++) {
             JsonObject definition = object(cases.get(index), "case definition");
@@ -314,8 +390,8 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
         }
 
         JsonArray steps = array(scenario.get("steps"), "steps");
-        if (steps.size() != 14) {
-            throw new IllegalArgumentException("scenario must contain exactly fourteen steps");
+        if (steps.size() != 40) {
+            throw new IllegalArgumentException("scenario must contain exactly forty steps");
         }
         int offset = 0;
         validateCaseMarker(steps.get(offset++), CASES[0]);
@@ -330,6 +406,22 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
         validateBeanStep(steps.get(offset++), CASE_SEND_STRINGS[1][CASE_SEND_STRINGS[1].length - 1]);
         validateReadVariableStep(steps.get(offset++), "myvar1");
         validateReadVariableStep(steps.get(offset++), "myvar2");
+        validateCaseMarker(steps.get(offset++), CASES[2]);
+        for (int eventIndex = 0; eventIndex < CASE_SEND_STRINGS[2].length; eventIndex++) {
+            validateAdvanceTimeStep(steps.get(offset++), CASE_ADVANCE_TIMES[2][eventIndex]);
+            validateBeanStep(steps.get(offset++), CASE_SEND_STRINGS[2][eventIndex]);
+        }
+        validateCaseMarker(steps.get(offset++), CASES[3]);
+        // E6 is preceded by two advances (the 25000 output boundary and the 27000
+        // pre-send clock), so its pair is validated explicitly below.
+        for (int eventIndex = 0; eventIndex < CASE_SEND_STRINGS[3].length - 1; eventIndex++) {
+            validateAdvanceTimeStep(steps.get(offset++), CASE_ADVANCE_TIMES[3][eventIndex]);
+            validateBeanStep(steps.get(offset++), CASE_SEND_STRINGS[3][eventIndex]);
+        }
+        validateAdvanceTimeStep(steps.get(offset++), CASE_ADVANCE_TIMES[3][5]);
+        validateAdvanceTimeStep(steps.get(offset++), CASE_ADVANCE_TIMES[3][6]);
+        validateBeanStep(steps.get(offset++), CASE_SEND_STRINGS[3][5]);
+        validateAdvanceTimeStep(steps.get(offset++), CASE_ADVANCE_TIMES[3][7]);
         if (offset != steps.size()) {
             throw new IllegalArgumentException("scenario steps contain an unexpected suffix");
         }
@@ -355,6 +447,15 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
         if (!expectedString.equals(string(payload, "theString"))
                 || longInteger(payload, "intPrimitive") != 0) {
             throw new IllegalArgumentException("SupportBean payload is not pinned");
+        }
+    }
+
+    private static void validateAdvanceTimeStep(JsonValue value, String expectedAt) {
+        JsonObject step = object(value, "advance-time step");
+        requireFields(step, "op", "at");
+        if (!"advance-time".equals(string(step, "op"))
+                || !expectedAt.equals(string(step, "at"))) {
+            throw new IllegalArgumentException("advance-time step is not pinned");
         }
     }
 
@@ -503,17 +604,18 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
                 throw new IllegalStateException("case " + CASES[caseIndex]
                         + " produced more than " + expectedCallbacks + " listener callbacks");
             }
-            int expectedRows = 1;
+            int callbackIndex = next - 1;
+            int expectedRows = EXPECTED_ROW_COUNTS[caseIndex][callbackIndex];
             if (newEvents == null || newEvents.length != expectedRows
                     || (oldEvents != null && oldEvents.length != 0)) {
                 throw new IllegalStateException("case " + CASES[caseIndex]
                         + " listener callback must contain " + expectedRows + " new rows only");
             }
             long now = runtime.getEventService().getCurrentTime();
-            if (now != EXPECTED_TIMES[caseIndex]) {
+            if (now != EXPECTED_CALLBACK_TIMES[caseIndex][callbackIndex]) {
                 throw new IllegalStateException("unexpected callback time " + now);
             }
-            validateRows(newEvents, next - 1);
+            validateRows(newEvents, callbackIndex);
 
             JsonObject record = new JsonObject();
             record.add("case", CASES[caseIndex]);
@@ -538,7 +640,10 @@ public final class ResultSetOutputLimitAfterEventsScenarioOracle {
                             + CASES[caseIndex]);
                 }
                 for (int fieldIndex = 0; fieldIndex < expectedFields.length; fieldIndex++) {
-                    assertValue(event.get(expectedFields[fieldIndex]), expectedValues[fieldIndex],
+                    // expectedValues is row-major over (rows x fields) for every
+                    // callback of this contract, so index it as [row * width + field].
+                    assertValue(event.get(expectedFields[fieldIndex]),
+                            expectedValues[rowIndex * expectedFields.length + fieldIndex],
                             expectedFields[fieldIndex], rowIndex, CASES[caseIndex]);
                 }
             }

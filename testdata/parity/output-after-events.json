@@ -1,20 +1,26 @@
 {
   "version": "esper-parity/v1",
   "id": "output-after-events",
-  "description": "ResultSetOutputLimitAfter event-count after-gate: direct after-3-events delivery and the when-then variable side-effect form.",
+  "description": "ResultSetOutputLimitAfter event-count and time-period after-gates: direct after-3-events delivery, the when-then variable side-effect form, after-20-seconds boundary, and after-20-seconds-every-5-seconds anchoring.",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAfter.java",
   "javaRuntimes": [
     "java-runtime-34bfe3c4c56f505d50cd",
-    "java-runtime-499038c2c0fca09551c1"
+    "java-runtime-499038c2c0fca09551c1",
+    "java-runtime-77a5ebb703ccb5fdbf63",
+    "java-runtime-88c88732359bcd33f9cd"
   ],
   "javaNames": [
     "ResultSetDirectNumberOfEvents",
-    "ResultSetOutputWhenThen"
+    "ResultSetOutputWhenThen",
+    "ResultSetDirectTimePeriod",
+    "ResultSetEveryPolicy"
   ],
   "javaStaticIds": [
     "java-aacc84310d1fab722e9f",
-    "java-310737339ed16858a1fc"
+    "java-310737339ed16858a1fc",
+    "java-a71efa831c6880fb5722",
+    "java-8e3b0bae1be282e4a000"
   ],
   "javaFlags": [],
   "cases": [
@@ -35,6 +41,24 @@
       "observation": "listener",
       "iteratorSnapshots": 0,
       "epl": "@Name('s0') select a.* from SupportBean#time(10) a output after 3 events when myvar0=true then set myvar1=true, myvar2=true"
+    },
+    {
+      "case": "after-20-seconds",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-77a5ebb703ccb5fdbf63",
+      "executionName": "ResultSetDirectTimePeriod",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select theString from SupportBean#keepall output after 20 seconds"
+    },
+    {
+      "case": "after-20-seconds-every-5",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-88c88732359bcd33f9cd",
+      "executionName": "ResultSetEveryPolicy",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select theString from SupportBean#keepall output after 0 days 0 hours 0 minutes 20 seconds 0 milliseconds every 0 days 0 hours 0 minutes 5 seconds 0 milliseconds"
     }
   ],
   "steps": [
@@ -52,6 +76,34 @@
     {"op": "set-variable", "name": "myvar0", "payload": true},
     {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 0}},
     {"op": "read-variable", "name": "myvar1"},
-    {"op": "read-variable", "name": "myvar2"}
+    {"op": "read-variable", "name": "myvar2"},
+
+    {"op": "case", "case": "after-20-seconds"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00.001Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:06Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:19.999Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:20Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:21Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 0}},
+
+    {"op": "case", "case": "after-20-seconds-every-5"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00.001Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:06Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:16Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:20Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:24.999Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:25Z"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:27Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E6", "intPrimitive": 0}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:30Z"}
   ]
 }

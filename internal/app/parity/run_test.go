@@ -31256,6 +31256,49 @@ func TestRunOutputAfterEventsDiffRejectsTraceMutations(t *testing.T) {
 				trace.Records[2].Time = "1970-01-01T00:00:01Z"
 			},
 		},
+		{
+			name: "after-20-seconds-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["theString"] = "Z"
+			},
+		},
+		{
+			name: "after-20-seconds-gate-leak",
+			mutate: func(trace *compat.Trace) {
+				extra := compat.ResultRecord{Kind: "row", Fields: map[string]any{"theString": "E3"}}
+				trace.Records[5].New = append([]compat.ResultRecord{extra}, trace.Records[5].New...)
+			},
+		},
+		{
+			name: "after-20-seconds-row-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5], trace.Records[6] = trace.Records[6], trace.Records[5]
+			},
+		},
+		{
+			name: "every-5-batch-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New = trace.Records[7].New[:1]
+			},
+		},
+		{
+			name: "every-5-batch-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0], trace.Records[7].New[1] = trace.Records[7].New[1], trace.Records[7].New[0]
+			},
+		},
+		{
+			name: "every-5-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[0].Fields["theString"] = "Z"
+			},
+		},
+		{
+			name: "every-5-time-anchor",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].Time = "1970-01-01T00:00:20Z"
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -31409,6 +31452,12 @@ func TestRunOutputAfterEventsRejectsMalformedRawScenario(t *testing.T) {
 		{name: "read-variable-name-drift", mutate: func(data []byte) []byte {
 			return bytes.Replace(data, []byte(`"name": "myvar1"`), []byte(`"name": "myvar9"`), 1)
 		}},
+		{name: "advance-time-missing-at", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "advance-time", "at": "1970-01-01T00:00:20Z"}`), []byte(`{"op": "advance-time"}`), 1)
+		}},
+		{name: "advance-time-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "advance-time", "at": "1970-01-01T00:00:20Z"}`), []byte(`{"op": "advance-time", "at": "1970-01-01T00:00:19Z"}`), 1)
+		}},
 		{name: "trailing-json", mutate: func(data []byte) []byte {
 			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
 		}},
@@ -31476,7 +31525,7 @@ func TestRunOutputAfterEventsRuntimeIDMappingMatchesScenario(t *testing.T) {
 	for index, entry := range document.Cases {
 		if entry.Case != outputAfterEventsCases[index] ||
 			entry.Ordinal != outputAfterEventsOrdinals[index] ||
-			entry.RuntimeID != outputAfterEventsJavaRuntimeIDs[index] ||
+			entry.RuntimeID != outputAfterEventsRuntimeID(outputAfterEventsCases[index]) ||
 			entry.ExecutionName != outputAfterEventsJavaExecutions[index] ||
 			entry.Observation != "listener" || entry.IteratorSnapshots != 0 ||
 			entry.EPL != outputAfterEventsEPLs[index] {
@@ -31490,25 +31539,31 @@ func assertOutputAfterEventsTrace(t *testing.T, trace compat.Trace) {
 	if trace.Version != compat.ScenarioVersion || trace.ID != outputAfterEventsID {
 		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
 	}
-	if len(trace.Records) != 5 {
-		t.Fatalf("trace records = %d, want 5", len(trace.Records))
+	if len(trace.Records) != 9 {
+		t.Fatalf("trace records = %d, want 9", len(trace.Records))
 	}
 	listenerBatches := []struct {
-		caseName string
-		sequence uint64
-		values   []string
+		caseName    string
+		sequence    uint64
+		time        string
+		values      []string
+		recordIndex int
 	}{
-		{caseName: "after-3-events", sequence: 1, values: []string{"E4"}},
-		{caseName: "after-3-events", sequence: 2, values: []string{"E5"}},
-		{caseName: "after-3-events-when-then", sequence: 1, values: []string{"E4"}},
+		{caseName: "after-3-events", sequence: 1, time: "1970-01-01T00:00:00Z", values: []string{"E4"}, recordIndex: 0},
+		{caseName: "after-3-events", sequence: 2, time: "1970-01-01T00:00:00Z", values: []string{"E5"}, recordIndex: 1},
+		{caseName: "after-3-events-when-then", sequence: 1, time: "1970-01-01T00:00:00Z", values: []string{"E4"}, recordIndex: 2},
+		{caseName: "after-20-seconds", sequence: 1, time: "1970-01-01T00:00:20Z", values: []string{"E4"}, recordIndex: 5},
+		{caseName: "after-20-seconds", sequence: 2, time: "1970-01-01T00:00:21Z", values: []string{"E5"}, recordIndex: 6},
+		{caseName: "after-20-seconds-every-5", sequence: 1, time: "1970-01-01T00:00:25Z", values: []string{"E4", "E5"}, recordIndex: 7},
+		{caseName: "after-20-seconds-every-5", sequence: 2, time: "1970-01-01T00:00:30Z", values: []string{"E6"}, recordIndex: 8},
 	}
-	for batchIndex, batch := range listenerBatches {
-		record := trace.Records[batchIndex]
+	for _, batch := range listenerBatches {
+		record := trace.Records[batch.recordIndex]
 		if record.Case != batch.caseName ||
 			record.Operation != "listener" || record.Statement != "s0" ||
-			record.Sequence != batch.sequence || record.Time != "1970-01-01T00:00:00Z" ||
+			record.Sequence != batch.sequence || record.Time != batch.time ||
 			len(record.New) != len(batch.values) || len(record.Old) != 0 {
-			t.Fatalf("record %d metadata/shape = %#v", batchIndex, record)
+			t.Fatalf("record %d metadata/shape = %#v", batch.recordIndex, record)
 		}
 		wantFields := 1
 		if batch.caseName == "after-3-events-when-then" {
@@ -31517,7 +31572,7 @@ func assertOutputAfterEventsTrace(t *testing.T, trace compat.Trace) {
 		for rowIndex, row := range record.New {
 			if row.Kind != "row" || len(row.Fields) != wantFields ||
 				row.Fields["theString"] != batch.values[rowIndex] {
-				t.Fatalf("record %d row %d shape/identity = %#v", batchIndex, rowIndex, row)
+				t.Fatalf("record %d row %d shape/identity = %#v", batch.recordIndex, rowIndex, row)
 			}
 		}
 	}

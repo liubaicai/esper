@@ -3,14 +3,18 @@
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaRuntimeIds": [
     "java-runtime-34bfe3c4c56f505d50cd",
-    "java-runtime-499038c2c0fca09551c1"
+    "java-runtime-499038c2c0fca09551c1",
+    "java-runtime-77a5ebb703ccb5fdbf63",
+    "java-runtime-88c88732359bcd33f9cd"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAfter.java"
   ],
   "javaExecutions": [
     "ResultSetDirectNumberOfEvents",
-    "ResultSetOutputWhenThen"
+    "ResultSetOutputWhenThen",
+    "ResultSetDirectTimePeriod",
+    "ResultSetEveryPolicy"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -108,6 +112,154 @@
       {
         "op": "read-variable",
         "name": "myvar2"
+      },
+      {
+        "op": "case",
+        "case": "after-20-seconds"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.001Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:19.999Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:20Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:21Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "after-20-seconds-every-5"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.001Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:16Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:20Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:24.999Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:25Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:27Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:30Z"
       }
     ]
   },
@@ -174,6 +326,72 @@
         "sequence": 0,
         "name": "myvar2",
         "value": true
+      },
+      {
+        "case": "after-20-seconds",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:21Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds-every-5",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:25Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds-every-5",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
       }
     ]
   },
@@ -240,6 +458,72 @@
         "sequence": 0,
         "name": "myvar2",
         "value": true
+      },
+      {
+        "case": "after-20-seconds",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:21Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds-every-5",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:25Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds-every-5",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E6"
+            }
+          }
+        ]
       }
     ]
   },

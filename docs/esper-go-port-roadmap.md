@@ -1,3 +1,5 @@
+> 最新补充：Draft 4.316（2026-09-05），`case.output-after-events` 扩展 after-gate 时间切片：新增 ord 4 `ResultSetDirectTimePeriod`（`java-runtime-77a5ebb703ccb5fdbf63`；static `java-a71efa831c6880fb5722`）与 ord 1 `ResultSetEveryPolicy`（`java-runtime-88c88732359bcd33f9cd`；static `java-8e3b0bae1be282e4a000`）两个 case。Java/Go 各 9 条 records、0 differences：`output after 20 seconds` 在 t=1/6000/19999 抑制、20000 边界含端点交付 {E4}、21000 交付 {E5}；`output after 20 seconds every 5 seconds` 中 every 调度在 gate 期间锚定，25000 定时器一次交付 [E4, E5]、30000 交付 [E6]（E1..E3 被门控丢弃、E4 缓冲至首个 post-gate 批次）。advance-time 绝对跳变步覆盖虚拟时钟序列。typed Go 使用 `OutputAfterTime` 与 `OutputEveryTime` 组合。manifest 更新为 606 cases、219 个 differential-verified case、784 个 differential runtime IDs、3407 条 associations（referenced 3167）；capability 119 个（36 DV）。
+
 > 最新补充：Draft 4.316（2026-09-05），新增 `output.core` 的
 > `case.output-after-events` differential-verified 场景，对照固定 Java
 > `ResultSetOutputLimitAfter.java` ordinals 3 与 6 的 `ResultSetDirectNumberOfEvents`

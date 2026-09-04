@@ -15,7 +15,7 @@ import (
 
 const (
 	outputAfterEventsID          = "output-after-events"
-	outputAfterEventsDescription = "ResultSetOutputLimitAfter event-count after-gate: direct after-3-events delivery and the when-then variable side-effect form."
+	outputAfterEventsDescription = "ResultSetOutputLimitAfter event-count and time-period after-gates: direct after-3-events delivery, the when-then variable side-effect form, after-20-seconds boundary, and after-20-seconds-every-5-seconds anchoring."
 	outputAfterEventsJavaCommit  = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 	outputAfterEventsSource      = "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAfter.java"
 )
@@ -27,23 +27,33 @@ var (
 	outputAfterEventsJavaRuntimeIDs = []string{
 		"java-runtime-34bfe3c4c56f505d50cd",
 		"java-runtime-499038c2c0fca09551c1",
+		"java-runtime-77a5ebb703ccb5fdbf63",
+		"java-runtime-88c88732359bcd33f9cd",
 	}
 	outputAfterEventsJavaExecutions = []string{
 		"ResultSetDirectNumberOfEvents",
 		"ResultSetOutputWhenThen",
+		"ResultSetDirectTimePeriod",
+		"ResultSetEveryPolicy",
 	}
 	outputAfterEventsJavaStaticIDs = []string{
 		"java-aacc84310d1fab722e9f",
 		"java-310737339ed16858a1fc",
+		"java-a71efa831c6880fb5722",
+		"java-8e3b0bae1be282e4a000",
 	}
 	outputAfterEventsCases = []string{
 		"after-3-events",
 		"after-3-events-when-then",
+		"after-20-seconds",
+		"after-20-seconds-every-5",
 	}
-	outputAfterEventsOrdinals = []int{3, 6}
+	outputAfterEventsOrdinals = []int{3, 6, 4, 1}
 	outputAfterEventsEPLs     = []string{
 		"@name('s0') select theString from SupportBean#keepall output after 3 events",
 		"@Name('s0') select a.* from SupportBean#time(10) a output after 3 events when myvar0=true then set myvar1=true, myvar2=true",
+		"@name('s0') select theString from SupportBean#keepall output after 20 seconds",
+		"@name('s0') select theString from SupportBean#keepall output after 0 days 0 hours 0 minutes 20 seconds 0 milliseconds every 0 days 0 hours 0 minutes 5 seconds 0 milliseconds",
 	}
 )
 
@@ -141,8 +151,8 @@ func loadOutputAfterEventsScenario(reader io.Reader) (compat.Scenario, error) {
 		}
 		if definition.Case != outputAfterEventsCases[index] ||
 			definition.Ordinal != outputAfterEventsOrdinals[index] ||
-			definition.RuntimeID != outputAfterEventsJavaRuntimeIDs[index] ||
-			definition.ExecutionName != outputAfterEventsJavaExecutions[index] ||
+			definition.RuntimeID != outputAfterEventsRuntimeID(outputAfterEventsCases[index]) ||
+			definition.ExecutionName != outputAfterEventsExecutionName(outputAfterEventsCases[index]) ||
 			definition.Observation != "listener" || definition.IteratorSnapshots != 0 ||
 			definition.EPL != outputAfterEventsEPLs[index] {
 			return compat.Scenario{}, fmt.Errorf("%s scenario case %d metadata is not pinned", outputAfterEventsID, index)
@@ -150,8 +160,8 @@ func loadOutputAfterEventsScenario(reader io.Reader) (compat.Scenario, error) {
 	}
 
 	var rawSteps []json.RawMessage
-	if err := json.Unmarshal(root["steps"], &rawSteps); err != nil || len(rawSteps) != 14 {
-		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly fourteen steps", outputAfterEventsID)
+	if err := json.Unmarshal(root["steps"], &rawSteps); err != nil || len(rawSteps) != 40 {
+		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly forty steps", outputAfterEventsID)
 	}
 	steps := make([]compat.Step, len(rawSteps))
 	for index, rawStep := range rawSteps {
@@ -190,6 +200,17 @@ func loadOutputAfterEventsScenario(reader io.Reader) (compat.Scenario, error) {
 			if step.Name != "myvar0" || !bytes.Equal(bytes.TrimSpace(step.Payload), []byte("true")) {
 				return compat.Scenario{}, fmt.Errorf("scenario step %d set-variable is not pinned", index)
 			}
+		case "advance-time":
+			if err := requireOutputAfterEventsFields(object, "op", "at"); err != nil {
+				return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
+			}
+			var step compat.Step
+			if err := json.Unmarshal(rawStep, &step); err != nil {
+				return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
+			}
+			if _, err := time.Parse(time.RFC3339Nano, step.At); err != nil {
+				return compat.Scenario{}, fmt.Errorf("scenario step %d advance-time is not pinned", index)
+			}
 		case "read-variable":
 			if err := requireOutputAfterEventsFields(object, "op", "name"); err != nil {
 				return compat.Scenario{}, fmt.Errorf("scenario step %d: %w", index, err)
@@ -219,7 +240,7 @@ func validateOutputAfterEventsScenario(scenario compat.Scenario) error {
 	if err := scenario.Validate(); err != nil {
 		return err
 	}
-	if scenario.ID != outputAfterEventsID || len(scenario.Steps) != 14 {
+	if scenario.ID != outputAfterEventsID || len(scenario.Steps) != 40 {
 		return fmt.Errorf("%s scenario shape is not pinned", outputAfterEventsID)
 	}
 	index := 0
@@ -259,8 +280,85 @@ func validateOutputAfterEventsScenario(scenario compat.Scenario) error {
 		return fmt.Errorf("when-then second read: %w", err)
 	}
 	index++
+	if err := validateOutputAfterEventsCaseMarker(scenario.Steps[index], outputAfterEventsCases[2]); err != nil {
+		return fmt.Errorf("after-20-seconds marker: %w", err)
+	}
+	index++
+	for _, stepTiming := range outputAfterEventsTimeCaseSteps {
+		if stepTiming.advanceAt != "" {
+			if err := validateOutputAfterEventsAdvanceStep(scenario.Steps[index], stepTiming.advanceAt); err != nil {
+				return fmt.Errorf("after-20-seconds advance: %w", err)
+			}
+			index++
+			continue
+		}
+		if err := validateOutputAfterEventsBeanStep(scenario.Steps[index], stepTiming.bean); err != nil {
+			return fmt.Errorf("after-20-seconds event: %w", err)
+		}
+		index++
+	}
+	if err := validateOutputAfterEventsCaseMarker(scenario.Steps[index], outputAfterEventsCases[3]); err != nil {
+		return fmt.Errorf("every-5 marker: %w", err)
+	}
+	index++
+	for _, stepTiming := range outputAfterEventsEveryCaseSteps {
+		if stepTiming.advanceAt != "" {
+			if err := validateOutputAfterEventsAdvanceStep(scenario.Steps[index], stepTiming.advanceAt); err != nil {
+				return fmt.Errorf("every-5 advance: %w", err)
+			}
+			index++
+			continue
+		}
+		if err := validateOutputAfterEventsBeanStep(scenario.Steps[index], stepTiming.bean); err != nil {
+			return fmt.Errorf("every-5 event: %w", err)
+		}
+		index++
+	}
 	if index != len(scenario.Steps) {
 		return fmt.Errorf("%s scenario has trailing steps", outputAfterEventsID)
+	}
+	return nil
+}
+
+
+type outputAfterEventsStepTiming struct {
+	advanceAt string
+	bean      outputAfterEventsBean
+}
+
+var outputAfterEventsTimeCaseSteps = []outputAfterEventsStepTiming{
+	{advanceAt: "1970-01-01T00:00:00.001Z"},
+	{bean: outputAfterEventsBean{TheString: "E1", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:06Z"},
+	{bean: outputAfterEventsBean{TheString: "E2", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:19.999Z"},
+	{bean: outputAfterEventsBean{TheString: "E3", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:20Z"},
+	{bean: outputAfterEventsBean{TheString: "E4", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:21Z"},
+	{bean: outputAfterEventsBean{TheString: "E5", IntPrimitive: 0}},
+}
+
+var outputAfterEventsEveryCaseSteps = []outputAfterEventsStepTiming{
+	{advanceAt: "1970-01-01T00:00:00.001Z"},
+	{bean: outputAfterEventsBean{TheString: "E1", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:06Z"},
+	{bean: outputAfterEventsBean{TheString: "E2", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:16Z"},
+	{bean: outputAfterEventsBean{TheString: "E3", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:20Z"},
+	{bean: outputAfterEventsBean{TheString: "E4", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:24.999Z"},
+	{bean: outputAfterEventsBean{TheString: "E5", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:25Z"},
+	{advanceAt: "1970-01-01T00:00:27Z"},
+	{bean: outputAfterEventsBean{TheString: "E6", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:30Z"},
+}
+
+func validateOutputAfterEventsAdvanceStep(step compat.Step, expected string) error {
+	if step.Op != "advance-time" || step.Case != "" || step.At != expected {
+		return fmt.Errorf("must advance time to %q", expected)
 	}
 	return nil
 }
@@ -366,6 +464,22 @@ func runOutputAfterEventsCase(ctx context.Context, scenario compat.Scenario, cas
 					esper.SetOutputVariable("myvar2", esper.Literal(true)),
 				))),
 			)
+	case "after-20-seconds":
+		kept20 := esper.From[outputAfterEventsBean](env, "SupportBean").Window(esper.KeepAll())
+		query = esper.Select(kept20,
+			esper.Alias("theString", theString),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithOutput(esper.OutputAfterTime(20 * time.Second)),
+		)
+	case "after-20-seconds-every-5":
+		keptEvery := esper.From[outputAfterEventsBean](env, "SupportBean").Window(esper.KeepAll())
+		query = esper.Select(keptEvery,
+			esper.Alias("theString", theString),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithOutput(esper.OutputAfterTime(20*time.Second, esper.OutputEveryTime(5*time.Second))),
+		)
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported %s case %q", outputAfterEventsID, caseName)
 	}
@@ -472,8 +586,29 @@ func validateOutputAfterEventsStringArray(raw json.RawMessage, expected []string
 }
 
 func outputAfterEventsRuntimeID(caseName string) string {
-	if caseName == "after-3-events-when-then" {
+	switch caseName {
+	case "after-3-events":
+		return outputAfterEventsJavaRuntimeIDs[0]
+	case "after-3-events-when-then":
 		return outputAfterEventsJavaRuntimeIDs[1]
+	case "after-20-seconds":
+		return outputAfterEventsJavaRuntimeIDs[2]
+	case "after-20-seconds-every-5":
+		return outputAfterEventsJavaRuntimeIDs[3]
 	}
 	return outputAfterEventsJavaRuntimeIDs[0]
+}
+
+func outputAfterEventsExecutionName(caseName string) string {
+	switch caseName {
+	case "after-3-events":
+		return outputAfterEventsJavaExecutions[0]
+	case "after-3-events-when-then":
+		return outputAfterEventsJavaExecutions[1]
+	case "after-20-seconds":
+		return outputAfterEventsJavaExecutions[2]
+	case "after-20-seconds-every-5":
+		return outputAfterEventsJavaExecutions[3]
+	}
+	return outputAfterEventsJavaExecutions[0]
 }
