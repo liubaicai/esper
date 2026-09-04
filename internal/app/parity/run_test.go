@@ -30739,3 +30739,411 @@ func assertResultsetOrderbyMultiDeliveryTrace(t *testing.T, trace compat.Trace) 
 		}
 	}
 }
+
+func TestRunResultsetOrderbySelfJoinDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySelfJoinID,
+		"-scenario", filepath.Join(root, resultsetOrderbySelfJoinID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultsetOrderbySelfJoinTrace(t, trace)
+}
+
+func TestRunResultsetOrderbySelfJoinDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), resultsetOrderbySelfJoinID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySelfJoinID + "-diff",
+		"-scenario", filepath.Join(root, resultsetOrderbySelfJoinID+".json"),
+		"-java-trace", filepath.Join(root, resultsetOrderbySelfJoinID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetOrderbySelfJoinJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetOrderbySelfJoinJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetOrderbySelfJoinSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetOrderbySelfJoinJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultsetOrderbySelfJoinTrace(t, evidence.JavaTrace)
+	assertResultsetOrderbySelfJoinTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultsetOrderbySelfJoinDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "first-batch-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["cnt"] = json.Number("9")
+			},
+		},
+		{
+			name: "second-batch-row-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0], trace.Records[1].New[1] = trace.Records[1].New[1], trace.Records[1].New[0]
+			},
+		},
+		{
+			name: "third-batch-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New = trace.Records[2].New[:1]
+			},
+		},
+		{
+			name: "third-batch-ecid",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["ecid"] = json.Number("9")
+			},
+		},
+		{
+			name: "snapshot-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["prio"] = json.Number("9")
+			},
+		},
+		{
+			name: "snapshot-row-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0], trace.Records[3].New[1] = trace.Records[3].New[1], trace.Records[3].New[0]
+			},
+		},
+		{
+			name: "snapshot-row-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New = trace.Records[3].New[:1]
+			},
+		},
+		{
+			name: "record-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2], trace.Records[3] = trace.Records[3], trace.Records[2]
+			},
+		},
+		{
+			name: "record-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "time-boundary",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, resultsetOrderbySelfJoinID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), resultsetOrderbySelfJoinID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", resultsetOrderbySelfJoinID + "-diff",
+				"-scenario", filepath.Join(root, resultsetOrderbySelfJoinID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultsetOrderbySelfJoinCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, resultsetOrderbySelfJoinID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, resultsetOrderbySelfJoinID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, resultsetOrderbySelfJoinID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != resultsetOrderbySelfJoinJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetOrderbySelfJoinJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetOrderbySelfJoinSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetOrderbySelfJoinJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertResultsetOrderbySelfJoinTrace(t, javaTrace)
+	assertResultsetOrderbySelfJoinTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, resultsetOrderbySelfJoinID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetOrderbySelfJoinJavaCommit,
+		resultsetOrderbySelfJoinJavaRuntimeIDs,
+		[]string{resultsetOrderbySelfJoinSource},
+		resultsetOrderbySelfJoinJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetOrderbySelfJoinID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultsetOrderbySelfJoinTrace(t, replayed)
+}
+
+func TestRunResultsetOrderbySelfJoinRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, resultsetOrderbySelfJoinID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "selfjoin",`), []byte(`"case": "selfjoin", "extra": 0,`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-74b0c1ce48febfe83007"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"event_criteria_id": 1, "priority": 1`), []byte(`"event_criteria_id": 1, "priority": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"event_criteria_id": 1, "priority": 1`), []byte(`"event_criteria_id": 1, "priority": 1, "priority": 2`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportHierarchyEvent"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "snapshot-statement-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "snapshot", "statement": "s0"}`), []byte(`{"op": "snapshot", "statement": "s1"}`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", resultsetOrderbySelfJoinID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultsetOrderbySelfJoinRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", resultsetOrderbySelfJoinID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != resultsetOrderbySelfJoinID ||
+		document.Description != resultsetOrderbySelfJoinDescription ||
+		document.JavaCommit != resultsetOrderbySelfJoinJavaCommit ||
+		document.JavaSource != resultsetOrderbySelfJoinSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, resultsetOrderbySelfJoinJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetOrderbySelfJoinJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultsetOrderbySelfJoinJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(resultsetOrderbySelfJoinCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetOrderbySelfJoinCases[index] ||
+			entry.Ordinal != resultsetOrderbySelfJoinOrdinals[index] ||
+			entry.RuntimeID != resultsetOrderbySelfJoinJavaRuntimeIDs[0] ||
+			entry.ExecutionName != resultsetOrderbySelfJoinJavaExecutions[0] ||
+			entry.Observation != "listener" || entry.IteratorSnapshots != 1 ||
+			entry.EPL != resultsetOrderbySelfJoinEPLs[index] {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertResultsetOrderbySelfJoinTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetOrderbySelfJoinID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 4 {
+		t.Fatalf("trace records = %d, want 4", len(trace.Records))
+	}
+	listenerBatches := []struct {
+		sequence uint64
+		rows     [][4]int64
+	}{
+		{sequence: 1, rows: [][4]int64{{1, 1, 1, 1}}},
+		{sequence: 2, rows: [][4]int64{{3, 2, 1, 2}, {3, 2, 2, 2}}},
+		{sequence: 3, rows: [][4]int64{{3, 2, 1, 2}, {3, 2, 2, 2}}},
+	}
+	fields := [4]string{"ecid", "priority", "prio", "cnt"}
+	for batchIndex, batch := range listenerBatches {
+		record := trace.Records[batchIndex]
+		if record.Case != "selfjoin" ||
+			record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != batch.sequence || record.Time != "1970-01-01T00:00:00Z" ||
+			len(record.New) != len(batch.rows) || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", batchIndex, record)
+		}
+		for rowIndex, row := range record.New {
+			if row.Kind != "row" || len(row.Fields) != 4 {
+				t.Fatalf("record %d row %d shape = %#v", batchIndex, rowIndex, row)
+			}
+			want := batch.rows[rowIndex]
+			for fieldIndex, field := range fields {
+				assertResultsetOrderbySelfJoinNumber(t, row.Fields[field], float64(want[fieldIndex]), batchIndex, rowIndex, field)
+			}
+		}
+	}
+	snapshot := trace.Records[3]
+	if snapshot.Case != "selfjoin" ||
+		snapshot.Operation != "snapshot" || snapshot.Statement != "s0" ||
+		snapshot.Sequence != 0 || snapshot.Time != "1970-01-01T00:00:00Z" ||
+		len(snapshot.New) != 2 || len(snapshot.Old) != 0 {
+		t.Fatalf("record 3 metadata/shape = %#v", snapshot)
+	}
+	snapshotRows := [][4]int64{{3, 2, 1, 2}, {3, 2, 2, 2}}
+	for rowIndex, row := range snapshot.New {
+		if row.Kind != "row" || len(row.Fields) != 4 {
+			t.Fatalf("record 3 row %d shape = %#v", rowIndex, row)
+		}
+		for fieldIndex, field := range fields {
+			assertResultsetOrderbySelfJoinNumber(t, row.Fields[field], float64(snapshotRows[rowIndex][fieldIndex]), 3, rowIndex, field)
+		}
+	}
+}
+
+func assertResultsetOrderbySelfJoinNumber(t *testing.T, value any, want float64, recordIndex, rowIndex int, field string) {
+	t.Helper()
+	number, ok := value.(json.Number)
+	if !ok {
+		t.Fatalf("record %d row %d %s type = %T, value = %#v", recordIndex, rowIndex, field, value, value)
+	}
+	got, err := number.Float64()
+	if err != nil || got != want {
+		t.Fatalf("record %d row %d %s = %v (err=%v), want %v", recordIndex, rowIndex, field, number, err, want)
+	}
+}

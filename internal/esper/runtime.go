@@ -10336,13 +10336,15 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 		if !visible {
 			continue
 		}
-		// Java's grouped join iterator shape follows the result-set
-		// processor split: AggregateGroupedImpl (non-key scalar reads) is a
-		// live view over the join tuples — one row per member event with
-		// plain columns bound to that member — while RowPerGroupImpl
-		// (keys and aggregates only) and ungrouped joins keep one row per
-		// group built from the group representative.
-		if len(definition.groupBy) == 0 || !aggregateDefinitionReadsNonKeyEvent(definition) {
+		// Java's result-set processor split decides the join iterator shape:
+		// AggregateGroupedImpl (non-key scalar reads, grouped) is a live view
+		// over the join tuples — one row per member event with plain columns
+		// bound to that member — while RowPerGroupImpl (keys and aggregates
+		// only) and ungrouped joins that read no non-key fields keep one row
+		// per group built from the group representative. An ungrouped join
+		// that reads non-key scalars is AGGREGATED_UNGROUPED RowPerEvent, so
+		// its iterator is also one row per join tuple.
+		if !aggregateDefinitionReadsNonKeyEvent(definition) {
 			values, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi)
 			if visible {
 				entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key})

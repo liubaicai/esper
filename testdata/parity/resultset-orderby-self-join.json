@@ -1,0 +1,35 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-orderby-self-join",
+  "description": "ResultSetOrderBySelfJoin ordinals 0: three-way self-join with ungrouped count and order-by on a join field.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySelfJoin.java",
+  "javaRuntimes": [
+    "java-runtime-74b0c1ce48febfe83007"
+  ],
+  "javaNames": [
+    "ResultSetOrderBySelfJoinSimple"
+  ],
+  "javaStaticIds": [
+    "java-7cbb50aac0764e25b3bc"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "selfjoin",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-74b0c1ce48febfe83007",
+      "executionName": "ResultSetOrderBySelfJoinSimple",
+      "observation": "listener",
+      "iteratorSnapshots": 1,
+      "epl": "@name('s0') select c1.event_criteria_id as ecid, c1.priority as priority, c2.priority as prio, cast(count(*), int) as cnt from SupportHierarchyEvent#lastevent as c1, SupportHierarchyEvent#groupwin(event_criteria_id)#lastevent as c2, SupportHierarchyEvent#groupwin(event_criteria_id)#lastevent as p where c2.event_criteria_id in (c1.event_criteria_id,2,1) and p.event_criteria_id in (c1.parent_event_criteria_id, c1.event_criteria_id) order by c2.priority asc"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "selfjoin"},
+    {"op": "send", "eventType": "SupportHierarchyEvent", "payload": {"event_criteria_id": 1, "priority": 1, "parent_event_criteria_id": null}},
+    {"op": "send", "eventType": "SupportHierarchyEvent", "payload": {"event_criteria_id": 3, "priority": 2, "parent_event_criteria_id": 2}},
+    {"op": "send", "eventType": "SupportHierarchyEvent", "payload": {"event_criteria_id": 3, "priority": 2, "parent_event_criteria_id": 2}},
+    {"op": "snapshot", "statement": "s0"}
+  ]
+}

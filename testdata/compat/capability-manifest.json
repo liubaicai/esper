@@ -4646,7 +4646,8 @@
     "internal/esper/stream.go",
     "internal/app/parity/run_test.go",
     "internal/app/parity/resultset_orderby_join.go",
-    "internal/app/parity/resultset_orderby_multi_delivery.go"
+    "internal/app/parity/resultset_orderby_multi_delivery.go",
+    "internal/app/parity/resultset_orderby_self_join.go"
    ],
    "phase": 2,
    "status": "differential-verified",
@@ -38054,6 +38055,69 @@
    "notes": [
     "ResultSetOrderByMultiDelivery replays the ESPER-409 delivery-batching contract as three sequential statement parts (one runtime, 3 cases, 3 listener records per side, 0 differences). The pattern part completes two every-branches with one B-event and delivers one two-row batch sorted a.theString desc [A2, A1]; the output every 3 events part buffers three A-events without output and fires one three-row batch [A3, A2, A1] on B because the limiter counts match rows posted to the output process, not input events (Go engine patternBatch now recounts outputInserted/Removed from collected match rows); the grouped time-window part emits the removal stream at the 11-second boundary as one two-row rstream callback [A2, A1] with order-by sorting the delivered batch."
    ]
+  },
+  {
+   "id": "case.resultset-orderby-self-join",
+   "javaRuntimeIds": [
+    "java-runtime-74b0c1ce48febfe83007"
+   ],
+   "javaStaticIds": [
+    "java-7cbb50aac0764e25b3bc"
+   ],
+   "javaNames": [
+    "ResultSetOrderBySelfJoinSimple"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySelfJoin.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbySelfJoinDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbySelfJoinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbySelfJoinDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbySelfJoinCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbySelfJoinRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbySelfJoinRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "order-by",
+    "self-join",
+    "three-way-join",
+    "ungrouped-aggregate",
+    "count",
+    "cast",
+    "iterator",
+    "snapshot",
+    "listener",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-orderby-self-join.json",
+    "testdata/parity/resultset-orderby-self-join.trace.json",
+    "testdata/parity/resultset-orderby-self-join.go.trace.json",
+    "testdata/parity/resultset-orderby-self-join.evidence.json",
+    "tools/java-oracle/ResultSetOrderBySelfJoinScenarioOracle.java",
+    "tools/java-oracle/run-resultset-orderby-self-join.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-74b0c1ce48febfe83007"
+   ],
+   "notes": [
+    "ResultSetOrderBySelfJoinSimple replays the three-way SupportHierarchyEvent self-join (c1 #lastevent, c2/p #groupwin(event_criteria_id)#lastevent, correlated in-predicates with a nullable parent candidate) as one case with three continuous row-per-event listener deliveries plus one statement-iterator snapshot of the retained join set (4 records per side, 0 differences). count(*) tracks net join deltas -1+2 and -2+2 so both later batches and the snapshot carry cnt=2 on every row, cast to int; order by c2.priority asc sorts each delivered batch and the snapshot prio-asc. Go engine: snapshotJoinAggregateBatch now emits one row per retained join tuple for ungrouped join aggregates that read non-key scalars (Java AGGREGATED_UNGROUPED RowPerEvent iterator), matching the existing row-for-event delivery shape."
+   ]
   }
  ],
  "mappings": [
@@ -40808,13 +40872,17 @@
   {
    "capabilityId": "resultset.orderby-simple",
    "caseId": "case.resultset-orderby-multi-delivery"
+  },
+  {
+   "capabilityId": "resultset.orderby-simple",
+   "caseId": "case.resultset-orderby-self-join"
   }
  ],
  "summary": {
-  "inventoriedCases": 604,
-  "implementedCases": 602,
-  "differentialVerifiedCases": 217,
-  "differentialVerifiedRuntimeIds": 779,
+  "inventoriedCases": 605,
+  "implementedCases": 603,
+  "differentialVerifiedCases": 218,
+  "differentialVerifiedRuntimeIds": 780,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40824,14 +40892,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3402,
-  "referencedJavaRuntimeIds": 3166,
+  "runtimeAssociationCount": 3403,
+  "referencedJavaRuntimeIds": 3167,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 970,
+  "unreferencedJavaRuntimeIds": 969,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 604,
+  "totalCases": 605,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 779
+  "differentialVerifiedRuntimeIDs": 780
  }
 }

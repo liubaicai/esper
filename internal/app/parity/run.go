@@ -71,6 +71,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOrderbyJoinScenario(file)
 	} else if *mode == "resultset-orderby-multi-delivery" || *mode == "resultset-orderby-multi-delivery-diff" {
 		scenario, err = loadResultsetOrderbyMultiDeliveryScenario(file)
+	} else if *mode == "resultset-orderby-self-join" || *mode == "resultset-orderby-self-join-diff" {
+		scenario, err = loadResultsetOrderbySelfJoinScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
@@ -2245,6 +2247,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOrderbyMultiDeliveryJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOrderbyMultiDeliveryJavaSources),
 				splitMetadata(*javaExecutions, resultsetOrderbyMultiDeliveryJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-orderby-self-join" || *mode == "resultset-orderby-self-join-diff" {
+		trace, err := runResultsetOrderbySelfJoinScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-orderby-self-join-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOrderbySelfJoinJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOrderbySelfJoinJavaSources),
+				splitMetadata(*javaExecutions, resultsetOrderbySelfJoinJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

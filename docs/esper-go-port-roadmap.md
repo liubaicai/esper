@@ -1,3 +1,18 @@
+> 最新补充：Draft 4.315（2026-09-05），新增 `resultset.orderby-simple` 的
+> `case.resultset-orderby-self-join` differential-verified 场景，对照固定 Java
+> `ResultSetOrderBySelfJoin.java` ordinal 0 的 `ResultSetOrderBySelfJoinSimple`
+>（`java-runtime-74b0c1ce48febfe83007`；static `java-7cbb50aac0764e25b3bc`；Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；无 flags）：Java/Go 各 4 条 records、0 differences。
+> 三路 SupportHierarchyEvent 自连接（c1 `#lastevent`，c2/p `#groupwin(event_criteria_id)#lastevent`，
+> 相关 `in` 谓词含可空 parent 候选）连续交付三条 row-per-event 批次（cnt 经净增量 -1+2、-2+2 保持
+> 为 2，`cast(count(*), int)`），加一条保留 join 集的 statement-iterator 快照（均按 c2.priority
+> 升序）。Go 引擎：`snapshotJoinAggregateBatch` 对读取非键标量的无分组 join 聚合改为按保留 join
+> 元组逐行输出（Java AGGREGATED_UNGROUPED RowPerEvent 迭代器形状），与既有交付形状一致。typed Go
+> 使用扁平 `JoinMany`/`JoinSource`、`AggregateStream.Where`（`In[int]`/`InOf` SQL 三值 null 语义）、
+> `Cast[int64,int]`/`CountAll`、`GroupWindow`/`LastEvent` 与 iterator replay。manifest 更新为 605
+> cases、218 个 differential-verified case、780 个 differential runtime IDs、3403 条 associations
+>（referenced 3167）；capability 119 个（36 DV）。
+
 > 最新补充：Draft 4.314（2026-09-05），新增 `resultset.orderby-simple` 的
 > `case.resultset-orderby-multi-delivery` differential-verified 场景，对照固定 Java
 > `ResultSetOrderBySimple.java` ordinal 0 的 `ResultSetOrderByMultiDelivery`
@@ -1230,11 +1245,11 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 119 |
-| Case | 604 |
-| Case differential-verified | 217 |
-| Differential-verified runtime | 779 / 4,136 |
-| Runtime 已关联 | 3,166 / 4,136（76.5%） |
-| Runtime 未关联 | 970 |
+| Case | 605 |
+| Case differential-verified | 218 |
+| Differential-verified runtime | 780 / 4,136 |
+| Runtime 已关联 | 3,167 / 4,136（76.6%） |
+| Runtime 未关联 | 969 |
 | Representative scenario | 107 / 107 通过 |
 | Intentionally-different case | 23 |
 | NFR-verified case | 0 |
