@@ -1027,7 +1027,8 @@
     "internal/esper/resultset_output_limit_row_limit_negative_rowcount_parity_test.go",
     "internal/app/parity/resultset_output_limit_row_limit_invalid.go",
     "internal/app/parity/resultset_output_limit_row_limit_variable.go",
-    "internal/app/parity/run_test.go"
+    "internal/app/parity/run_test.go",
+    "internal/app/parity/output_after_events.go"
    ],
    "phase": 1,
    "status": "differential-verified",
@@ -1118,7 +1119,8 @@
     "internal/esper/resultset_grouped_time_window_parity_test.go",
     "internal/app/parity/resultset_grouped_time_window.go",
     "internal/esper/resultset_row_per_group_simple_parity_test.go",
-    "internal/app/parity/resultset_row_per_group_simple.go"
+    "internal/app/parity/resultset_row_per_group_simple.go",
+    "internal/app/parity/output_after_events.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -38118,6 +38120,70 @@
    "notes": [
     "ResultSetOrderBySelfJoinSimple replays the three-way SupportHierarchyEvent self-join (c1 #lastevent, c2/p #groupwin(event_criteria_id)#lastevent, correlated in-predicates with a nullable parent candidate) as one case with three continuous row-per-event listener deliveries plus one statement-iterator snapshot of the retained join set (4 records per side, 0 differences). count(*) tracks net join deltas -1+2 and -2+2 so both later batches and the snapshot carry cnt=2 on every row, cast to int; order by c2.priority asc sorts each delivered batch and the snapshot prio-asc. Go engine: snapshotJoinAggregateBatch now emits one row per retained join tuple for ungrouped join aggregates that read non-key scalars (Java AGGREGATED_UNGROUPED RowPerEvent iterator), matching the existing row-for-event delivery shape."
    ]
+  },
+  {
+   "id": "case.output-after-events",
+   "javaRuntimeIds": [
+    "java-runtime-34bfe3c4c56f505d50cd",
+    "java-runtime-499038c2c0fca09551c1"
+   ],
+   "javaStaticIds": [
+    "java-aacc84310d1fab722e9f",
+    "java-310737339ed16858a1fc"
+   ],
+   "javaNames": [
+    "ResultSetDirectNumberOfEvents",
+    "ResultSetOutputWhenThen"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAfter.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunOutputAfterEventsDirectReplay",
+    "internal/app/parity/run_test.go:TestRunOutputAfterEventsDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunOutputAfterEventsDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunOutputAfterEventsCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunOutputAfterEventsRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunOutputAfterEventsRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "output",
+    "output-limit",
+    "after",
+    "event-count",
+    "when-then",
+    "variable",
+    "listener",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/output-after-events.json",
+    "testdata/parity/output-after-events.trace.json",
+    "testdata/parity/output-after-events.go.trace.json",
+    "testdata/parity/output-after-events.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitAfterEventsScenarioOracle.java",
+    "tools/java-oracle/run-output-after-events.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-34bfe3c4c56f505d50cd",
+    "java-runtime-499038c2c0fca09551c1"
+   ],
+   "notes": [
+    "ResultSetOutputLimitAfter event-count after-gate family (5 records per side, 0 differences). DirectNumberOfEvents: keepall with output after 3 events delivers E4 and E5 as individual one-row new-only callbacks (the gate counts input events and satisfies only past the third), the SODA redeploy variant asserting the trailing-space EPL rendering is compile-only and not replayed. OutputWhenThen: select a.* over #time(10) with output after 3 events when myvar0=true then set myvar1=true, myvar2=true - E1..E3 suppressed, runtime set of myvar0, E4 delivers one full-event row (intPrimitive 0, theString E4) and both then-assignments verify true through variable-service reads recorded as variable records."
+   ]
   }
  ],
  "mappings": [
@@ -40876,13 +40942,17 @@
   {
    "capabilityId": "resultset.orderby-simple",
    "caseId": "case.resultset-orderby-self-join"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.output-after-events"
   }
  ],
  "summary": {
-  "inventoriedCases": 605,
-  "implementedCases": 603,
-  "differentialVerifiedCases": 218,
-  "differentialVerifiedRuntimeIds": 780,
+  "inventoriedCases": 606,
+  "implementedCases": 604,
+  "differentialVerifiedCases": 219,
+  "differentialVerifiedRuntimeIds": 782,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40892,14 +40962,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3403,
+  "runtimeAssociationCount": 3405,
   "referencedJavaRuntimeIds": 3167,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 969,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 605,
+  "totalCases": 606,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 780
+  "differentialVerifiedRuntimeIDs": 782
  }
 }

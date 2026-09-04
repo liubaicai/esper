@@ -1,0 +1,57 @@
+{
+  "version": "esper-parity/v1",
+  "id": "output-after-events",
+  "description": "ResultSetOutputLimitAfter event-count after-gate: direct after-3-events delivery and the when-then variable side-effect form.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAfter.java",
+  "javaRuntimes": [
+    "java-runtime-34bfe3c4c56f505d50cd",
+    "java-runtime-499038c2c0fca09551c1"
+  ],
+  "javaNames": [
+    "ResultSetDirectNumberOfEvents",
+    "ResultSetOutputWhenThen"
+  ],
+  "javaStaticIds": [
+    "java-aacc84310d1fab722e9f",
+    "java-310737339ed16858a1fc"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "after-3-events",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-34bfe3c4c56f505d50cd",
+      "executionName": "ResultSetDirectNumberOfEvents",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select theString from SupportBean#keepall output after 3 events"
+    },
+    {
+      "case": "after-3-events-when-then",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-499038c2c0fca09551c1",
+      "executionName": "ResultSetOutputWhenThen",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@Name('s0') select a.* from SupportBean#time(10) a output after 3 events when myvar0=true then set myvar1=true, myvar2=true"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "after-3-events"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E5", "intPrimitive": 0}},
+
+    {"op": "case", "case": "after-3-events-when-then"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 0}},
+    {"op": "set-variable", "name": "myvar0", "payload": true},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E4", "intPrimitive": 0}},
+    {"op": "read-variable", "name": "myvar1"},
+    {"op": "read-variable", "name": "myvar2"}
+  ]
+}

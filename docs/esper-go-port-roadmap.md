@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.316（2026-09-05），新增 `output.core` 的
+> `case.output-after-events` differential-verified 场景，对照固定 Java
+> `ResultSetOutputLimitAfter.java` ordinals 3 与 6 的 `ResultSetDirectNumberOfEvents`
+>（`java-runtime-34bfe3c4c56f505d50cd`；static `java-aacc84310d1fab722e9f`）与
+> `ResultSetOutputWhenThen`（`java-runtime-499038c2c0fca09551c1`；static
+> `java-310737339ed16858a1fc`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；
+> 无 flags）：Java/Go 各 5 条 records、0 differences。事件计数 after-gate：keepall
+> `output after 3 events` 按输入事件计数且第 3 个事件仍被抑制，E4/E5 以单行回调逐个交付；
+> `select a.* from SupportBean#time(10) a output after 3 events when myvar0=true then set
+> myvar1=true, myvar2=true`——E1..E3 抑制、运行时置 myvar0、E4 交付一条完整事件行
+>（intPrimitive 0, theString E4）且两个 then 赋值经 variable-service 读取验证为 true
+>（以 variable 记录入 trace）。typed Go 使用 `OutputAfterEvents`、`OutputWhen`、
+> `SetOutputVariable`、`VariableRef`、`Equal`、`TimeWindow`、`KeepAll` 与
+> `ReplayWithStatementsAndHandlers` 的 set-variable/read-variable 处理器。manifest 更新为
+> 606 cases、219 个 differential-verified case、782 个 differential runtime IDs、3405 条
+> associations（referenced 3167）；capability 119 个（36 DV）。
+
 > 最新补充：Draft 4.315（2026-09-05），新增 `resultset.orderby-simple` 的
 > `case.resultset-orderby-self-join` differential-verified 场景，对照固定 Java
 > `ResultSetOrderBySelfJoin.java` ordinal 0 的 `ResultSetOrderBySelfJoinSimple`
@@ -1245,9 +1262,9 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 119 |
-| Case | 605 |
-| Case differential-verified | 218 |
-| Differential-verified runtime | 780 / 4,136 |
+| Case | 606 |
+| Case differential-verified | 219 |
+| Differential-verified runtime | 782 / 4,136 |
 | Runtime 已关联 | 3,167 / 4,136（76.6%） |
 | Runtime 未关联 | 969 |
 | Representative scenario | 107 / 107 通过 |
