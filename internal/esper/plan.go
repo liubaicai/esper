@@ -2051,8 +2051,28 @@ func (e *Environment) validateQueryModifiers(query Query) error {
 			}
 			continue
 		}
-		if query.sourceLess || query.pattern != nil {
-			return fmt.Errorf("order-by is not yet supported for source-less, join, or pattern queries")
+		if query.pattern != nil {
+			// Pattern order-by keys sort the delivered match-row batch (the
+			// ESPER-409 contract), so they must resolve against the projected
+			// result row exactly like match-recognize measures.
+			node := key.Expr.node()
+			if node == nil || node.kind != "result-field" {
+				return fmt.Errorf("order-by key %d for pattern queries must use ResultField", index)
+			}
+			known := false
+			for _, selection := range query.patternSelections {
+				if selection.Name == node.fieldName {
+					known = true
+					break
+				}
+			}
+			if !known {
+				return NewError(ErrorUnknownName, fmt.Sprintf("order-by key %d references unknown pattern selection %q", index, node.fieldName))
+			}
+			continue
+		}
+		if query.sourceLess {
+			return fmt.Errorf("order-by is not yet supported for source-less queries")
 		}
 		if query.join != nil && query.aggregate == nil {
 			node := key.Expr.node()

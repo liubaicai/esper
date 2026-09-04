@@ -1,0 +1,64 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-orderby-multi-delivery",
+  "description": "ResultSetOrderByMultiDelivery: pattern and grouped-time delivery batching with order-by over each delivered batch.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java",
+  "javaRuntimes": [
+    "java-runtime-1c3d57ae9e8d4bca739f"
+  ],
+  "javaNames": [
+    "ResultSetOrderByMultiDelivery"
+  ],
+  "javaStaticIds": [
+    "java-5151c7da40772952b49a"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "multi-delivery-pattern",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-1c3d57ae9e8d4bca739f",
+      "executionName": "ResultSetOrderByMultiDelivery",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select a.theString from pattern [every a=SupportBean(theString like 'A%') -> b=SupportBean(theString like 'B%')] order by a.theString desc"
+    },
+    {
+      "case": "multi-delivery-pattern-output-limit",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-1c3d57ae9e8d4bca739f",
+      "executionName": "ResultSetOrderByMultiDelivery",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select a.theString from pattern [every a=SupportBean(theString like 'A%') -> b=SupportBean(theString like 'B%')] output every 3 events order by a.theString desc"
+    },
+    {
+      "case": "multi-delivery-groupwin-time",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-1c3d57ae9e8d4bca739f",
+      "executionName": "ResultSetOrderByMultiDelivery",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select rstream theString from SupportBean#groupwin(theString)#time(10) order by theString desc"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "multi-delivery-pattern"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A2", "intPrimitive": 2}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "B", "intPrimitive": 3}},
+
+    {"op": "case", "case": "multi-delivery-pattern-output-limit"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A2", "intPrimitive": 2}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A3", "intPrimitive": 3}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "B", "intPrimitive": 3}},
+
+    {"op": "case", "case": "multi-delivery-groupwin-time"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:01Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "A2", "intPrimitive": 1}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:11Z"}
+  ]
+}

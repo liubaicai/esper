@@ -1,3 +1,19 @@
+> 最新补充：Draft 4.314（2026-09-05），新增 `resultset.orderby-simple` 的
+> `case.resultset-orderby-multi-delivery` differential-verified 场景，对照固定 Java
+> `ResultSetOrderBySimple.java` ordinal 0 的 `ResultSetOrderByMultiDelivery`
+>（`java-runtime-1c3d57ae9e8d4bca739f`；static `java-5151c7da40772952b49a`；Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；无 flags）：Java/Go 各 3 条 records、0 differences。
+> 三个顺序语句 part 固定 ESPER-409 投递批次契约：pattern part 一个 B 事件完成两个 every 分支并
+> 一次投递两行按 `a.theString` desc 排序的批次 [A2, A1]；`output every 3 events` part 缓冲三个
+> A 事件不输出、在 B 交付三行时立即触发（限值按 match 行计数）[A3, A2, A1]；groupwin+time(10)
+> rstream part 在 11 秒边界一次输出两行删除流回调 [A2, A1]。引擎修复：`patternBatch` 在 match
+> 收集后按投递行重算 outputInserted/Removed（此前按输入事件计数导致限值提前触发），并开放 pattern
+> 查询的 order-by（ResultField 校验 + 交付批次 RSP 级排序），含两个引擎回归测试。typed Go 使用
+> `PatternFrom`/`Every`/`FollowedBy`/`LikeOf`/`TagField`、`ResultField`、`OutputAllEveryEvents`、
+> `GroupWindow`/`TimeWindow`/`WithRemoveStreamOnly`。manifest 更新为 604 cases、217 个
+> differential-verified case、779 个 differential runtime IDs、3402 条 associations（referenced
+> 3166）；capability 119 个（36 DV）。
+
 > 最新补充：Draft 4.313（2026-09-05），新增 `resultset.orderby-simple` 的
 > `case.resultset-orderby-join` differential-verified 场景，对照固定 Java
 > `ResultSetOrderBySimple.java` ordinals 1-2 的 `ResultSetIterator`
@@ -1214,9 +1230,9 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 119 |
-| Case | 603 |
-| Case differential-verified | 216 |
-| Differential-verified runtime | 778 / 4,136 |
+| Case | 604 |
+| Case differential-verified | 217 |
+| Differential-verified runtime | 779 / 4,136 |
 | Runtime 已关联 | 3,166 / 4,136（76.5%） |
 | Runtime 未关联 | 970 |
 | Representative scenario | 107 / 107 通过 |

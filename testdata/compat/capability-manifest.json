@@ -4645,7 +4645,8 @@
     "internal/esper/resultset_orderby_parity_test.go",
     "internal/esper/stream.go",
     "internal/app/parity/run_test.go",
-    "internal/app/parity/resultset_orderby_join.go"
+    "internal/app/parity/resultset_orderby_join.go",
+    "internal/app/parity/resultset_orderby_multi_delivery.go"
    ],
    "phase": 2,
    "status": "differential-verified",
@@ -37991,6 +37992,68 @@
    "notes": [
     "ResultSetOrderBySimple ordinals 1-2 replayed through one deterministic join scenario (17 Java/Go market sends and five string seeds per side across three cases, 4 records per side, 0 differences). ResultSetIterator observes the continuous length(10) join through two ordered statement-iterator snapshots sorted by price (CAT/15, IBM/49, CAT/50, IBM/100 then KGB/75 inserted at rank four) with the attached listener recording nothing. ResultSetAcrossJoin replays both output-every-6-events variants: order by price emits one six-row new-only callback (KGB/1, IBM/2, CMU/3, CAT/5, CAT/6, IBM/6) once the seeded strings complete six join delta rows, and order by theString, price emits one six-row symbol-only callback (CAT 5/6, CMU 3, IBM 2/6, KGB 1). All records are new-only at epoch zero."
    ]
+  },
+  {
+   "id": "case.resultset-orderby-multi-delivery",
+   "javaRuntimeIds": [
+    "java-runtime-1c3d57ae9e8d4bca739f"
+   ],
+   "javaStaticIds": [
+    "java-5151c7da40772952b49a"
+   ],
+   "javaNames": [
+    "ResultSetOrderByMultiDelivery"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyMultiDeliveryDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyMultiDeliveryDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyMultiDeliveryDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyMultiDeliveryCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyMultiDeliveryRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyMultiDeliveryRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "order-by",
+    "pattern",
+    "multi-delivery",
+    "output-rate",
+    "rstream",
+    "groupwin",
+    "time-window",
+    "listener",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-orderby-multi-delivery.json",
+    "testdata/parity/resultset-orderby-multi-delivery.trace.json",
+    "testdata/parity/resultset-orderby-multi-delivery.go.trace.json",
+    "testdata/parity/resultset-orderby-multi-delivery.evidence.json",
+    "tools/java-oracle/ResultSetOrderByMultiDeliveryScenarioOracle.java",
+    "tools/java-oracle/run-resultset-orderby-multi-delivery.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1c3d57ae9e8d4bca739f"
+   ],
+   "notes": [
+    "ResultSetOrderByMultiDelivery replays the ESPER-409 delivery-batching contract as three sequential statement parts (one runtime, 3 cases, 3 listener records per side, 0 differences). The pattern part completes two every-branches with one B-event and delivers one two-row batch sorted a.theString desc [A2, A1]; the output every 3 events part buffers three A-events without output and fires one three-row batch [A3, A2, A1] on B because the limiter counts match rows posted to the output process, not input events (Go engine patternBatch now recounts outputInserted/Removed from collected match rows); the grouped time-window part emits the removal stream at the 11-second boundary as one two-row rstream callback [A2, A1] with order-by sorting the delivered batch."
+   ]
   }
  ],
  "mappings": [
@@ -40741,13 +40804,17 @@
   {
    "capabilityId": "resultset.orderby-simple",
    "caseId": "case.resultset-orderby-join"
+  },
+  {
+   "capabilityId": "resultset.orderby-simple",
+   "caseId": "case.resultset-orderby-multi-delivery"
   }
  ],
  "summary": {
-  "inventoriedCases": 603,
-  "implementedCases": 601,
-  "differentialVerifiedCases": 216,
-  "differentialVerifiedRuntimeIds": 778,
+  "inventoriedCases": 604,
+  "implementedCases": 602,
+  "differentialVerifiedCases": 217,
+  "differentialVerifiedRuntimeIds": 779,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40757,14 +40824,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3401,
+  "runtimeAssociationCount": 3402,
   "referencedJavaRuntimeIds": 3166,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 970,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 603,
+  "totalCases": 604,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 778
+  "differentialVerifiedRuntimeIDs": 779
  }
 }

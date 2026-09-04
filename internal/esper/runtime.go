@@ -17455,6 +17455,21 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 			r.patternState.patternStopped = true
 		}
 	}
+	// Java's output-limit condition counts the match rows the pattern posts
+	// into the output process view (OutputProcessViewConditionDefault ->
+	// OutputConditionCount), not the statement's input events, so recount
+	// after match collection; input events that complete no match must not
+	// advance an event-count limiter.
+	batch.outputInserted = int64(len(batch.New))
+	batch.outputRemoved = int64(len(batch.Old))
+	if len(plan.query.orderBy) > 0 {
+		// Esper sorts each pattern delivery at the result-set processor, so
+		// the order-by applies to the batch even when no output-rate view
+		// follows (ESPER-409) and output-limited buffering receives rows
+		// already in delivery order.
+		batch.New = orderRowRecogResults(batch.New, plan.query.orderBy, now, r.variables)
+		batch.Old = orderRowRecogResults(batch.Old, plan.query.orderBy, now, r.variables)
+	}
 	if !batch.empty() {
 		if plan.query.distinct {
 			batch.New, batch.Old = r.applyDistinct(plan.query, batch.New, batch.Old)
