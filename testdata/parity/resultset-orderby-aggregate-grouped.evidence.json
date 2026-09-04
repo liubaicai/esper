@@ -1,0 +1,912 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-46cf1731d511ce733720",
+    "java-runtime-99e2349823d5d0643cb7",
+    "java-runtime-85ba512296ed6b671ece",
+    "java-runtime-8295fe09d8727195fb80",
+    "java-runtime-08747f9055632cef41c6"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByAggregateGrouped.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAliasesAggregationCompile",
+    "ResultSetAliasesAggregationOM",
+    "ResultSetAliases",
+    "ResultSetGroupBySwitch",
+    "ResultSetGroupBySwitchJoin"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-aggregate-grouped",
+    "steps": [
+      {
+        "op": "case",
+        "case": "aliases-aggregation-compile"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 110,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 120,
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 130,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 140,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 150,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 160,
+          "price": 6
+        }
+      },
+      {
+        "op": "case",
+        "case": "aliases-aggregation-om"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 110,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 120,
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 130,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 140,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 150,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 160,
+          "price": 6
+        }
+      },
+      {
+        "op": "case",
+        "case": "aliases"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 110,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 120,
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 130,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 140,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 150,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 160,
+          "price": 6
+        }
+      },
+      {
+        "op": "case",
+        "case": "group-by-switch"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 110,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 120,
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 130,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 140,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 150,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 160,
+          "price": 6
+        }
+      },
+      {
+        "op": "case",
+        "case": "group-by-switch-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 110,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 120,
+          "price": 4
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 130,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 140,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 150,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 160,
+          "price": 6
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-aggregate-grouped",
+    "records": [
+      {
+        "case": "aliases-aggregation-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 1,
+              "symbol": "CMU",
+              "volume": 130
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "CMU",
+              "volume": 140
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "IBM",
+              "volume": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 5,
+              "symbol": "CAT",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 7,
+              "symbol": "IBM",
+              "volume": 120
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 11,
+              "symbol": "CAT",
+              "volume": 160
+            }
+          }
+        ]
+      },
+      {
+        "case": "aliases-aggregation-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 1,
+              "symbol": "CMU",
+              "volume": 130
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "CMU",
+              "volume": 140
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "IBM",
+              "volume": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 5,
+              "symbol": "CAT",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 7,
+              "symbol": "IBM",
+              "volume": 120
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 11,
+              "symbol": "CAT",
+              "volume": 160
+            }
+          }
+        ]
+      },
+      {
+        "case": "aliases",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 1,
+              "symbol": "CMU",
+              "volume": 130
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "CMU",
+              "volume": 140
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "IBM",
+              "volume": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 5,
+              "symbol": "CAT",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 7,
+              "symbol": "IBM",
+              "volume": 120
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 11,
+              "symbol": "CAT",
+              "volume": 160
+            }
+          }
+        ]
+      },
+      {
+        "case": "group-by-switch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 11,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group-by-switch-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 11,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-aggregate-grouped",
+    "records": [
+      {
+        "case": "aliases-aggregation-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 1,
+              "symbol": "CMU",
+              "volume": 130
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "CMU",
+              "volume": 140
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "IBM",
+              "volume": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 5,
+              "symbol": "CAT",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 7,
+              "symbol": "IBM",
+              "volume": 120
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 11,
+              "symbol": "CAT",
+              "volume": 160
+            }
+          }
+        ]
+      },
+      {
+        "case": "aliases-aggregation-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 1,
+              "symbol": "CMU",
+              "volume": 130
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "CMU",
+              "volume": 140
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "IBM",
+              "volume": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 5,
+              "symbol": "CAT",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 7,
+              "symbol": "IBM",
+              "volume": 120
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 11,
+              "symbol": "CAT",
+              "volume": 160
+            }
+          }
+        ]
+      },
+      {
+        "case": "aliases",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 1,
+              "symbol": "CMU",
+              "volume": 130
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "CMU",
+              "volume": 140
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 3,
+              "symbol": "IBM",
+              "volume": 110
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 5,
+              "symbol": "CAT",
+              "volume": 150
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 7,
+              "symbol": "IBM",
+              "volume": 120
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 11,
+              "symbol": "CAT",
+              "volume": 160
+            }
+          }
+        ]
+      },
+      {
+        "case": "group-by-switch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 11,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      },
+      {
+        "case": "group-by-switch-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 1,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 3,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 5,
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 7,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "sum(price)": 11,
+              "symbol": "CAT"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

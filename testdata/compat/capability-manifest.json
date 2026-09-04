@@ -4633,38 +4633,43 @@
     "variables-onset"
    ]
   },
-  {
-   "id": "resultset.orderby-simple",
-   "domain": "resultset",
-   "level": "G",
-   "summary": "ORDER BY on result sets: ascending, descending, multiple keys with tie-break, expression sort keys and invalid-field diagnostics",
-   "javaRefs": [
-    "ResultSetOrderBySimple"
-   ],
-   "goRefs": [
-    "internal/esper/resultset_orderby_parity_test.go",
-    "internal/esper/stream.go"
-   ],
-   "phase": 2,
-   "status": "implemented",
-   "remaining": [
-    "output-rate-limited batch delivery with ORDER BY (output every N events)",
-    "ORDER BY on join result sets",
-    "SODA object-model ORDER BY path",
-    "wildcard projection with ORDER BY",
-    "ORDER BY on Named Window FAF snapshot"
-   ],
-   "verification": [
-    "inventoried",
-    "implemented",
-    "differential-verified"
-   ],
-   "differentialVerifiedRuntimeIds": [
-    "java-runtime-d530652f60616c332431",
-    "java-runtime-9668909b2b2f00769dab",
-    "java-runtime-92e69b0657b10a656fdc"
-   ]
-  },
+ {
+  "id": "resultset.orderby-simple",
+  "domain": "resultset",
+  "level": "G",
+  "summary": "ORDER BY on result sets: ascending, descending, multiple keys with tie-break, expression sort keys and invalid-field diagnostics",
+  "javaRefs": [
+   "ResultSetOrderBySimple"
+  ],
+  "goRefs": [
+   "internal/esper/resultset_orderby_parity_test.go",
+   "internal/esper/stream.go",
+   "internal/app/parity/run_test.go"
+  ],
+  "phase": 2,
+  "status": "differential-verified",
+  "remaining": [
+   "ORDER BY on join result sets",
+   "SODA object-model ORDER BY path",
+   "wildcard projection with ORDER BY",
+   "ORDER BY on Named Window FAF snapshot"
+  ],
+  "verification": [
+   "inventoried",
+   "implemented",
+   "differential-verified"
+  ],
+  "differentialVerifiedRuntimeIds": [
+   "java-runtime-d530652f60616c332431",
+   "java-runtime-9668909b2b2f00769dab",
+   "java-runtime-92e69b0657b10a656fdc",
+   "java-runtime-46cf1731d511ce733720",
+   "java-runtime-99e2349823d5d0643cb7",
+   "java-runtime-85ba512296ed6b671ece",
+   "java-runtime-8295fe09d8727195fb80",
+   "java-runtime-08747f9055632cef41c6"
+  ]
+ },
   {
    "id": "resultset.orderby-row-per-group",
    "domain": "resultset",
@@ -37833,7 +37838,85 @@
     "ResultSetOutputLimitRowLimit ordinal 9 replays three equivalent deployment forms (69 Java/Go records per side: 63 iterator snapshots and 6 listener records, 0 differences) with dynamic variable-backed limit and offset.",
     "The scenario drives SupportBean E1-E10 through a length(5) window, updates nullable Integer myrows/myoffset through SupportBeanNumeric, and covers initial, negative, zero, null and oversized values. The typed Go runner uses RegisterVariable, SetVariables, VariableRef, LimitExpression, OffsetExpression, LengthWindow and OutputEvery; strict scenario/oracle validators pin Java metadata, payload order, listener/iterator shape, and value/order/null/time/record-count mutations."
    ]
-  }
+  },
+ {
+  "id": "case.resultset-orderby-aggregate-grouped",
+  "javaRuntimeIds": [
+   "java-runtime-46cf1731d511ce733720",
+   "java-runtime-99e2349823d5d0643cb7",
+   "java-runtime-85ba512296ed6b671ece",
+   "java-runtime-8295fe09d8727195fb80",
+   "java-runtime-08747f9055632cef41c6"
+  ],
+  "javaStaticIds": [
+   "java-a8a71b78b77eec10ee62",
+   "java-015649f9c0449597e55",
+   "java-e002cbfd72133e0c59f0",
+   "java-610fffded9e2415c805e",
+   "java-b312c9571904401d3fdf"
+  ],
+  "javaNames": [
+   "ResultSetAliasesAggregationCompile",
+   "ResultSetAliasesAggregationOM",
+   "ResultSetAliases",
+   "ResultSetGroupBySwitch",
+   "ResultSetGroupBySwitchJoin"
+  ],
+  "javaSourceFiles": [
+   "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByAggregateGrouped.java"
+  ],
+  "goTests": [
+   "internal/app/parity/run_test.go:TestRunResultsetOrderbyAggregateGroupedDirectReplay",
+   "internal/app/parity/run_test.go:TestRunResultsetOrderbyAggregateGroupedDiffWritesPassingEvidence",
+   "internal/app/parity/run_test.go:TestRunResultsetOrderbyAggregateGroupedDiffRejectsTraceMutations",
+   "internal/app/parity/run_test.go:TestRunResultsetOrderbyAggregateGroupedCheckedInEvidenceMatchesTraceAndReplay",
+   "internal/app/parity/run_test.go:TestRunResultsetOrderbyAggregateGroupedRejectsMalformedRawScenario",
+   "internal/app/parity/run_test.go:TestRunResultsetOrderbyAggregateGroupedRuntimeIDMappingMatchesScenario"
+  ],
+  "tags": [
+   "resultset",
+   "order-by",
+   "aggregate",
+   "grouped",
+   "aliases",
+   "join",
+   "output-rate",
+   "listener",
+   "differential"
+  ],
+  "status": "differential-verified",
+  "evidence": [
+   "testdata/parity/resultset-orderby-aggregate-grouped.json",
+   "testdata/parity/resultset-orderby-aggregate-grouped.trace.json",
+   "testdata/parity/resultset-orderby-aggregate-grouped.go.trace.json",
+   "testdata/parity/resultset-orderby-aggregate-grouped.evidence.json",
+   "tools/java-oracle/ResultSetOrderByAggregateGroupedScenarioOracle.java",
+   "tools/java-oracle/run-resultset-orderby-aggregate-grouped.sh",
+   "java-runtime-inventory",
+   "java-source",
+   "java-oracle",
+   "go-unit",
+   "differential-evidence",
+   "mutation"
+  ],
+  "difference": null,
+  "verification": [
+   "inventoried",
+   "implemented",
+   "differential-verified"
+  ],
+  "differentialVerifiedRuntimeIds": [
+   "java-runtime-46cf1731d511ce733720",
+   "java-runtime-99e2349823d5d0643cb7",
+   "java-runtime-85ba512296ed6b671ece",
+   "java-runtime-8295fe09d8727195fb80",
+   "java-runtime-08747f9055632cef41c6"
+  ],
+  "notes": [
+   "ResultSetOrderByAggregateGrouped ordinals 0-4 replayed through one deterministic six-event length(20) grouped scenario (30 Java/Go events per side and five listener records per side, 0 differences). The first three alias aggregate executions order projected rows by sum(price), then symbol; GroupBySwitch exercises order-by on a non-selected volume key; GroupBySwitchJoin seeds five SupportBeanString symbols and joins market rows before applying the same grouped ordering. All records are new-only at epoch zero, with six ordered rows per callback.",
+   "The typed Go runner uses registered SupportMarketDataBean and SupportBeanString structs, LengthWindow, GroupBy, Sum, Alias, OrderBy, Ascending, OutputEvery, and Join/OnEqual. Compile-only and SODA Java representations share the typed plan because EPL is not the public Go API. Strict scenario/oracle validators pin Java metadata, exact EPL, payload order, listener shape, and value/order/time/record-count mutations."
+  ]
+ }
  ],
  "mappings": [
   {
@@ -40575,13 +40658,17 @@
   {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit-variable"
+  },
+  {
+   "capabilityId": "resultset.orderby-simple",
+   "caseId": "case.resultset-orderby-aggregate-grouped"
   }
  ],
  "summary": {
-  "inventoriedCases": 601,
-  "implementedCases": 599,
-  "differentialVerifiedCases": 214,
-  "differentialVerifiedRuntimeIds": 768,
+  "inventoriedCases": 602,
+  "implementedCases": 600,
+  "differentialVerifiedCases": 215,
+  "differentialVerifiedRuntimeIds": 773,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40591,14 +40678,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3391,
-  "referencedJavaRuntimeIds": 3158,
+  "runtimeAssociationCount": 3396,
+  "referencedJavaRuntimeIds": 3163,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 978,
+  "unreferencedJavaRuntimeIds": 973,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 601,
+  "totalCases": 602,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 768
+  "differentialVerifiedRuntimeIDs": 773
  }
 }

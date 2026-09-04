@@ -34,6 +34,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-row-per-event and resultset-querytype-row-per-event-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-by and resultset-querytype-local-group-by-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-aggregate-grouped-having and resultset-querytype-aggregate-grouped-having-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-orderby-aggregate-grouped and resultset-orderby-aggregate-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-context-grouped and resultset-output-limit-row-limit-context-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit and resultset-output-limit-row-limit-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-negative-rowcount and resultset-output-limit-row-limit-negative-rowcount-diff")
@@ -64,6 +65,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	var scenario compat.Scenario
 	if *mode == "resultset-querytype-aggregate-grouped-having" || *mode == "resultset-querytype-aggregate-grouped-having-diff" {
 		scenario, err = loadResultsetQueryTypeAggregateGroupedHavingScenario(file)
+	} else if *mode == "resultset-orderby-aggregate-grouped" || *mode == "resultset-orderby-aggregate-grouped-diff" {
+		scenario, err = loadResultsetOrderbyAggregateGroupedScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
@@ -2287,6 +2290,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOrderbyRowPerGroupJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOrderbyRowPerGroupJavaSources),
 				splitMetadata(*javaExecutions, resultsetOrderbyRowPerGroupJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-orderby-aggregate-grouped" || *mode == "resultset-orderby-aggregate-grouped-diff" {
+		trace, err := runResultsetOrderbyAggregateGroupedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-orderby-aggregate-grouped-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOrderbyAggregateGroupedJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOrderbyAggregateGroupedJavaSources),
+				splitMetadata(*javaExecutions, resultsetOrderbyAggregateGroupedJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -31,64 +31,25 @@ acceptance criteria in `docs/esper-go-port-quality-strategy.md` all pass.
 Progress is measured by verified work units and manifest evidence, not agent
 activity or a single coverage percentage.
 
-- Updated: 2026-09-04; Draft 4.310 (`resultset-output-limit-row-limit-variable`) targets fixed Java `ResultSetOutputLimitRowLimit.java` ordinal 9 (`ResultSetLengthOffsetVariable`). The Java contract is frozen from commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`: runtime `java-runtime-c591e5e05eb22cddfd00`, static ID `java-299a17bb6319c7f2e6de`, no flags. Three deployments share `int myrows=2` and `int myoffset=1`; an `on SupportBeanNumeric set myrows=intOne, myoffset=intTwo` trigger changes them. Each `SupportBean#length(5) output every 5 events` query uses wildcard new-stream rows and dynamic limit/offset. Java/Go match 21 iterator snapshots and 2 listener flushes per deployment across initial, updated, nullable, negative, zero, and oversized values; setter events do not count toward output batches. The comma, keyword, and SODA forms are represented by one typed Go plan because EPL is not the public API.
-- Baseline: Draft 4.309 (`resultset-output-limit-row-limit-invalid`) is committed and pushed at `507eedfde`; its one runtime has zero-difference evidence and passed full local gates.
-- Validation: targeted parity tests, affected Esper tests, `./scripts/check-layout.sh`, `go vet ./...`, ordinal-nine race tests, manifest artifact validation, and `make check` all pass. `Ordinal9ParityReview` independently returned PASS with zero P1/P2 findings; checked-in Java/Go traces each contain 69 records and differential evidence has status `passing` with zero differences.
+- Completed: Draft 4.310 (`resultset-output-limit-row-limit-variable`) is committed and pushed at `bdc968996`; Java/Go each produced 69 records with zero-difference evidence, and all local gates plus independent parity review passed.
+- Current target: Draft 4.311 ports `ResultSetOrderByAggregateGrouped.java` ordinals 0-4; implementation, traces, evidence, manifest update, focused validation, full gates, and independent review are complete. Commit and push remain.
 ## Current work unit
-Ordinal 9 uses `SupportBeanNumeric` nullable `Integer` fields as the setter source. The observable contract is: each run sends E1..E10, snapshots the iterator after every send, then probes setters `(2,3),(-1,0),(10,0),(6,3),(1,1),(2,1),(1,2),(6,6),(1,4),(null,null),(null,2),(2,null),(-1,4),(-1,0),(0,0)`. Iterator rows are the current length-window arrival order after offset/limit resolution: initial values produce E2; E3; E2/E3; E2/E3; E3/E4; then E6/E7, E4..E8, E5..E9, E9/E10; setter-only probes produce E7, E7/E8, E8, empty, E10, E6..E10, E8..E10, E6/E7, E10, E6..E10, empty. OutputEvery(5) emits only at E5 with E2/E3 and E10 with E9/E10, no old rows; there are two listener batches per run and no timers. Null/missing limit is unlimited, negative limit is unlimited, zero limit is empty, and null/non-positive offset resolves to zero.
+`ResultSetOrderByAggregateGrouped.java` ordinals 0-4 are five listener-only executions: `ResultSetAliasesAggregationCompile`, `ResultSetAliasesAggregationOM`, `ResultSetAliases`, `ResultSetGroupBySwitch`, and `ResultSetGroupBySwitchJoin`. Fixed Java commit is `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; runtime IDs in ordinal order are `java-runtime-46cf1731d511ce733720`, `java-runtime-99e2349823d5d0643cb7`, `java-runtime-85ba512296ed6b671ece`, `java-runtime-8295fe09d8727195fb80`, and `java-runtime-08747f9055632cef41c6`; all flags are empty. The shared outer/static inventory ID is `java-015649f9c0449597e55`; per-execution static IDs are `java-a8a71b78b77eec10ee62`, `java-015649f9c0449597e55`, `java-e002cbfd72133e0c59f0`, `java-610fffded9e2415c805e`, and `java-b312c9571904401d3fdf`.
+Each case deploys `s0`, listens through six `SupportMarketDataBean` events (`IBM/110/3`, `IBM/120/4`, `CMU/130/1`, `CMU/140/2`, `CAT/150/5`, `CAT/160/6`) over `length(20)`, groups by symbol, emits `output every 6 events`, and produces one new-only listener record at epoch zero. Cases 0-2 select `symbol,volume,sum(price)` (alias `mySum` where applicable) and order by aggregate sum then symbol; cases 3-4 select `symbol,sum(price)` but add non-selected volume to the order keys, exercising Java's row-per-event switch; case 4 seeds `CAT`, `IBM`, `CMU`, `KGB`, and `DOG` `SupportBeanString` rows before market events. Every case must produce six ordered new rows: `CMU/130/1`, `CMU/140/3`, `IBM/110/3`, `CAT/150/5`, `IBM/120/7`, `CAT/160/11`; no old rows, iterator snapshots, timers, or errors.
+The typed Go surface is a dedicated parity runner using registered market/string structs, `LengthWindow`, `GroupBy`, `Sum`, `Alias`, `OrderBy`, `Ascending`, `OutputEvery`, and `Join`/`OnEqual` for the join case. The SODA and compile-only Java representations share this typed plan because EPL is not the public Go API.
 ## Delegation checkpoint
-Ordinal-9 read-only scouts `Ordinal9JavaScout` (`java-oracle-scout`) and `Ordinal9GoScout` (`scout`) completed concurrently. Java froze the execution/runtime/static IDs, exact source setup, three-run lifecycle, 21 snapshots per run, 2 listener flushes per run, nullable setter sequence, and dynamic window semantics. Go confirmed `RegisterVariable`, `SetVariables`, `VariableRef`, `LimitExpression`, `OffsetExpression`, `LengthWindow`, and `OutputEvery` are sufficient with no shared-core gap. Primary owns `PLANS.md`, run.go/run_test.go, manifest, traces/evidence, roadmap, CHANGELOG, README, validation, review, commit and push. Asset ownership is disjoint: `Ordinal9JavaAssets` may write only the new Java oracle, shell script, and scenario JSON; `Ordinal9GoAssets` may write only the new Go parity runner and independent semantic parity test. Neither may write central facts or generated traces/evidence.
-## Progress
- - [x] Freeze ordinal-nine Java/Go contracts.
- - [x] Define ordinal-nine scenario and file ownership.
- - [x] Add variable-backed row-limit parity assets.
- - [x] Add ordinal-nine semantic regression tests.
- - [x] Generate ordinal-nine traces and zero-difference evidence.
- - [x] Update ordinal-nine manifest and documentation.
- - [x] Run full gates and independent parity review.
- - [ ] Commit and push ordinal-nine work unit.
-## Next work unit
-After ordinal 9 delivery, continue from the remaining `resultset` output/querytype executions selected by the roadmap and manifest; do not claim complete Esper parity.
+`NextResultsetJavaScout` (`java-oracle-scout`) and `NextResultsetGoScout` (`scout`) completed concurrently before the prior unit committed. They froze the five execution/runtime/static IDs, event and listener contract, group-by switch behavior, join seeding, reusable typed builders, and disjoint file ownership. Core writer may edit only `internal/app/parity/resultset_orderby_aggregate_grouped.go` and the aggregate-grouped branches in `internal/app/parity/run.go`; asset writer may edit only `tools/java-oracle/ResultSetOrderByAggregateGroupedScenarioOracle.java`, its runner script, `testdata/parity/resultset-orderby-aggregate-grouped.json`, and dedicated aggregate-grouped test additions in `internal/app/parity/run_test.go`. Primary owns generated traces/evidence, manifest, PLANS.md, roadmap, CHANGELOG, README, validation, review, commit and push.
+- [x] Freeze aggregate-grouped contract.
+- [x] Add aggregate-grouped Go runner.
+- [x] Add aggregate-grouped semantic tests.
+- [x] Generate aggregate-grouped traces and evidence.
+- [x] Update aggregate-grouped manifest and documentation.
+- [x] Run gates and independent parity review.
+- [ ] Commit and push aggregate-grouped unit.
+Aggregate-grouped verification: `go test ./internal/app/parity -run 'TestRunResultsetOrderbyAggregateGrouped|TestRunHelpSucceeds' -count=1` passed; `gofmt -d internal/app/parity/run.go internal/app/parity/run_test.go internal/app/parity/resultset_orderby_aggregate_grouped.go` produced no diff; the pinned Java 9.0.0 oracle replay compiled and exercised the repaired compile-only and SODA paths, emitted five records, and matched the checked-in Java trace (`cmp=0`); Java/Go traces and evidence contain five listener records per side and zero differences. Manifest JSON, shell syntax, JSON assets, `make check`, and `git diff --check` pass. Final follow-up parity review passed (verdict PASS, 3 P3 notes; see below).
+Final follow-up parity review `AggregateGroupedParityReviewFinal-3` (independent read-only reviewer) returned PASS with 3 P3 notes: (1) CHANGELOG record-count wording ambiguity — fixed; (2) manifest 1-space indent reformat is cosmetic; (3) Go trace omits the java version field per pre-existing convention — no action needed. The final checklist item (commit and push) is the pending action; do not write any future commit hash here.
 ## Prior outcomes
-Draft 4.301 is frozen as all 7 executions of `ResultSetQueryTypeRowPerEvent.java`
-(ordinals 0-6; runtimes `java-runtime-5111b05c6bc620b88e15`, `java-runtime-50601d6f0cc0411a9f90`,
-`java-runtime-06c962063c57e3a3adee`, `java-runtime-14d3e2b22e8c3ef00657`,
-`java-runtime-1f1dae3e5953610a77e3`, `java-runtime-9160c96fccf23486d782`,
-`java-runtime-cce782d69a46b20b8609`; per-execution static IDs `java-1a361248f817f0b81296`,
-`java-7d58340c8817c9bfb25e`, `java-8dd67a080a802003aaa8`, `java-e24ebbd3fbf82c30ea82`,
-`java-282eb4e43b87f9a56d65`, `java-bd1527f8f8cd1b5ed493`, `java-1bb7052967b0e94389eb`; flags empty).
-Scenario `testdata/parity/resultset-querytype-row-per-event.json` (7 cases), Java oracle
-`tools/java-oracle/ResultSetQueryTypeRowPerEventScenarioOracle.java` with run script, Go runner
-`internal/app/parity/resultset_querytype_row_per_event.go`, mode
-`resultset-querytype-row-per-event[-diff]`, 2 tests in run_test.go. Engine fix:
-`expressionTreeReadsCurrentEvent` recognizes `join-event` columns so an ungrouped join aggregate
-with an unaggregated current-tuple column routes to Java `ResultSetProcessorRowPerEvent`
-(one row per input tuple). Representation registration: whole-bean `sb` and `window(s0.*)` rows
-render through the underlying bean's full 20-property map (charPrimitive `"\u0000"`); null
-symbol/volume are pointer schema fields so `count(distinct)`/distinct dedup skips them exactly
-like Java's `ifRefNull` gate; ungrouped having binding the current event (ESPER-571) and
-pre-view `where` filtering are pinned.
-
-## Delegation checkpoint
-Draft 4.301 batch `RpeJavaContract` (java-oracle-scout) + `RpeGoSurface` (scout) ran as parallel
-read-only scouts during the Draft 4.300 review window; both delivered reports inline. Primary owns
-all implementation, central facts, validation, review, commit, and push. Reviewer `RpeReview`
-(parity-reviewer) verified the integrated diff read-only.
-
-## Progress
-- Independent parity review `RpeReview`: verdict PASS, 0 P1/P2 findings, 3 P3 notes —
-  (1) per-execution javaStaticIds listed (applied, matching static-manifest.json);
-  (2) oracle normalizeBean reflection order immaterial under CanonicalTrace map comparison;
-  (3) unagg-having 365-day window is a documented surrogate for Java #time(1) with no clock
-  advancement on either side.
-- Validation before commit: `make check` green; `make test-race` green (parity 202s, esper 419s);
-  differential `resultset-querytype-row-per-event-diff` passing with 0 differences over 28
-  records × 2 sides; mutation tests reject 10/10 trace mutations.
-- Commit: one semantic commit `feat(resultset): port row-per-event result sets 7 runtimes`
-  pushed to `master`. Do not write a post-push checkpoint-only commit.
-- Next unit selection: reopen N+1 prefetch when this unit is committed (candidates:
-  `ResultSetQueryTypeAggregateGroupedHaving.java` 4 executions, `ResultSetOutputLimitRowLimit.java`
-  7 uncovered, `ResultSetOrderByAggregateGrouped.java` 8 uncovered, epl/infra P1 domains).
+Draft 4.301 is frozen as all 7 executions of `ResultSetQueryTypeRowPerEvent.java` (ordinals 0-6; runtimes `java-runtime-5111b05c6bc620b88e15`, `java-runtime-50601d6f0cc0411a9f90`, `java-runtime-06c962063c57e3a3adee`, `java-runtime-14d3e2b22e8c3ef00657`, `java-runtime-1f1dae3e5953610a77e3`, `java-runtime-9160c96fccf23486d782`, `java-runtime-cce782d69a46b20b8609`; flags empty). Scenario, Java oracle, Go runner, manifest/evidence, full gates, review and commit are complete; continue from remaining resultset order-by/output/querytype executions.
 
 - Previous unit (Draft 4.261, implemented, review PASS, pending commit):
   case.variables-use closed EPLVariablesUse at 9/11 executions (101/101
