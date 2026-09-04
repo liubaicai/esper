@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29510,6 +29512,48 @@ func TestRunResultsetOrderbyAggregateGroupedDiffRejectsTraceMutations(t *testing
 				trace.Records[0].Time = "1970-01-01T00:00:01Z"
 			},
 		},
+		{
+			name: "last-batch-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["sum(price)"] = json.Number("999")
+			},
+		},
+		{
+			name: "last-batch-volume",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[2].Fields["volume"] = json.Number("999")
+			},
+		},
+		{
+			name: "last-batch-row-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[1], trace.Records[6].New[2] = trace.Records[6].New[2], trace.Records[6].New[1]
+			},
+		},
+		{
+			name: "last-group-omission",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].New = trace.Records[10].New[:2]
+			},
+		},
+		{
+			name: "iterator-snapshot-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0].Fields["sumPrice"] = json.Number("999")
+			},
+		},
+		{
+			name: "iterator-snapshot-row-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New = trace.Records[8].New[:4]
+			},
+		},
+		{
+			name: "iterator-snapshot-the-string",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[4].Fields["theString"] = "DOG"
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -29670,6 +29714,15 @@ func TestRunResultsetOrderbyAggregateGroupedRejectsMalformedRawScenario(t *testi
 		{name: "non-integer-volume", mutate: func(data []byte) []byte {
 			return bytes.Replace(data, []byte(`"volume": 110`), []byte(`"volume": 110.5`), 1)
 		}},
+		{name: "snapshot-missing-statement", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "snapshot", "statement": "s0"}`), []byte(`{"op": "snapshot"}`), 1)
+		}},
+		{name: "snapshot-statement-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "snapshot", "statement": "s0"}`), []byte(`{"op": "snapshot", "statement": "s1"}`), 1)
+		}},
+		{name: "snapshot-extra-field", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "snapshot", "statement": "s0"}`), []byte(`{"op": "snapshot", "statement": "s0", "extra": 0}`), 1)
+		}},
 		{name: "trailing-json", mutate: func(data []byte) []byte {
 			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
 		}},
@@ -29734,12 +29787,14 @@ func TestRunResultsetOrderbyAggregateGroupedRuntimeIDMappingMatchesScenario(t *t
 		len(document.JavaFlags) != 0 || len(document.Cases) != len(resultsetOrderbyAggregateGroupedCases) {
 		t.Fatalf("scenario metadata = %#v", document)
 	}
+	observations := []string{"listener", "listener", "listener", "listener", "listener", "listener", "iterator", "listener"}
+	iteratorSnapshots := []int{0, 0, 0, 0, 0, 0, 2, 0}
 	for index, entry := range document.Cases {
 		if entry.Case != resultsetOrderbyAggregateGroupedCases[index] ||
 			entry.Ordinal != resultsetOrderbyAggregateGroupedOrdinals[index] ||
 			entry.RuntimeID != resultsetOrderbyAggregateGroupedJavaRuntimeIDs[index] ||
 			entry.ExecutionName != resultsetOrderbyAggregateGroupedJavaExecutions[index] ||
-			entry.Observation != "listener" || entry.IteratorSnapshots != 0 ||
+			entry.Observation != observations[index] || entry.IteratorSnapshots != iteratorSnapshots[index] ||
 			entry.EPL != resultsetOrderbyAggregateGroupedEPLs[index] {
 			t.Fatalf("scenario case %d metadata = %#v", index, entry)
 		}
@@ -29751,13 +29806,14 @@ func assertResultsetOrderbyAggregateGroupedTrace(t *testing.T, trace compat.Trac
 	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetOrderbyAggregateGroupedID {
 		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
 	}
-	if len(trace.Records) != len(resultsetOrderbyAggregateGroupedCases) {
-		t.Fatalf("trace records = %d, want %d", len(trace.Records), len(resultsetOrderbyAggregateGroupedCases))
+	if len(trace.Records) != 11 {
+		t.Fatalf("trace records = %d, want 11", len(trace.Records))
 	}
 	wantSymbols := []string{"CMU", "CMU", "IBM", "CAT", "IBM", "CAT"}
 	wantVolumes := []float64{130, 140, 110, 150, 120, 160}
 	wantSums := []float64{1, 3, 3, 5, 7, 11}
-	for caseIndex, record := range trace.Records {
+	for caseIndex := 0; caseIndex < 5; caseIndex++ {
+		record := trace.Records[caseIndex]
 		if record.Case != resultsetOrderbyAggregateGroupedCases[caseIndex] ||
 			record.Operation != "listener" || record.Statement != "s0" ||
 			record.Sequence != 1 || record.Time != "1970-01-01T00:00:00Z" ||
@@ -29781,6 +29837,94 @@ func assertResultsetOrderbyAggregateGroupedTrace(t *testing.T, trace compat.Trac
 			}
 		}
 	}
+	lastBatches := []struct {
+		recordIndex int
+		caseName    string
+		sequence    uint64
+		symbols     []string
+		volumes     []float64
+		sums        []float64
+	}{
+		{recordIndex: 5, caseName: "last-join", sequence: 1, symbols: []string{"CMU", "IBM", "CAT"}, volumes: []float64{104, 102, 106}, sums: []float64{3, 7, 11}},
+		{recordIndex: 6, caseName: "last-join", sequence: 2, symbols: []string{"DOG", "CMU", "IBM"}, volumes: []float64{206, 204, 202}, sums: []float64{1, 13, 14}},
+		{recordIndex: 9, caseName: "last", sequence: 1, symbols: []string{"CMU", "IBM", "CAT"}, volumes: []float64{104, 102, 106}, sums: []float64{3, 7, 11}},
+		{recordIndex: 10, caseName: "last", sequence: 2, symbols: []string{"DOG", "CMU", "IBM"}, volumes: []float64{206, 204, 202}, sums: []float64{1, 13, 14}},
+	}
+	for _, batch := range lastBatches {
+		record := trace.Records[batch.recordIndex]
+		if record.Case != batch.caseName ||
+			record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != batch.sequence || record.Time != "1970-01-01T00:00:00Z" ||
+			len(record.New) != 3 || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", batch.recordIndex, record)
+		}
+		for rowIndex, row := range record.New {
+			if row.Kind != "row" || len(row.Fields) != 3 ||
+				row.Fields["symbol"] != batch.symbols[rowIndex] {
+				t.Fatalf("record %d row %d shape/identity = %#v", batch.recordIndex, rowIndex, row)
+			}
+			assertResultsetOrderbyAggregateGroupedNumber(t, row.Fields["volume"], batch.volumes[rowIndex], batch.recordIndex, rowIndex, "volume")
+			assertResultsetOrderbyAggregateGroupedNumber(t, row.Fields["sum(price)"], batch.sums[rowIndex], batch.recordIndex, rowIndex, "sum(price)")
+		}
+	}
+	iteratorSnapshots := []struct {
+		symbols []string
+		sums    []float64
+	}{
+		{symbols: []string{"CAT", "CAT", "IBM", "IBM"}, sums: []float64{65, 65, 149, 149}},
+		{symbols: []string{"CAT", "CAT", "IBM", "IBM", "KGB"}, sums: []float64{65, 65, 149, 149, 75}},
+	}
+	for snapshotIndex, snapshot := range iteratorSnapshots {
+		record := trace.Records[7+snapshotIndex]
+		if record.Case != "iterator" ||
+			record.Operation != "snapshot" || record.Statement != "s0" ||
+			record.Sequence != 0 || record.Time != "1970-01-01T00:00:00Z" ||
+			len(record.New) != len(snapshot.symbols) || len(record.Old) != 0 {
+			t.Fatalf("record %d metadata/shape = %#v", 7+snapshotIndex, record)
+		}
+		rows := append([]compat.ResultRecord(nil), record.New...)
+		sort.SliceStable(rows, func(left, right int) bool {
+			return fmt.Sprintf("%v", rows[left].Fields["symbol"]) < fmt.Sprintf("%v", rows[right].Fields["symbol"])
+		})
+		seen := map[string]int{}
+		for _, row := range rows {
+			if row.Kind != "row" || len(row.Fields) != 3 {
+				t.Fatalf("record %d row shape/identity = %#v", 7+snapshotIndex, row)
+			}
+			symbol, _ := row.Fields["symbol"].(string)
+			theString, _ := row.Fields["theString"].(string)
+			if symbol != theString {
+				t.Fatalf("record %d row identity = %#v", 7+snapshotIndex, row)
+			}
+			sum := assertResultsetOrderbyAggregateGroupedNumberText(t, row.Fields["sumPrice"], 7+snapshotIndex, "sumPrice")
+			seen[symbol+"@"+sum]++
+		}
+		for index, symbol := range snapshot.symbols {
+			key := symbol + "@" + assertResultsetOrderbyAggregateGroupedSumText(snapshot.sums[index])
+			if seen[key] == 0 {
+				t.Fatalf("record %d missing row %s", 7+snapshotIndex, key)
+			}
+			seen[key]--
+		}
+		for key, count := range seen {
+			if count != 0 {
+				t.Fatalf("record %d unexpected row %s x%d", 7+snapshotIndex, key, count)
+			}
+		}
+	}
+}
+
+func assertResultsetOrderbyAggregateGroupedSumText(value float64) string {
+	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
+func assertResultsetOrderbyAggregateGroupedNumberText(t *testing.T, value any, recordIndex int, field string) string {
+	t.Helper()
+	number, ok := value.(json.Number)
+	if !ok {
+		t.Fatalf("record %d %s type = %T, value = %#v", recordIndex, field, value, value)
+	}
+	return number.String()
 }
 
 func assertResultsetOrderbyAggregateGroupedNumber(t *testing.T, value any, want float64, caseIndex, rowIndex int, field string) {

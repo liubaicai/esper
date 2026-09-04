@@ -1,7 +1,7 @@
 {
   "version": "esper-parity/v1",
   "id": "resultset-orderby-aggregate-grouped",
-  "description": "ResultSetOrderByAggregateGrouped ordinals 0-4: grouped aggregate order-by aliases and row-per-event switch with listener output.",
+  "description": "ResultSetOrderByAggregateGrouped ordinals 0-7: grouped aggregate order-by aliases, row-per-event switch, output-last batches, and grouped-join iterator snapshots.",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByAggregateGrouped.java",
   "javaRuntimes": [
@@ -9,21 +9,30 @@
     "java-runtime-99e2349823d5d0643cb7",
     "java-runtime-85ba512296ed6b671ece",
     "java-runtime-8295fe09d8727195fb80",
-    "java-runtime-08747f9055632cef41c6"
+    "java-runtime-08747f9055632cef41c6",
+    "java-runtime-12d689fc781af934b76d",
+    "java-runtime-680e7b6016501fed42cb",
+    "java-runtime-18eacf385e5ac00e8a80"
   ],
   "javaNames": [
     "ResultSetAliasesAggregationCompile",
     "ResultSetAliasesAggregationOM",
     "ResultSetAliases",
     "ResultSetGroupBySwitch",
-    "ResultSetGroupBySwitchJoin"
+    "ResultSetGroupBySwitchJoin",
+    "ResultSetLastJoin",
+    "ResultSetIterator",
+    "ResultSetLast"
   ],
   "javaStaticIds": [
     "java-a8a71b78b77eec10ee62",
-    "java-015649f9c0449597e55",
+    "java-015649f9c0449597e55a",
     "java-e002cbfd72133e0c59f0",
     "java-610fffded9e2415c805e",
-    "java-b312c9571904401d3fdf"
+    "java-b312c9571904401d3fdf",
+    "java-663c2d183bbd4dc98fa2",
+    "java-0de948d5133afc56e9fe",
+    "java-726632af45ffc7989e27"
   ],
   "javaFlags": [],
   "cases": [
@@ -71,6 +80,33 @@
       "observation": "listener",
       "iteratorSnapshots": 0,
       "epl": "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(20) as one, SupportBeanString#length(100) as two where one.symbol = two.theString group by symbol output every 6 events order by sum(price), symbol, volume"
+    },
+    {
+      "case": "last-join",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-12d689fc781af934b76d",
+      "executionName": "ResultSetLastJoin",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, volume, sum(price) from SupportMarketDataBean#length(20) as one, SupportBeanString#length(100) as two where one.symbol = two.theString group by symbol output last every 6 events order by sum(price)"
+    },
+    {
+      "case": "iterator",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-680e7b6016501fed42cb",
+      "executionName": "ResultSetIterator",
+      "observation": "iterator",
+      "iteratorSnapshots": 2,
+      "epl": "@name('s0') select symbol, theString, sum(price) as sumPrice from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString group by symbol order by symbol"
+    },
+    {
+      "case": "last",
+      "ordinal": 7,
+      "runtimeId": "java-runtime-18eacf385e5ac00e8a80",
+      "executionName": "ResultSetLast",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, volume, sum(price) from SupportMarketDataBean#length(20) group by symbol output last every 6 events order by sum(price)"
     }
   ],
   "steps": [
@@ -117,6 +153,53 @@
     {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 130, "price": 1}},
     {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 140, "price": 2}},
     {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 150, "price": 5}},
-    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 160, "price": 6}}
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 160, "price": 6}},
+
+    {"op": "case", "case": "last-join"},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CAT"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CMU"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KGB"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DOG"}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 101, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 102, "price": 4}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 103, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 104, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 105, "price": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 106, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 201, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 202, "price": 4}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 203, "price": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 204, "price": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DOG", "volume": 205, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DOG", "volume": 206, "price": 1}},
+
+    {"op": "case", "case": "iterator"},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CAT"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CMU"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KGB"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DOG"}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 50}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 49}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 15}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 100}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 75}},
+    {"op": "snapshot", "statement": "s0"},
+
+    {"op": "case", "case": "last"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 101, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 102, "price": 4}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 103, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 104, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 105, "price": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 106, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 201, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 202, "price": 4}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 203, "price": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 204, "price": 5}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DOG", "volume": 205, "price": 0}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "DOG", "volume": 206, "price": 1}}
   ]
 }

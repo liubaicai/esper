@@ -36,7 +36,9 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -44,16 +46,20 @@ import java.util.regex.Pattern;
 
 /**
  * Direct Esper 9.0.0 oracle for ResultSetOrderByAggregateGrouped ordinals
- * zero through four.  Each execution is replayed in a fresh runtime and
- * emits the one listener callback produced by the six-event output boundary.
- * The compile-only execution replays EPL-to-model compilation, while the SODA
+ * zero through seven.  Each execution is replayed in a fresh runtime and the
+ * observation is pinned per execution: ordinals zero through four emit one
+ * six-row listener callback at the six-event output boundary, ordinals five
+ * and seven (output last every 6 events) emit two three-row listener batches,
+ * and ordinal six is a continuous grouped join observed through two statement
+ * iterator snapshots while its attached listener never records.  The
+ * compile-only execution replays EPL-to-model compilation, while the SODA
  * execution builds, serializes, validates, annotates, and compiles its model.
  */
 public final class ResultSetOrderByAggregateGroupedScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
     private static final String ID = "resultset-orderby-aggregate-grouped";
     private static final String DESCRIPTION =
-            "ResultSetOrderByAggregateGrouped ordinals 0-4: grouped aggregate order-by aliases and row-per-event switch with listener output.";
+            "ResultSetOrderByAggregateGrouped ordinals 0-7: grouped aggregate order-by aliases, row-per-event switch, output-last batches, and grouped-join iterator snapshots.";
     private static final String JAVA_COMMIT = "9e1b9f1cc9117fea4bf33ab043762c045d73839c";
     private static final String JAVA_SOURCE =
             "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByAggregateGrouped.java";
@@ -63,36 +69,51 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
             "java-runtime-99e2349823d5d0643cb7",
             "java-runtime-85ba512296ed6b671ece",
             "java-runtime-8295fe09d8727195fb80",
-            "java-runtime-08747f9055632cef41c6"
+            "java-runtime-08747f9055632cef41c6",
+            "java-runtime-12d689fc781af934b76d",
+            "java-runtime-680e7b6016501fed42cb",
+            "java-runtime-18eacf385e5ac00e8a80"
     };
     private static final String[] EXECUTION_NAMES = {
             "ResultSetAliasesAggregationCompile",
             "ResultSetAliasesAggregationOM",
             "ResultSetAliases",
             "ResultSetGroupBySwitch",
-            "ResultSetGroupBySwitchJoin"
+            "ResultSetGroupBySwitchJoin",
+            "ResultSetLastJoin",
+            "ResultSetIterator",
+            "ResultSetLast"
     };
     private static final String[] STATIC_IDS = {
             "java-a8a71b78b77eec10ee62",
-            "java-015649f9c0449597e55",
+            "java-015649f9c0449597e55a",
             "java-e002cbfd72133e0c59f0",
             "java-610fffded9e2415c805e",
-            "java-b312c9571904401d3fdf"
+            "java-b312c9571904401d3fdf",
+            "java-663c2d183bbd4dc98fa2",
+            "java-0de948d5133afc56e9fe",
+            "java-726632af45ffc7989e27"
     };
     private static final String[] CASES = {
             "aliases-aggregation-compile",
             "aliases-aggregation-om",
             "aliases",
             "group-by-switch",
-            "group-by-switch-join"
+            "group-by-switch-join",
+            "last-join",
+            "iterator",
+            "last"
     };
-    private static final int[] ORDINALS = {0, 1, 2, 3, 4};
+    private static final int[] ORDINALS = {0, 1, 2, 3, 4, 5, 6, 7};
     private static final String[] EPLS = {
             "@name('s0') select symbol, volume, sum(price) as mySum from SupportMarketDataBean#length(20) group by symbol output every 6 events order by sum(price), symbol",
             "select symbol, volume, sum(price) as mySum from SupportMarketDataBean#length(20) group by symbol output every 6 events order by sum(price), symbol",
             "@name('s0') select symbol, volume, sum(price) as mySum from SupportMarketDataBean#length(20) group by symbol output every 6 events order by mySum, symbol",
             "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(20) group by symbol output every 6 events order by sum(price), symbol, volume",
-            "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(20) as one, SupportBeanString#length(100) as two where one.symbol = two.theString group by symbol output every 6 events order by sum(price), symbol, volume"
+            "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(20) as one, SupportBeanString#length(100) as two where one.symbol = two.theString group by symbol output every 6 events order by sum(price), symbol, volume",
+            "@name('s0') select symbol, volume, sum(price) from SupportMarketDataBean#length(20) as one, SupportBeanString#length(100) as two where one.symbol = two.theString group by symbol output last every 6 events order by sum(price)",
+            "@name('s0') select symbol, theString, sum(price) as sumPrice from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString group by symbol order by symbol",
+            "@name('s0') select symbol, volume, sum(price) from SupportMarketDataBean#length(20) group by symbol output last every 6 events order by sum(price)"
     };
 
     private static final String[] MARKET_SYMBOLS = {"IBM", "IBM", "CMU", "CMU", "CAT", "CAT"};
@@ -102,6 +123,23 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
     private static final long[] EXPECTED_VOLUMES = {130L, 140L, 110L, 150L, 120L, 160L};
     private static final double[] EXPECTED_SUMS = {1d, 3d, 3d, 5d, 7d, 11d};
     private static final String[] JOIN_SEEDS = {"CAT", "IBM", "CMU", "KGB", "DOG"};
+    private static final String[] LAST_BATCH_MARKET_SYMBOLS =
+            {"IBM", "IBM", "CMU", "CMU", "CAT", "CAT", "IBM", "IBM", "CMU", "CMU", "DOG", "DOG"};
+    private static final long[] LAST_BATCH_MARKET_VOLUMES =
+            {101L, 102L, 103L, 104L, 105L, 106L, 201L, 202L, 203L, 204L, 205L, 206L};
+    private static final double[] LAST_BATCH_MARKET_PRICES =
+            {3d, 4d, 1d, 2d, 5d, 6d, 3d, 4d, 5d, 5d, 0d, 1d};
+    private static final String[] LAST_BATCH_SYMBOLS = {"CMU", "IBM", "CAT", "DOG", "CMU", "IBM"};
+    private static final long[] LAST_BATCH_VOLUMES = {104L, 102L, 106L, 206L, 204L, 202L};
+    private static final double[] LAST_BATCH_SUMS = {3d, 7d, 11d, 1d, 13d, 14d};
+    private static final String[] ITERATOR_MARKET_SYMBOLS = {"CAT", "IBM", "CAT", "IBM"};
+    private static final long[] ITERATOR_MARKET_VOLUMES = {0L, 0L, 0L, 0L};
+    private static final double[] ITERATOR_MARKET_PRICES = {50d, 49d, 15d, 100d};
+    private static final String[] ITERATOR_FIELDS = {"sumPrice", "symbol", "theString"};
+    private static final String[] ITERATOR_SNAPSHOT_ONE_SYMBOLS = {"CAT", "CAT", "IBM", "IBM"};
+    private static final double[] ITERATOR_SNAPSHOT_ONE_SUMS = {65d, 65d, 149d, 149d};
+    private static final String[] ITERATOR_SNAPSHOT_TWO_SYMBOLS = {"CAT", "CAT", "IBM", "IBM", "KGB"};
+    private static final double[] ITERATOR_SNAPSHOT_TWO_SUMS = {65d, 65d, 149d, 149d, 75d};
     private static final Pattern INTEGER_SYNTAX = Pattern.compile("-?(?:0|[1-9][0-9]*)");
 
     private ResultSetOrderByAggregateGroupedScenarioOracle() {
@@ -126,8 +164,9 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
         for (int index = 0; index < CASES.length; index++) {
             runCase(index, caseDefinitions.get(index).asObject(), allSteps, records);
         }
-        if (records.size() != CASES.length) {
-            throw new IllegalStateException("expected five listener records, got " + records.size());
+        if (records.size() != 11) {
+            throw new IllegalStateException("expected eleven listener and snapshot records, got "
+                    + records.size());
         }
 
         JsonObject root = new JsonObject();
@@ -155,12 +194,14 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
             EPDeployment deployment = runtime.getDeploymentService().deploy(compiled,
                     new DeploymentOptions().setDeploymentId(ID + "-" + caseName));
             EPStatement statement = findStatement(deployment, caseName);
-            RecordingListener listener = new RecordingListener(records, caseIndex, statement, runtime);
+            int expectedCallbacks = expectedListenerCallbacks(caseIndex);
+            RecordingListener listener = new RecordingListener(records, caseIndex, statement, runtime,
+                    expectedCallbacks);
             statement.addListener(listener);
-            replay(allSteps, caseName, runtime);
-            if (listener.sequence != 1) {
+            replay(allSteps, caseName, runtime, statement, records);
+            if (listener.sequence != expectedCallbacks) {
                 throw new IllegalStateException("case " + caseName + " produced "
-                        + listener.sequence + " listener records, expected one");
+                        + listener.sequence + " listener records, expected " + expectedCallbacks);
             }
         } finally {
             runtime.getDeploymentService().undeployAll();
@@ -183,6 +224,13 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
             throw new IllegalStateException("case " + caseName + " did not deploy statement s0");
         }
         return result;
+    }
+
+    private static int expectedListenerCallbacks(int caseIndex) {
+        if (caseIndex == 6) {
+            return 0;
+        }
+        return caseIndex < 5 ? 1 : 2;
     }
 
     private static EPCompiled compileCase(int caseIndex, Configuration configuration,
@@ -225,8 +273,10 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
                 new CompilerArguments(runtime.getRuntimePath()));
     }
 
-    private static void replay(JsonArray allSteps, String caseName, EPRuntime runtime) {
+    private static void replay(JsonArray allSteps, String caseName, EPRuntime runtime,
+                               EPStatement statement, JsonArray records) {
         boolean inCase = false;
+        int snapshots = 0;
         for (JsonValue stepValue : allSteps) {
             JsonObject step = object(stepValue, "step");
             String operation = string(step, "op");
@@ -237,12 +287,87 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
             if (!inCase) {
                 continue;
             }
+            if ("snapshot".equals(operation)) {
+                if (!"iterator".equals(caseName)) {
+                    throw new IllegalArgumentException("snapshot step in case " + caseName
+                            + " is not supported; only case iterator carries snapshots");
+                }
+                emitSnapshot(step, statement, caseName, runtime, records, snapshots++);
+                continue;
+            }
             if (!"send".equals(operation)) {
                 throw new IllegalArgumentException("unsupported operation " + operation
                         + " in case " + caseName);
             }
             sendEvent(runtime, step, caseName);
         }
+    }
+
+    private static void emitSnapshot(JsonObject step, EPStatement statement, String caseName,
+                                     EPRuntime runtime, JsonArray records, int snapshotIndex) {
+        validateSnapshotStep(step);
+        List<EventBean> drained = new ArrayList<>();
+        for (Iterator<EventBean> iterator = statement.iterator(); iterator.hasNext(); ) {
+            drained.add(iterator.next());
+        }
+        validateIteratorSnapshot(caseName, snapshotIndex, drained);
+        long now = runtime.getEventService().getCurrentTime();
+        if (now != 0L) {
+            throw new IllegalStateException("unexpected snapshot time " + now);
+        }
+        JsonObject record = new JsonObject();
+        record.add("case", caseName);
+        record.add("operation", "snapshot");
+        record.add("statement", statement.getName());
+        record.add("sequence", 0);
+        record.add("time", Instant.ofEpochMilli(now).toString());
+        record.add("new", rows(drained.toArray(new EventBean[0])));
+        records.add(record);
+    }
+
+    private static void validateIteratorSnapshot(String caseName, int snapshotIndex,
+                                                 List<EventBean> drained) {
+        String[] expectedSymbols = snapshotIndex == 0
+                ? ITERATOR_SNAPSHOT_ONE_SYMBOLS
+                : ITERATOR_SNAPSHOT_TWO_SYMBOLS;
+        double[] expectedSums = snapshotIndex == 0
+                ? ITERATOR_SNAPSHOT_ONE_SUMS
+                : ITERATOR_SNAPSHOT_TWO_SUMS;
+        if (drained.size() != expectedSymbols.length) {
+            throw new IllegalStateException("case " + caseName + " iterator snapshot "
+                    + (snapshotIndex + 1) + " must contain " + expectedSymbols.length
+                    + " rows, got " + drained.size());
+        }
+        List<String> actualKeys = new ArrayList<>();
+        for (EventBean event : drained) {
+            String[] fields = event.getEventType().getPropertyNames().clone();
+            Arrays.sort(fields);
+            if (!Arrays.equals(fields, ITERATOR_FIELDS)) {
+                throw new IllegalStateException("case " + caseName + " iterator snapshot fields are "
+                        + Arrays.toString(fields) + ", expected " + Arrays.toString(ITERATOR_FIELDS));
+            }
+            Object sumPrice = event.get("sumPrice");
+            if (!(sumPrice instanceof Number)) {
+                throw new IllegalStateException("case " + caseName + " iterator snapshot row "
+                        + actualKeys.size() + " sumPrice must be numeric, got " + sumPrice);
+            }
+            actualKeys.add(rowKey(event.get("symbol"), event.get("theString"),
+                    ((Number) sumPrice).doubleValue()));
+        }
+        List<String> expectedKeys = new ArrayList<>();
+        for (int index = 0; index < expectedSymbols.length; index++) {
+            expectedKeys.add(rowKey(expectedSymbols[index], expectedSymbols[index], expectedSums[index]));
+        }
+        Collections.sort(actualKeys);
+        Collections.sort(expectedKeys);
+        if (!actualKeys.equals(expectedKeys)) {
+            throw new IllegalStateException("case " + caseName + " iterator snapshot "
+                    + (snapshotIndex + 1) + " rows are not pinned: " + actualKeys);
+        }
+    }
+
+    private static String rowKey(Object symbol, Object theString, double sumPrice) {
+        return symbol + "|" + theString + "|" + sumPrice;
     }
 
     private static void sendEvent(EPRuntime runtime, JsonObject step, String caseName) {
@@ -281,26 +406,28 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
 
         JsonArray cases = array(scenario.get("cases"), "cases");
         if (cases.size() != CASES.length) {
-            throw new IllegalArgumentException("scenario must contain exactly five cases");
+            throw new IllegalArgumentException("scenario must contain exactly eight cases");
         }
         for (int index = 0; index < CASES.length; index++) {
             JsonObject definition = object(cases.get(index), "case definition");
             requireFields(definition, "case", "ordinal", "runtimeId", "executionName",
                     "observation", "iteratorSnapshots", "epl");
+            String expectedObservation = index == 6 ? "iterator" : "listener";
+            int expectedSnapshots = index == 6 ? 2 : 0;
             if (!CASES[index].equals(string(definition, "case"))
                     || integer(definition, "ordinal") != ORDINALS[index]
                     || !RUNTIME_IDS[index].equals(string(definition, "runtimeId"))
                     || !EXECUTION_NAMES[index].equals(string(definition, "executionName"))
-                    || !"listener".equals(string(definition, "observation"))
-                    || integer(definition, "iteratorSnapshots") != 0
+                    || !expectedObservation.equals(string(definition, "observation"))
+                    || integer(definition, "iteratorSnapshots") != expectedSnapshots
                     || !EPLS[index].equals(string(definition, "epl"))) {
                 throw new IllegalArgumentException("case metadata is not pinned at index " + index);
             }
         }
 
         JsonArray steps = array(scenario.get("steps"), "steps");
-        if (steps.size() != 40) {
-            throw new IllegalArgumentException("scenario must contain exactly forty steps");
+        if (steps.size() != 84) {
+            throw new IllegalArgumentException("scenario must contain exactly eighty-four steps");
         }
         int offset = 0;
         for (int caseIndex = 0; caseIndex < 4; caseIndex++) {
@@ -317,6 +444,30 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
         for (int eventIndex = 0; eventIndex < MARKET_SYMBOLS.length; eventIndex++) {
             validateMarketStep(steps.get(offset++), MARKET_SYMBOLS[eventIndex],
                     MARKET_VOLUMES[eventIndex], MARKET_PRICES[eventIndex]);
+        }
+        validateCaseMarker(steps.get(offset++), CASES[5]);
+        for (String seed : JOIN_SEEDS) {
+            validateStringStep(steps.get(offset++), seed);
+        }
+        for (int eventIndex = 0; eventIndex < LAST_BATCH_MARKET_SYMBOLS.length; eventIndex++) {
+            validateMarketStep(steps.get(offset++), LAST_BATCH_MARKET_SYMBOLS[eventIndex],
+                    LAST_BATCH_MARKET_VOLUMES[eventIndex], LAST_BATCH_MARKET_PRICES[eventIndex]);
+        }
+        validateCaseMarker(steps.get(offset++), CASES[6]);
+        for (String seed : JOIN_SEEDS) {
+            validateStringStep(steps.get(offset++), seed);
+        }
+        for (int eventIndex = 0; eventIndex < ITERATOR_MARKET_SYMBOLS.length; eventIndex++) {
+            validateMarketStep(steps.get(offset++), ITERATOR_MARKET_SYMBOLS[eventIndex],
+                    ITERATOR_MARKET_VOLUMES[eventIndex], ITERATOR_MARKET_PRICES[eventIndex]);
+        }
+        validateSnapshotStep(steps.get(offset++));
+        validateMarketStep(steps.get(offset++), "KGB", 0L, 75d);
+        validateSnapshotStep(steps.get(offset++));
+        validateCaseMarker(steps.get(offset++), CASES[7]);
+        for (int eventIndex = 0; eventIndex < LAST_BATCH_MARKET_SYMBOLS.length; eventIndex++) {
+            validateMarketStep(steps.get(offset++), LAST_BATCH_MARKET_SYMBOLS[eventIndex],
+                    LAST_BATCH_MARKET_VOLUMES[eventIndex], LAST_BATCH_MARKET_PRICES[eventIndex]);
         }
         if (offset != steps.size()) {
             throw new IllegalArgumentException("scenario steps contain an unexpected suffix");
@@ -345,6 +496,15 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
                 || longInteger(payload, "volume") != expectedVolume
                 || Double.compare(number(payload, "price"), expectedPrice) != 0) {
             throw new IllegalArgumentException("market payload is not pinned");
+        }
+    }
+
+    private static void validateSnapshotStep(JsonValue value) {
+        JsonObject step = object(value, "snapshot step");
+        requireFields(step, "op", "statement");
+        if (!"snapshot".equals(string(step, "op"))
+                || !"s0".equals(string(step, "statement"))) {
+            throw new IllegalArgumentException("snapshot step is not pinned");
         }
     }
 
@@ -457,34 +617,40 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
         private final int caseIndex;
         private final EPStatement statement;
         private final EPRuntime runtime;
+        private final int expectedCallbacks;
         private int sequence;
 
         private RecordingListener(JsonArray records, int caseIndex, EPStatement statement,
-                                  EPRuntime runtime) {
+                                  EPRuntime runtime, int expectedCallbacks) {
             this.records = records;
             this.caseIndex = caseIndex;
             this.statement = statement;
             this.runtime = runtime;
+            this.expectedCallbacks = expectedCallbacks;
         }
 
         @Override
         public void update(EventBean[] newEvents, EventBean[] oldEvents,
                            EPStatement ignoredStatement, EPRuntime ignoredRuntime) {
-            int next = sequence + 1;
-            if (next > 1) {
-                throw new IllegalStateException("case " + CASES[caseIndex]
-                        + " produced more than one listener callback");
+            if (expectedCallbacks == 0) {
+                return;
             }
-            if (newEvents == null || newEvents.length != EXPECTED_SYMBOLS.length
+            int next = sequence + 1;
+            if (next > expectedCallbacks) {
+                throw new IllegalStateException("case " + CASES[caseIndex]
+                        + " produced more than " + expectedCallbacks + " listener callbacks");
+            }
+            int expectedRows = caseIndex < 5 ? EXPECTED_SYMBOLS.length : 3;
+            if (newEvents == null || newEvents.length != expectedRows
                     || (oldEvents != null && oldEvents.length != 0)) {
                 throw new IllegalStateException("case " + CASES[caseIndex]
-                        + " listener callback must contain six new rows only");
+                        + " listener callback must contain " + expectedRows + " new rows only");
             }
             long now = runtime.getEventService().getCurrentTime();
             if (now != 0L) {
                 throw new IllegalStateException("unexpected callback time " + now);
             }
-            validateRows(newEvents);
+            validateRows(newEvents, next);
 
             JsonObject record = new JsonObject();
             record.add("case", CASES[caseIndex]);
@@ -497,11 +663,19 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
             records.add(record);
         }
 
-        private void validateRows(EventBean[] events) {
-            String[] expectedFields = caseIndex < 3
-                    ? new String[]{"mySum", "symbol", "volume"}
-                    : new String[]{"sum(price)", "symbol"};
+        private void validateRows(EventBean[] events, int callbackSequence) {
+            String[] expectedFields;
+            if (caseIndex < 3) {
+                expectedFields = new String[]{"mySum", "symbol", "volume"};
+            } else if (caseIndex < 5) {
+                expectedFields = new String[]{"sum(price)", "symbol"};
+            } else {
+                expectedFields = new String[]{"sum(price)", "symbol", "volume"};
+            }
+            String sumField = caseIndex < 3 ? "mySum" : "sum(price)";
+            int offset = (callbackSequence - 1) * 3;
             for (int rowIndex = 0; rowIndex < events.length; rowIndex++) {
+                int expectedIndex = caseIndex < 5 ? rowIndex : offset + rowIndex;
                 EventBean event = events[rowIndex];
                 String[] fields = event.getEventType().getPropertyNames().clone();
                 Arrays.sort(fields);
@@ -511,12 +685,18 @@ public final class ResultSetOrderByAggregateGroupedScenarioOracle {
                     throw new IllegalStateException("result field metadata is not pinned for case "
                             + CASES[caseIndex]);
                 }
-                assertString(event.get("symbol"), EXPECTED_SYMBOLS[rowIndex], "symbol", rowIndex);
-                assertNumber(event.get(caseIndex < 3 ? "mySum" : "sum(price)"),
-                        EXPECTED_SUMS[rowIndex], caseIndex < 3 ? "mySum" : "sum(price)", rowIndex);
+                assertString(event.get("symbol"),
+                        caseIndex < 5 ? EXPECTED_SYMBOLS[expectedIndex] : LAST_BATCH_SYMBOLS[expectedIndex],
+                        "symbol", expectedIndex);
+                assertNumber(event.get(sumField),
+                        caseIndex < 5 ? EXPECTED_SUMS[expectedIndex] : LAST_BATCH_SUMS[expectedIndex],
+                        sumField, expectedIndex);
                 if (caseIndex < 3) {
-                    assertNumber(event.get("volume"), EXPECTED_VOLUMES[rowIndex],
-                            "volume", rowIndex);
+                    assertNumber(event.get("volume"), EXPECTED_VOLUMES[expectedIndex],
+                            "volume", expectedIndex);
+                } else if (caseIndex >= 5) {
+                    assertNumber(event.get("volume"), LAST_BATCH_VOLUMES[expectedIndex],
+                            "volume", expectedIndex);
                 }
             }
         }

@@ -1,3 +1,20 @@
+> 最新补充：Draft 4.312（2026-09-05），`case.resultset-orderby-aggregate-grouped` 扩展为
+> `ResultSetOrderByAggregateGrouped.java` 全部 8 个 execution（Java commit
+> `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；新增 ordinals 5-7：`ResultSetLastJoin`
+> `java-runtime-12d689fc781af934b76d`（static `java-663c2d183bbd4dc98fa2`）、`ResultSetIterator`
+> `java-runtime-680e7b6016501fed42cb`（static `java-0de948d5133afc56e9fe`）、`ResultSetLast`
+> `java-runtime-18eacf385e5ac00e8a80`（static `java-726632af45ffc7989e27`）；无 flags）：
+> Java/Go 各 11 条 records、0 differences。场景新增 output-last every-6-events 的 row-per-group
+> 双批次（CMU/104/3、IBM/102/7、CAT/106/11，随后 DOG/206/1、CMU/204/13、IBM/202/14，区间内无事件的
+> 组被抑制）、以及 grouped length(10) join 的两条 statement-iterator 快照（每组两条 join 行携带组级
+> sum；4 行后 5 行，无 mode any、按先例固定确定性顺序）。typed Go 使用 `OutputLastEveryEvents`、
+> `JoinField`、`LengthWindow`、`GroupBy`、`Sum`、`Alias`、`OrderBy`、`Ascending`，iterator case
+> 使用不订阅语句的自定义 replay 路径。同时将 ordinal 1 的 static ID 修正为完整
+> `java-015649f9c0449597e55a`（static-manifest 为准），oracle runner script 增加 Windows
+> classpath 分号/原生路径自适应。manifest 更新为 602 cases、215 个 differential-verified case、
+> 776 个 differential runtime IDs、3399 条 associations（referenced 3166）；capability 119 个
+> （36 DV）。
+
 > 最新补充：Draft 4.310（2026-09-04），新增 `output.when-basic` 的
 > `resultset-output-limit-row-limit-variable` differential-verified 场景，对照固定 Java
 > `ResultSetOutputLimitRowLimit.java` ordinal 9 的 `ResultSetLengthOffsetVariable` execution
@@ -1174,16 +1191,16 @@
 
 > 最新补充：Draft 4.196（2026-08-20），新增 `expr-core-current-timestamp` differential-verified 场景，对照固定 Java `ExprCoreCurrentTimestamp` 的三个 execution（`ExprCoreCurrentTimestampGet` `java-runtime-c1c1fd3dc31af4864a50`、`ExprCoreCurrentTimestampOM` `java-runtime-96c8b8cb4cf36a523669`、`ExprCoreCurrentTimestampCompile` `java-runtime-5b126fe7fb865be8b293`），三个 isolated case、四条 listener records、0 differences。Go 侧复用类型化 `CurrentTimestamp()` 和虚拟时钟，覆盖未命名 `current_timestamp()` 字段、重复引用、加一运算，以及 100/999/777 毫秒绝对时间；Java boxed Long 元数据和文本编译诊断继续保持差异边界。Java oracle、固定 commit runner、scenario、trace、evidence 和 value/order/field/time mutation tests 已纳入兼容资产；manifest 更新为 122 个 differential-verified case、373 个 differential runtime IDs。
 
-截至 2026-09-04，manifest v2 的已校验摘要为：
+截至 2026-09-05，manifest v2 的已校验摘要为：
 
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 119 |
 | Case | 602 |
 | Case differential-verified | 215 |
-| Differential-verified runtime | 773 / 4,136 |
-| Runtime 已关联 | 3,163 / 4,136（76.5%） |
-| Runtime 未关联 | 973 |
+| Differential-verified runtime | 776 / 4,136 |
+| Runtime 已关联 | 3,166 / 4,136（76.5%） |
+| Runtime 未关联 | 970 |
 | Representative scenario | 107 / 107 通过 |
 | Intentionally-different case | 23 |
 | NFR-verified case | 0 |

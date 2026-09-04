@@ -80,7 +80,7 @@ command -v "$javac_bin" >/dev/null 2>&1 || { echo "javac executable was not foun
 command -v "$mvn_bin" >/dev/null 2>&1 || { echo "Maven executable was not found: $mvn_bin" >&2; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo "jq executable was not found; it is required to validate the scenario and oracle trace" >&2; exit 1; }
 
-java_version=$($java_bin -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | sed -n '1p')
+java_version=$("$java_bin" -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | sed -n '1p')
 [ "$java_version" = "17" ] || {
     echo "Java 17 is required for the Java 9.0.0 oracle; found ${java_version:-unknown}" >&2
     exit 1
@@ -90,17 +90,19 @@ if ! jq -e '
     .version == "esper-parity/v1" and
     .id == "resultset-orderby-aggregate-grouped" and
     .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
-    (.javaRuntimes | type == "array" and length == 5) and
-    (.javaNames | type == "array" and length == 5) and
-    (.javaStaticIds | type == "array" and length == 5) and
+    (.javaRuntimes | type == "array" and length == 8) and
+    (.javaNames | type == "array" and length == 8) and
+    (.javaStaticIds | type == "array" and length == 8) and
     (.javaFlags | type == "array" and length == 0) and
-    (.cases | type == "array" and length == 5) and
-    ([.cases[] | select(.observation == "listener" and .iteratorSnapshots == 0)] | length == 5) and
-    ([.cases[].runtimeId] | length == 5 and all(startswith("java-runtime-"))) and
-    ([.steps[] | select(.op == "case")] | length == 5) and
-    ([.steps[] | select(.op == "send" and .eventType == "SupportMarketDataBean")] | length == 30) and
-    ([.steps[] | select(.op == "send" and .eventType == "SupportBeanString")] | length == 5) and
-    (.steps | type == "array" and length == 40)
+    (.cases | type == "array" and length == 8) and
+    ([.cases[] | select(.observation == "listener" and .iteratorSnapshots == 0)] | length == 7) and
+    ([.cases[] | select(.observation == "iterator" and .iteratorSnapshots == 2)] | length == 1) and
+    ([.cases[].runtimeId] | length == 8 and all(startswith("java-runtime-"))) and
+    ([.steps[] | select(.op == "case")] | length == 8) and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportMarketDataBean")] | length == 59) and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBeanString")] | length == 15) and
+    ([.steps[] | select(.op == "snapshot")] | length == 2) and
+    (.steps | type == "array" and length == 84)
 ' "$scenario" >/dev/null 2>&1; then
     echo "scenario is not a valid resultset-orderby-aggregate-grouped replay: $scenario" >&2
     exit 1
@@ -130,11 +132,29 @@ trap cleanup EXIT HUP INT TERM
 
 classes="$work/classes"
 mkdir -p "$classes"
-classpath="$classes:$esper_root/common/target/classes:$esper_root/compiler/target/classes:$esper_root/runtime/target/classes"
-classpath="$classpath:$esper_root/common-avro/target/classes:$esper_root/common-xmlxsd/target/classes"
-classpath="$classpath:$(tr '\n' ':' < "$work/compiler-cp.txt"):$(tr '\n' ':' < "$work/runtime-cp.txt")"
+# Windows javac/java need ';' separators and native paths; the Maven
+# dependency classpath files already use the platform separator.
+case "$(uname -s)" in
+    MINGW* | MSYS* | CYGWIN*)
+        cp_sep=";"
+        native_path() { cygpath -m "$1"; }
+        ;;
+    *)
+        cp_sep=":"
+        native_path() { printf '%s' "$1"; }
+        ;;
+esac
+compiler_cp=$(tr -d '\r\n' < "$work/compiler-cp.txt")
+runtime_cp=$(tr -d '\r\n' < "$work/runtime-cp.txt")
+classpath="$(native_path "$classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/compiler/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/runtime/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common-avro/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common-xmlxsd/target/classes")"
+classpath="$classpath$cp_sep$compiler_cp$cp_sep$runtime_cp"
 
-"$javac_bin" -encoding UTF-8 -cp "$classpath" -d "$classes" \
+"$javac_bin" -encoding UTF-8 -cp "$classpath" -d "$(native_path "$classes")" \
     "$script_root/ResultSetOrderByAggregateGroupedScenarioOracle.java"
 
 mkdir -p "$(dirname "$output")"
@@ -146,14 +166,17 @@ if ! jq -e '
     .version == "esper-parity/v1" and
     .id == "resultset-orderby-aggregate-grouped" and
     .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
-    (.records | type == "array" and length == 5) and
-    ([.records[].case] == ["aliases-aggregation-compile", "aliases-aggregation-om", "aliases", "group-by-switch", "group-by-switch-join"]) and
-    ([.records[].operation] | all(. == "listener")) and
+    (.records | type == "array" and length == 11) and
+    ([.records[].case] == ["aliases-aggregation-compile", "aliases-aggregation-om", "aliases", "group-by-switch", "group-by-switch-join", "last-join", "last-join", "iterator", "iterator", "last", "last"]) and
+    ([.records[].operation] | all(. == "listener" or . == "snapshot")) and
+    ([.records[] | select(.operation == "listener")] | length == 9) and
+    ([.records[] | select(.operation == "snapshot")] | length == 2) and
     ([.records[].statement] | all(. == "s0")) and
-    ([.records[].sequence] == [1, 1, 1, 1, 1]) and
+    ([.records[].sequence] == [1, 1, 1, 1, 1, 1, 2, 0, 0, 1, 2]) and
     ([.records[].time] | all(. == "1970-01-01T00:00:00Z")) and
     ([.records[] | select(.old != null)] | length == 0) and
-    ([.records[].new] | all(type == "array" and length == 6)) and
+    ([.records[].new] | all(type == "array")) and
+    ([.records[].new | length] == [6, 6, 6, 6, 6, 3, 3, 4, 5, 3, 3]) and
     ([.records[].new[] | .kind] | all(. == "row"))
 ' "$output" >/dev/null 2>&1; then
     echo "Java oracle produced an invalid resultset-orderby-aggregate-grouped trace: $output" >&2
