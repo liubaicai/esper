@@ -5,7 +5,9 @@
     "java-runtime-34bfe3c4c56f505d50cd",
     "java-runtime-499038c2c0fca09551c1",
     "java-runtime-77a5ebb703ccb5fdbf63",
-    "java-runtime-88c88732359bcd33f9cd"
+    "java-runtime-88c88732359bcd33f9cd",
+    "java-runtime-04a6303bb13045ec2e3d",
+    "java-runtime-4621c599c2655d0464c4"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAfter.java"
@@ -14,7 +16,9 @@
     "ResultSetDirectNumberOfEvents",
     "ResultSetOutputWhenThen",
     "ResultSetDirectTimePeriod",
-    "ResultSetEveryPolicy"
+    "ResultSetEveryPolicy",
+    "ResultSetMonthScoped",
+    "ResultSetSnapshotVariable"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -260,6 +264,102 @@
       {
         "op": "advance-time",
         "at": "1970-01-01T00:00:30Z"
+      },
+      {
+        "op": "case",
+        "case": "after-1-month"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-03-01T08:59:59.999Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-03-01T09:00:00.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "case",
+        "case": "after-20-seconds-snapshot-variable"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:06Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:19.999Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:20Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:21Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 0
+        }
       }
     ]
   },
@@ -392,6 +492,94 @@
             }
           }
         ]
+      },
+      {
+        "case": "after-1-month",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds-snapshot-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds-snapshot-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:21Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
+            }
+          }
+        ]
       }
     ]
   },
@@ -521,6 +709,94 @@
             "kind": "row",
             "fields": {
               "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-1-month",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds-snapshot-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "after-20-seconds-snapshot-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:21Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E5"
             }
           }
         ]

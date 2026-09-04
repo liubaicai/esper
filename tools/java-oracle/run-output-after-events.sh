@@ -90,19 +90,19 @@ if ! jq -e '
     .version == "esper-parity/v1" and
     .id == "output-after-events" and
     .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
-    (.javaRuntimes | type == "array" and length == 4) and
-    (.javaNames | type == "array" and length == 4) and
-    (.javaStaticIds | type == "array" and length == 4) and
+    (.javaRuntimes | type == "array" and length == 6) and
+    (.javaNames | type == "array" and length == 6) and
+    (.javaStaticIds | type == "array" and length == 6) and
     (.javaFlags | type == "array" and length == 0) and
-    (.cases | type == "array" and length == 4) and
-    ([.cases[] | select(.observation == "listener" and .iteratorSnapshots == 0)] | length == 4) and
-    ([.cases[].runtimeId] | length == 4 and all(startswith("java-runtime-"))) and
-    ([.steps[] | select(.op == "case")] | length == 4) and
-    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length == 20) and
-    ([.steps[] | select(.op == "advance-time")] | length == 13) and
+    (.cases | type == "array" and length == 6) and
+    ([.cases[] | select(.observation == "listener" and .iteratorSnapshots == 0)] | length == 6) and
+    ([.cases[].runtimeId] | length == 6 and all(startswith("java-runtime-"))) and
+    ([.steps[] | select(.op == "case")] | length == 6) and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length == 28) and
+    ([.steps[] | select(.op == "advance-time")] | length == 19) and
     ([.steps[] | select(.op == "set-variable")] | length == 1) and
     ([.steps[] | select(.op == "read-variable")] | length == 2) and
-    (.steps | type == "array" and length == 40)
+    (.steps | type == "array" and length == 56)
 ' "$scenario" >/dev/null 2>&1; then
     echo "scenario is not a valid output-after-events replay: $scenario" >&2
     exit 1
@@ -166,14 +166,14 @@ if ! jq -e '
     .version == "esper-parity/v1" and
     .id == "output-after-events" and
     .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
-    (.records | type == "array" and length == 9) and
-    ([.records[].case] == ["after-3-events", "after-3-events", "after-3-events-when-then", "after-3-events-when-then", "after-3-events-when-then", "after-20-seconds", "after-20-seconds", "after-20-seconds-every-5", "after-20-seconds-every-5"]) and
-    ([.records[].operation] == ["listener", "listener", "listener", "variable", "variable", "listener", "listener", "listener", "listener"]) and
+    (.records | type == "array" and length == 12) and
+    ([.records[].case] == ["after-3-events", "after-3-events", "after-3-events-when-then", "after-3-events-when-then", "after-3-events-when-then", "after-20-seconds", "after-20-seconds", "after-20-seconds-every-5", "after-20-seconds-every-5", "after-1-month", "after-20-seconds-snapshot-variable", "after-20-seconds-snapshot-variable"]) and
+    ([.records[].operation] == ["listener", "listener", "listener", "variable", "variable", "listener", "listener", "listener", "listener", "listener", "listener", "listener"]) and
     ([.records[] | select(.operation == "listener") | .statement] | all(. == "s0")) and
-    ([.records[] | select(.operation == "listener") | .sequence] == [1, 2, 1, 1, 2, 1, 2]) and
-    ([.records[] | select(.operation == "listener") | .time] == ["1970-01-01T00:00:00Z", "1970-01-01T00:00:00Z", "1970-01-01T00:00:00Z", "1970-01-01T00:00:20Z", "1970-01-01T00:00:21Z", "1970-01-01T00:00:25Z", "1970-01-01T00:00:30Z"]) and
+    ([.records[] | select(.operation == "listener") | .sequence] == [1, 2, 1, 1, 2, 1, 2, 1, 1, 2]) and
+    ([.records[] | select(.operation == "listener") | .time] == ["1970-01-01T00:00:00Z", "1970-01-01T00:00:00Z", "1970-01-01T00:00:00Z", "1970-01-01T00:00:20Z", "1970-01-01T00:00:21Z", "1970-01-01T00:00:25Z", "1970-01-01T00:00:30Z", "2002-03-01T09:00:00Z", "1970-01-01T00:00:20Z", "1970-01-01T00:00:21Z"]) and
     ([.records[] | select(.old != null)] | length == 0) and
-    ([.records[] | select(.operation == "listener") | .new] | map(length) == [1, 1, 1, 1, 1, 2, 1]) and
+    ([.records[] | select(.operation == "listener") | .new] | map(length) == [1, 1, 1, 1, 1, 2, 1, 1, 4, 5]) and
     ([.records[] | select(.operation == "listener") | .new[] | .kind] | all(. == "row")) and
     ([.records[] | select(.operation == "variable") | .name] == ["myvar1", "myvar2"]) and
     ([.records[] | select(.operation == "variable") | .value] | all(. == true))

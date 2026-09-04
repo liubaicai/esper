@@ -9136,7 +9136,10 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		return ResultBatch{}
 	}
 	if policy.When != nil {
-		if policy.Kind == OutputSnapshotPolicy && len(plans) > 0 {
+		if policy.Kind == OutputSnapshotPolicy && len(plans) > 0 && !batch.empty() {
+			// Java rebuilds a snapshot-when pending batch only from updates
+			// reaching the output view; a bare time advance with no events
+			// neither refreshes nor delivers the snapshot.
 			snapshot := r.snapshotBatch(plans[0], now)
 			if !snapshot.empty() {
 				r.outputState.whenPending = &snapshot

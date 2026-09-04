@@ -31299,6 +31299,37 @@ func TestRunOutputAfterEventsDiffRejectsTraceMutations(t *testing.T) {
 				trace.Records[7].Time = "1970-01-01T00:00:20Z"
 			},
 		},
+		{
+			name: "month-boundary-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[0].Fields["theString"] = "Z"
+			},
+		},
+		{
+			name: "month-boundary-time",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].Time = "2002-03-01T08:59:59.999Z"
+			},
+		},
+		{
+			name: "month-gate-leak",
+			mutate: func(trace *compat.Trace) {
+				extra := compat.ResultRecord{Kind: "row", Fields: map[string]any{"theString": "E2", "intPrimitive": json.Number("2")}}
+				trace.Records[9].New = append([]compat.ResultRecord{extra}, trace.Records[9].New...)
+			},
+		},
+		{
+			name: "snapshot-window-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].New[0].Fields["theString"] = "Z"
+			},
+		},
+		{
+			name: "snapshot-window-count",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[11].New = trace.Records[11].New[:4]
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -31539,23 +31570,27 @@ func assertOutputAfterEventsTrace(t *testing.T, trace compat.Trace) {
 	if trace.Version != compat.ScenarioVersion || trace.ID != outputAfterEventsID {
 		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
 	}
-	if len(trace.Records) != 9 {
-		t.Fatalf("trace records = %d, want 9", len(trace.Records))
+	if len(trace.Records) != 12 {
+		t.Fatalf("trace records = %d, want 12", len(trace.Records))
 	}
 	listenerBatches := []struct {
 		caseName    string
 		sequence    uint64
 		time        string
 		values      []string
+		wantFields  int
 		recordIndex int
 	}{
-		{caseName: "after-3-events", sequence: 1, time: "1970-01-01T00:00:00Z", values: []string{"E4"}, recordIndex: 0},
-		{caseName: "after-3-events", sequence: 2, time: "1970-01-01T00:00:00Z", values: []string{"E5"}, recordIndex: 1},
-		{caseName: "after-3-events-when-then", sequence: 1, time: "1970-01-01T00:00:00Z", values: []string{"E4"}, recordIndex: 2},
-		{caseName: "after-20-seconds", sequence: 1, time: "1970-01-01T00:00:20Z", values: []string{"E4"}, recordIndex: 5},
-		{caseName: "after-20-seconds", sequence: 2, time: "1970-01-01T00:00:21Z", values: []string{"E5"}, recordIndex: 6},
-		{caseName: "after-20-seconds-every-5", sequence: 1, time: "1970-01-01T00:00:25Z", values: []string{"E4", "E5"}, recordIndex: 7},
-		{caseName: "after-20-seconds-every-5", sequence: 2, time: "1970-01-01T00:00:30Z", values: []string{"E6"}, recordIndex: 8},
+		{caseName: "after-3-events", sequence: 1, time: "1970-01-01T00:00:00Z", values: []string{"E4"}, wantFields: 1, recordIndex: 0},
+		{caseName: "after-3-events", sequence: 2, time: "1970-01-01T00:00:00Z", values: []string{"E5"}, wantFields: 1, recordIndex: 1},
+		{caseName: "after-3-events-when-then", sequence: 1, time: "1970-01-01T00:00:00Z", values: []string{"E4"}, wantFields: 2, recordIndex: 2},
+		{caseName: "after-20-seconds", sequence: 1, time: "1970-01-01T00:00:20Z", values: []string{"E4"}, wantFields: 1, recordIndex: 5},
+		{caseName: "after-20-seconds", sequence: 2, time: "1970-01-01T00:00:21Z", values: []string{"E5"}, wantFields: 1, recordIndex: 6},
+		{caseName: "after-20-seconds-every-5", sequence: 1, time: "1970-01-01T00:00:25Z", values: []string{"E4", "E5"}, wantFields: 1, recordIndex: 7},
+		{caseName: "after-20-seconds-every-5", sequence: 2, time: "1970-01-01T00:00:30Z", values: []string{"E6"}, wantFields: 1, recordIndex: 8},
+		{caseName: "after-1-month", sequence: 1, time: "2002-03-01T09:00:00Z", values: []string{"E3"}, wantFields: 2, recordIndex: 9},
+		{caseName: "after-20-seconds-snapshot-variable", sequence: 1, time: "1970-01-01T00:00:20Z", values: []string{"E1", "E2", "E3", "E4"}, wantFields: 1, recordIndex: 10},
+		{caseName: "after-20-seconds-snapshot-variable", sequence: 2, time: "1970-01-01T00:00:21Z", values: []string{"E1", "E2", "E3", "E4", "E5"}, wantFields: 1, recordIndex: 11},
 	}
 	for _, batch := range listenerBatches {
 		record := trace.Records[batch.recordIndex]
@@ -31565,12 +31600,8 @@ func assertOutputAfterEventsTrace(t *testing.T, trace compat.Trace) {
 			len(record.New) != len(batch.values) || len(record.Old) != 0 {
 			t.Fatalf("record %d metadata/shape = %#v", batch.recordIndex, record)
 		}
-		wantFields := 1
-		if batch.caseName == "after-3-events-when-then" {
-			wantFields = 2
-		}
 		for rowIndex, row := range record.New {
-			if row.Kind != "row" || len(row.Fields) != wantFields ||
+			if row.Kind != "row" || len(row.Fields) != batch.wantFields ||
 				row.Fields["theString"] != batch.values[rowIndex] {
 				t.Fatalf("record %d row %d shape/identity = %#v", batch.recordIndex, rowIndex, row)
 			}

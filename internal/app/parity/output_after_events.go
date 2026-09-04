@@ -15,7 +15,7 @@ import (
 
 const (
 	outputAfterEventsID          = "output-after-events"
-	outputAfterEventsDescription = "ResultSetOutputLimitAfter event-count and time-period after-gates: direct after-3-events delivery, the when-then variable side-effect form, after-20-seconds boundary, and after-20-seconds-every-5-seconds anchoring."
+	outputAfterEventsDescription = "ResultSetOutputLimitAfter after-gate family: event-count and time-period gates, calendar-month anchor, and snapshot-when-variable with after-20-seconds."
 	outputAfterEventsJavaCommit  = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 	outputAfterEventsSource      = "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitAfter.java"
 )
@@ -29,31 +29,41 @@ var (
 		"java-runtime-499038c2c0fca09551c1",
 		"java-runtime-77a5ebb703ccb5fdbf63",
 		"java-runtime-88c88732359bcd33f9cd",
+		"java-runtime-04a6303bb13045ec2e3d",
+		"java-runtime-4621c599c2655d0464c4",
 	}
 	outputAfterEventsJavaExecutions = []string{
 		"ResultSetDirectNumberOfEvents",
 		"ResultSetOutputWhenThen",
 		"ResultSetDirectTimePeriod",
 		"ResultSetEveryPolicy",
+		"ResultSetMonthScoped",
+		"ResultSetSnapshotVariable",
 	}
 	outputAfterEventsJavaStaticIDs = []string{
 		"java-aacc84310d1fab722e9f",
 		"java-310737339ed16858a1fc",
 		"java-a71efa831c6880fb5722",
 		"java-8e3b0bae1be282e4a000",
+		"java-98f4c2cff7997399ba90",
+		"java-8038a4481e2996fd8a7f",
 	}
 	outputAfterEventsCases = []string{
 		"after-3-events",
 		"after-3-events-when-then",
 		"after-20-seconds",
 		"after-20-seconds-every-5",
+		"after-1-month",
+		"after-20-seconds-snapshot-variable",
 	}
-	outputAfterEventsOrdinals = []int{3, 6, 4, 1}
+	outputAfterEventsOrdinals = []int{3, 6, 4, 1, 2, 5}
 	outputAfterEventsEPLs     = []string{
 		"@name('s0') select theString from SupportBean#keepall output after 3 events",
 		"@Name('s0') select a.* from SupportBean#time(10) a output after 3 events when myvar0=true then set myvar1=true, myvar2=true",
 		"@name('s0') select theString from SupportBean#keepall output after 20 seconds",
 		"@name('s0') select theString from SupportBean#keepall output after 0 days 0 hours 0 minutes 20 seconds 0 milliseconds every 0 days 0 hours 0 minutes 5 seconds 0 milliseconds",
+		"@name('s0') select * from SupportBean output after 1 month",
+		"@name('s0') select theString from SupportBean#keepall output after 20 seconds snapshot when myvar_local=1",
 	}
 )
 
@@ -160,8 +170,8 @@ func loadOutputAfterEventsScenario(reader io.Reader) (compat.Scenario, error) {
 	}
 
 	var rawSteps []json.RawMessage
-	if err := json.Unmarshal(root["steps"], &rawSteps); err != nil || len(rawSteps) != 40 {
-		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly forty steps", outputAfterEventsID)
+	if err := json.Unmarshal(root["steps"], &rawSteps); err != nil || len(rawSteps) != 56 {
+		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly fifty-six steps", outputAfterEventsID)
 	}
 	steps := make([]compat.Step, len(rawSteps))
 	for index, rawStep := range rawSteps {
@@ -240,7 +250,7 @@ func validateOutputAfterEventsScenario(scenario compat.Scenario) error {
 	if err := scenario.Validate(); err != nil {
 		return err
 	}
-	if scenario.ID != outputAfterEventsID || len(scenario.Steps) != 40 {
+	if scenario.ID != outputAfterEventsID || len(scenario.Steps) != 56 {
 		return fmt.Errorf("%s scenario shape is not pinned", outputAfterEventsID)
 	}
 	index := 0
@@ -314,12 +324,45 @@ func validateOutputAfterEventsScenario(scenario compat.Scenario) error {
 		}
 		index++
 	}
+	if err := validateOutputAfterEventsCaseMarker(scenario.Steps[index], outputAfterEventsCases[4]); err != nil {
+		return fmt.Errorf("after-1-month marker: %w", err)
+	}
+	index++
+	for _, stepTiming := range outputAfterEventsMonthCaseSteps {
+		if stepTiming.advanceAt != "" {
+			if err := validateOutputAfterEventsAdvanceStep(scenario.Steps[index], stepTiming.advanceAt); err != nil {
+				return fmt.Errorf("after-1-month advance: %w", err)
+			}
+			index++
+			continue
+		}
+		if err := validateOutputAfterEventsBeanStep(scenario.Steps[index], stepTiming.bean); err != nil {
+			return fmt.Errorf("after-1-month event: %w", err)
+		}
+		index++
+	}
+	if err := validateOutputAfterEventsCaseMarker(scenario.Steps[index], outputAfterEventsCases[5]); err != nil {
+		return fmt.Errorf("snapshot marker: %w", err)
+	}
+	index++
+	for _, stepTiming := range outputAfterEventsSnapshotCaseSteps {
+		if stepTiming.advanceAt != "" {
+			if err := validateOutputAfterEventsAdvanceStep(scenario.Steps[index], stepTiming.advanceAt); err != nil {
+				return fmt.Errorf("snapshot advance: %w", err)
+			}
+			index++
+			continue
+		}
+		if err := validateOutputAfterEventsBeanStep(scenario.Steps[index], stepTiming.bean); err != nil {
+			return fmt.Errorf("snapshot event: %w", err)
+		}
+		index++
+	}
 	if index != len(scenario.Steps) {
 		return fmt.Errorf("%s scenario has trailing steps", outputAfterEventsID)
 	}
 	return nil
 }
-
 
 type outputAfterEventsStepTiming struct {
 	advanceAt string
@@ -354,6 +397,26 @@ var outputAfterEventsEveryCaseSteps = []outputAfterEventsStepTiming{
 	{advanceAt: "1970-01-01T00:00:27Z"},
 	{bean: outputAfterEventsBean{TheString: "E6", IntPrimitive: 0}},
 	{advanceAt: "1970-01-01T00:00:30Z"},
+}
+
+var outputAfterEventsMonthCaseSteps = []outputAfterEventsStepTiming{
+	{bean: outputAfterEventsBean{TheString: "E1", IntPrimitive: 1}},
+	{advanceAt: "2002-03-01T08:59:59.999Z"},
+	{bean: outputAfterEventsBean{TheString: "E2", IntPrimitive: 2}},
+	{advanceAt: "2002-03-01T09:00:00.000Z"},
+	{bean: outputAfterEventsBean{TheString: "E3", IntPrimitive: 3}},
+}
+
+var outputAfterEventsSnapshotCaseSteps = []outputAfterEventsStepTiming{
+	{advanceAt: "1970-01-01T00:00:06Z"},
+	{bean: outputAfterEventsBean{TheString: "E1", IntPrimitive: 0}},
+	{bean: outputAfterEventsBean{TheString: "E2", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:19.999Z"},
+	{bean: outputAfterEventsBean{TheString: "E3", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:20Z"},
+	{bean: outputAfterEventsBean{TheString: "E4", IntPrimitive: 0}},
+	{advanceAt: "1970-01-01T00:00:21Z"},
+	{bean: outputAfterEventsBean{TheString: "E5", IntPrimitive: 0}},
 }
 
 func validateOutputAfterEventsAdvanceStep(step compat.Step, expected string) error {
@@ -470,7 +533,7 @@ func runOutputAfterEventsCase(ctx context.Context, scenario compat.Scenario, cas
 			esper.Alias("theString", theString),
 		).Query(
 			esper.StatementName("s0"),
-			esper.WithOutput(esper.OutputAfterTime(20 * time.Second)),
+			esper.WithOutput(esper.OutputAfterTime(20*time.Second)),
 		)
 	case "after-20-seconds-every-5":
 		keptEvery := esper.From[outputAfterEventsBean](env, "SupportBean").Window(esper.KeepAll())
@@ -480,6 +543,26 @@ func runOutputAfterEventsCase(ctx context.Context, scenario compat.Scenario, cas
 			esper.StatementName("s0"),
 			esper.WithOutput(esper.OutputAfterTime(20*time.Second, esper.OutputEveryTime(5*time.Second))),
 		)
+	case "after-1-month":
+		stream := esper.From[outputAfterEventsBean](env, "SupportBean")
+		query = esper.Select(stream).Query(
+			esper.StatementName("s0"),
+			esper.WithOutput(esper.OutputAfterCalendar(0, 1, 0)),
+		)
+	case "after-20-seconds-snapshot-variable":
+		if err := env.RegisterVariable("myvar_local", int(1), esper.VariableType(reflect.TypeOf(int(0)))); err != nil {
+			return compat.Trace{}, err
+		}
+		keptSnapshot := esper.From[outputAfterEventsBean](env, "SupportBean").Window(esper.KeepAll())
+		query = esper.Select(keptSnapshot,
+			esper.Alias("theString", theString),
+		).Query(
+			esper.StatementName("s0"),
+			esper.WithOutput(esper.OutputAfterTime(20*time.Second, esper.OutputWhenWith(
+				esper.OutputSnapshot(),
+				esper.Equal[int](esper.VariableRef[int]("myvar_local"), esper.Literal(1)),
+			))),
+		)
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported %s case %q", outputAfterEventsID, caseName)
 	}
@@ -487,7 +570,12 @@ func runOutputAfterEventsCase(ctx context.Context, scenario compat.Scenario, cas
 	if err != nil {
 		return compat.Trace{}, err
 	}
-	engine := esper.NewEngine(env, esper.WithRuntimeURI(outputAfterEventsRuntimeID(caseName)))
+	engineOptions := []esper.EngineOption{esper.WithRuntimeURI(outputAfterEventsRuntimeID(caseName))}
+	if caseName == "after-1-month" {
+		// Java anchors the after-condition at view creation: 2002-02-01T09:00:00.000.
+		engineOptions = append(engineOptions, esper.WithStartTime(time.Date(2002, 2, 1, 9, 0, 0, 0, time.UTC)))
+	}
+	engine := esper.NewEngine(env, engineOptions...)
 	defer func() { _ = engine.Close(context.Background()) }()
 	deployment, err := engine.Deploy(ctx, plan)
 	if err != nil {
@@ -595,6 +683,10 @@ func outputAfterEventsRuntimeID(caseName string) string {
 		return outputAfterEventsJavaRuntimeIDs[2]
 	case "after-20-seconds-every-5":
 		return outputAfterEventsJavaRuntimeIDs[3]
+	case "after-1-month":
+		return outputAfterEventsJavaRuntimeIDs[4]
+	case "after-20-seconds-snapshot-variable":
+		return outputAfterEventsJavaRuntimeIDs[5]
 	}
 	return outputAfterEventsJavaRuntimeIDs[0]
 }
@@ -609,6 +701,10 @@ func outputAfterEventsExecutionName(caseName string) string {
 		return outputAfterEventsJavaExecutions[2]
 	case "after-20-seconds-every-5":
 		return outputAfterEventsJavaExecutions[3]
+	case "after-1-month":
+		return outputAfterEventsJavaExecutions[4]
+	case "after-20-seconds-snapshot-variable":
+		return outputAfterEventsJavaExecutions[5]
 	}
 	return outputAfterEventsJavaExecutions[0]
 }
