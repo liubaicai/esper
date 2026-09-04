@@ -4644,12 +4644,12 @@
    "goRefs": [
     "internal/esper/resultset_orderby_parity_test.go",
     "internal/esper/stream.go",
-    "internal/app/parity/run_test.go"
+    "internal/app/parity/run_test.go",
+    "internal/app/parity/resultset_orderby_join.go"
    ],
    "phase": 2,
    "status": "differential-verified",
    "remaining": [
-    "ORDER BY on join result sets",
     "SODA object-model ORDER BY path",
     "wildcard projection with ORDER BY",
     "ORDER BY on Named Window FAF snapshot"
@@ -37927,6 +37927,70 @@
    "notes": [
     "ResultSetOrderByAggregateGrouped ordinals 0-7 replayed through one deterministic grouped scenario (59 Java/Go market sends per side, 11 listener/snapshot records per side, 0 differences). Ordinals 0-4 keep the six-event output-every aliases, SODA/compile forms, GroupBySwitch and join variants; ordinals 5 and 7 add output-last every-6-events row-per-group batches (CMU/104/3, IBM/102/7, CAT/106/11 then DOG/206/1, CMU/204/13, IBM/202/14 - groups without interval events are suppressed); ordinal 6 observes a grouped length(10) join through two statement-iterator snapshots whose duplicate per-group join rows carry the group-wide sum. All records are new-only at epoch zero."
    ]
+  },
+  {
+   "id": "case.resultset-orderby-join",
+   "javaRuntimeIds": [
+    "java-runtime-53aea47cdd71b80fdbb9",
+    "java-runtime-4a0adaff4741914b9ad1"
+   ],
+   "javaStaticIds": [
+    "java-3d5138ecf75168eb575d",
+    "java-61243b98a3005c75950a"
+   ],
+   "javaNames": [
+    "ResultSetIterator",
+    "ResultSetAcrossJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyJoinDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyJoinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyJoinDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyJoinCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyJoinRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOrderbyJoinRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "order-by",
+    "join",
+    "iterator",
+    "snapshot",
+    "output-rate",
+    "listener",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-orderby-join.json",
+    "testdata/parity/resultset-orderby-join.trace.json",
+    "testdata/parity/resultset-orderby-join.go.trace.json",
+    "testdata/parity/resultset-orderby-join.evidence.json",
+    "tools/java-oracle/ResultSetOrderByJoinScenarioOracle.java",
+    "tools/java-oracle/run-resultset-orderby-join.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-53aea47cdd71b80fdbb9",
+    "java-runtime-4a0adaff4741914b9ad1"
+   ],
+   "notes": [
+    "ResultSetOrderBySimple ordinals 1-2 replayed through one deterministic join scenario (17 Java/Go market sends and five string seeds per side across three cases, 4 records per side, 0 differences). ResultSetIterator observes the continuous length(10) join through two ordered statement-iterator snapshots sorted by price (CAT/15, IBM/49, CAT/50, IBM/100 then KGB/75 inserted at rank four) with the attached listener recording nothing. ResultSetAcrossJoin replays both output-every-6-events variants: order by price emits one six-row new-only callback (KGB/1, IBM/2, CMU/3, CAT/5, CAT/6, IBM/6) once the seeded strings complete six join delta rows, and order by theString, price emits one six-row symbol-only callback (CAT 5/6, CMU 3, IBM 2/6, KGB 1). All records are new-only at epoch zero."
+   ]
   }
  ],
  "mappings": [
@@ -40673,13 +40737,17 @@
   {
    "capabilityId": "resultset.orderby-simple",
    "caseId": "case.resultset-orderby-aggregate-grouped"
+  },
+  {
+   "capabilityId": "resultset.orderby-simple",
+   "caseId": "case.resultset-orderby-join"
   }
  ],
  "summary": {
-  "inventoriedCases": 602,
-  "implementedCases": 600,
-  "differentialVerifiedCases": 215,
-  "differentialVerifiedRuntimeIds": 776,
+  "inventoriedCases": 603,
+  "implementedCases": 601,
+  "differentialVerifiedCases": 216,
+  "differentialVerifiedRuntimeIds": 778,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -40689,14 +40757,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3399,
+  "runtimeAssociationCount": 3401,
   "referencedJavaRuntimeIds": 3166,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 970,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 602,
+  "totalCases": 603,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 776
+  "differentialVerifiedRuntimeIDs": 778
  }
 }

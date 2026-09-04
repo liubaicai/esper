@@ -67,6 +67,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetQueryTypeAggregateGroupedHavingScenario(file)
 	} else if *mode == "resultset-orderby-aggregate-grouped" || *mode == "resultset-orderby-aggregate-grouped-diff" {
 		scenario, err = loadResultsetOrderbyAggregateGroupedScenario(file)
+	} else if *mode == "resultset-orderby-join" || *mode == "resultset-orderby-join-diff" {
+		scenario, err = loadResultsetOrderbyJoinScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
@@ -2209,6 +2211,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, orderBySimpleJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, orderBySimpleJavaSources),
 				splitMetadata(*javaExecutions, orderBySimpleJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-orderby-join" || *mode == "resultset-orderby-join-diff" {
+		trace, err := runResultsetOrderbyJoinScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-orderby-join-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOrderbyJoinJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOrderbyJoinJavaSources),
+				splitMetadata(*javaExecutions, resultsetOrderbyJoinJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

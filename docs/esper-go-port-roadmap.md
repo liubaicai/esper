@@ -1,3 +1,21 @@
+> 最新补充：Draft 4.313（2026-09-05），新增 `resultset.orderby-simple` 的
+> `case.resultset-orderby-join` differential-verified 场景，对照固定 Java
+> `ResultSetOrderBySimple.java` ordinals 1-2 的 `ResultSetIterator`
+>（`java-runtime-53aea47cdd71b80fdbb9`；static `java-3d5138ecf75168eb575d`）与
+> `ResultSetAcrossJoin`（`java-runtime-4a0adaff4741914b9ad1`；static
+> `java-61243b98a3005c75950a`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；
+> 无 flags）：Java/Go 各 4 条 records、0 differences。`ResultSetIterator` 经两条有序
+> statement-iterator 快照观察连续 length(10) join（按 price 排序 CAT/15、IBM/49、CAT/50、
+> IBM/100，随后 KGB/75 插入第四位；附加 listener 不记录）；`ResultSetAcrossJoin` 重放两个
+> output-every-6-events 变体：order by price 在五条预置字符串补满六条 join 增量行后一次性输出
+> 六行 new-only（KGB/1、IBM/2、CMU/3、CAT/5、CAT/6、IBM/6），order by theString, price 输出
+> symbol-only 六行（CAT 5/6、CMU 3、IBM 2/6、KGB 1），覆盖 join 上未选择列的 order-by 与
+> 按 join 增量计数的输出限值语义。typed Go 使用 `Join`/`OnEqual`/`JoinField`、
+> `SelectFrom`、`OrderBy`/`Ascending`、`OutputAllEveryEvents` 与不订阅语句的 iterator
+> replay；`resultset.orderby-simple` remaining 移除 "ORDER BY on join result sets"。
+> manifest 更新为 603 cases、216 个 differential-verified case、778 个 differential runtime
+> IDs、3401 条 associations（referenced 3166）；capability 119 个（36 DV）。
+
 > 最新补充：Draft 4.312（2026-09-05），`case.resultset-orderby-aggregate-grouped` 扩展为
 > `ResultSetOrderByAggregateGrouped.java` 全部 8 个 execution（Java commit
 > `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；新增 ordinals 5-7：`ResultSetLastJoin`
@@ -1196,9 +1214,9 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 119 |
-| Case | 602 |
-| Case differential-verified | 215 |
-| Differential-verified runtime | 776 / 4,136 |
+| Case | 603 |
+| Case differential-verified | 216 |
+| Differential-verified runtime | 778 / 4,136 |
 | Runtime 已关联 | 3,166 / 4,136（76.5%） |
 | Runtime 未关联 | 970 |
 | Representative scenario | 107 / 107 通过 |

@@ -1,0 +1,685 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-53aea47cdd71b80fdbb9",
+    "java-runtime-4a0adaff4741914b9ad1"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java"
+  ],
+  "javaExecutions": [
+    "ResultSetIterator",
+    "ResultSetAcrossJoin"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-join",
+    "steps": [
+      {
+        "op": "case",
+        "case": "iterator"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 50
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 49
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 100
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "KGB",
+          "volume": 0,
+          "price": 75
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "across-join-price"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "KGB",
+          "volume": 0,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 0,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      },
+      {
+        "op": "case",
+        "case": "across-join-symbol-price"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "KGB",
+          "volume": 0,
+          "price": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CMU",
+          "volume": 0,
+          "price": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "CAT",
+          "volume": 0,
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CAT"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "IBM"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "CMU"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "KGB"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DOG"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-join",
+    "records": [
+      {
+        "case": "iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 15,
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 49,
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 50,
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 100,
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 15,
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 49,
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 50,
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 75,
+              "symbol": "KGB",
+              "theString": "KGB"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 100,
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "across-join-price",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB",
+              "theString": "KGB"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU",
+              "theString": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "across-join-symbol-price",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-orderby-join",
+    "records": [
+      {
+        "case": "iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 15,
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 49,
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 50,
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 100,
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "price": 15,
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 49,
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 50,
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 75,
+              "symbol": "KGB",
+              "theString": "KGB"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "price": 100,
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "across-join-price",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB",
+              "theString": "KGB"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU",
+              "theString": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT",
+              "theString": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM",
+              "theString": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "across-join-symbol-price",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CAT"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "CMU"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "KGB"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -1,0 +1,90 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-orderby-join",
+  "description": "ResultSetOrderBySimple ordinals 1-2: join order-by with statement-iterator snapshots and output-limit over join deltas.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderBySimple.java",
+  "javaRuntimes": [
+    "java-runtime-53aea47cdd71b80fdbb9",
+    "java-runtime-4a0adaff4741914b9ad1"
+  ],
+  "javaNames": [
+    "ResultSetIterator",
+    "ResultSetAcrossJoin"
+  ],
+  "javaStaticIds": [
+    "java-3d5138ecf75168eb575d",
+    "java-61243b98a3005c75950a"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "iterator",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-53aea47cdd71b80fdbb9",
+      "executionName": "ResultSetIterator",
+      "observation": "iterator",
+      "iteratorSnapshots": 2,
+      "epl": "@name('s0') select symbol, theString, price from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString order by price"
+    },
+    {
+      "case": "across-join-price",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-4a0adaff4741914b9ad1",
+      "executionName": "ResultSetAcrossJoin",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, theString from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by price"
+    },
+    {
+      "case": "across-join-symbol-price",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-4a0adaff4741914b9ad1",
+      "executionName": "ResultSetAcrossJoin",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString output every 6 events order by theString, price"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "iterator"},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CAT"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CMU"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KGB"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DOG"}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 50}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 49}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 15}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 100}},
+    {"op": "snapshot", "statement": "s0"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 75}},
+    {"op": "snapshot", "statement": "s0"},
+
+    {"op": "case", "case": "across-join-price"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CAT"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CMU"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KGB"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DOG"}},
+
+    {"op": "case", "case": "across-join-symbol-price"},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 2}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "KGB", "volume": 0, "price": 1}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CMU", "volume": 0, "price": 3}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "IBM", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 6}},
+    {"op": "send", "eventType": "SupportMarketDataBean", "payload": {"symbol": "CAT", "volume": 0, "price": 5}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CAT"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "IBM"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "CMU"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "KGB"}},
+    {"op": "send", "eventType": "SupportBeanString", "payload": {"theString": "DOG"}}
+  ]
+}
