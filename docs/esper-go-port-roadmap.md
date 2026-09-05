@@ -1,5 +1,7 @@
 > 最新补充：Draft 4.317（2026-09-05），新增 `output.core` 的 `case.resultset-output-limit-insert-into` differential-verified 场景，对照固定 Java `ResultSetOutputLimitInsertInto.java` 两个 execution：`ResultSetOutputLimitInsertFirst`（`java-runtime-e57a7555b3a0303c0303`；static `java-00bb626878ef4282b5d2`）与 `ResultSetOutputLimitInsertSnapshot`（`java-runtime-cd524991d69bc898c061`；static `java-460f4166b6f5e1099aae`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；无 flags）。Java/Go 各 9 条 records、0 differences：insert-first 在区间首个事件即时路由 [E1]、新区间 E2 后路由 [E2]（s0 两次、s1 两次）；insert-snapshot 经 keepall 快照在 1000/2000 交付 [E1] 与 [E1, E2]（s0/s1 各两次），而路由消费端逐行接收 [E1]、[E1]、[E2]。typed Go 使用 `InsertInto`+`WithOutput` 组合、`OutputFirstEveryTime`/`OutputSnapshotEvery`、`FromAny` 目标流消费与双语句部署。manifest 更新为 607 cases、220 个 differential-verified case、788 个 differential runtime IDs、3411 条 associations（referenced 3170）；capability 119 个（36 DV）。
 
+> 最新补充：Draft 4.318（2026-09-05），新增 `output.core` 的 `case.resultset-output-limit-microsecond-resolution` 与 `case.resultset-output-limit-parameterized-context` 两个 differential-verified 场景，对照固定 Java `ResultSetOutputLimitMicrosecondResolution.java`（`java-runtime-fb9601d7d5288b0b7ba5`；static `java-c68fd57c7e6ce42ed2d5`；plain-suite millis 参数 0/"1"/1000/1000 与 789123456789/"0.1"/+100 规范化）与 `ResultSetOutputLimitParameterizedByContext.java`（`java-runtime-3fc747eca88c34b6ab3a`；static `java-3bf9eee607100a7666ab`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；无 flags）。Java/Go 各 4 与 1 条 records、0 differences：微秒解析——`output every 1 seconds` 在 999 静默、1000 边界含端点触发 [E1]、2000 触发 [E2]；`output every 0.1 seconds`（100ms，锚定 789123456789ms = 1995-01-03T08:57:36.789Z）在 +88/-1 静默、+89/+100 边界触发；参数化上下文——context MyCtx 由 SupportScheduleSimpleEvent(athour=10, atminute=15) 启动，per-partition crontab at(minute=15, hour=10) 在 2002-05-01T10:15:00.000Z 一次交付 {c: 1}（start-only context 无终止交付；被 gate 抑制的 S0 事件使 count 保持 1）。typed Go 使用 `OutputEveryTime`、`CreatePatternInitiatedContext`/`PatternFrom`/`ContextPatternField`/`CronValuesExpr`/`OutputAt`/`OutputAndWhenTerminated`、`Aggregate(Alias(CountAll()))` 与 `WithStartTime`。manifest 更新为 609 cases、222 个 differential-verified case、790 个 differential runtime IDs、3413 条 associations（referenced 3172）；capability 119 个（36 DV）。
+
 > 最新补充：Draft 4.316（2026-09-05），`case.output-after-events` 完成 after-gate 家族最后两个 execution：新增 ord 2 `ResultSetMonthScoped`（`java-runtime-04a6303bb13045ec2e3d`；static `java-98f4c2cff7997399ba90`）与 ord 5 `ResultSetSnapshotVariable`（`java-runtime-4621c599c2655d0464c4`；static `java-8038a4481e2996fd8a7f`）两个 case。Java/Go 各 12 条 records、0 differences：`select * from SupportBean output after 1 month` 以 2002-02-01T09:00:00.000 锚定（WithStartTime），2002-03-01T08:59:59.999（due − 1ms）抑制、2002-03-01T09:00:00.000 边界含端点交付 select-* 行（E3, intPrimitive 3）；`select theString from SupportBean#keepall output after 20 seconds snapshot when myvar_local=1`——被抑制事件在窗口快照中重现，20000 交付 [E1..E4]、21000 交付 [E1..E5]。Go 引擎：snapshot-when 的 pending 批次仅从非空更新批次重建，裸时间推进既不刷新也不交付快照（对齐 Java 仅在更新/变量变更时求值）。typed Go 使用 `OutputAfterCalendar(0,1,0)`、`OutputWhenWith(OutputSnapshot(),...)`、`WithStartTime` 与 `RegisterVariable`。manifest 更新为 606 cases、219 个 differential-verified case、786 个 differential runtime IDs、3409 条 associations（referenced 3168）；capability 119 个（36 DV）。
 
 > 最新补充：Draft 4.316（2026-09-05），`case.output-after-events` 扩展 after-gate 时间切片：新增 ord 4 `ResultSetDirectTimePeriod`（`java-runtime-77a5ebb703ccb5fdbf63`；static `java-a71efa831c6880fb5722`）与 ord 1 `ResultSetEveryPolicy`（`java-runtime-88c88732359bcd33f9cd`；static `java-8e3b0bae1be282e4a000`）两个 case。Java/Go 各 9 条 records、0 differences：`output after 20 seconds` 在 t=1/6000/19999 抑制、20000 边界含端点交付 {E4}、21000 交付 {E5}；`output after 20 seconds every 5 seconds` 中 every 调度在 gate 期间锚定，25000 定时器一次交付 [E4, E5]、30000 交付 [E6]（E1..E3 被门控丢弃、E4 缓冲至首个 post-gate 批次）。advance-time 绝对跳变步覆盖虚拟时钟序列。typed Go 使用 `OutputAfterTime` 与 `OutputEveryTime` 组合。manifest 更新为 606 cases、219 个 differential-verified case、784 个 differential runtime IDs、3407 条 associations（referenced 3167）；capability 119 个（36 DV）。
@@ -1268,11 +1270,11 @@
 | 维度 | 数值 |
 | --- | --- |
 | Capability | 119 |
-| Case | 606 |
-| Case differential-verified | 219 |
-| Differential-verified runtime | 782 / 4,136 |
-| Runtime 已关联 | 3,167 / 4,136（76.6%） |
-| Runtime 未关联 | 969 |
+| Case | 609 |
+| Case differential-verified | 222 |
+| Differential-verified runtime | 790 / 4,136 |
+| Runtime 已关联 | 3,172 / 4,136（76.7%） |
+| Runtime 未关联 | 964 |
 | Representative scenario | 107 / 107 通过 |
 | Intentionally-different case | 23 |
 | NFR-verified case | 0 |

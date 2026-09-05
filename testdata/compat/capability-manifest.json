@@ -1121,7 +1121,9 @@
     "internal/esper/resultset_row_per_group_simple_parity_test.go",
     "internal/app/parity/resultset_row_per_group_simple.go",
     "internal/app/parity/output_after_events.go",
-    "internal/app/parity/resultset_output_limit_insert_into.go"
+    "internal/app/parity/resultset_output_limit_insert_into.go",
+    "internal/app/parity/resultset_output_limit_microsecond_resolution.go",
+    "internal/app/parity/resultset_output_limit_parameterized_context.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -38270,6 +38272,126 @@
    "notes": [
     "ResultSetOutputLimitInsertInto replays output-limited insert-into producers observed through both the producing statement (s0) and the routed target stream consumer (s1): insert-first delivers the interval-opening E1 immediately on both statements and the new-interval E2 after the 1-second advance (4 records), insert-snapshot delivers keepall snapshots [E1] at 1000 and [E1, E2] at 2000 through s0 (4 records) while the routed consumer receives the snapshot rows individually [E1], [E1], [E2] (3 records). Both executions are deterministic under advance-time with no wall-clock dependencies."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-microsecond-resolution",
+   "javaRuntimeIds": [
+    "java-runtime-fb9601d7d5288b0b7ba5"
+   ],
+   "javaStaticIds": [
+    "java-c68fd57c7e6ce42ed2d5"
+   ],
+   "javaNames": [
+    "ResultSetOutputLimitMicrosecondResolution"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitMicrosecondResolution.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitMicrosecondDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitMicrosecondDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitMicrosecondDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitMicrosecondCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitMicrosecondRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitMicrosecondRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "output",
+    "output-limit",
+    "every",
+    "timer-boundary",
+    "fractional-rate",
+    "advance-time",
+    "listener",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-microsecond-resolution.json",
+    "testdata/parity/resultset-output-limit-microsecond-resolution.trace.json",
+    "testdata/parity/resultset-output-limit-microsecond-resolution.go.trace.json",
+    "testdata/parity/resultset-output-limit-microsecond-resolution.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitMicrosecondResolutionScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-microsecond-resolution.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-fb9601d7d5288b0b7ba5"
+   ],
+   "notes": [
+    "ResultSetOutputLimitMicrosecondResolution replays the inclusive output-rate timer boundary under externally advanced millisecond time: two cases on one execution - output every 1 seconds anchored at epoch 0 (silent at 999, fires [E1] at exactly 1000 and [E2] at 2000) and output every 0.1 seconds anchored at 789123456789 (silent at -1ms steps, fires [E1] at +100ms and [E2] at the next +100ms). The fractional 0.1-second rate resolves to 100ms via the millis time abacus; the boundary check is inclusive (schedule time == current time fires)."
+   ]
+  },
+  {
+   "id": "case.resultset-output-limit-parameterized-context",
+   "javaRuntimeIds": [
+    "java-runtime-3fc747eca88c34b6ab3a"
+   ],
+   "javaStaticIds": [
+    "java-3bf9eee607100a7666ab"
+   ],
+   "javaNames": [
+    "ResultSetOutputLimitParameterizedByContext"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitParameterizedByContext.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitParameterizedContextDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitParameterizedContextDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitParameterizedContextDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitParameterizedContextCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitParameterizedContextRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitParameterizedContextRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "output",
+    "output-limit",
+    "context",
+    "cron",
+    "context-property",
+    "output-last",
+    "listener",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-parameterized-context.json",
+    "testdata/parity/resultset-output-limit-parameterized-context.trace.json",
+    "testdata/parity/resultset-output-limit-parameterized-context.go.trace.json",
+    "testdata/parity/resultset-output-limit-parameterized-context.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitParameterizedContextScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-parameterized-context.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-3fc747eca88c34b6ab3a"
+   ],
+   "notes": [
+    "ResultSetOutputLimitParameterizedByContext replays per-partition output-last scheduling from context start-event properties: context MyCtx starts on SupportScheduleSimpleEvent(athour=10, atminute=15), the counted aggregate joins the partition silently, and the crontab at(15, 10) fires exactly once at 2002-05-01T10:15:00.000 delivering {c: 1}. The when-terminated clause never fires (start-only context)."
+   ]
   }
  ],
  "mappings": [
@@ -41036,13 +41158,21 @@
   {
    "capabilityId": "output.core",
    "caseId": "case.resultset-output-limit-insert-into"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-microsecond-resolution"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-parameterized-context"
   }
  ],
  "summary": {
-  "inventoriedCases": 607,
-  "implementedCases": 605,
-  "differentialVerifiedCases": 220,
-  "differentialVerifiedRuntimeIds": 788,
+  "inventoriedCases": 609,
+  "implementedCases": 607,
+  "differentialVerifiedCases": 222,
+  "differentialVerifiedRuntimeIds": 790,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -41052,14 +41182,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3411,
-  "referencedJavaRuntimeIds": 3170,
+  "runtimeAssociationCount": 3413,
+  "referencedJavaRuntimeIds": 3172,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 966,
+  "unreferencedJavaRuntimeIds": 964,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 607,
+  "totalCases": 609,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 788
+  "differentialVerifiedRuntimeIDs": 790
  }
 }

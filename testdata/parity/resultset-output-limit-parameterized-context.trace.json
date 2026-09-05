@@ -1,0 +1,1 @@
+{"version":"esper-parity/v1","id":"resultset-output-limit-parameterized-context","javaCommit":"9e1b9f1cc9117fea4bf33ab043762c045d73839c","java":"17.0.20","records":[{"case":"context-cron","operation":"listener","statement":"s0","sequence":1,"time":"2002-05-01T10:15:00Z","new":[{"kind":"row","fields":{"c":1}}]}]}

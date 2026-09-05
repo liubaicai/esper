@@ -77,6 +77,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadOutputAfterEventsScenario(file)
 	} else if *mode == "resultset-output-limit-insert-into" || *mode == "resultset-output-limit-insert-into-diff" {
 		scenario, err = loadResultsetOutputLimitInsertIntoScenario(file)
+	} else if *mode == "resultset-output-limit-microsecond-resolution" || *mode == "resultset-output-limit-microsecond-resolution-diff" {
+		scenario, err = loadResultsetOutputLimitMicrosecondScenario(file)
+	} else if *mode == "resultset-output-limit-parameterized-context" || *mode == "resultset-output-limit-parameterized-context-diff" {
+		scenario, err = loadResultsetOutputLimitParameterizedContextScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
@@ -2299,6 +2303,38 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitInsertIntoJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOutputLimitInsertIntoJavaSources),
 				splitMetadata(*javaExecutions, resultsetOutputLimitInsertIntoJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-microsecond-resolution" || *mode == "resultset-output-limit-microsecond-resolution-diff" {
+		trace, err := runResultsetOutputLimitMicrosecondScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-microsecond-resolution-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitMicrosecondJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitMicrosecondJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitMicrosecondJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-parameterized-context" || *mode == "resultset-output-limit-parameterized-context-diff" {
+		trace, err := runResultsetOutputLimitParameterizedContextScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-parameterized-context-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitParameterizedContextJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitParameterizedContextJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitParameterizedContextJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

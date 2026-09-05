@@ -1,0 +1,36 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-output-limit-parameterized-context",
+  "description": "ResultSetOutputLimitParameterizedByContext: a context started by SupportScheduleSimpleEvent parameterizes the output-last crontab from the start event; one S0 event joins the partition and exactly one new-only single-row count callback fires at the scheduled 10:15 instant.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitParameterizedByContext.java",
+  "javaRuntimes": [
+    "java-runtime-3fc747eca88c34b6ab3a"
+  ],
+  "javaNames": [
+    "ResultSetOutputLimitParameterizedByContext"
+  ],
+  "javaStaticIds": [
+    "java-3bf9eee607100a7666ab"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "context-cron",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-3fc747eca88c34b6ab3a",
+      "executionName": "ResultSetOutputLimitParameterizedByContext",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('ctx') create context MyCtx start SupportScheduleSimpleEvent as sse;\n@name('s0') context MyCtx\nselect count(*) as c \nfrom SupportBean_S0\noutput last at(context.sse.atminute, context.sse.athour, *, *, *, *) and when terminated\n"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "context-cron"},
+    {"op": "advance-time", "at": "2002-05-01T09:00:00.000Z"},
+    {"op": "send", "eventType": "SupportScheduleSimpleEvent", "payload": {"athour": 10, "atminute": 15}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "advance-time", "at": "2002-05-01T10:14:59.000Z"},
+    {"op": "advance-time", "at": "2002-05-01T10:15:00.000Z"}
+  ]
+}

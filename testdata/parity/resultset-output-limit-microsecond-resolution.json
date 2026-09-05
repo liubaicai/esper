@@ -1,0 +1,56 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-output-limit-microsecond-resolution",
+  "description": "ResultSetOutputLimitMicrosecondResolution: whole-second and 0.1-second output-every schedules under externally advanced millisecond time; each case arms s0 after an initial advance, sends E1 and E2, and delivers exactly one new-only single-row full-event callback at each flip instant.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitMicrosecondResolution.java",
+  "javaRuntimes": [
+    "java-runtime-fb9601d7d5288b0b7ba5"
+  ],
+  "javaNames": [
+    "ResultSetOutputLimitMicrosecondResolution"
+  ],
+  "javaStaticIds": [
+    "java-c68fd57c7e6ce42ed2d5"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "every-one-second",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-fb9601d7d5288b0b7ba5",
+      "executionName": "ResultSetOutputLimitMicrosecondResolution",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select * from SupportBean output every 1 seconds"
+    },
+    {
+      "case": "fractional-100ms",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-fb9601d7d5288b0b7ba5",
+      "executionName": "ResultSetOutputLimitMicrosecondResolution",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select * from SupportBean output every 0.1 seconds"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "every-one-second"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00.999Z"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:01Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:01.999Z"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:02Z"},
+
+    {"op": "case", "case": "fractional-100ms"},
+    {"op": "advance-time", "at": "1995-01-03T08:57:36.789Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "advance-time", "at": "1995-01-03T08:57:36.888Z"},
+    {"op": "advance-time", "at": "1995-01-03T08:57:36.889Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10}},
+    {"op": "advance-time", "at": "1995-01-03T08:57:36.988Z"},
+    {"op": "advance-time", "at": "1995-01-03T08:57:36.989Z"}
+  ]
+}
