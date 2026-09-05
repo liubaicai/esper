@@ -75,6 +75,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOrderbySelfJoinScenario(file)
 	} else if *mode == "output-after-events" || *mode == "output-after-events-diff" {
 		scenario, err = loadOutputAfterEventsScenario(file)
+	} else if *mode == "resultset-output-limit-insert-into" || *mode == "resultset-output-limit-insert-into-diff" {
+		scenario, err = loadResultsetOutputLimitInsertIntoScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
@@ -2281,6 +2283,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, outputAfterEventsJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, outputAfterEventsJavaSources),
 				splitMetadata(*javaExecutions, outputAfterEventsJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-insert-into" || *mode == "resultset-output-limit-insert-into-diff" {
+		trace, err := runResultsetOutputLimitInsertIntoScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-insert-into-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitInsertIntoJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitInsertIntoJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitInsertIntoJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
