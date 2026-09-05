@@ -1723,12 +1723,6 @@ func (s *Statement) NumChangesetRows() int {
 	return s.runtime.outputState.changesetRows
 }
 
-// NumChangesetRows reports the number of interim update pairs buffered by
-// the output-limit changeset view since the last output, mirroring Java's
-// OutputProcessView.getNumChangesetRows white-box counter. It is gated by
-// the DISABLE_OUTPUTLIMIT_OPT hint; statements without that hint always
-// report zero.
-
 // Priority returns the ordinary continuous-statement dispatch priority.
 // Higher values run first. The bool is false when no explicit priority was
 // supplied and the effective priority is the default zero.
@@ -5729,8 +5723,8 @@ type outputRuntimeState struct {
 	// output-limit changeset view (Java OutputProcessViewConditionDeltaSetImpl).
 	// It is gated by the DISABLE_OUTPUTLIMIT_OPT hint: without that hint the
 	// statement maps to the unordered last-all view whose counter stays zero.
-	changesetRows       int
-	changesetCounting   bool
+	changesetRows     int
+	changesetCounting bool
 	// lastOutputGroupRows retains the last emitted row per group for default
 	// count/time output policies (output every N/time). Esper's statement
 	// iterator for those policies reads the last output rather than live
@@ -9634,9 +9628,9 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch ResultBatch, flush bool, now time.Time, plans ...Plan) ResultBatch {
 	state := r.outputState
 	if !batch.empty() {
-		if state.changesetCounting {
-			state.changesetRows++
-		}
+		// The changeset counter already ticked once per update in applyOutput;
+		// Java's grouped delta set is the same single buffering layer, so the
+		// grouped path must not count the update pair a second time.
 		copyBatch := mergeLastOutputBatch(state.pending, batch)
 		state.pending = &copyBatch
 		if state.nextOutputAt.IsZero() {

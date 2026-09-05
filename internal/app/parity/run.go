@@ -81,6 +81,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOutputLimitMicrosecondScenario(file)
 	} else if *mode == "resultset-output-limit-parameterized-context" || *mode == "resultset-output-limit-parameterized-context-diff" {
 		scenario, err = loadResultsetOutputLimitParameterizedContextScenario(file)
+	} else if *mode == "resultset-output-limit-changeset-opt" || *mode == "resultset-output-limit-changeset-opt-diff" {
+		scenario, err = loadResultsetOutputLimitChangesetScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
@@ -2335,6 +2337,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitParameterizedContextJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetOutputLimitParameterizedContextJavaSources),
 				splitMetadata(*javaExecutions, resultsetOutputLimitParameterizedContextJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-changeset-opt" || *mode == "resultset-output-limit-changeset-opt-diff" {
+		trace, err := runResultsetOutputLimitChangesetScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-changeset-opt-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitChangesetJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitChangesetJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitChangesetJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

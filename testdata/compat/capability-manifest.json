@@ -1123,7 +1123,9 @@
     "internal/app/parity/output_after_events.go",
     "internal/app/parity/resultset_output_limit_insert_into.go",
     "internal/app/parity/resultset_output_limit_microsecond_resolution.go",
-    "internal/app/parity/resultset_output_limit_parameterized_context.go"
+    "internal/app/parity/resultset_output_limit_parameterized_context.go",
+    "internal/app/parity/resultset_output_limit_changeset_opt.go",
+    "internal/esper/output_changeset_test.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -38392,6 +38394,62 @@
    "notes": [
     "ResultSetOutputLimitParameterizedByContext replays per-partition output-last scheduling from context start-event properties: context MyCtx starts on SupportScheduleSimpleEvent(athour=10, atminute=15), the counted aggregate joins the partition silently, and the crontab at(15, 10) fires exactly once at 2002-05-01T10:15:00.000 delivering {c: 1}. The when-terminated clause never fires (start-only context)."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-changeset-opt",
+   "javaRuntimeIds": [
+    "java-runtime-9b0f27f829d9820e3792"
+   ],
+   "javaStaticIds": [
+    "java-9f9a094322f3c6687f00"
+   ],
+   "javaNames": [
+    "ResultSetOutputLimitChangeSetOpt"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitChangeSetOpt.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitChangesetDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitChangesetDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitChangesetDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitChangesetCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitChangesetRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetOutputLimitChangesetRuntimeIDMappingMatchesScenario",
+    "internal/esper/output_changeset_test.go:TestOutputLimitChangesetCounter",
+    "internal/esper/output_changeset_test.go:TestOutputLimitOptimizationHintOrderByRejected"
+   ],
+   "tags": [
+    "output",
+    "output-limit",
+    "hint",
+    "changeset-counter",
+    "white-box",
+    "buffering-view",
+    "listener",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-changeset-opt.json",
+    "testdata/parity/resultset-output-limit-changeset-opt.trace.json",
+    "testdata/parity/resultset-output-limit-changeset-opt.go.trace.json",
+    "testdata/parity/resultset-output-limit-changeset-opt.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitChangeSetOptScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-changeset-opt.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9b0f27f829d9820e3792"
+   ],
+   "notes": [
+    "ResultSetOutputLimitChangeSetOpt replays the white-box getNumChangesetRows contract of the buffered output process view: 36 rounds redeploy one s0 statement over SupportBean#length(2) across output-limit hint (default, enable, disable), select (plain, fully aggregated, mixed, grouped), group-by, having, and output kind (last, all, first) variants. Each round sends E0..E4, reads the counter before the one-second advance (five only on the nine DISABLE_OUTPUTLIMIT_OPT rounds that keep the buffering delta-set view, zero elsewhere), advances cumulative time by one second, re-reads the drained counter, and undeploys. The ENABLE_OUTPUTLIMIT_OPT-with-order-by compile rejection is asserted in code on both sides without emitting a record."
+   ]
   }
  ],
  "mappings": [
@@ -41166,13 +41224,17 @@
   {
    "capabilityId": "output.core",
    "caseId": "case.resultset-output-limit-parameterized-context"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-changeset-opt"
   }
  ],
  "summary": {
-  "inventoriedCases": 609,
-  "implementedCases": 607,
-  "differentialVerifiedCases": 222,
-  "differentialVerifiedRuntimeIds": 790,
+  "inventoriedCases": 610,
+  "implementedCases": 608,
+  "differentialVerifiedCases": 223,
+  "differentialVerifiedRuntimeIds": 791,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -41182,14 +41244,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3413,
-  "referencedJavaRuntimeIds": 3172,
+  "runtimeAssociationCount": 3414,
+  "referencedJavaRuntimeIds": 3173,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 964,
+  "unreferencedJavaRuntimeIds": 963,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 609,
+  "totalCases": 610,
   "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 790
+  "differentialVerifiedRuntimeIDs": 791
  }
 }

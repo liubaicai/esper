@@ -180,6 +180,13 @@ type TraceRecord struct {
 	Value      any               `json:"value,omitempty"`
 }
 
+// FormatTraceTime exposes the Java Instant.toString-compatible timestamp
+// formatting to custom differential runners that emit records outside the
+// shared replay loop.
+func FormatTraceTime(value time.Time) string {
+	return formatTraceTime(value)
+}
+
 // formatTraceTime matches Java's Instant.toString() representation used by
 // the oracle trace writers: RFC3339 with fractional seconds emitted in groups
 // of three digits and trailing zero groups omitted.
