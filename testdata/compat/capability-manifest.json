@@ -2137,14 +2137,16 @@
    "level": "G",
    "summary": "Filtered scalar subselects in select/where clauses: correlated predicates on outer fields and multi-stream outer joins with numeric coercion, constant/range filters, non-aggregated per-row having, wildcard event payloads, prev/prior projections, sort windows, int-array correlation keys, insert-into chains with coalesced last-row subselects and irstream outer windows",
    "javaRefs": [
-    "EPLSubselectFiltered"
+    "EPLSubselectFiltered",
+    "EPLSubselectWithinHaving"
    ],
    "goRefs": [
     "internal/esper/subquery.go",
     "internal/esper/plan.go",
     "internal/esper/expr.go",
     "internal/esper/epl_subselect_filtered_parity_test.go",
-    "internal/app/parity/subselect_filtered.go"
+    "internal/app/parity/subselect_filtered.go",
+    "internal/app/parity/epl_subselect_within_filter_having.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -38553,6 +38555,74 @@
    "notes": [
     "EPLVariablesOutputRate replays variable-driven output rates: three deployment forms of \"output last every var_output_limit events\" over count(*) share one observable timeline (six callbacks {cnt 3,8,10,11,12,13} with the rate moved 3-5-2-1-null through the deployed on SupportMarketDataBean set statement; null keeps the previous rate), and \"output snapshot every var_output_limit seconds\" delivers snapshots {2}@3s,{4}@4s,{4}@5s,{4}@8s,{6}@12s with anchored-multiple reschedules from reference point 0; the null set at 13999 makes the 14000 schedule advance throw before dispatching the queued snapshot. Engine: expression-driven output-rate policies (CountExpr/IntervalExpr on OutputPolicy, OutputLastEveryEventsExpr, OutputSnapshotEveryExpr) with per-boundary variable re-evaluation, anchored reschedule arithmetic, and schedule-error propagation out of engine.AdvanceTime."
    ]
+  },
+  {
+   "id": "case.epl-subselect-within-filter-having",
+   "javaRuntimeIds": [
+    "java-runtime-844ff5e51e235151dccc",
+    "java-runtime-1405e55b4e78331c4ec7",
+    "java-runtime-5249f7c19ee8d26d8f30",
+    "java-runtime-4b4ca324ee2a41b8ccd6"
+   ],
+   "javaStaticIds": [
+    "java-e0811e7acc03cb5daab2",
+    "java-09e87f283cdd09c8434f",
+    "java-d69f172401e51113c81d",
+    "java-d69f172401e51113c81d"
+   ],
+   "javaNames": [
+    "EPLSubselectWithinFilterExistsWhereAndUDF",
+    "EPLSubselectWithinFilterRowWhereAndUDF",
+    "EPLSubselectHavingSubselectWithGroupBy{namedWindow=true}",
+    "EPLSubselectHavingSubselectWithGroupBy{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectWithinFilter.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectWithinHaving.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplSubselectWithinFilterHavingDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEplSubselectWithinFilterHavingDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplSubselectWithinFilterHavingDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEplSubselectWithinFilterHavingCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEplSubselectWithinFilterHavingRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEplSubselectWithinFilterHavingRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "epl",
+    "subselect",
+    "filter",
+    "having",
+    "named-window",
+    "table",
+    "correlated",
+    "inlined-class",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-subselect-within-filter-having.json",
+    "testdata/parity/epl-subselect-within-filter-having.trace.json",
+    "testdata/parity/epl-subselect-within-filter-having.go.trace.json",
+    "testdata/parity/epl-subselect-within-filter-having.evidence.json",
+    "tools/java-oracle/EPLSubselectWithinFilterHavingScenarioOracle.java",
+    "tools/java-oracle/run-epl-subselect-within-filter-having.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-844ff5e51e235151dccc",
+    "java-runtime-1405e55b4e78331c4ec7",
+    "java-runtime-5249f7c19ee8d26d8f30",
+    "java-runtime-4b4ca324ee2a41b8ccd6"
+   ],
+   "notes": [
+    "EPLSubselectWithinFilter and EPLSubselectWithinHaving close subselect placement edge cases: exists and scalar-row subqueries with an inlined-class UDF correlation inside stream filters (two records each over SupportBean_S1#keepall; select * exposes five S0 properties because the Java value field has no getter), and a grouped groupwin#length(2) having clause gated by sum(intPrimitive) > a correlated subselect over MyInfra, replayed once as a #unique(key) named window and once as a primary-key table with identical five-record timelines (G2/21, G3/31, G3/33, G1/105, G1/100; strict > boundary). Java inlined-class UDF compareIt maps to typed string equality; table-variant insert routes through OnEvent InsertIntoTable with column assignments (routeTargetSchema covers named windows and plain schemas only)."
+   ]
   }
  ],
  "mappings": [
@@ -41335,13 +41405,17 @@
   {
    "capabilityId": "epl.variable-output-rate",
    "caseId": "case.epl-variable-output-rate"
+  },
+  {
+   "capabilityId": "epl.subselect.filtered",
+   "caseId": "case.epl-subselect-within-filter-having"
   }
  ],
  "summary": {
-  "inventoriedCases": 611,
-  "implementedCases": 609,
-  "differentialVerifiedCases": 224,
-  "differentialVerifiedRuntimeIds": 795,
+  "inventoriedCases": 612,
+  "implementedCases": 610,
+  "differentialVerifiedCases": 225,
+  "differentialVerifiedRuntimeIds": 799,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -41351,14 +41425,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3418,
-  "referencedJavaRuntimeIds": 3177,
+  "runtimeAssociationCount": 3422,
+  "referencedJavaRuntimeIds": 3181,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 959,
+  "unreferencedJavaRuntimeIds": 955,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 611,
+  "totalCases": 612,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 795
+  "differentialVerifiedRuntimeIDs": 799
  }
 }
