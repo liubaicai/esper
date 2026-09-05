@@ -737,15 +737,21 @@ func statementConsumesNamedWindow(query Query, window *NamedWindow) bool {
 	return matches(input)
 }
 
-func (e *Engine) expireStatementWithMetricsLocked(statement *Statement, now time.Time, variables map[string]Value) (ResultBatch, bool) {
+func (e *Engine) expireStatementWithMetricsLocked(statement *Statement, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
 	sample := e.startStatementMetricSampleLocked(statement)
 	batch, changed := statement.expire(now, variables)
+	if err := statement.takeScheduleError(); err != nil {
+		// Java's schedule processing clears the remaining handles and
+		// rethrows the exception out of the clock advance before any
+		// dispatch happens, so the failed statement contributes nothing.
+		return ResultBatch{}, false, err
+	}
 	e.auditStatementScheduleFireLocked(statement, now, batch, changed)
 	if changed {
 		e.finishStatementMetricSampleLocked(statement, sample, 1)
 		e.recordStatementMetricOutputLocked(statement, batch)
 	}
-	return batch, changed
+	return batch, changed, nil
 }
 
 func (e *Engine) statementMetricEntryLocked(statement *Statement) *statementMetricEntry {

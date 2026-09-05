@@ -4641,6 +4641,42 @@
    ]
   },
   {
+   "id": "epl.variable-output-rate",
+   "domain": "variable",
+   "level": "G",
+   "summary": "Variable-driven output rates: event-count and seconds output limits read from a variable per boundary event or schedule point, runtime on-set reassignment, anchored-multiple reschedules from a fixed reference point, and the null-rate schedule failure.",
+   "javaRefs": [
+    "EPLVariablesOutputRate"
+   ],
+   "goRefs": [
+    "internal/esper/stream.go",
+    "internal/esper/plan.go",
+    "internal/esper/runtime.go",
+    "internal/app/parity/epl_variables_output_rate.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "variable",
+    "output-rate",
+    "on-set",
+    "snapshot",
+    "error-phase"
+   ],
+   "status": "differential-verified",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "remaining": [],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0b028b6fe8bddbbb6480",
+    "java-runtime-0539523182c81174c7f6",
+    "java-runtime-303a9b5ee74d52e62125",
+    "java-runtime-4909a80e9612b815310e"
+   ]
+  },
+  {
    "id": "resultset.orderby-simple",
    "domain": "resultset",
    "level": "G",
@@ -38450,6 +38486,73 @@
    "notes": [
     "ResultSetOutputLimitChangeSetOpt replays the white-box getNumChangesetRows contract of the buffered output process view: 36 rounds redeploy one s0 statement over SupportBean#length(2) across output-limit hint (default, enable, disable), select (plain, fully aggregated, mixed, grouped), group-by, having, and output kind (last, all, first) variants. Each round sends E0..E4, reads the counter before the one-second advance (five only on the nine DISABLE_OUTPUTLIMIT_OPT rounds that keep the buffering delta-set view, zero elsewhere), advances cumulative time by one second, re-reads the drained counter, and undeploys. The ENABLE_OUTPUTLIMIT_OPT-with-order-by compile rejection is asserted in code on both sides without emitting a record."
    ]
+  },
+  {
+   "id": "case.epl-variable-output-rate",
+   "javaRuntimeIds": [
+    "java-runtime-0b028b6fe8bddbbb6480",
+    "java-runtime-0539523182c81174c7f6",
+    "java-runtime-303a9b5ee74d52e62125",
+    "java-runtime-4909a80e9612b815310e"
+   ],
+   "javaStaticIds": [
+    "java-b8a2d4466ca4d002fa69",
+    "java-b08aeecf9371278c24f6",
+    "java-9ee028b9ce2729673e8e",
+    "java-b3199a3fee2738477788"
+   ],
+   "javaNames": [
+    "EPLVariableOutputRateEventsAll",
+    "EPLVariableOutputRateEventsAllOM",
+    "EPLVariableOutputRateEventsAllCompile",
+    "EPLVariableOutputRateTimeAll"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOutputRate.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplVariableOutputRateDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEplVariableOutputRateDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplVariableOutputRateDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEplVariableOutputRateCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEplVariableOutputRateRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEplVariableOutputRateRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "epl",
+    "variable",
+    "output-rate",
+    "output-limit",
+    "on-set",
+    "snapshot",
+    "anchored-reschedule",
+    "error-phase",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-variable-output-rate.json",
+    "testdata/parity/epl-variable-output-rate.trace.json",
+    "testdata/parity/epl-variable-output-rate.go.trace.json",
+    "testdata/parity/epl-variable-output-rate.evidence.json",
+    "tools/java-oracle/EPLVariablesOutputRateScenarioOracle.java",
+    "tools/java-oracle/run-epl-variable-output-rate.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0b028b6fe8bddbbb6480",
+    "java-runtime-0539523182c81174c7f6",
+    "java-runtime-303a9b5ee74d52e62125",
+    "java-runtime-4909a80e9612b815310e"
+   ],
+   "notes": [
+    "EPLVariablesOutputRate replays variable-driven output rates: three deployment forms of \"output last every var_output_limit events\" over count(*) share one observable timeline (six callbacks {cnt 3,8,10,11,12,13} with the rate moved 3-5-2-1-null through the deployed on SupportMarketDataBean set statement; null keeps the previous rate), and \"output snapshot every var_output_limit seconds\" delivers snapshots {2}@3s,{4}@4s,{4}@5s,{4}@8s,{6}@12s with anchored-multiple reschedules from reference point 0; the null set at 13999 makes the 14000 schedule advance throw before dispatching the queued snapshot. Engine: expression-driven output-rate policies (CountExpr/IntervalExpr on OutputPolicy, OutputLastEveryEventsExpr, OutputSnapshotEveryExpr) with per-boundary variable re-evaluation, anchored reschedule arithmetic, and schedule-error propagation out of engine.AdvanceTime."
+   ]
   }
  ],
  "mappings": [
@@ -41228,30 +41331,34 @@
   {
    "capabilityId": "output.core",
    "caseId": "case.resultset-output-limit-changeset-opt"
+  },
+  {
+   "capabilityId": "epl.variable-output-rate",
+   "caseId": "case.epl-variable-output-rate"
   }
  ],
  "summary": {
-  "inventoriedCases": 610,
-  "implementedCases": 608,
-  "differentialVerifiedCases": 223,
-  "differentialVerifiedRuntimeIds": 791,
+  "inventoriedCases": 611,
+  "implementedCases": 609,
+  "differentialVerifiedCases": 224,
+  "differentialVerifiedRuntimeIds": 795,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 119,
-  "implementedCapabilities": 118,
-  "differentialVerifiedCapabilities": 36,
+  "inventoriedCapabilities": 120,
+  "implementedCapabilities": 119,
+  "differentialVerifiedCapabilities": 37,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3414,
-  "referencedJavaRuntimeIds": 3173,
+  "runtimeAssociationCount": 3418,
+  "referencedJavaRuntimeIds": 3177,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 963,
+  "unreferencedJavaRuntimeIds": 959,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 610,
-  "totalCapabilities": 119,
-  "differentialVerifiedRuntimeIDs": 791
+  "totalCases": 611,
+  "totalCapabilities": 120,
+  "differentialVerifiedRuntimeIDs": 795
  }
 }

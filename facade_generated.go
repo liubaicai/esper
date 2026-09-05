@@ -4869,6 +4869,14 @@ func OutputLastEveryEvents(count int) OutputPolicy {
 	return internalengine.OutputLastEveryEvents(count)
 }
 
+// OutputLastEveryEventsExpr emits the latest visible result after each count
+// of accepted input events, with the count read from the expression at every
+// boundary event. Java's OutputConditionCount variable contract applies: a
+// null value keeps the previous rate instead of firing.
+func OutputLastEveryEventsExpr(count Expr) OutputPolicy {
+	return internalengine.OutputLastEveryEventsExpr(count)
+}
+
 const OutputLastEveryEventsPolicy = internalengine.OutputLastEveryEventsPolicy
 
 // OutputLastEveryTime emits the latest pending result at each virtual-clock
@@ -4910,6 +4918,16 @@ func OutputSnapshotEvery(interval time.Duration) OutputPolicy {
 // "output snapshot every N events" policy.
 func OutputSnapshotEveryEvents(count int) OutputPolicy {
 	return internalengine.OutputSnapshotEveryEvents(count)
+}
+
+// OutputSnapshotEveryExpr emits the current statement state at each
+// virtual-clock interval read from the seconds-valued expression. The
+// interval is re-read at every event arrival and schedule point, and each
+// reschedule computes the next multiple of the current interval from the
+// schedule's fixed reference point (Java's OutputConditionTime variable
+// contract). A null value fails the schedule advance.
+func OutputSnapshotEveryExpr(interval Expr) OutputPolicy {
+	return internalengine.OutputSnapshotEveryExpr(interval)
 }
 
 const OutputSnapshotPolicy = internalengine.OutputSnapshotPolicy

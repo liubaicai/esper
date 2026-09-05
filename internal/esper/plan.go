@@ -6520,10 +6520,25 @@ func validateOutputPolicy(policy OutputPolicy) error {
 	if policy.Snapshot && policy.Cron != nil {
 		return NewError(ErrorInvalidRule, "snapshot-every output cannot be combined with a calendar schedule")
 	}
-	if (policy.Kind == OutputFirstPolicy || policy.Kind == OutputEveryPolicy || policy.Kind == OutputFirstEveryEventsPolicy || policy.Kind == OutputLastEveryEventsPolicy || policy.Kind == OutputAllEveryEventsPolicy) && policy.Count <= 0 {
+	if policy.CountExpr != nil && policy.Count != 0 {
+		return NewError(ErrorInvalidRule, "output count expression and constant count are mutually exclusive")
+	}
+	if policy.IntervalExpr != nil && policy.Interval != 0 {
+		return NewError(ErrorInvalidRule, "output interval expression and constant interval are mutually exclusive")
+	}
+	if policy.CountExpr != nil && policy.Kind != OutputLastEveryEventsPolicy {
+		return NewError(ErrorInvalidRule, "output count expression is only supported for last-every-events output")
+	}
+	if policy.IntervalExpr != nil && policy.Kind != OutputEveryTimePolicy {
+		return NewError(ErrorInvalidRule, "output interval expression is only supported for every-time output")
+	}
+	// Expression-driven counts and intervals are validated at every
+	// evaluation instead: Java reads the variable per boundary and keeps the
+	// previous rate (events) or fails the schedule (time) when it reads null.
+	if policy.CountExpr == nil && (policy.Kind == OutputFirstPolicy || policy.Kind == OutputEveryPolicy || policy.Kind == OutputFirstEveryEventsPolicy || policy.Kind == OutputLastEveryEventsPolicy || policy.Kind == OutputAllEveryEventsPolicy) && policy.Count <= 0 {
 		return NewError(ErrorInvalidRule, "output count must be positive")
 	}
-	if (policy.Kind == OutputEveryTimePolicy || policy.Kind == OutputFirstEveryTimePolicy || policy.Kind == OutputLastEveryTimePolicy || policy.Kind == OutputAllEveryTimePolicy) && policy.Interval <= 0 {
+	if policy.IntervalExpr == nil && (policy.Kind == OutputEveryTimePolicy || policy.Kind == OutputFirstEveryTimePolicy || policy.Kind == OutputLastEveryTimePolicy || policy.Kind == OutputAllEveryTimePolicy) && policy.Interval <= 0 {
 		return NewError(ErrorInvalidRule, "time-based output interval must be positive")
 	}
 	if policy.Kind > OutputAllEveryEventsPolicy {

@@ -92,6 +92,12 @@ func (s Scenario) Validate() error {
 			if _, err := time.Parse(time.RFC3339Nano, step.At); err != nil {
 				return fmt.Errorf("compat: step %d invalid time %q: %w", i, step.At, err)
 			}
+		case "advance-time-error":
+			// The host must attempt the advance and record the expected
+			// engine failure instead of aborting the replay.
+			if _, err := time.Parse(time.RFC3339Nano, step.At); err != nil {
+				return fmt.Errorf("compat: step %d invalid time %q: %w", i, step.At, err)
+			}
 		case "faf", "deploy":
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)

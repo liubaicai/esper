@@ -1,0 +1,1499 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0b028b6fe8bddbbb6480",
+    "java-runtime-0539523182c81174c7f6",
+    "java-runtime-303a9b5ee74d52e62125",
+    "java-runtime-4909a80e9612b815310e"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesOutputRate.java"
+  ],
+  "javaExecutions": [
+    "EPLVariableOutputRateEventsAll",
+    "EPLVariableOutputRateEventsAllOM",
+    "EPLVariableOutputRateEventsAllCompile",
+    "EPLVariableOutputRateTimeAll"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-variable-output-rate",
+    "steps": [
+      {
+        "op": "case",
+        "case": "events"
+      },
+      {
+        "op": "set-variable",
+        "case": "events",
+        "name": "var_output_limit",
+        "payload": {
+          "type": "long",
+          "value": 3
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "events",
+        "statement": "s0",
+        "epl": "@name('s0') select count(*) as cnt from SupportBean output last every var_output_limit events"
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "events",
+        "statement": "s1",
+        "epl": "on SupportMarketDataBean set var_output_limit = volume"
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 5,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 2,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E10"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E11"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E12"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E13"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "events"
+      },
+      {
+        "op": "case",
+        "case": "events-om"
+      },
+      {
+        "op": "set-variable",
+        "case": "events-om",
+        "name": "var_output_limit",
+        "payload": {
+          "type": "long",
+          "value": 3
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "events-om",
+        "statement": "s0",
+        "epl": "@name('s0') select count(*) as cnt from SupportBean output last every var_output_limit events"
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "events-om",
+        "statement": "s1",
+        "epl": "on SupportMarketDataBean set var_output_limit = volume"
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 5,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 2,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E10"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E11"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E12"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E13"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "events-om"
+      },
+      {
+        "op": "case",
+        "case": "events-compile"
+      },
+      {
+        "op": "set-variable",
+        "case": "events-compile",
+        "name": "var_output_limit",
+        "payload": {
+          "type": "long",
+          "value": 3
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "events-compile",
+        "statement": "s0",
+        "epl": "@name('s0') select count(*) as cnt from SupportBean output last every var_output_limit events"
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3"
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "events-compile",
+        "statement": "s1",
+        "epl": "on SupportMarketDataBean set var_output_limit = volume"
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 5,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 2,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E10"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E11"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E12"
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "events-compile",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E13"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "events-compile"
+      },
+      {
+        "op": "case",
+        "case": "time-snapshot"
+      },
+      {
+        "op": "set-variable",
+        "case": "time-snapshot",
+        "name": "var_output_limit",
+        "payload": {
+          "type": "long",
+          "value": 3
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "time-snapshot",
+        "statement": "s0",
+        "epl": "@name('s0') select count(*) as cnt from SupportBean output snapshot every var_output_limit seconds"
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:02.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "deploy",
+        "case": "time-snapshot",
+        "statement": "s1",
+        "epl": "on SupportMarketDataBean set var_output_limit = volume"
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 5,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:03.200Z"
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:03.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 4,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:04.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:07.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:08Z"
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5"
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:11.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:12Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:13Z"
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": 2,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7"
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:13.999Z"
+      },
+      {
+        "op": "send",
+        "case": "time-snapshot",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "",
+          "price": 0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time-error",
+        "case": "time-snapshot",
+        "at": "1970-01-01T00:00:14Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "time-snapshot"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-variable-output-rate",
+    "records": [
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:08Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "advance-time-error",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:14Z",
+        "value": "Unexpected exception in statement 's0': Failed to evaluate time period, received a null value for 'Received null value evaluating time period'"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-variable-output-rate",
+    "records": [
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "events",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "events-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:08Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:12Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "cnt": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-snapshot",
+        "operation": "advance-time-error",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:14Z",
+        "value": "Unexpected exception in statement 's0': Failed to evaluate time period, received a null value for 'Received null value evaluating time period'"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

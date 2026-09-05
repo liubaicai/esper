@@ -33066,3 +33066,399 @@ func assertResultsetOutputLimitChangesetTrace(t *testing.T, trace compat.Trace) 
 		}
 	}
 }
+func TestRunEplVariableOutputRateDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariableOutputRateID,
+		"-scenario", filepath.Join(root, eplVariableOutputRateID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEplVariableOutputRateTrace(t, trace)
+}
+
+func TestRunEplVariableOutputRateDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eplVariableOutputRateID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariableOutputRateID + "-diff",
+		"-scenario", filepath.Join(root, eplVariableOutputRateID+".json"),
+		"-java-trace", filepath.Join(root, eplVariableOutputRateID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != eplVariableOutputRateJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplVariableOutputRateJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{eplVariableOutputRateSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplVariableOutputRateJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertEplVariableOutputRateTrace(t, evidence.JavaTrace)
+	assertEplVariableOutputRateTrace(t, evidence.GoTrace)
+}
+
+func TestRunEplVariableOutputRateDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "events-cnt-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["cnt"] = json.Number("4")
+			},
+		},
+		{
+			name: "events-cnt-order",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["cnt"] = trace.Records[0].New[0].Fields["cnt"]
+			},
+		},
+		{
+			name: "events-time-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Time = "1970-01-01T00:00:01Z"
+			},
+		},
+		{
+			name: "snapshot-cnt-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[19].New[0].Fields["cnt"] = json.Number("5")
+			},
+		},
+		{
+			name: "snapshot-time-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[20].Time = "1970-01-01T00:00:12.999Z"
+			},
+		},
+		{
+			name: "error-message-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[23].Value = "Unexpected exception in statement 's0': wrong message"
+			},
+		},
+		{
+			name: "error-record-dropped",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:10]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, eplVariableOutputRateID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eplVariableOutputRateID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eplVariableOutputRateID + "-diff",
+				"-scenario", filepath.Join(root, eplVariableOutputRateID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEplVariableOutputRateCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eplVariableOutputRateID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eplVariableOutputRateID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eplVariableOutputRateID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != eplVariableOutputRateJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplVariableOutputRateJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{eplVariableOutputRateSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplVariableOutputRateJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEplVariableOutputRateTrace(t, javaTrace)
+	assertEplVariableOutputRateTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, eplVariableOutputRateID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		eplVariableOutputRateJavaCommit,
+		eplVariableOutputRateJavaRuntimeIDs,
+		[]string{eplVariableOutputRateSource},
+		eplVariableOutputRateJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariableOutputRateID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertEplVariableOutputRateTrace(t, replayed)
+}
+
+func TestRunEplVariableOutputRateRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eplVariableOutputRateID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "events",`), []byte(`"case": "events", "extra": 0,`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-0b028b6fe8bddbbb6480"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1"`), []byte(`"theString": "E1", "extra": 0`), 1)
+		}},
+		{name: "deploy-without-statement", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "deploy", "case": "events", "statement": "s0", "epl": "@name('s0') select count(*) as cnt from SupportBean output last every var_output_limit events"}`),
+				[]byte(`{"op": "deploy", "case": "events", "epl": "@name('s0') select count(*) as cnt from SupportBean output last every var_output_limit events"}`), 1)
+		}},
+		{name: "deploy-statement-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "s1"`), []byte(`"statement": "sX"`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "advance-time-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "advance-time", "case": "time-snapshot", "at": "1970-01-01T00:00:03Z"}`),
+				[]byte(`{"op": "advance-time", "case": "time-snapshot", "at": "1970-01-01T00:00:03.001Z"}`), 1)
+		}},
+		{name: "set-variable-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"payload": {"type": "long", "value": 3}`), []byte(`"payload": {"type": "long", "value": 9}`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", eplVariableOutputRateID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEplVariableOutputRateRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", eplVariableOutputRateID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != eplVariableOutputRateID ||
+		document.Description != eplVariableOutputRateDescription ||
+		document.JavaCommit != eplVariableOutputRateJavaCommit ||
+		document.JavaSource != eplVariableOutputRateSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, eplVariableOutputRateJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, eplVariableOutputRateJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, eplVariableOutputRateJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(eplVariableOutputRateCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != eplVariableOutputRateCases[index] ||
+			entry.Ordinal != eplVariableOutputRateOrdinals[index] ||
+			entry.RuntimeID != eplVariableOutputRateJavaRuntimeIDs[index] ||
+			entry.ExecutionName != eplVariableOutputRateJavaExecutions[index] ||
+			entry.Observation != "listener" || entry.IteratorSnapshots != 0 ||
+			entry.EPL != eplVariableOutputRateEPLs[index] {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertEplVariableOutputRateTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eplVariableOutputRateID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 24 {
+		t.Fatalf("trace records = %d, want 24", len(trace.Records))
+	}
+	eventsCounts := []int64{3, 8, 10, 11, 12, 13}
+	snapshotCounts := []int64{2, 4, 4, 4, 6}
+	snapshotTimes := []string{
+		"1970-01-01T00:00:03Z",
+		"1970-01-01T00:00:04Z",
+		"1970-01-01T00:00:05Z",
+		"1970-01-01T00:00:08Z",
+		"1970-01-01T00:00:12Z",
+	}
+	offset := 0
+	for _, caseName := range eplVariableOutputRateCases {
+		expected := eventsCounts
+		if caseName == "time-snapshot" {
+			expected = snapshotCounts
+		}
+		for index, want := range expected {
+			record := trace.Records[offset]
+			offset++
+			time := "1970-01-01T00:00:00Z"
+			if caseName == "time-snapshot" {
+				time = snapshotTimes[index]
+			}
+			if record.Case != caseName || record.Operation != "listener" || record.Statement != "s0" ||
+				record.Sequence != uint64(index+1) || record.Time != time ||
+				len(record.New) != 1 || len(record.Old) != 0 {
+				t.Fatalf("%s listener record %d metadata/shape = %#v", caseName, index, record)
+			}
+			if !valueMatches(record.New[0].Fields["cnt"], want) {
+				t.Fatalf("%s listener record %d cnt = %#v, want %d", caseName, index, record.New[0].Fields["cnt"], want)
+			}
+		}
+		if caseName != "time-snapshot" {
+			continue
+		}
+		record := trace.Records[offset]
+		offset++
+		if record.Case != caseName || record.Operation != "advance-time-error" || record.Statement != "s0" ||
+			record.Sequence != 6 || record.Time != "1970-01-01T00:00:14Z" {
+			t.Fatalf("time-snapshot error record = %#v", record)
+		}
+		if message, ok := record.Value.(string); !ok ||
+			message != "Unexpected exception in statement 's0': Failed to evaluate time period, received a null value for 'Received null value evaluating time period'" {
+			t.Fatalf("time-snapshot error value = %#v", record.Value)
+		}
+	}
+	if offset != len(trace.Records) {
+		t.Fatalf("trace has %d trailing records", len(trace.Records)-offset)
+	}
+}

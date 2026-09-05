@@ -2646,7 +2646,9 @@ type OutputPolicy struct {
 	Kind            OutputPolicyKind
 	Snapshot        bool
 	Count           int
+	CountExpr       Expr
 	Interval        time.Duration
+	IntervalExpr    Expr
 	After           OutputAfterKind
 	AfterCount      int
 	AfterDuration   time.Duration
@@ -2683,6 +2685,14 @@ func OutputFirstEveryTime(interval time.Duration) OutputPolicy {
 // Esper's output-after plus last-every policy.
 func OutputLastEveryEvents(count int) OutputPolicy {
 	return OutputPolicy{Kind: OutputLastEveryEventsPolicy, Count: count}
+}
+
+// OutputLastEveryEventsExpr emits the latest visible result after each count
+// of accepted input events, with the count read from the expression at every
+// boundary event. Java's OutputConditionCount variable contract applies: a
+// null value keeps the previous rate instead of firing.
+func OutputLastEveryEventsExpr(count Expr) OutputPolicy {
+	return OutputPolicy{Kind: OutputLastEveryEventsPolicy, CountExpr: count}
 }
 
 // OutputLastEveryTime emits the latest pending result at each virtual-clock
@@ -2771,6 +2781,16 @@ func OutputEveryTime(interval time.Duration) OutputPolicy {
 // since the previous tick.
 func OutputSnapshotEvery(interval time.Duration) OutputPolicy {
 	return OutputPolicy{Kind: OutputEveryTimePolicy, Interval: interval, Snapshot: true}
+}
+
+// OutputSnapshotEveryExpr emits the current statement state at each
+// virtual-clock interval read from the seconds-valued expression. The
+// interval is re-read at every event arrival and schedule point, and each
+// reschedule computes the next multiple of the current interval from the
+// schedule's fixed reference point (Java's OutputConditionTime variable
+// contract). A null value fails the schedule advance.
+func OutputSnapshotEveryExpr(interval Expr) OutputPolicy {
+	return OutputPolicy{Kind: OutputEveryTimePolicy, IntervalExpr: interval, Snapshot: true}
 }
 
 // OutputSnapshotEveryEvents emits the current statement state after each
@@ -3735,7 +3755,13 @@ func outputDescription(policy OutputPolicy) string {
 			base = fmt.Sprintf("every(%d)", policy.Count)
 		}
 	case OutputEveryTimePolicy:
-		if policy.Snapshot {
+		if policy.IntervalExpr != nil {
+			if policy.Snapshot {
+				base = fmt.Sprintf("snapshot-every-time-expr(%s)", policy.IntervalExpr.Description())
+			} else {
+				base = fmt.Sprintf("every-time-expr(%s)", policy.IntervalExpr.Description())
+			}
+		} else if policy.Snapshot {
 			base = fmt.Sprintf("snapshot-every-time(%s)", policy.Interval)
 		} else {
 			base = fmt.Sprintf("every-time(%s)", policy.Interval)
@@ -3746,6 +3772,9 @@ func outputDescription(policy OutputPolicy) string {
 		base = fmt.Sprintf("first-every-time(%s)", policy.Interval)
 	case OutputLastEveryEventsPolicy:
 		base = fmt.Sprintf("last-every-events(%d)", policy.Count)
+		if policy.CountExpr != nil {
+			base = fmt.Sprintf("last-every-events-expr(%s)", policy.CountExpr.Description())
+		}
 	case OutputLastEveryTimePolicy:
 		base = fmt.Sprintf("last-every-time(%s)", policy.Interval)
 	case OutputAllEveryTimePolicy:

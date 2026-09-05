@@ -1723,6 +1723,33 @@ func (s *Statement) NumChangesetRows() int {
 	return s.runtime.outputState.changesetRows
 }
 
+// takeScheduleError drains a failed expression-driven schedule evaluation
+// stored by the output appliers. Java rethrows the schedule exception out of
+// the clock advance before dispatching, so the engine aborts the current
+// advance when this returns a non-nil error.
+func (s *Statement) takeScheduleError() error {
+	if s == nil || s.runtime.outputState == nil {
+		return nil
+	}
+	err := s.runtime.outputState.scheduleError
+	s.runtime.outputState.scheduleError = nil
+	return err
+}
+
+// wrapScheduleError frames a failed schedule evaluation with the statement
+// name, mirroring the regression harness's rethrowing exception handler
+// ("Unexpected exception in statement 's0': ...").
+func (e *Engine) wrapScheduleError(statement *Statement, err error) error {
+	if statement == nil {
+		return err
+	}
+	message := err.Error()
+	if esperErr, ok := err.(*Error); ok {
+		message = esperErr.Message
+	}
+	return NewError(ErrorState, fmt.Sprintf("Unexpected exception in statement '%s': %s", statement.Name(), message))
+}
+
 // Priority returns the ordinary continuous-statement dispatch priority.
 // Higher values run first. The bool is false when no explicit priority was
 // supplied and the effective priority is the default zero.
@@ -4234,7 +4261,11 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 		}
 	}
 	for _, statement := range statements {
-		batch, changed := e.expireStatementWithMetricsLocked(statement, at, variables)
+		batch, changed, expireErr := e.expireStatementWithMetricsLocked(statement, at, variables)
+		if expireErr != nil {
+			e.mu.Unlock()
+			return e.wrapScheduleError(statement, expireErr)
+		}
 		if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
 			e.mu.Unlock()
 			return err
@@ -5725,6 +5756,17 @@ type outputRuntimeState struct {
 	// statement maps to the unordered last-all view whose counter stays zero.
 	changesetRows     int
 	changesetCounting bool
+	// Expression-driven output rates (OutputLastEveryEventsExpr /
+	// OutputSnapshotEveryExpr) mirror Java's variable output conditions:
+	// eventRate/timeRate retain the last non-null rate read, the anchor fixes
+	// the reference point for anchored-multiple reschedules, and
+	// scheduleError surfaces a failed rate evaluation (null variable) through
+	// the enclosing clock advance like Java's rethrown schedule exception.
+	eventRate      int64
+	eventRateKnown bool
+	timeRate       time.Duration
+	scheduleAnchor time.Time
+	scheduleError  error
 	// lastOutputGroupRows retains the last emitted row per group for default
 	// count/time output policies (output every N/time). Esper's statement
 	// iterator for those policies reads the last output rather than live
@@ -9281,8 +9323,14 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		return r.finishOutput(policy, result, now, plans...)
 	case OutputEveryTimePolicy:
 		if policy.Snapshot {
-			if !batch.empty() && r.outputState.nextOutputAt.IsZero() {
-				r.outputState.nextOutputAt = now.Add(policy.Interval)
+			if !batch.empty() {
+				if policy.IntervalExpr != nil {
+					if !r.rescheduleOutputExpr(policy, now) {
+						return ResultBatch{}
+					}
+				} else if r.outputState.nextOutputAt.IsZero() {
+					r.outputState.nextOutputAt = now.Add(policy.Interval)
+				}
 			}
 			if !flush || r.outputState.nextOutputAt.IsZero() || now.Before(r.outputState.nextOutputAt) {
 				return ResultBatch{}
@@ -9298,7 +9346,11 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			}
 			r.outputState.pending = nil
 			r.outputState.pendingCount = 0
-			r.advanceOutputSchedule(policy, now)
+			// The schedule advance runs before the delivery: Java's callback
+			// throws on a failed rate before the queued snapshot dispatches.
+			if !r.advanceOutputSchedule(policy, now) {
+				return ResultBatch{}
+			}
 			if result.empty() {
 				return ResultBatch{}
 			}
@@ -9306,7 +9358,11 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			return r.finishOutput(policy, result, now, plans...)
 		}
 		if !batch.empty() {
-			if r.outputState.nextOutputAt.IsZero() {
+			if policy.IntervalExpr != nil {
+				if !r.rescheduleOutputExpr(policy, now) {
+					return ResultBatch{}
+				}
+			} else if r.outputState.nextOutputAt.IsZero() {
 				r.outputState.nextOutputAt = now.Add(policy.Interval)
 			}
 			r.appendPending(batch)
@@ -9315,14 +9371,18 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			return ResultBatch{}
 		}
 		if r.outputState.pending == nil {
-			r.advanceOutputSchedule(policy, now)
+			if !r.advanceOutputSchedule(policy, now) {
+				return ResultBatch{}
+			}
 			return ResultBatch{}
 		}
 		result := r.outputState.pending.clone()
 		result.Time = now
 		r.outputState.pending = nil
 		r.outputState.pendingCount = 0
-		r.advanceOutputSchedule(policy, now)
+		if !r.advanceOutputSchedule(policy, now) {
+			return ResultBatch{}
+		}
 		if len(plans) > 0 {
 			r.recordOutputGroupRows(plans[0], result)
 		}
@@ -9520,6 +9580,19 @@ func (r *statementRuntime) applyLastEveryEvents(policy OutputPolicy, batch Resul
 	inserted, removed := outputEventCounts(batch)
 	state.lastEverySeen += inserted
 	state.lastEverySeenRemoved += removed
+	rate := int64(policy.Count)
+	if policy.CountExpr != nil {
+		// Java's OutputConditionCount re-reads the variable rate on every
+		// update and keeps the previous rate when the value is null.
+		if value, ok := r.evalOutputRateValue(policy.CountExpr, now); ok {
+			state.eventRate = int64(value)
+			state.eventRateKnown = true
+		}
+		if !state.eventRateKnown {
+			return ResultBatch{}
+		}
+		rate = state.eventRate
+	}
 	if !batch.empty() {
 		if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 && len(aggregateGroupingSetsForDefinition(plans[0].query.aggregate)) == 1 {
 			// Grouped row-per-group output-last consolidates at the boundary
@@ -9541,7 +9614,7 @@ func (r *statementRuntime) applyLastEveryEvents(policy OutputPolicy, batch Resul
 			state.pending = &copyBatch
 		}
 	}
-	if state.lastEverySeen < policy.Count && state.lastEverySeenRemoved < policy.Count {
+	if int64(state.lastEverySeen) < rate && int64(state.lastEverySeenRemoved) < rate {
 		return ResultBatch{}
 	}
 	state.lastEverySeen = 0
@@ -9621,7 +9694,9 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 	result := state.pending.clone()
 	result.Time = now
 	state.pending = nil
-	r.advanceOutputSchedule(policy, now)
+	if !r.advanceOutputSchedule(policy, now) {
+		return ResultBatch{}
+	}
 	return r.finishOutput(policy, result, now, plans...)
 }
 
@@ -9700,7 +9775,9 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 	}
 	state.pending = nil
 	state.pendingCount = 0
-	r.advanceOutputSchedule(policy, now)
+	if !r.advanceOutputSchedule(policy, now) {
+		return ResultBatch{}
+	}
 	return r.finishOutput(policy, result, now, plans...)
 }
 
@@ -9798,7 +9875,9 @@ func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBa
 			}
 		}
 	}
-	r.advanceOutputSchedule(policy, now)
+	if !r.advanceOutputSchedule(policy, now) {
+		return ResultBatch{}
+	}
 	if result.empty() {
 		return ResultBatch{}
 	}
@@ -9838,7 +9917,9 @@ func (r *statementRuntime) applyAllEveryTimeAggregateGrouped(policy OutputPolicy
 	}
 	state.pending = nil
 	state.allEverySeen = make(map[string]struct{})
-	r.advanceOutputSchedule(policy, now)
+	if !r.advanceOutputSchedule(policy, now) {
+		return ResultBatch{}
+	}
 	if result.empty() {
 		return ResultBatch{}
 	}
@@ -11371,7 +11452,14 @@ func outputChangesetCounting(hints []StatementHint) bool {
 }
 
 func (r *statementRuntime) scheduleOutput(policy OutputPolicy, at time.Time) {
-	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) || policy.Interval <= 0 {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) {
+		return
+	}
+	if policy.IntervalExpr != nil {
+		r.armOutputScheduleExpr(policy, at)
+		return
+	}
+	if policy.Interval <= 0 {
 		return
 	}
 	if r.outputState.nextOutputAt.IsZero() {
@@ -11379,8 +11467,106 @@ func (r *statementRuntime) scheduleOutput(policy OutputPolicy, at time.Time) {
 	}
 }
 
+// evalOutputRateValue evaluates an expression-driven output rate against the
+// current variable snapshot. The bool is false for a null or missing value
+// (Java's variable output conditions then keep the previous events rate or
+// fail the time schedule).
+func (r *statementRuntime) evalOutputRateValue(expr Expr, now time.Time) (float64, bool) {
+	if r == nil || expr == nil {
+		return 0, false
+	}
+	return numericValue(expr.eval(EvalContext{Now: now, Variables: r.variables}))
+}
+
+// nextOutputMultiple returns the first multiple of interval strictly after
+// now, measured from the schedule anchor. This mirrors Java's
+// deltaAddWReference reference-point arithmetic: a changed rate realigns the
+// schedule to whole multiples of the new interval from the anchor instead of
+// stepping forward from the previous schedule time.
+func nextOutputMultiple(anchor, now time.Time, interval time.Duration) time.Time {
+	if interval <= 0 {
+		return now.Add(interval)
+	}
+	elapsed := now.Sub(anchor)
+	if elapsed < 0 {
+		elapsed = 0
+	}
+	steps := elapsed/interval + 1
+	return anchor.Add(time.Duration(steps) * interval)
+}
+
+// armOutputScheduleExpr fixes the schedule anchor and arms the first
+// expression-driven interval schedule. A null rate leaves the schedule
+// unarmed; the next evaluation surfaces the failure.
+func (r *statementRuntime) armOutputScheduleExpr(policy OutputPolicy, at time.Time) {
+	if !r.outputState.nextOutputAt.IsZero() {
+		return
+	}
+	if r.outputState.scheduleAnchor.IsZero() {
+		r.outputState.scheduleAnchor = at
+	}
+	interval, ok := r.evalOutputRateInterval(policy.IntervalExpr, at)
+	if !ok {
+		return
+	}
+	r.outputState.timeRate = interval
+	r.outputState.nextOutputAt = nextOutputMultiple(r.outputState.scheduleAnchor, at, interval)
+}
+
+// evalOutputRateInterval evaluates a seconds-valued output-rate expression.
+// Null, missing, and non-positive reads report false: Java fails the
+// schedule for a null variable and rejects non-positive time periods.
+func (r *statementRuntime) evalOutputRateInterval(expr Expr, now time.Time) (time.Duration, bool) {
+	seconds, ok := r.evalOutputRateValue(expr, now)
+	if !ok || seconds <= 0 {
+		return 0, false
+	}
+	return time.Duration(seconds * float64(time.Second)), true
+}
+
+// rescheduleOutputExpr re-reads an expression-driven interval at event
+// arrival and recomputes the pending schedule when the rate changed. The
+// bool is false when the rate read null; the error is stored for the
+// enclosing clock/send operation (Java throws inside the per-update
+// reschedule).
+func (r *statementRuntime) rescheduleOutputExpr(policy OutputPolicy, now time.Time) bool {
+	interval, ok := r.evalOutputRateInterval(policy.IntervalExpr, now)
+	if !ok {
+		r.outputState.scheduleError = errOutputScheduleRate
+		return false
+	}
+	if r.outputState.nextOutputAt.IsZero() {
+		r.armOutputScheduleExpr(policy, now)
+		return true
+	}
+	if interval == r.outputState.timeRate {
+		return true
+	}
+	if r.outputState.scheduleAnchor.IsZero() {
+		r.outputState.scheduleAnchor = now
+	}
+	r.outputState.timeRate = interval
+	r.outputState.nextOutputAt = nextOutputMultiple(r.outputState.scheduleAnchor, now, interval)
+	return true
+}
+
+// errOutputScheduleRate marks a failed expression-driven schedule evaluation
+// so the expire chain can abort the clock advance like Java's rethrown
+// schedule exception.
+var errOutputScheduleRate = NewError(ErrorState, "Failed to evaluate time period, received a null value for 'Received null value evaluating time period'")
+
 func (r *statementRuntime) anchorOutputSchedule(policy OutputPolicy, at time.Time) {
-	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) || policy.Interval <= 0 {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) {
+		return
+	}
+	if policy.IntervalExpr != nil {
+		if r.outputState.afterActive && !r.outputState.outputScheduleAnchored {
+			r.armOutputScheduleExpr(policy, at)
+			r.outputState.outputScheduleAnchored = true
+		}
+		return
+	}
+	if policy.Interval <= 0 {
 		return
 	}
 	if !r.outputState.afterActive || r.outputState.outputScheduleAnchored {
@@ -11417,13 +11603,36 @@ func (r *statementRuntime) ensureCronSchedule(policy OutputPolicy, now time.Time
 	return !r.outputState.cronNext.IsZero()
 }
 
-func (r *statementRuntime) advanceOutputSchedule(policy OutputPolicy, now time.Time) {
-	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) || policy.Interval <= 0 {
-		return
+// advanceOutputSchedule moves the schedule past now after a delivery. The
+// bool is false when an expression-driven rate failed to evaluate: the
+// schedule error is stored and the caller must abort the delivery (Java's
+// schedule callback throws before the queued result is dispatched).
+func (r *statementRuntime) advanceOutputSchedule(policy OutputPolicy, now time.Time) bool {
+	if r == nil || r.outputState == nil || (policy.Kind != OutputEveryTimePolicy && policy.Kind != OutputLastEveryTimePolicy && policy.Kind != OutputAllEveryTimePolicy) {
+		return true
+	}
+	if policy.IntervalExpr != nil {
+		interval, ok := r.evalOutputRateInterval(policy.IntervalExpr, now)
+		if !ok {
+			r.outputState.scheduleError = errOutputScheduleRate
+			// Java clears the schedule handles when the callback throws, so
+			// the failed schedule does not refire on the next advance.
+			r.outputState.nextOutputAt = time.Time{}
+			return false
+		}
+		if r.outputState.scheduleAnchor.IsZero() {
+			r.outputState.scheduleAnchor = now
+		}
+		r.outputState.timeRate = interval
+		r.outputState.nextOutputAt = nextOutputMultiple(r.outputState.scheduleAnchor, now, interval)
+		return true
+	}
+	if policy.Interval <= 0 {
+		return true
 	}
 	if r.outputState.nextOutputAt.IsZero() {
 		r.outputState.nextOutputAt = now.Add(policy.Interval)
-		return
+		return true
 	}
 	const maxOutputCatchUp = 100000
 	for steps := 0; steps < maxOutputCatchUp && !r.outputState.nextOutputAt.After(now); steps++ {
@@ -11432,6 +11641,7 @@ func (r *statementRuntime) advanceOutputSchedule(policy OutputPolicy, now time.T
 	if !r.outputState.nextOutputAt.After(now) {
 		r.outputState.nextOutputAt = now.Add(policy.Interval)
 	}
+	return true
 }
 
 func (s *Statement) processNamedWindow(ctx context.Context, now time.Time, delta NamedWindowDelta, variables map[string]Value) (ResultBatch, bool, error) {
