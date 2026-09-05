@@ -1711,6 +1711,24 @@ func (s *Statement) HasNoLock() bool {
 	return s != nil && s.plan.query.statementMetadata.noLock
 }
 
+// NumChangesetRows reports the number of interim update pairs buffered by
+// the output-limit changeset view since the last output, mirroring Java's
+// OutputProcessView.getNumChangesetRows white-box counter. It is gated by
+// the DISABLE_OUTPUTLIMIT_OPT hint; statements without that hint always
+// report zero.
+func (s *Statement) NumChangesetRows() int {
+	if s == nil || s.runtime.outputState == nil {
+		return 0
+	}
+	return s.runtime.outputState.changesetRows
+}
+
+// NumChangesetRows reports the number of interim update pairs buffered by
+// the output-limit changeset view since the last output, mirroring Java's
+// OutputProcessView.getNumChangesetRows white-box counter. It is gated by
+// the DISABLE_OUTPUTLIMIT_OPT hint; statements without that hint always
+// report zero.
+
 // Priority returns the ordinary continuous-statement dispatch priority.
 // Higher values run first. The bool is false when no explicit priority was
 // supplied and the effective priority is the default zero.
@@ -5707,6 +5725,12 @@ type outputRuntimeState struct {
 	// the current tick) captured before same-tick window expiry, so the next
 	// time-based snapshot can include them exactly as Esper does.
 	snapshotBoundary *aggregateSnapshotBoundary
+	// changesetRows counts the buffered interim update pairs for the
+	// output-limit changeset view (Java OutputProcessViewConditionDeltaSetImpl).
+	// It is gated by the DISABLE_OUTPUTLIMIT_OPT hint: without that hint the
+	// statement maps to the unordered last-all view whose counter stays zero.
+	changesetRows       int
+	changesetCounting   bool
 	// lastOutputGroupRows retains the last emitted row per group for default
 	// count/time output policies (output every N/time). Esper's statement
 	// iterator for those policies reads the last output rather than live
@@ -5926,7 +5950,7 @@ func newStatementRuntime(query Query) statementRuntime {
 		runtime.rowRecogState = &rowRecogRuntimeState{partitions: make(map[string]*rowRecogPartitionState)}
 	}
 	if query.output.Kind != OutputAllPolicy || query.output.After != OutputAfterNone || query.output.Cron != nil || query.output.When != nil || len(query.output.Then) > 0 || query.output.Termination != OutputNoTermination || query.output.TerminationWhen != nil || len(query.output.TerminationThen) > 0 {
-		runtime.outputState = &outputRuntimeState{}
+		runtime.outputState = &outputRuntimeState{changesetCounting: outputChangesetCounting(query.statementMetadata.hints)}
 	}
 	if query.distinct {
 		runtime.distinctCounts = make(map[string]int)
@@ -9117,6 +9141,11 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 	if !active {
 		return ResultBatch{}
 	}
+	if r.outputState.changesetCounting && !batch.empty() {
+		// Java's delta-set view counts one interim pair per update reaching
+		// the output view (not per row), mirroring that granularity here.
+		r.outputState.changesetRows++
+	}
 	r.recordOutputCounts(batch)
 	if policy.Termination == OutputOnlyOnTermination {
 		if !batch.empty() && policy.Kind != OutputSnapshotPolicy {
@@ -9605,6 +9634,9 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch ResultBatch, flush bool, now time.Time, plans ...Plan) ResultBatch {
 	state := r.outputState
 	if !batch.empty() {
+		if state.changesetCounting {
+			state.changesetRows++
+		}
 		copyBatch := mergeLastOutputBatch(state.pending, batch)
 		state.pending = &copyBatch
 		if state.nextOutputAt.IsZero() {
@@ -11060,7 +11092,15 @@ func (r *statementRuntime) outputWhenMatches(condition Expr, now time.Time) bool
 }
 
 func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
-	if r == nil || batch.empty() {
+	if r == nil {
+		return batch
+	}
+	if r.outputState != nil && r.outputState.changesetCounting {
+		// Java's delta set clears during the output callback, so the white-box
+		// counter reads zero after any output evaluation.
+		r.outputState.changesetRows = 0
+	}
+	if batch.empty() {
 		return batch
 	}
 	if batch.Sequence == 0 {
@@ -11317,6 +11357,23 @@ func (r *statementRuntime) appendCronPending(batch ResultBatch) {
 	r.outputState.cronPending.outputKeysNew = append(r.outputState.cronPending.outputKeysNew, batch.outputKeysNew...)
 	r.outputState.cronPending.outputKeysOld = append(r.outputState.cronPending.outputKeysOld, batch.outputKeysOld...)
 	r.outputState.cronPending.Time = batch.Time
+}
+
+// outputChangesetCounting reports whether the statement's output view buffers
+// interim change pairs for the white-box changeset counter. Java maps the
+// DISABLE_OUTPUTLIMIT_OPT hint (and only that hint, under the default
+// compiler configuration) to the buffering delta-set view; the unordered
+// last-all view and every other hint keep the counter at zero.
+func outputChangesetCounting(hints []StatementHint) bool {
+	for _, hint := range hints {
+		if hint.kind == HintDisableOutputLimitOptimization {
+			return true
+		}
+		if hint.kind == HintEnableOutputLimitOptimization {
+			return false
+		}
+	}
+	return false
 }
 
 func (r *statementRuntime) scheduleOutput(policy OutputPolicy, at time.Time) {

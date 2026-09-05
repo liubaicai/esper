@@ -788,6 +788,9 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	if err := e.validateReclaimHintParameters(query.statementMetadata); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "statement metadata", err)
 	}
+	if err := validateOutputLimitOptimizationHint(query); err != nil {
+		return Plan{}, err
+	}
 
 	description := query.description()
 	if query.routeTarget != "" {
@@ -1079,6 +1082,21 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 		resultSchema:    resultSchema,
 		indexPlan:       indexPlan.clone(),
 	}, nil
+}
+
+// validateOutputLimitOptimizationHint mirrors Java's result-set-processor
+// check: the ENABLE_OUTPUTLIMIT_OPT hint cannot be combined with an
+// order-by clause.
+func validateOutputLimitOptimizationHint(query Query) error {
+	if len(query.orderBy) == 0 {
+		return nil
+	}
+	for _, hint := range query.statementMetadata.hints {
+		if hint.kind == HintEnableOutputLimitOptimization {
+			return NewError(ErrorInvalidRule, "The ENABLE_OUTPUTLIMIT_OPT hint is not supported with order-by")
+		}
+	}
+	return nil
 }
 
 func (e *Environment) validateReclaimHintParameters(metadata statementMetadata) error {
