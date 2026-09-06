@@ -2245,7 +2245,8 @@
     "InfraJoinIndexChoice",
     "InfraRightOuterJoinLateStart",
     "InfraFullOuterJoinNamedAggregationLateStart",
-    "InfraNWTableSubqUncorrel"
+    "InfraNWTableSubqUncorrel",
+    "InfraNWTableSubqueryAtEventBean"
    ],
    "goRefs": [
     "internal/app/parity/infra_named_window_join.go",
@@ -2256,7 +2257,8 @@
     "internal/esper/runtime.go",
     "internal/esper/state.go",
     "internal/esper/trigger.go",
-    "internal/app/parity/infra_nwtable_subq_uncorrel.go"
+    "internal/app/parity/infra_nwtable_subq_uncorrel.go",
+    "internal/app/parity/infra_nwtable_subq_at_eventbean.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -38761,6 +38763,64 @@
    "notes": [
     "InfraNWTableSubqUncorrel pins uncorrelated scalar subqueries over a projection named window and a primary-key table: irstream consumers see null/one-row/multi-row null progression across inserts and trigger deletes, the create statement carries insert rows as new and deleted rows as old, and the on-delete statement publishes the removed rows as new data. Index-share hints are plan-only. Engine: named-window delete triggers now publish removed rows as newEvents (matching Java insert-stream semantics, FAF deletes keep oldEvents) and named-window mutation trigger dispatches are deferred until after the consumer wave flush so create old rows precede on-delete new rows."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-subq-at-eventbean",
+   "javaRuntimeIds": [
+    "java-runtime-59604d7dbcef79bacde1",
+    "java-runtime-d8e8832ac46005459ffd"
+   ],
+   "javaStaticIds": [
+    "java-0d99efae7b23e8d8b346",
+    "java-0d99efae7b23e8d8b346"
+   ],
+   "javaNames": [
+    "InfraSubSelStar{namedWindow=true}",
+    "InfraSubSelStar{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqueryAtEventBean.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqAtEventBeanDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqAtEventBeanDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqAtEventBeanDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqAtEventBeanCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqAtEventBeanRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqAtEventBeanRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "table",
+    "subselect",
+    "select-star",
+    "eventbean",
+    "null-fragment",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-subq-at-eventbean.json",
+    "testdata/parity/infra-nwtable-subq-at-eventbean.trace.json",
+    "testdata/parity/infra-nwtable-subq-at-eventbean.go.trace.json",
+    "testdata/parity/infra-nwtable-subq-at-eventbean.evidence.json",
+    "tools/java-oracle/InfraNWTableSubqueryAtEventBeanScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-subq-at-eventbean.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-59604d7dbcef79bacde1",
+    "java-runtime-d8e8832ac46005459ffd"
+   ],
+   "notes": [
+    "InfraNWTableSubqueryAtEventBean pins whole-event subselects: (select * from MyInfra) @eventbean as detail over a keepall named window and a primary-key table. The empty infra yields a null fragment (Java assertNull; rendered {\"state\":\"null\"} with the key present), and populated windows yield row arrays [{c0,c1}] in insertion order. Engine: SubqueryValueWithOptions[[]Event](inner, WindowEvents()) — the aggregate group path accumulates named-window/table candidates so values[0] is the full snapshot and the empty case yields Null() matching the Java getFragment null."
+   ]
   }
  ],
  "mappings": [
@@ -41555,13 +41615,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-subq-uncorrel"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-subq-at-eventbean"
   }
  ],
  "summary": {
-  "inventoriedCases": 614,
-  "implementedCases": 612,
-  "differentialVerifiedCases": 227,
-  "differentialVerifiedRuntimeIds": 807,
+  "inventoriedCases": 615,
+  "implementedCases": 613,
+  "differentialVerifiedCases": 228,
+  "differentialVerifiedRuntimeIds": 809,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -41571,14 +41635,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3430,
-  "referencedJavaRuntimeIds": 3189,
+  "runtimeAssociationCount": 3432,
+  "referencedJavaRuntimeIds": 3191,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 947,
+  "unreferencedJavaRuntimeIds": 945,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 614,
+  "totalCases": 615,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 807
+  "differentialVerifiedRuntimeIDs": 809
  }
 }

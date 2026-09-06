@@ -1,0 +1,63 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-nwtable-subq-at-eventbean",
+  "description": "InfraNWTableSubqueryAtEventBean uncorrelated select-star subquery (select * from MyInfra) @eventbean over a keepall named window and over a table, capturing the null detail fragment on an empty infra and the growing multi-row detail fragments after insertions from the s0 listener (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqueryAtEventBean.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqueryAtEventBean.java",
+  "javaRuntimes": [
+    "java-runtime-59604d7dbcef79bacde1",
+    "java-runtime-d8e8832ac46005459ffd"
+  ],
+  "javaNames": [
+    "InfraSubSelStar{namedWindow=true}",
+    "InfraSubSelStar{namedWindow=false}"
+  ],
+  "javaStaticIds": [
+    "java-0d99efae7b23e8d8b346",
+    "java-0d99efae7b23e8d8b346"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "nw",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-59604d7dbcef79bacde1",
+      "executionName": "InfraSubSelStar{namedWindow=true}",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select p00, (select * from MyInfra) @eventbean as detail from SupportBean_S0"
+    },
+    {
+      "case": "table",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-d8e8832ac46005459ffd",
+      "executionName": "InfraSubSelStar{namedWindow=false}",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select p00, (select * from MyInfra) @eventbean as detail from SupportBean_S0"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "nw"},
+    {"op": "deploy", "case": "nw", "statement": "create", "epl": "@public create window MyInfra#keepall as (c0 string, c1 int)"},
+    {"op": "deploy", "case": "nw", "statement": "insert", "epl": "insert into MyInfra select theString as c0, intPrimitive as c1 from SupportBean"},
+    {"op": "deploy", "case": "nw", "statement": "s0", "epl": "@name('s0') select p00, (select * from MyInfra) @eventbean as detail from SupportBean_S0"},
+    {"op": "send", "case": "nw", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "send", "case": "nw", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "send", "case": "nw", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "send", "case": "nw", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "send", "case": "nw", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "undeploy-all", "case": "nw"},
+
+    {"op": "case", "case": "table"},
+    {"op": "deploy", "case": "table", "statement": "create", "epl": "@public create table MyInfra(c0 string primary key, c1 int)"},
+    {"op": "deploy", "case": "table", "statement": "insert", "epl": "insert into MyInfra select theString as c0, intPrimitive as c1 from SupportBean"},
+    {"op": "deploy", "case": "table", "statement": "s0", "epl": "@name('s0') select p00, (select * from MyInfra) @eventbean as detail from SupportBean_S0"},
+    {"op": "send", "case": "table", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "send", "case": "table", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "send", "case": "table", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "send", "case": "table", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "send", "case": "table", "eventType": "SupportBean_S0", "payload": {"id": 0}},
+    {"op": "undeploy-all", "case": "table"}
+  ]
+}
