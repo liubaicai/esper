@@ -1,0 +1,3084 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-3dbb926e23a4521d64d5",
+    "java-runtime-9a68943733f98a1ea1dd",
+    "java-runtime-f220d864166a5650e6f7",
+    "java-runtime-0fbd10b1080bb8e7afa3"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEval.java"
+  ],
+  "javaExecutions": [
+    "EPLSubselectCorrelatedSubqueryOrder",
+    "EPLSubselectOrderOfEvaluationSubselectFirst",
+    "EPLSubselectIndexChoicesOverdefinedWhere",
+    "EPLSubselectUniqueIndexCorrelated"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-subselect-order-of-eval-index",
+    "steps": [
+      {
+        "op": "case",
+        "case": "correlated-subquery-order"
+      },
+      {
+        "op": "deploy",
+        "case": "correlated-subquery-order",
+        "statement": "s0",
+        "epl": "select * from SupportTradeEventTwo#lastevent;\n@name('s0') select window(tl.*) as longItems,        (SELECT window(ts.*) AS shortItems FROM SupportTradeEventTwo#time(20 minutes) as ts WHERE ts.securityID=tl.securityID) from SupportTradeEventTwo#time(20 minutes) as tl where tl.securityID = 1000group by tl.securityID"
+      },
+      {
+        "op": "send",
+        "case": "correlated-subquery-order",
+        "eventType": "SupportTradeEventTwo",
+        "payload": {
+          "time": 1000,
+          "securityID": 1000,
+          "price": 50.0,
+          "volume": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "correlated-subquery-order",
+        "eventType": "SupportTradeEventTwo",
+        "payload": {
+          "time": 1010,
+          "securityID": 1000,
+          "price": 50.0,
+          "volume": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "correlated-subquery-order"
+      },
+      {
+        "op": "case",
+        "case": "order-of-eval-subselect-first"
+      },
+      {
+        "op": "deploy",
+        "case": "order-of-eval-subselect-first",
+        "statement": "s0",
+        "epl": "@name('s0') @name('s0')select * from SupportBean(intPrimitive\u003c10) where intPrimitive not in (select intPrimitive from SupportBean#unique(intPrimitive))"
+      },
+      {
+        "op": "send",
+        "case": "order-of-eval-subselect-first",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "order-of-eval-subselect-first"
+      },
+      {
+        "op": "deploy",
+        "case": "order-of-eval-subselect-first",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean where intPrimitive not in (select intPrimitive from SupportBean(intPrimitive\u003c10)#unique(intPrimitive))"
+      },
+      {
+        "op": "send",
+        "case": "order-of-eval-subselect-first",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "order-of-eval-subselect-first"
+      },
+      {
+        "op": "case",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(s2,i2) as ssb2 ) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 2,
+          "l2": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 10,
+          "d1": 11,
+          "l1": 12
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EY",
+          "i1": 10,
+          "d1": 11,
+          "l1": 12
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,i2) as ssb2 where ssb2.i2 = ssb1.i1 and ssb2.d2 = ssb1.d1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,i2) as ssb2 where ssb2.d2 = ssb1.d1 and ssb2.i2 = ssb1.i1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,i2) as ssb2 where ssb2.l2 = ssb1.l1 and ssb2.d2 = ssb1.d1 and ssb2.i2 = ssb1.i1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,i2) as ssb2 where ssb2.l2 = ssb1.l1 and ssb2.i2 = ssb1.i1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,i2) as ssb2 where ssb2.d2 = ssb1.d1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,i2) as ssb2 where ssb2.i2 = ssb1.i1 and ssb2.d2 = ssb1.d1 and ssb2.l2 between 1 and 1000) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,i2) as ssb2 where ssb2.d2 = ssb1.d1 and ssb2.l2 between 1 and 1000) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(i2,d2,l2) as ssb2 where ssb2.l2 = ssb1.l1 and ssb2.d2 = ssb1.d1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(i2,d2,l2) as ssb2 where ssb2.l2 = ssb1.l1 and ssb2.i2 = ssb1.i1 and ssb2.d2 = ssb1.d1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,l2,i2) as ssb2 where ssb2.l2 = ssb1.l1 and ssb2.i2 = ssb1.i1 and ssb2.d2 = ssb1.d1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(d2,l2,i2) as ssb2 where ssb2.l2 = ssb1.l1 and ssb2.i2 = ssb1.i1 and ssb2.d2 = ssb1.d1 and ssb2.s2 between 'E3' and 'E4') as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(l2) as ssb2 where ssb2.l2 = ssb1.l1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@Hint('DISABLE_UNIQUE_IMPLICIT_IDX')@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(l2) as ssb2 where ssb2.l2 = ssb1.l1) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(l2) as ssb2 where ssb2.l2 = ssb1.l1 and ssb1.i1 between 1 and 20) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1,
+          "d2": 3,
+          "l2": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 1,
+          "d2": 2,
+          "l2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E3",
+          "i2": 1,
+          "d2": 3,
+          "l2": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "EX",
+          "i1": 1,
+          "d1": 3,
+          "l1": 9
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(s2) as ssb2 where ssb1.i1 \u003e ssb2.i2) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "A",
+          "i1": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "B",
+          "i1": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "C",
+          "i1": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "D",
+          "i1": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "E",
+          "i1": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(s2) as ssb2 where ssb1.i1 \u003e= ssb2.i2) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "A",
+          "i1": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "B",
+          "i1": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "C",
+          "i1": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "D",
+          "i1": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "E",
+          "i1": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(s2) as ssb2 where ssb1.i1 \u003c ssb2.i2) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "A",
+          "i1": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "B",
+          "i1": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "C",
+          "i1": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "D",
+          "i1": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "E",
+          "i1": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "deploy",
+        "case": "index-choices-overdefined-where",
+        "statement": "s0",
+        "epl": "@name('s0') select s1 as c0, (select s2 from SupportSimpleBeanTwo#unique(s2) as ssb2 where ssb1.i1 \u003c= ssb2.i2) as c1 from SupportSimpleBeanOne as ssb1"
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E1",
+          "i2": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanTwo",
+        "payload": {
+          "s2": "E2",
+          "i2": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "A",
+          "i1": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "B",
+          "i1": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "C",
+          "i1": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "D",
+          "i1": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "index-choices-overdefined-where",
+        "eventType": "SupportSimpleBeanOne",
+        "payload": {
+          "s1": "E",
+          "i1": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "index-choices-overdefined-where"
+      },
+      {
+        "op": "case",
+        "case": "unique-index-correlated"
+      },
+      {
+        "op": "deploy",
+        "case": "unique-index-correlated",
+        "statement": "s0",
+        "epl": "@name('s0') select id as c0, (select intPrimitive from SupportBean#unique(theString) where theString = s0.p00) as c1 from SupportBean_S0 as s0"
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 11,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "unique-index-correlated"
+      },
+      {
+        "op": "deploy",
+        "case": "unique-index-correlated",
+        "statement": "s0",
+        "epl": "@name('s0') select id as c0, (select intPrimitive from SupportBean#firstunique(theString) where theString = s0.p00) as c1 from SupportBean_S0 as s0"
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 11,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "unique-index-correlated"
+      },
+      {
+        "op": "deploy",
+        "case": "unique-index-correlated",
+        "statement": "s0",
+        "epl": "@name('s0') select id as c0, (select intPrimitive from SupportBean#time(1)#unique(theString) where theString = s0.p00) as c1 from SupportBean_S0 as s0"
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 11,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "unique-index-correlated"
+      },
+      {
+        "op": "deploy",
+        "case": "unique-index-correlated",
+        "statement": "s0",
+        "epl": "@name('s0') select id as c0, (select longPrimitive from SupportBean#groupwin(theString)#unique(intPrimitive) where theString = s0.p00 and intPrimitive = s0.id) as c1 from SupportBean_S0 as s0"
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 101
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 102
+        }
+      },
+      {
+        "op": "send",
+        "case": "unique-index-correlated",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "unique-index-correlated"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-subselect-order-of-eval-index",
+    "records": [
+      {
+        "case": "correlated-subquery-order",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longItems": [
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1000,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                }
+              ],
+              "shortItems": [
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1000,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-subquery-order",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longItems": [
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1000,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1010,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                }
+              ],
+              "shortItems": [
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1000,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1010,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EY",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "C",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "D",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "C",
+              "c1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "D",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "C",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "D",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 33,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 34,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "C",
+              "c1": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 35,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "D",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 36,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11,
+              "c1": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11,
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11,
+              "c1": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 102
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-subselect-order-of-eval-index",
+    "records": [
+      {
+        "case": "correlated-subquery-order",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longItems": [
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1000,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                }
+              ],
+              "shortItems": [
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1000,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "correlated-subquery-order",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longItems": [
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1000,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1010,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                }
+              ],
+              "shortItems": [
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1000,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "price": 50,
+                    "securityID": 1000,
+                    "time": 1010,
+                    "volume": 1
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EY",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "EX",
+              "c1": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 17,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 18,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 19,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "C",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 20,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "D",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 21,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 22,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 23,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 24,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "C",
+              "c1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 25,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "D",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 26,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 27,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 28,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 29,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "C",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 30,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "D",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 31,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 32,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 33,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 34,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "C",
+              "c1": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 35,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "D",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "index-choices-overdefined-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 36,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11,
+              "c1": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11,
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11,
+              "c1": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "unique-index-correlated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 102
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
