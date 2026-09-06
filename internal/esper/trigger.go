@@ -2524,7 +2524,14 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 		if err := engine.queueNamedWindowDeltaLocked(ctx, now, window, delta, &variables, owner); err != nil {
 			return tableMutationResult{}, err
 		}
-		return tableMutationResult{oldEvents: append([]Event(nil), delta.Old...)}, nil
+		if definition.onDemand {
+			// Fire-and-forget deletes keep the removed rows on the remove
+			// stream: the FAF result set reads them from mutation.oldEvents.
+			return tableMutationResult{oldEvents: append([]Event(nil), delta.Old...)}, nil
+		}
+		// Java on-delete statements publish the removed window rows as new
+		// data (insert stream of the on-delete output), not as remove-stream.
+		return tableMutationResult{newEvents: append([]Event(nil), delta.Old...)}, nil
 	case triggerUpdateTable:
 		if definition.where == nil {
 			return tableMutationResult{}, NewError(ErrorInvalidRule, "named-window update requires a predicate")

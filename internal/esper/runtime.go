@@ -3725,6 +3725,13 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		processedRoutes++
 		statements := e.dispatchStatementsLocked()
 		matched := false
+		// Java dispatches named-window consumer waves (aggregated remove/new
+		// deltas from on-delete, on-insert and on-merge trigger mutations)
+		// before the mutation statements' own output reaches listeners, and it
+		// aggregates multiple queued deltas into one consumer callback. Defer
+		// the mutation statements' own dispatches so the flushed wave precedes
+		// them, then append the deferred dispatches.
+		deferredTriggerDispatches := make([]statementDispatch, 0, 2)
 		for _, statement := range orderUpdateStatementsFirst(statements) {
 			accepted := statement.matchesEventFilter(current, now, variables)
 			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted)
@@ -3745,17 +3752,37 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 				e.mu.Unlock()
 				return err
 			}
-			if changed {
+			mutationTrigger := false
+			if triggerDefinition := statement.plan.query.trigger; triggerDefinition != nil &&
+				triggerDefinition.target == triggerTargetNamedWindow {
+				switch triggerDefinition.action {
+				case triggerDeleteTable, triggerUpdateTable, triggerMergeTable:
+					mutationTrigger = true
+				}
+			}
+			if changed && !mutationTrigger {
 				dispatches = append(dispatches, statementDispatch{statement: statement, batch: batch})
+			}
+			if changed {
 				if err = e.queueStatementRoutesLocked(statement, batch, now); err != nil {
 					e.mu.Unlock()
 					return err
+				}
+				if mutationTrigger {
+					deferredTriggerDispatches = append(deferredTriggerDispatches, statementDispatch{statement: statement, batch: batch})
 				}
 				if statement.plan.query.statementDrop {
 					break
 				}
 			}
 		}
+		if len(deferredTriggerDispatches) > 0 && len(e.pendingNamedWindowConsumerDeltas) > 0 {
+			if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, &variables, &dispatches); err != nil {
+				e.mu.Unlock()
+				return err
+			}
+		}
+		dispatches = append(dispatches, deferredTriggerDispatches...)
 		if err = e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, &unmatchedEvents, &processedRoutes); err != nil {
 			e.mu.Unlock()
 			return err

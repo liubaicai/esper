@@ -89,6 +89,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEplSubselectWithinFilterHavingScenario(file)
 	} else if *mode == "epl-subselect-order-of-eval-index" || *mode == "epl-subselect-order-of-eval-index-diff" {
 		scenario, err = loadEplSubselectOrderOfEvalIndexScenario(file)
+	} else if *mode == "infra-nwtable-subq-uncorrel" || *mode == "infra-nwtable-subq-uncorrel-diff" {
+		scenario, err = loadInfraNWTableSubqUncorrelScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
@@ -211,6 +213,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplSubselectOrderOfEvalIndexJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplSubselectOrderOfEvalIndexJavaSources),
 				splitMetadata(*javaExecutions, eplSubselectOrderOfEvalIndexJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-subq-uncorrel" || *mode == "infra-nwtable-subq-uncorrel-diff" {
+		trace, err := runInfraNWTableSubqUncorrelScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-subq-uncorrel-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableSubqUncorrelJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableSubqUncorrelJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableSubqUncorrelJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

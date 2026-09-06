@@ -1,0 +1,2909 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-e175cfaf55ce541ca088",
+    "java-runtime-f03db66c82987b5cef54",
+    "java-runtime-d521ebd5c45c89c8e842",
+    "java-runtime-1a498d1407159a6d8c90"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqUncorrel.java"
+  ],
+  "javaExecutions": [
+    "InfraNWTableSubqUncorrelAssertion{namedWindow=true, enableIndexShareCreate=false, disableIndexShareConsumer=false}",
+    "InfraNWTableSubqUncorrelAssertion{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=false}",
+    "InfraNWTableSubqUncorrelAssertion{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=true}",
+    "InfraNWTableSubqUncorrelAssertion{namedWindow=false, enableIndexShareCreate=false, disableIndexShareConsumer=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-uncorrel",
+    "steps": [
+      {
+        "op": "case",
+        "case": "nw-no-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfra#keepall as select theString as a, longPrimitive as b, longBoxed as c from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString as a, longPrimitive as b, longBoxed as c from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "select",
+        "epl": "@name('select') select irstream (select a from MyInfra) as value, symbol from SupportMarketDataBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "longPrimitive": 1,
+          "longBoxed": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "selectTwo",
+        "epl": "@name('selectTwo') select irstream (select a from MyInfra) as value, symbol from SupportMarketDataBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "longPrimitive": 10,
+          "longBoxed": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M2",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportBean_A delete from MyInfra where id = a"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M3",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M4",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "longPrimitive": 100,
+          "longBoxed": 200
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M5",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-no-share"
+      },
+      {
+        "op": "case",
+        "case": "nw-index-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-index-share",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @name('create') @public create window MyInfra#keepall as select theString as a, longPrimitive as b, longBoxed as c from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-index-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString as a, longPrimitive as b, longBoxed as c from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-index-share",
+        "statement": "select",
+        "epl": "@name('select') select irstream (select a from MyInfra) as value, symbol from SupportMarketDataBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "longPrimitive": 1,
+          "longBoxed": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-index-share",
+        "statement": "selectTwo",
+        "epl": "@name('selectTwo') select irstream (select a from MyInfra) as value, symbol from SupportMarketDataBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "longPrimitive": 10,
+          "longBoxed": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M2",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-index-share",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportBean_A delete from MyInfra where id = a"
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M3",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M4",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "longPrimitive": 100,
+          "longBoxed": 200
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M5",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-index-share"
+      },
+      {
+        "op": "case",
+        "case": "nw-disable-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-disable-share",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @name('create') @public create window MyInfra#keepall as select theString as a, longPrimitive as b, longBoxed as c from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-disable-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString as a, longPrimitive as b, longBoxed as c from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-disable-share",
+        "statement": "select",
+        "epl": "@Hint('disable_window_subquery_indexshare') @name('select') select irstream (select a from MyInfra) as value, symbol from SupportMarketDataBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "longPrimitive": 1,
+          "longBoxed": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-disable-share",
+        "statement": "selectTwo",
+        "epl": "@Hint('disable_window_subquery_indexshare') @name('selectTwo') select irstream (select a from MyInfra) as value, symbol from SupportMarketDataBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "longPrimitive": 10,
+          "longBoxed": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M2",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-disable-share",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportBean_A delete from MyInfra where id = a"
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M3",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M4",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "longPrimitive": 100,
+          "longBoxed": 200
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-disable-share",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M5",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-disable-share"
+      },
+      {
+        "op": "case",
+        "case": "table"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfra(a string primary key, b long, c long)"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString as a, longPrimitive as b, longBoxed as c from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "select",
+        "epl": "@name('select') select irstream (select a from MyInfra) as value, symbol from SupportMarketDataBean"
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S1",
+          "longPrimitive": 1,
+          "longBoxed": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "selectTwo",
+        "epl": "@name('selectTwo') select irstream (select a from MyInfra) as value, symbol from SupportMarketDataBean"
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M1",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S2",
+          "longPrimitive": 10,
+          "longBoxed": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M2",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportBean_A delete from MyInfra where id = a"
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M3",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "S2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M4",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "S3",
+          "longPrimitive": 100,
+          "longBoxed": 200
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "M5",
+          "price": 0.0,
+          "volume": null,
+          "feed": ""
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-uncorrel",
+    "records": [
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 100,
+              "c": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 100,
+              "c": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 100,
+              "c": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-uncorrel",
+    "records": [
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 100,
+              "c": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 100,
+              "c": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S3",
+              "b": 100,
+              "c": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-disable-share",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M1",
+              "value": "S1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M2",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S1",
+              "b": 1,
+              "c": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M3",
+              "value": "S2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "S2",
+              "b": 10,
+              "c": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M4",
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "selectTwo",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "symbol": "M5",
+              "value": "S3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

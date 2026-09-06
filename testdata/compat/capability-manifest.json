@@ -2244,7 +2244,8 @@
     "InfraNamedWindowViews",
     "InfraJoinIndexChoice",
     "InfraRightOuterJoinLateStart",
-    "InfraFullOuterJoinNamedAggregationLateStart"
+    "InfraFullOuterJoinNamedAggregationLateStart",
+    "InfraNWTableSubqUncorrel"
    ],
    "goRefs": [
     "internal/app/parity/infra_named_window_join.go",
@@ -2254,7 +2255,8 @@
     "internal/esper/rowrecog.go",
     "internal/esper/runtime.go",
     "internal/esper/state.go",
-    "internal/esper/trigger.go"
+    "internal/esper/trigger.go",
+    "internal/app/parity/infra_nwtable_subq_uncorrel.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -38693,6 +38695,72 @@
    "notes": [
     "EPLSubselectOrderOfEval and EPLSubselectIndex close subselect evaluation-order and index-choice edges: window(tl.*)/window(ts.*) over a correlated #time(20 minutes) subselect deliver grouped window-aggregate rows as row arrays (wall-clock bean times pinned to 1000/1010, provably outcome-invariant), the preeval-on default (selfSubselectPreeval=true) makes both not-in filter statements silent (zero records by design), the 19-cycle #unique(<fields>) data-window matrix drives per-cycle retained-row sets with multi-row scalar subqueries returning null, and unique/firstunique/#time(1)#unique/#groupwin#unique correlated scalar subqueries match Java exactly. The regression hook annotation (plan-only) is dropped; the DISABLE_UNIQUE_IMPLICIT_IDX hint window shape is preserved."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-subq-uncorrel",
+   "javaRuntimeIds": [
+    "java-runtime-e175cfaf55ce541ca088",
+    "java-runtime-f03db66c82987b5cef54",
+    "java-runtime-d521ebd5c45c89c8e842",
+    "java-runtime-1a498d1407159a6d8c90"
+   ],
+   "javaStaticIds": [
+    "java-5af40542812749ae30e4",
+    "java-5af40542812749ae30e4",
+    "java-5af40542812749ae30e4",
+    "java-5af40542812749ae30e4"
+   ],
+   "javaNames": [
+    "InfraNWTableSubqUncorrelAssertion{namedWindow=true, enableIndexShareCreate=false, disableIndexShareConsumer=false}",
+    "InfraNWTableSubqUncorrelAssertion{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=false}",
+    "InfraNWTableSubqUncorrelAssertion{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=true}",
+    "InfraNWTableSubqUncorrelAssertion{namedWindow=false, enableIndexShareCreate=false, disableIndexShareConsumer=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqUncorrel.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqUncorrelDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqUncorrelDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqUncorrelDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqUncorrelCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqUncorrelRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqUncorrelRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "table",
+    "subselect",
+    "uncorrelated",
+    "index-share",
+    "on-delete",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-subq-uncorrel.json",
+    "testdata/parity/infra-nwtable-subq-uncorrel.trace.json",
+    "testdata/parity/infra-nwtable-subq-uncorrel.go.trace.json",
+    "testdata/parity/infra-nwtable-subq-uncorrel.evidence.json",
+    "tools/java-oracle/InfraNWTableSubqUncorrelScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-subq-uncorrel.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-e175cfaf55ce541ca088",
+    "java-runtime-f03db66c82987b5cef54",
+    "java-runtime-d521ebd5c45c89c8e842",
+    "java-runtime-1a498d1407159a6d8c90"
+   ],
+   "notes": [
+    "InfraNWTableSubqUncorrel pins uncorrelated scalar subqueries over a projection named window and a primary-key table: irstream consumers see null/one-row/multi-row null progression across inserts and trigger deletes, the create statement carries insert rows as new and deleted rows as old, and the on-delete statement publishes the removed rows as new data. Index-share hints are plan-only. Engine: named-window delete triggers now publish removed rows as newEvents (matching Java insert-stream semantics, FAF deletes keep oldEvents) and named-window mutation trigger dispatches are deferred until after the consumer wave flush so create old rows precede on-delete new rows."
+   ]
   }
  ],
  "mappings": [
@@ -41483,13 +41551,17 @@
   {
    "capabilityId": "epl.subselect.filtered",
    "caseId": "case.epl-subselect-order-of-eval-index"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-subq-uncorrel"
   }
  ],
  "summary": {
-  "inventoriedCases": 613,
-  "implementedCases": 611,
-  "differentialVerifiedCases": 226,
-  "differentialVerifiedRuntimeIds": 803,
+  "inventoriedCases": 614,
+  "implementedCases": 612,
+  "differentialVerifiedCases": 227,
+  "differentialVerifiedRuntimeIds": 807,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -41499,14 +41571,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3426,
-  "referencedJavaRuntimeIds": 3185,
+  "runtimeAssociationCount": 3430,
+  "referencedJavaRuntimeIds": 3189,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 951,
+  "unreferencedJavaRuntimeIds": 947,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 613,
+  "totalCases": 614,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 803
+  "differentialVerifiedRuntimeIDs": 807
  }
 }
