@@ -2249,7 +2249,8 @@
     "InfraNWTableSubqueryAtEventBean",
     "InfraNWTableSubqCorrelJoin",
     "InfraNWTableSubqFilteredCorrel",
-    "InfraNamedWindowOnUpdate"
+    "InfraNamedWindowOnUpdate",
+    "InfraNamedWindowInsertFrom"
    ],
    "goRefs": [
     "internal/app/parity/infra_named_window_join.go",
@@ -2265,7 +2266,8 @@
     "internal/app/parity/infra_nwtable_subq_correl_join.go",
     "internal/app/parity/infra_nwtable_subq_filtered_correl.go",
     "internal/app/parity/infra_named_window_on_update.go",
-    "internal/app/parity/infra_named_window_on_update_misc.go"
+    "internal/app/parity/infra_named_window_on_update_misc.go",
+    "internal/app/parity/infra_named_window_insert_from.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -39173,6 +39175,73 @@
    "notes": [
     "InfraNamedWindowOnUpdate misc variants pin the remaining 4 executions (ordinals 0/3/4/5), closing the file at 8/8: the non-property-set update (method-call set clauses setIntPrimitive(10) + plugin single-row function setBeanLongPrimitive999, compiled verbatim by the Java oracle via a suite-faithful plugin registration and ported to Go as the approved-difference literal assignments) delivers the update statement's own old/new pair (new 10/999, old 1/0 projected to intPrimitive,longPrimitive); the subclass update routes a SupportBean trigger into a SupportBeanAbstractSub-typed window through a collapsed Go struct with pointer fields for null-exact v1 and carries the old pre-image on the create consumer (Java default irstream delivery); the copy-method bean update runs under the field-wise-copy approved difference (no copy hook); the wrapper-select window (select *, 1 as p0) declares p0 in the schema, inserts via CopyMatchingFields plus a SetColumn p0 assignment, and snapshots to theString,p0. The wrapper create+insert is one merged deploy step (probe-proven: a create-window-as-select with wildcard + extra property never registers its type among public types on the fixed tree, so a separate insert module cannot resolve it; mirrors the Java suite's own single-module compile). Snapshot rows project to the Java-asserted fields and mode-any snapshots use the differential canonical row order. javaFlags pins [] per runtime-inventory truth (static-manifest over-approximates file-scoped SERDEREQUIRED; only InfraUpdateCopyMethodBean declares it, with no Go-harness effect)."
    ]
+  },
+  {
+   "id": "case.infra-named-window-insert-from",
+   "javaRuntimeIds": [
+    "java-runtime-b3f6cb7b36c5211c8822",
+    "java-runtime-e601b3cc7f827d578185",
+    "java-runtime-46011542d6e9d34a87f5",
+    "java-runtime-8138dd777290d00417d1"
+   ],
+   "javaStaticIds": [
+    "java-b0917219c462cba9d770",
+    "java-cff4a3193da2b063a351",
+    "java-282d7b64878866ea4709",
+    "java-282d7b64878866ea4709"
+   ],
+   "javaNames": [
+    "InfraCreateNamedAfterNamed",
+    "InfraInsertWhereTypeAndFilter",
+    "InfraNamedWindowInsertLenientPropCount{rep=MAP}",
+    "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowInsertFromDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowInsertFromDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowInsertFromDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowInsertFromCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowInsertFromRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowInsertFromRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "insert-from",
+    "seed",
+    "unique",
+    "lenient",
+    "object-array",
+    "snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-named-window-insert-from.json",
+    "testdata/parity/infra-named-window-insert-from.trace.json",
+    "testdata/parity/infra-named-window-insert-from.go.trace.json",
+    "testdata/parity/infra-named-window-insert-from.evidence.json",
+    "tools/java-oracle/InfraNamedWindowInsertFromScenarioOracle.java",
+    "tools/java-oracle/run-infra-named-window-insert-from.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b3f6cb7b36c5211c8822",
+    "java-runtime-e601b3cc7f827d578185",
+    "java-runtime-46011542d6e9d34a87f5",
+    "java-runtime-8138dd777290d00417d1"
+   ],
+   "notes": [
+    "InfraNamedWindowInsertFrom pins insert-from-window semantics for 4 of 7 executions (ordinals 0/1/5/6): type-by-window creation after an existing named window with shared insert delivery (windowOne full-row record plus a selectOne record projected to theString only); the insert-from heart — create-window-insert seeds (plain keepall, where-filtered keepall, unique(intPrimitive) last-per-id dedup-at-seed) whose deploy-time row copies never reach the attach-after-deploy create-statement listeners, verified through ordered and mode-any snapshots (A1..C5, A1/A4, C3/C5) and four per-window filtered routing inserts delivering exactly one listener record each (B9 into Two, A8 into IWT, C7 into Three, D6 into Four, confirming the seed is a one-time copy and ongoing flow requires explicit insert-into); and lenient partial-column inserts (one of two columns per insert, the other null-filled) over MAP and OBJECTARRAY schemas snapshotted as ordered c0/c1 pairs. Typed Go seeds the new windows at the create deploy step through a harness mapping — the source statement Snapshot + Underlying + engine.InsertNamedWindow (retention dedup natural; the where seed filter is a theString first-character check, exact for this scenario's payload set) — while the seeded create statements deploy as plain FromNamedWindow(...).Query(...) consumers so seed rows never reach their attach-after-deploy listeners; ongoing flow uses OnEvent(...).Filter(Like).InsertIntoNamedWindow(CopyMatchingFields) routes, and lenient schemas register with NewMapSchema/NewObjectArraySchema using pointer c1 fields for null-exact rendering. Snapshot rows project to the Java-asserted fields; mode-any snapshots use the differential canonical row order. StatementProperty/assertSame/count-check assertions and the OM toEPL round-trip matrix (ord 2), invalid compiles (ord 3, no Go rejection surface), and variant streams (ord 4, unproven surface) are approved differences/deferrals recorded here."
+   ]
   }
  ],
  "mappings": [
@@ -41991,13 +42060,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-named-window-on-update-misc"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-named-window-insert-from"
   }
  ],
  "summary": {
-  "inventoriedCases": 620,
-  "implementedCases": 618,
-  "differentialVerifiedCases": 233,
-  "differentialVerifiedRuntimeIds": 831,
+  "inventoriedCases": 621,
+  "implementedCases": 619,
+  "differentialVerifiedCases": 234,
+  "differentialVerifiedRuntimeIds": 835,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42007,14 +42080,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3454,
-  "referencedJavaRuntimeIds": 3213,
+  "runtimeAssociationCount": 3458,
+  "referencedJavaRuntimeIds": 3217,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 923,
+  "unreferencedJavaRuntimeIds": 919,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 620,
+  "totalCases": 621,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 831
+  "differentialVerifiedRuntimeIDs": 835
  }
 }

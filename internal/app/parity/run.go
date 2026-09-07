@@ -101,6 +101,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNamedWindowOnUpdateScenario(file)
 	} else if *mode == "infra-named-window-on-update-misc" || *mode == "infra-named-window-on-update-misc-diff" {
 		scenario, err = loadInfraNamedWindowOnUpdateMiscScenario(file)
+	} else if *mode == "infra-named-window-insert-from" || *mode == "infra-named-window-insert-from-diff" {
+		scenario, err = loadInfraNamedWindowInsertFromScenario(file)
 	} else if *mode == "infra-nwtable-start-stop" || *mode == "infra-nwtable-start-stop-diff" {
 		scenario, err = loadInfraNWTableStartStopScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
@@ -273,6 +275,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableSubqCorrelJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableSubqCorrelJoinJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableSubqCorrelJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-named-window-insert-from" || *mode == "infra-named-window-insert-from-diff" {
+		trace, err := runInfraNamedWindowInsertFromScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-named-window-insert-from-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNamedWindowInsertFromJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNamedWindowInsertFromJavaSources),
+				splitMetadata(*javaExecutions, infraNamedWindowInsertFromJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

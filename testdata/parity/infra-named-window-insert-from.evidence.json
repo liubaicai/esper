@@ -1,0 +1,1055 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-b3f6cb7b36c5211c8822",
+    "java-runtime-e601b3cc7f827d578185",
+    "java-runtime-46011542d6e9d34a87f5",
+    "java-runtime-8138dd777290d00417d1"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java"
+  ],
+  "javaExecutions": [
+    "InfraCreateNamedAfterNamed",
+    "InfraInsertWhereTypeAndFilter",
+    "InfraNamedWindowInsertLenientPropCount{rep=MAP}",
+    "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-insert-from",
+    "steps": [
+      {
+        "op": "case",
+        "case": "create-after-named"
+      },
+      {
+        "op": "deploy",
+        "case": "create-after-named",
+        "statement": "windowOne",
+        "epl": "@name('windowOne') @public create window MyWindow#keepall as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "create-after-named",
+        "statement": "windowTwo",
+        "epl": "@name('windowTwo') @public create window MyWindowTwo#keepall as MyWindow"
+      },
+      {
+        "op": "deploy",
+        "case": "create-after-named",
+        "statement": "insert",
+        "epl": "insert into MyWindow select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "create-after-named",
+        "statement": "selectOne",
+        "epl": "@name('selectOne') select theString from MyWindow"
+      },
+      {
+        "op": "send",
+        "case": "create-after-named",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "create-after-named"
+      },
+      {
+        "op": "case",
+        "case": "insert-where-type-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "window",
+        "epl": "@name('window') @public create window MyWindowIWT#keepall as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "insert",
+        "epl": "insert into MyWindowIWT select * from SupportBean(intPrimitive \u003e 0)"
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C5",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "windowTwo",
+        "epl": "@name('windowTwo') @public create window MyWindowTwo#keepall as MyWindowIWT insert"
+      },
+      {
+        "op": "snapshot",
+        "case": "insert-where-type-filter",
+        "statement": "windowTwo",
+        "mode": "ordered"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "windowThree",
+        "epl": "@name('windowThree') @public create window MyWindowThree#keepall as MyWindowIWT insert where theString like 'A%'"
+      },
+      {
+        "op": "snapshot",
+        "case": "insert-where-type-filter",
+        "statement": "windowThree",
+        "mode": "ordered"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "windowFour",
+        "epl": "@name('windowFour') @public create window MyWindowFour#unique(intPrimitive) as MyWindowIWT insert"
+      },
+      {
+        "op": "snapshot",
+        "case": "insert-where-type-filter",
+        "statement": "windowFour",
+        "mode": "any"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "insertA",
+        "epl": "insert into MyWindowIWT select * from SupportBean(theString like 'A%')"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "insertB",
+        "epl": "insert into MyWindowTwo select * from SupportBean(theString like 'B%')"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "insertC",
+        "epl": "insert into MyWindowThree select * from SupportBean(theString like 'C%')"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-where-type-filter",
+        "statement": "insertD",
+        "epl": "insert into MyWindowFour select * from SupportBean(theString like 'D%')"
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B9",
+          "intPrimitive": -9
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A8",
+          "intPrimitive": -8
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C7",
+          "intPrimitive": -7
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-where-type-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "D6",
+          "intPrimitive": -6
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insert-where-type-filter"
+      },
+      {
+        "op": "case",
+        "case": "lenient-map"
+      },
+      {
+        "op": "deploy",
+        "case": "lenient-map",
+        "statement": "schema",
+        "epl": "@public create MAP schema MyTwoColEvent(c0 string, c1 int)"
+      },
+      {
+        "op": "deploy",
+        "case": "lenient-map",
+        "statement": "window",
+        "epl": "@public @name('window') create window MyWindow#keepall as MyTwoColEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "lenient-map",
+        "statement": "insertOne",
+        "epl": "insert into MyWindow select theString as c0 from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "lenient-map",
+        "statement": "insertTwo",
+        "epl": "insert into MyWindow select id as c1 from SupportBean_S0"
+      },
+      {
+        "op": "send",
+        "case": "lenient-map",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "lenient-map",
+        "statement": "window",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "lenient-map",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "lenient-map",
+        "statement": "window",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "lenient-map"
+      },
+      {
+        "op": "case",
+        "case": "lenient-objectarray"
+      },
+      {
+        "op": "deploy",
+        "case": "lenient-objectarray",
+        "statement": "schema",
+        "epl": "@public create OBJECTARRAY schema MyTwoColEvent(c0 string, c1 int)"
+      },
+      {
+        "op": "deploy",
+        "case": "lenient-objectarray",
+        "statement": "window",
+        "epl": "@public @name('window') create window MyWindow#keepall as MyTwoColEvent"
+      },
+      {
+        "op": "deploy",
+        "case": "lenient-objectarray",
+        "statement": "insertOne",
+        "epl": "insert into MyWindow select theString as c0 from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "lenient-objectarray",
+        "statement": "insertTwo",
+        "epl": "insert into MyWindow select id as c1 from SupportBean_S0"
+      },
+      {
+        "op": "send",
+        "case": "lenient-objectarray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "lenient-objectarray",
+        "statement": "window",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "lenient-objectarray",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "lenient-objectarray",
+        "statement": "window",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "lenient-objectarray"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-insert-from",
+    "records": [
+      {
+        "case": "create-after-named",
+        "operation": "listener",
+        "statement": "windowOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create-after-named",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "C3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "theString": "A4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "theString": "C5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "snapshot",
+        "statement": "windowTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "C3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "A4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "C5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "snapshot",
+        "statement": "windowThree",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "A4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "snapshot",
+        "statement": "windowFour",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "C3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "C5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "windowTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": -9,
+              "theString": "B9"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": -8,
+              "theString": "A8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "windowThree",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": -7,
+              "theString": "C7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "windowFour",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": -6,
+              "theString": "D6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "lenient-map",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "lenient-map",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "lenient-objectarray",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "lenient-objectarray",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-insert-from",
+    "records": [
+      {
+        "case": "create-after-named",
+        "operation": "listener",
+        "statement": "windowOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "create-after-named",
+        "operation": "listener",
+        "statement": "selectOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "C3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "theString": "A4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 4,
+              "theString": "C5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "snapshot",
+        "statement": "windowTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "C3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "A4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "C5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "snapshot",
+        "statement": "windowThree",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "A4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "snapshot",
+        "statement": "windowFour",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "C3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "C5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "windowTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": -9,
+              "theString": "B9"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "window",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": -8,
+              "theString": "A8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "windowThree",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": -7,
+              "theString": "C7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-where-type-filter",
+        "operation": "listener",
+        "statement": "windowFour",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": -6,
+              "theString": "D6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "lenient-map",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "lenient-map",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "lenient-objectarray",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "lenient-objectarray",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

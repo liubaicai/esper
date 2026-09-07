@@ -1,0 +1,119 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-named-window-insert-from",
+  "description": "InfraNamedWindowInsertFrom insert-from-window semantics: type-by-window creation after an existing named window with shared insert delivery, seeded keep-all and filtered and unique-index create-window-insert with deploy-time row copying that never reaches create-statement listeners, filtered routing inserts into each window, and lenient partial-column inserts over map and object-array schemas, captured from window listeners and ordered or canonical mode-any snapshots projected to the Java-asserted fields (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowInsertFrom.java",
+  "javaRuntimes": [
+    "java-runtime-b3f6cb7b36c5211c8822",
+    "java-runtime-e601b3cc7f827d578185",
+    "java-runtime-46011542d6e9d34a87f5",
+    "java-runtime-8138dd777290d00417d1"
+  ],
+  "javaNames": [
+    "InfraCreateNamedAfterNamed",
+    "InfraInsertWhereTypeAndFilter",
+    "InfraNamedWindowInsertLenientPropCount{rep=MAP}",
+    "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}"
+  ],
+  "javaStaticIds": [
+    "java-b0917219c462cba9d770",
+    "java-cff4a3193da2b063a351",
+    "java-282d7b64878866ea4709",
+    "java-282d7b64878866ea4709"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "create-after-named",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-b3f6cb7b36c5211c8822",
+      "executionName": "InfraCreateNamedAfterNamed",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('windowOne') create window MyWindow#keepall as SupportBean"
+    },
+    {
+      "case": "insert-where-type-filter",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-e601b3cc7f827d578185",
+      "executionName": "InfraInsertWhereTypeAndFilter",
+      "observation": "listener",
+      "iteratorSnapshots": 3,
+      "epl": "@name('window') @public create window MyWindowIWT#keepall as SupportBean"
+    },
+    {
+      "case": "lenient-map",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-46011542d6e9d34a87f5",
+      "executionName": "InfraNamedWindowInsertLenientPropCount{rep=MAP}",
+      "observation": "listener",
+      "iteratorSnapshots": 1,
+      "epl": "@public @name('window') create window MyWindow#keepall as MyTwoColEvent"
+    },
+    {
+      "case": "lenient-objectarray",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-8138dd777290d00417d1",
+      "executionName": "InfraNamedWindowInsertLenientPropCount{rep=OBJECTARRAY}",
+      "observation": "listener",
+      "iteratorSnapshots": 1,
+      "epl": "@public @name('window') create window MyWindow#keepall as MyTwoColEvent"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "create-after-named"},
+    {"op": "deploy", "case": "create-after-named", "statement": "windowOne", "epl": "@name('windowOne') @public create window MyWindow#keepall as SupportBean"},
+    {"op": "deploy", "case": "create-after-named", "statement": "windowTwo", "epl": "@name('windowTwo') @public create window MyWindowTwo#keepall as MyWindow"},
+    {"op": "deploy", "case": "create-after-named", "statement": "insert", "epl": "insert into MyWindow select * from SupportBean"},
+    {"op": "deploy", "case": "create-after-named", "statement": "selectOne", "epl": "@name('selectOne') select theString from MyWindow"},
+    {"op": "send", "case": "create-after-named", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "undeploy-all", "case": "create-after-named"},
+
+    {"op": "case", "case": "insert-where-type-filter"},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "window", "epl": "@name('window') @public create window MyWindowIWT#keepall as SupportBean"},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "insert", "epl": "insert into MyWindowIWT select * from SupportBean(intPrimitive > 0)"},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 1}},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 1}},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "C3", "intPrimitive": 1}},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "A4", "intPrimitive": 4}},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "C5", "intPrimitive": 4}},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "windowTwo", "epl": "@name('windowTwo') @public create window MyWindowTwo#keepall as MyWindowIWT insert"},
+    {"op": "snapshot", "case": "insert-where-type-filter", "statement": "windowTwo", "mode": "ordered"},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "windowThree", "epl": "@name('windowThree') @public create window MyWindowThree#keepall as MyWindowIWT insert where theString like 'A%'"},
+    {"op": "snapshot", "case": "insert-where-type-filter", "statement": "windowThree", "mode": "ordered"},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "windowFour", "epl": "@name('windowFour') @public create window MyWindowFour#unique(intPrimitive) as MyWindowIWT insert"},
+    {"op": "snapshot", "case": "insert-where-type-filter", "statement": "windowFour", "mode": "any"},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "insertA", "epl": "insert into MyWindowIWT select * from SupportBean(theString like 'A%')"},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "insertB", "epl": "insert into MyWindowTwo select * from SupportBean(theString like 'B%')"},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "insertC", "epl": "insert into MyWindowThree select * from SupportBean(theString like 'C%')"},
+    {"op": "deploy", "case": "insert-where-type-filter", "statement": "insertD", "epl": "insert into MyWindowFour select * from SupportBean(theString like 'D%')"},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "B9", "intPrimitive": -9}},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "A8", "intPrimitive": -8}},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "C7", "intPrimitive": -7}},
+    {"op": "send", "case": "insert-where-type-filter", "eventType": "SupportBean", "payload": {"theString": "D6", "intPrimitive": -6}},
+    {"op": "undeploy-all", "case": "insert-where-type-filter"},
+
+    {"op": "case", "case": "lenient-map"},
+    {"op": "deploy", "case": "lenient-map", "statement": "schema", "epl": "@public create MAP schema MyTwoColEvent(c0 string, c1 int)"},
+    {"op": "deploy", "case": "lenient-map", "statement": "window", "epl": "@public @name('window') create window MyWindow#keepall as MyTwoColEvent"},
+    {"op": "deploy", "case": "lenient-map", "statement": "insertOne", "epl": "insert into MyWindow select theString as c0 from SupportBean"},
+    {"op": "deploy", "case": "lenient-map", "statement": "insertTwo", "epl": "insert into MyWindow select id as c1 from SupportBean_S0"},
+    {"op": "send", "case": "lenient-map", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+    {"op": "snapshot", "case": "lenient-map", "statement": "window", "mode": "ordered"},
+    {"op": "send", "case": "lenient-map", "eventType": "SupportBean_S0", "payload": {"id": 10}},
+    {"op": "snapshot", "case": "lenient-map", "statement": "window", "mode": "ordered"},
+    {"op": "undeploy-all", "case": "lenient-map"},
+
+    {"op": "case", "case": "lenient-objectarray"},
+    {"op": "deploy", "case": "lenient-objectarray", "statement": "schema", "epl": "@public create OBJECTARRAY schema MyTwoColEvent(c0 string, c1 int)"},
+    {"op": "deploy", "case": "lenient-objectarray", "statement": "window", "epl": "@public @name('window') create window MyWindow#keepall as MyTwoColEvent"},
+    {"op": "deploy", "case": "lenient-objectarray", "statement": "insertOne", "epl": "insert into MyWindow select theString as c0 from SupportBean"},
+    {"op": "deploy", "case": "lenient-objectarray", "statement": "insertTwo", "epl": "insert into MyWindow select id as c1 from SupportBean_S0"},
+    {"op": "send", "case": "lenient-objectarray", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+    {"op": "snapshot", "case": "lenient-objectarray", "statement": "window", "mode": "ordered"},
+    {"op": "send", "case": "lenient-objectarray", "eventType": "SupportBean_S0", "payload": {"id": 10}},
+    {"op": "snapshot", "case": "lenient-objectarray", "statement": "window", "mode": "ordered"},
+    {"op": "undeploy-all", "case": "lenient-objectarray"}
+  ]
+}
