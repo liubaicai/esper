@@ -1,0 +1,1379 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-e14796f7892a57096988",
+    "java-runtime-7ef0dbf9f8ea7e311720",
+    "java-runtime-6c0691c9d5549b937cfc",
+    "java-runtime-683b282c41f311ed8429"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableStartStop.java"
+  ],
+  "javaExecutions": [
+    "InfraStartStopConsumer{namedWindow=true}",
+    "InfraStartStopConsumer{namedWindow=false}",
+    "InfraStartStopInserter{namedWindow=true}",
+    "InfraStartStopInserter{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-start-stop",
+    "steps": [
+      {
+        "op": "case",
+        "case": "consumer-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "consumer-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfra#keepall as select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "consumer-nw",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "consumer-nw",
+        "statement": "select",
+        "epl": "@Name('select') select a, b from MyInfra as s1"
+      },
+      {
+        "op": "send",
+        "case": "consumer-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-nw",
+        "statement": "create"
+      },
+      {
+        "op": "undeploy",
+        "case": "consumer-nw",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "case": "consumer-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "deploy",
+        "case": "consumer-nw",
+        "statement": "select",
+        "epl": "@Name('select') select a, b from MyInfra as s1"
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-nw",
+        "statement": "select",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "consumer-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-nw",
+        "statement": "select"
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy",
+        "case": "consumer-nw",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "case": "consumer-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "consumer-nw"
+      },
+      {
+        "op": "case",
+        "case": "consumer-table"
+      },
+      {
+        "op": "deploy",
+        "case": "consumer-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfra(a string primary key, b int primary key)"
+      },
+      {
+        "op": "deploy",
+        "case": "consumer-table",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "consumer-table",
+        "statement": "select",
+        "epl": "@Name('select') select a, b from MyInfra as s1"
+      },
+      {
+        "op": "send",
+        "case": "consumer-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-table",
+        "statement": "create"
+      },
+      {
+        "op": "undeploy",
+        "case": "consumer-table",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "case": "consumer-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "deploy",
+        "case": "consumer-table",
+        "statement": "select",
+        "epl": "@Name('select') select a, b from MyInfra as s1"
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-table",
+        "statement": "select",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "consumer-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "consumer-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy",
+        "case": "consumer-table",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "case": "consumer-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "consumer-table"
+      },
+      {
+        "op": "case",
+        "case": "inserter-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "inserter-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfra#keepall as select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "inserter-nw",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyInfra select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "inserter-nw",
+        "statement": "select",
+        "epl": "@name('select') select a, b from MyInfra as s1"
+      },
+      {
+        "op": "send",
+        "case": "inserter-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "inserter-nw",
+        "statement": "create"
+      },
+      {
+        "op": "undeploy",
+        "case": "inserter-nw",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "inserter-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "inserter-nw",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyInfra select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "inserter-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "inserter-nw",
+        "statement": "select"
+      },
+      {
+        "op": "snapshot",
+        "case": "inserter-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy",
+        "case": "inserter-nw",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "inserter-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "inserter-nw"
+      },
+      {
+        "op": "case",
+        "case": "inserter-table"
+      },
+      {
+        "op": "deploy",
+        "case": "inserter-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfra(a string primary key, b int primary key)"
+      },
+      {
+        "op": "deploy",
+        "case": "inserter-table",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyInfra select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "inserter-table",
+        "statement": "select",
+        "epl": "@name('select') select a, b from MyInfra as s1"
+      },
+      {
+        "op": "send",
+        "case": "inserter-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "inserter-table",
+        "statement": "create"
+      },
+      {
+        "op": "undeploy",
+        "case": "inserter-table",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "inserter-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "inserter-table",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyInfra select theString as a, intPrimitive as b from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "inserter-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "inserter-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy",
+        "case": "inserter-table",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "inserter-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "inserter-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-start-stop",
+    "records": [
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "b": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-table",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-start-stop",
+    "records": [
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E4",
+              "b": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-table",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "consumer-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E2",
+              "b": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "snapshot",
+        "statement": "select",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "inserter-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E1",
+              "b": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a": "E3",
+              "b": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

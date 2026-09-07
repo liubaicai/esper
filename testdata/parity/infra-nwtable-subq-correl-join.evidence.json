@@ -10,12 +10,9 @@
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqCorrelJoin.java"
   ],
   "javaExecutions": [
-    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=true",
-    "enableIndexShareCreate=false}",
-    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=true",
-    "enableIndexShareCreate=true}",
-    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=false",
-    "enableIndexShareCreate=false}"
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=true, enableIndexShareCreate=false}",
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=true, enableIndexShareCreate=true}",
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=false, enableIndexShareCreate=false}"
   ],
   "scenario": {
     "version": "esper-parity/v1",
