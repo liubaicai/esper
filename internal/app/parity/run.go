@@ -109,6 +109,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetAggregateFilterNamedParameterSortedJoinScenario(file)
 	} else if *mode == "infra-nwtable-subq-correl-coerce" || *mode == "infra-nwtable-subq-correl-coerce-diff" {
 		scenario, err = loadInfraNWTableSubqCorrelCoerceScenario(file)
+	} else if *mode == "epl-other-stream-expr" || *mode == "epl-other-stream-expr-diff" {
+		scenario, err = loadEplOtherStreamExprScenario(file)
 	} else if *mode == "infra-nwtable-start-stop" || *mode == "infra-nwtable-start-stop-diff" {
 		scenario, err = loadInfraNWTableStartStopScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
@@ -281,6 +283,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableSubqCorrelJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableSubqCorrelJoinJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableSubqCorrelJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-other-stream-expr" || *mode == "epl-other-stream-expr-diff" {
+		trace, err := runEplOtherStreamExprScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-other-stream-expr-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplOtherStreamExprJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplOtherStreamExprJavaSources),
+				splitMetadata(*javaExecutions, eplOtherStreamExprJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

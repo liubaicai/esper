@@ -37563,6 +37563,370 @@ func assertInfraNWTableSubqCorrelCoerceTrace(t *testing.T, trace compat.Trace) {
 	}
 }
 
+func TestRunEplOtherStreamExprDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherStreamExprID,
+		"-scenario", filepath.Join(root, eplOtherStreamExprID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEplOtherStreamExprTrace(t, trace)
+}
+
+func TestRunEplOtherStreamExprDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eplOtherStreamExprID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherStreamExprID + "-diff",
+		"-scenario", filepath.Join(root, eplOtherStreamExprID+".json"),
+		"-java-trace", filepath.Join(root, eplOtherStreamExprID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != eplOtherStreamExprJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplOtherStreamExprJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{eplOtherStreamExprSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplOtherStreamExprJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertEplOtherStreamExprTrace(t, evidence.JavaTrace)
+	assertEplOtherStreamExprTrace(t, evidence.GoTrace)
+}
+
+func TestRunEplOtherStreamExprDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "sf-volume-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["volume"] = json.Number("1")
+			},
+		},
+		{
+			name: "outer-join-null-to-value",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["theString"] = "ACME"
+			},
+		},
+		{
+			name: "aliased-pvf-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["pvf"] = json.Number("999")
+			},
+		},
+		{
+			name: "no-alias-c0-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[0].Fields["c0"] = json.Number("99")
+			},
+		},
+		{
+			name: "join-s1stream-theString-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0].Fields["s1stream"] = map[string]any{
+					"kind": "row", "fields": map[string]any{"intPrimitive": json.Number("0"), "theString": "X"},
+				}
+			},
+		},
+		{
+			name: "statement-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Statement = "s0b"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:9]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, eplOtherStreamExprID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eplOtherStreamExprID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eplOtherStreamExprID + "-diff",
+				"-scenario", filepath.Join(root, eplOtherStreamExprID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEplOtherStreamExprCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eplOtherStreamExprID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eplOtherStreamExprID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eplOtherStreamExprID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != eplOtherStreamExprJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplOtherStreamExprJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{eplOtherStreamExprSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplOtherStreamExprJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEplOtherStreamExprTrace(t, javaTrace)
+	assertEplOtherStreamExprTrace(t, goTrace)
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		eplOtherStreamExprJavaCommit,
+		eplOtherStreamExprJavaRuntimeIDs,
+		[]string{eplOtherStreamExprSource},
+		eplOtherStreamExprJavaExecutions,
+		scenarioForEplOtherStreamExpr(t, root), javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherStreamExprID,
+		"-scenario", filepath.Join(root, eplOtherStreamExprID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertEplOtherStreamExprTrace(t, replayed)
+}
+
+func scenarioForEplOtherStreamExpr(t *testing.T, root string) compat.Scenario {
+	t.Helper()
+	scenarioPath := filepath.Join(root, eplOtherStreamExprID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	return compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+}
+
+func TestRunEplOtherStreamExprRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eplOtherStreamExprID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "stream-function"`), []byte(`"case": "stream-function", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-67e9ea0d239585623711"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "epl-filter-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`volumeGreaterZero(s0)`), []byte(`volumeGreaterZero(s1)`), 1)
+		}},
+		{name: "epl-trailing-space-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`from SupportMarketDataBean as s0 "`), []byte(`from SupportMarketDataBean as s0x"`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"volume": 100`), []byte(`"volume": 1`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportMarketDataBean"`), []byte(`"eventType": "Wrong"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", eplOtherStreamExprID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEplOtherStreamExprRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", eplOtherStreamExprID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != eplOtherStreamExprID ||
+		document.Description != eplOtherStreamExprDescription ||
+		document.JavaCommit != eplOtherStreamExprJavaCommit ||
+		document.JavaSource != eplOtherStreamExprSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, eplOtherStreamExprJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, eplOtherStreamExprJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, eplOtherStreamExprJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(eplOtherStreamExprCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != eplOtherStreamExprCases[index] ||
+			entry.Ordinal != eplOtherStreamExprOrdinals[index] ||
+			entry.RuntimeID != eplOtherStreamExprJavaRuntimeIDs[index] ||
+			entry.ExecutionName != eplOtherStreamExprJavaExecutions[index] ||
+			entry.Observation != "listener" || entry.IteratorSnapshots != 0 {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertEplOtherStreamExprTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eplOtherStreamExprID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 10 {
+		t.Fatalf("trace records = %d, want 10", len(trace.Records))
+	}
+	mdRow := func(volume int) map[string]any {
+		return map[string]any{"feed": map[string]any{"state": "null"}, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number(fmt.Sprint(volume))}
+	}
+	beanRow := func(theString any) map[string]any {
+		return map[string]any{"intPrimitive": json.Number("0"), "theString": theString}
+	}
+	beanRowACME1 := func() map[string]any {
+		return map[string]any{"intPrimitive": json.Number("1"), "theString": "ACME"}
+	}
+	type expect struct {
+		caseName string
+		sequence uint64
+		fields   map[string]any
+	}
+	nullState := map[string]any{"state": "null"}
+	expects := []expect{
+		{"stream-function", 1, map[string]any{"feed": nullState, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number("100")}},
+		{"stream-function", 2, map[string]any{"feed": nullState, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number("100")}},
+		{"stream-function", 3, map[string]any{"feed": nullState, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number("100")}},
+		{"stream-function", 4, map[string]any{"feed": nullState, "price": json.Number("0"), "symbol": "ACME", "volume": json.Number("100")}},
+		{"stream-instance-method-aliased", 1, map[string]any{"pvf": json.Number("792"), "symbol": "ACME", "volume": json.Number("99")}},
+		{"stream-instance-method-no-alias", 1, map[string]any{"s0.getPriceTimesVolume(3)": json.Number("24"), "s0.getVolume()": json.Number("2")}},
+		{"stream-instance-method-no-alias", 2, map[string]any{"c0": json.Number("10"), "c1": json.Number("10")}},
+		{"join-stream-select", 1, map[string]any{"s0stream": map[string]any{"kind": "row", "fields": mdRow(0)}, "s1stream": map[string]any{"kind": "row", "fields": beanRow(nullState)}}},
+		{"join-stream-select", 2, map[string]any{"s0": map[string]any{"kind": "row", "fields": mdRow(0)}, "s1": map[string]any{"kind": "row", "fields": beanRow(nullState)}}},
+		{"pattern-stream-select", 1, map[string]any{"e1": map[string]any{"kind": "row", "fields": mdRow(0)}, "e2": map[string]any{"kind": "row", "fields": beanRowACME1()}}},
+	}
+	for index, want := range expects {
+		record := trace.Records[index]
+		if record.Case != want.caseName || record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != want.sequence || record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d metadata = %#v", index, record)
+		}
+		if len(record.New) != 1 {
+			t.Fatalf("record %d new rows = %d, want 1", index, len(record.New))
+		}
+		if !reflect.DeepEqual(record.New[0].Fields, want.fields) {
+			t.Fatalf("record %d new = %#v, want %#v", index, record.New[0].Fields, want.fields)
+		}
+		if len(record.Old) != 0 {
+			t.Fatalf("record %d unexpected old = %#v", index, record.Old)
+		}
+	}
+}
+
 func mustInt64(t *testing.T, value any) int64 {
 	number, ok := value.(json.Number)
 	if !ok {

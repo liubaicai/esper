@@ -39457,6 +39457,76 @@
    "notes": [
     "InfraNWTableSubqCorrelCoerce pins correlated scalar subqueries with int-to-long coercion across all 8 flag combinations (named window or col0-primary-key table; enable_window_subquery_indexshare create hint; disable_window_subquery_indexshare consumer hint; explicit two-key create index MyIndex (col2, col1)). The correlation col2 = es.e2 (string) and col1 = es.e1 (outer Integer coerced to the indexed long column) probes the infra through implicit, shared, or explicit indexes — hints are plan-inert here so all 8 executions emit the identical seven s0 records (val W1/null/W2/W3/W1/W4/W4). The mid-case undeploy(s0) + redeploy proves the subquery index repopulates from existing infra contents at statement start (sequence 7 re-derives W4 from the pre-existing keepall/table rows). Typed Go builds SubqueryValueWithOptions(col0, SubqueryWhere(And(Equal(col2, OuterField(e2)), EqualOf(Field[any,int64](col1), OuterField[int](e1))))) over FromNamedWindow/FromTable — EqualOf's big.Rat comparison covers the int-to-long coercion and the engine's subquery index probe collector recognizes equal-of with probe-value coercion — plus multi-key CreateIndex(\"MyIndex\", []string{\"col2\",\"col1\"}, IndexHash, false) and the selective undeploy/redeploy harness ops."
    ]
+  },
+  {
+   "id": "case-epl-other-stream-expr",
+   "javaRuntimeIds": [
+    "java-runtime-67e9ea0d239585623711",
+    "java-runtime-cc45d135a75bb01736f0",
+    "java-runtime-469a37a746e59d25a115",
+    "java-runtime-a59b12bbe5788257c37b",
+    "java-runtime-827ea8daeea9baec40cf"
+   ],
+   "javaStaticIds": [
+    "java-e571ee83c24576b8aba7",
+    "java-b448cd11a74aaf56dbab",
+    "java-572869619d74ba3c95be",
+    "java-534aeb16b8d33707670a",
+    "java-dfb3493bb3eb08a778db"
+   ],
+   "javaNames": [
+    "EPLOtherStreamFunction",
+    "EPLOtherStreamInstanceMethodAliased",
+    "EPLOtherStreamInstanceMethodNoAlias",
+    "EPLOtherJoinStreamSelectNoWildcard",
+    "EPLOtherPatternStreamSelectNoWildcard"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplOtherStreamExprDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherStreamExprDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplOtherStreamExprDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEplOtherStreamExprCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherStreamExprRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEplOtherStreamExprRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "epl",
+    "other",
+    "stream-expr",
+    "method",
+    "join",
+    "pattern",
+    "udf",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-stream-expr.json",
+    "testdata/parity/epl-other-stream-expr.trace.json",
+    "testdata/parity/epl-other-stream-expr.go.trace.json",
+    "testdata/parity/epl-other-stream-expr.evidence.json",
+    "tools/java-oracle/EPLOtherStreamExprScenarioOracle.java",
+    "tools/java-oracle/run-epl-other-stream-expr.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-67e9ea0d239585623711",
+    "java-runtime-cc45d135a75bb01736f0",
+    "java-runtime-469a37a746e59d25a115",
+    "java-runtime-a59b12bbe5788257c37b",
+    "java-runtime-827ea8daeea9baec40cf"
+   ],
+   "notes": [
+    "EPLOtherStreamExpr pins stream method expressions across 5 of 9 executions (ordinals 1/4/5/6/7): static-method where filters on a plain stream with stream-name, wildcard, and EventBean argument forms (volumeGreaterZero / volumeGreaterZeroEventBean); aliased and no-alias instance-method projections with verbatim expression-text output names (s0.getVolume(), s0.getPriceTimesVolume(3)) and Double/Long value rendering; stream-as-object join columns (s0stream/s1stream and s0/s1) over keepall inner joins; and a followed-by pattern with a static UDF filter comparing prior-tag properties. Method expressions compose via Method[T](EventValue[T](), ...) for event-receiver calls and Property[T](PatternEvent(tag), name) for pattern-tag navigation. Deferred executions: ord 0 (chained parameterized — chained Method resolution returns missing in Go, needs engine work), ord 2/3 (instance methods on absent join sides return missing instead of null — needs Method null-propagation alignment), ord 8 (invalid compiles — no Go rejection surface). All four deferred items are approved differences / engine-work items."
+   ]
   }
  ],
  "mappings": [
@@ -42291,13 +42361,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-subq-correl-coerce"
+  },
+  {
+   "capabilityId": "epl.other.distinct",
+   "caseId": "case-epl-other-stream-expr"
   }
  ],
  "summary": {
-  "inventoriedCases": 624,
-  "implementedCases": 622,
-  "differentialVerifiedCases": 237,
-  "differentialVerifiedRuntimeIds": 849,
+  "inventoriedCases": 625,
+  "implementedCases": 623,
+  "differentialVerifiedCases": 238,
+  "differentialVerifiedRuntimeIds": 854,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42307,14 +42381,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3472,
-  "referencedJavaRuntimeIds": 3231,
+  "runtimeAssociationCount": 3477,
+  "referencedJavaRuntimeIds": 3236,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 905,
+  "unreferencedJavaRuntimeIds": 900,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 624,
+  "totalCases": 625,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 849
+  "differentialVerifiedRuntimeIDs": 854
  }
 }

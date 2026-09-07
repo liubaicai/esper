@@ -1,0 +1,276 @@
+{
+  "version": "esper-parity/v1",
+  "id": "epl-other-stream-expr",
+  "description": "EPLOtherStreamExpr stream method expressions: static-method where filters with stream-name, wildcard, and EventBean arguments, aliased and verbatim no-alias expression-text output names with Long/Double/String value rendering, stream-as-object join columns, and a followed-by pattern with a static UDF filter referencing the prior tag (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java; chained parameterized, outer-join instance-method, static-method instance, and invalid-select executions are deferred with rationale in the capability manifest).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherStreamExpr.java",
+  "javaRuntimes": [
+    "java-runtime-67e9ea0d239585623711",
+    "java-runtime-cc45d135a75bb01736f0",
+    "java-runtime-469a37a746e59d25a115",
+    "java-runtime-a59b12bbe5788257c37b",
+    "java-runtime-827ea8daeea9baec40cf"
+  ],
+  "javaNames": [
+    "EPLOtherStreamFunction",
+    "EPLOtherStreamInstanceMethodAliased",
+    "EPLOtherStreamInstanceMethodNoAlias",
+    "EPLOtherJoinStreamSelectNoWildcard",
+    "EPLOtherPatternStreamSelectNoWildcard"
+  ],
+  "javaStaticIds": [
+    "java-e571ee83c24576b8aba7",
+    "java-b448cd11a74aaf56dbab",
+    "java-572869619d74ba3c95be",
+    "java-534aeb16b8d33707670a",
+    "java-dfb3493bb3eb08a778db"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "stream-function",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-67e9ea0d239585623711",
+      "executionName": "EPLOtherStreamFunction",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select * from SupportMarketDataBean as s0 where com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.volumeGreaterZero(s0)"
+    },
+    {
+      "case": "stream-instance-method-aliased",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-cc45d135a75bb01736f0",
+      "executionName": "EPLOtherStreamInstanceMethodAliased",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select s0.getVolume() as volume, s0.getSymbol() as symbol, s0.getPriceTimesVolume(2) as pvf from SupportMarketDataBean as s0 "
+    },
+    {
+      "case": "stream-instance-method-no-alias",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-469a37a746e59d25a115",
+      "executionName": "EPLOtherStreamInstanceMethodNoAlias",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select s0.getVolume(), s0.getPriceTimesVolume(3) from SupportMarketDataBean as s0 "
+    },
+    {
+      "case": "join-stream-select",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-a59b12bbe5788257c37b",
+      "executionName": "EPLOtherJoinStreamSelectNoWildcard",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select s0 as s0stream, s1 as s1stream from SupportMarketDataBean#keepall as s0, SupportBean#keepall as s1"
+    },
+    {
+      "case": "pattern-stream-select",
+      "ordinal": 7,
+      "runtimeId": "java-runtime-827ea8daeea9baec40cf",
+      "executionName": "EPLOtherPatternStreamSelectNoWildcard",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select * from pattern [every e1=SupportMarketDataBean -> e2=SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.compareEvents(e1, e2))]"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "stream-function"
+    },
+    {
+      "op": "deploy",
+      "case": "stream-function",
+      "statement": "s0a",
+      "epl": "@name('s0') select * from SupportMarketDataBean as s0 where com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.volumeGreaterZero(s0)"
+    },
+    {
+      "op": "deploy",
+      "case": "stream-function",
+      "statement": "s0b",
+      "epl": "@name('s0') select * from SupportMarketDataBean as s0 where com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.volumeGreaterZero(*)"
+    },
+    {
+      "op": "deploy",
+      "case": "stream-function",
+      "statement": "s0c",
+      "epl": "@name('s0') select * from SupportMarketDataBean as s0 where com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.volumeGreaterZeroEventBean(s0)"
+    },
+    {
+      "op": "deploy",
+      "case": "stream-function",
+      "statement": "s0d",
+      "epl": "@name('s0') select * from SupportMarketDataBean as s0 where com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.volumeGreaterZeroEventBean(*)"
+    },
+    {
+      "op": "send",
+      "case": "stream-function",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ACME",
+        "price": 0,
+        "volume": 0,
+        "feed": null
+      }
+    },
+    {
+      "op": "send",
+      "case": "stream-function",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ACME",
+        "price": 0,
+        "volume": 100,
+        "feed": null
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "stream-function"
+    },
+    {
+      "op": "case",
+      "case": "stream-instance-method-aliased"
+    },
+    {
+      "op": "deploy",
+      "case": "stream-instance-method-aliased",
+      "statement": "s0",
+      "epl": "@name('s0') select s0.getVolume() as volume, s0.getSymbol() as symbol, s0.getPriceTimesVolume(2) as pvf from SupportMarketDataBean as s0 "
+    },
+    {
+      "op": "send",
+      "case": "stream-instance-method-aliased",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ACME",
+        "price": 4,
+        "volume": 99,
+        "feed": null
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "stream-instance-method-aliased"
+    },
+    {
+      "op": "case",
+      "case": "stream-instance-method-no-alias"
+    },
+    {
+      "op": "deploy",
+      "case": "stream-instance-method-no-alias",
+      "statement": "s0a",
+      "epl": "@name('s0') select s0.getVolume(), s0.getPriceTimesVolume(3) from SupportMarketDataBean as s0 "
+    },
+    {
+      "op": "send",
+      "case": "stream-instance-method-no-alias",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ACME",
+        "price": 4,
+        "volume": 2,
+        "feed": null
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "stream-instance-method-no-alias",
+      "statement": "s0b",
+      "epl": "@public @buseventtype create schema MyTestEvent as com.espertech.esper.regressionlib.suite.epl.other.EPLOtherStreamExpr$MyTestEvent"
+    },
+    {
+      "op": "deploy",
+      "case": "stream-instance-method-no-alias",
+      "statement": "s0c",
+      "epl": "@name('s0') select s0.getValueAsInt(s0, 'id') as c0,s0.getValueAsInt(*, 'id') as c1 from MyTestEvent as s0"
+    },
+    {
+      "op": "send",
+      "case": "stream-instance-method-no-alias",
+      "eventType": "MyTestEvent",
+      "payload": {
+        "id": 10
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "stream-instance-method-no-alias"
+    },
+    {
+      "op": "case",
+      "case": "join-stream-select"
+    },
+    {
+      "op": "deploy",
+      "case": "join-stream-select",
+      "statement": "s0a",
+      "epl": "@name('s0') select s0 as s0stream, s1 as s1stream from SupportMarketDataBean#keepall as s0, SupportBean#keepall as s1"
+    },
+    {
+      "op": "deploy",
+      "case": "join-stream-select",
+      "statement": "s0b",
+      "epl": "@name('s0') select s0, s1 from SupportMarketDataBean#keepall as s0, SupportBean#keepall as s1"
+    },
+    {
+      "op": "send",
+      "case": "join-stream-select",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ACME",
+        "price": 0,
+        "volume": 0,
+        "feed": null
+      }
+    },
+    {
+      "op": "send",
+      "case": "join-stream-select",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "join-stream-select"
+    },
+    {
+      "op": "case",
+      "case": "pattern-stream-select"
+    },
+    {
+      "op": "deploy",
+      "case": "pattern-stream-select",
+      "statement": "s0",
+      "epl": "@name('s0') select * from pattern [every e1=SupportMarketDataBean -> e2=SupportBean(com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.compareEvents(e1, e2))]"
+    },
+    {
+      "op": "send",
+      "case": "pattern-stream-select",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "ACME",
+        "price": 0,
+        "volume": 0,
+        "feed": null
+      }
+    },
+    {
+      "op": "send",
+      "case": "pattern-stream-select",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "ACME",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "pattern-stream-select"
+    }
+  ]
+}
