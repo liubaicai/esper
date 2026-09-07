@@ -1,0 +1,863 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f921cf2543cbb10b4150",
+    "java-runtime-0947ec873ea298b60209",
+    "java-runtime-9870ee394d3099ef85e8",
+    "java-runtime-a25a18f2754aeae08015"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnUpdate.java"
+  ],
+  "javaExecutions": [
+    "InfraMultipleDataWindowIntersect",
+    "InfraMultipleDataWindowUnion",
+    "InfraUpdateMultikeyWArrayPrimitiveArray",
+    "InfraUpdateMultikeyWArrayTwoFields"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-update",
+    "steps": [
+      {
+        "op": "case",
+        "case": "intersect"
+      },
+      {
+        "op": "deploy",
+        "case": "intersect",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindowMDW#unique(theString)#length(2) as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "intersect",
+        "statement": "insert",
+        "epl": "insert into MyWindowMDW select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "intersect",
+        "statement": "update",
+        "epl": "on SupportBean_A update MyWindowMDW set intPrimitive=intPrimitive*100 where theString=id"
+      },
+      {
+        "op": "send",
+        "case": "intersect",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "intersect",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "intersect",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "intersect",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intersect"
+      },
+      {
+        "op": "case",
+        "case": "union"
+      },
+      {
+        "op": "deploy",
+        "case": "union",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindowMU#unique(theString)#length(2) retain-union as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "union",
+        "statement": "insert",
+        "epl": "insert into MyWindowMU select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "union",
+        "statement": "update",
+        "epl": "on SupportBean_A update MyWindowMU mw set mw.intPrimitive=intPrimitive*100 where theString=id"
+      },
+      {
+        "op": "send",
+        "case": "union",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "union",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "union",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "union",
+        "statement": "create"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "union"
+      },
+      {
+        "op": "case",
+        "case": "multikey-array"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-array",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindow#keepall as SupportEventWithManyArray"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-array",
+        "statement": "insert",
+        "epl": "insert into MyWindow select * from SupportEventWithManyArray"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-array",
+        "statement": "update",
+        "epl": "on SupportEventWithIntArray as sewia update MyWindow as mw set value = sewia.value where mw.intOne = sewia.array"
+      },
+      {
+        "op": "send",
+        "case": "multikey-array",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E1",
+          "intOne": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-array",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E2",
+          "intOne": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-array",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E3",
+          "intOne": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-array",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "E4",
+          "intOne": []
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "U1",
+          "array": [
+            3,
+            4
+          ],
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "U2",
+          "array": [
+            1
+          ],
+          "value": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "U3",
+          "array": [],
+          "value": 12
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-array",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "U4",
+          "array": [
+            1,
+            2
+          ],
+          "value": 13
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "multikey-array",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multikey-array"
+      },
+      {
+        "op": "case",
+        "case": "multikey-two-fields"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-two-fields",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindow#keepall as SupportEventWithManyArray"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-two-fields",
+        "statement": "insert",
+        "epl": "insert into MyWindow select * from SupportEventWithManyArray"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-two-fields",
+        "statement": "update",
+        "epl": "on SupportEventWithIntArray as sewia update MyWindow as mw set value = sewia.value where mw.id = sewia.id and mw.intOne = sewia.array"
+      },
+      {
+        "op": "send",
+        "case": "multikey-two-fields",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "ID1",
+          "intOne": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-two-fields",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "ID2",
+          "intOne": [
+            3,
+            4
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-two-fields",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "ID3",
+          "intOne": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-two-fields",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "ID2",
+          "array": [
+            3,
+            4
+          ],
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-two-fields",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "ID3",
+          "array": [
+            1
+          ],
+          "value": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-two-fields",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "ID1",
+          "array": [
+            1,
+            2
+          ],
+          "value": 12
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-two-fields",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "IDX",
+          "array": [
+            1
+          ],
+          "value": 14
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-two-fields",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "ID1",
+          "array": [
+            1,
+            2,
+            3
+          ],
+          "value": 15
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "multikey-two-fields",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multikey-two-fields"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-update",
+    "records": [
+      {
+        "case": "intersect",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersect",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersect",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 300,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersect",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 300,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "union",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "union",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "union",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 300,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "union",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 300,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-array",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1",
+              "value": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E2",
+              "value": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E3",
+              "value": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E4",
+              "value": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-two-fields",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "ID1",
+              "value": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "ID2",
+              "value": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "ID3",
+              "value": 11
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-update",
+    "records": [
+      {
+        "case": "intersect",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersect",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersect",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 300,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersect",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 300,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "union",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "union",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "union",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 300,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "union",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 300,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-array",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E1",
+              "value": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E2",
+              "value": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E3",
+              "value": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "E4",
+              "value": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-two-fields",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "ID1",
+              "value": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "ID2",
+              "value": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "ID3",
+              "value": 11
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

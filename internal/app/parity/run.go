@@ -97,6 +97,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableSubqCorrelJoinScenario(file)
 	} else if *mode == "infra-nwtable-subq-filtered-correl" || *mode == "infra-nwtable-subq-filtered-correl-diff" {
 		scenario, err = loadInfraNWTableSubqFilteredCorrelScenario(file)
+	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
+		scenario, err = loadInfraNamedWindowOnUpdateScenario(file)
 	} else if *mode == "infra-nwtable-start-stop" || *mode == "infra-nwtable-start-stop-diff" {
 		scenario, err = loadInfraNWTableStartStopScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
@@ -269,6 +271,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableSubqCorrelJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableSubqCorrelJoinJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableSubqCorrelJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
+		trace, err := runInfraNamedWindowOnUpdateScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-named-window-on-update-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNamedWindowOnUpdateJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNamedWindowOnUpdateJavaSources),
+				splitMetadata(*javaExecutions, infraNamedWindowOnUpdateJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
