@@ -34653,6 +34653,373 @@ func assertInfraNWTableSubqUncorrelTrace(t *testing.T, trace compat.Trace) {
 		t.Fatalf("trace has %d trailing records", len(trace.Records)-offset)
 	}
 }
+
+func TestRunInfraNWTableSubqFilteredCorrelDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableSubqFilteredCorrelID,
+		"-scenario", filepath.Join(root, infraNWTableSubqFilteredCorrelID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraNWTableSubqFilteredCorrelTrace(t, trace)
+}
+
+func TestRunInfraNWTableSubqFilteredCorrelDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraNWTableSubqFilteredCorrelID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableSubqFilteredCorrelID + "-diff",
+		"-scenario", filepath.Join(root, infraNWTableSubqFilteredCorrelID+".json"),
+		"-java-trace", filepath.Join(root, infraNWTableSubqFilteredCorrelID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraNWTableSubqFilteredCorrelJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWTableSubqFilteredCorrelJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNWTableSubqFilteredCorrelSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWTableSubqFilteredCorrelJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraNWTableSubqFilteredCorrelTrace(t, evidence.JavaTrace)
+	assertInfraNWTableSubqFilteredCorrelTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraNWTableSubqFilteredCorrelDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "val-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["val"] = json.Number("99")
+			},
+		},
+		{
+			name: "val-null-shape",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["val"] = ""
+			},
+		},
+		{
+			name: "statement-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Statement = "create"
+			},
+		},
+		{
+			name: "sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].Sequence = 5
+			},
+		},
+		{
+			name: "case-label-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].Case = "nw-no-share-x"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:27]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraNWTableSubqFilteredCorrelID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraNWTableSubqFilteredCorrelID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraNWTableSubqFilteredCorrelID + "-diff",
+				"-scenario", filepath.Join(root, infraNWTableSubqFilteredCorrelID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableSubqFilteredCorrelCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraNWTableSubqFilteredCorrelID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraNWTableSubqFilteredCorrelID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraNWTableSubqFilteredCorrelID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != infraNWTableSubqFilteredCorrelJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWTableSubqFilteredCorrelJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNWTableSubqFilteredCorrelSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWTableSubqFilteredCorrelJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertInfraNWTableSubqFilteredCorrelTrace(t, javaTrace)
+	assertInfraNWTableSubqFilteredCorrelTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, infraNWTableSubqFilteredCorrelID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		infraNWTableSubqFilteredCorrelJavaCommit,
+		infraNWTableSubqFilteredCorrelJavaRuntimeIDs,
+		[]string{infraNWTableSubqFilteredCorrelSource},
+		infraNWTableSubqFilteredCorrelJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableSubqFilteredCorrelID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertInfraNWTableSubqFilteredCorrelTrace(t, replayed)
+}
+
+func TestRunInfraNWTableSubqFilteredCorrelRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWTableSubqFilteredCorrelID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "nw-no-share"`), []byte(`"case": "nw-no-share", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-6823e53d322aa502295b"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "create-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`create window MyInfra#keepall as select * from SupportBean`), []byte(`create window MyInfra#keepall as select * from SupportBean_Z`), 1)
+		}},
+		{name: "consume-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`MyInfra(intPrimitive<0)`), []byte(`MyInfra(intPrimitive<1)`), 1)
+		}},
+		{name: "hint-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`@Hint('enable_window_subquery_indexshare') @public`), []byte(`@Hint('other_hint') @public`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"p00": "E1"`), []byte(`"p00": "E1", "extra": 0`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_S0"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1", "intPrimitive": 1}`), []byte(`"theString": "E1", "intPrimitive": 9}`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraNWTableSubqFilteredCorrelID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableSubqFilteredCorrelRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", infraNWTableSubqFilteredCorrelID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != infraNWTableSubqFilteredCorrelID ||
+		document.Description != infraNWTableSubqFilteredCorrelDescription ||
+		document.JavaCommit != infraNWTableSubqFilteredCorrelJavaCommit ||
+		document.JavaSource != infraNWTableSubqFilteredCorrelSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, infraNWTableSubqFilteredCorrelJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, infraNWTableSubqFilteredCorrelJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, infraNWTableSubqFilteredCorrelJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(infraNWTableSubqFilteredCorrelCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != infraNWTableSubqFilteredCorrelCases[index] ||
+			entry.Ordinal != infraNWTableSubqFilteredCorrelOrdinals[index] ||
+			entry.RuntimeID != infraNWTableSubqFilteredCorrelJavaRuntimeIDs[index] ||
+			entry.ExecutionName != infraNWTableSubqFilteredCorrelJavaExecutions[index] ||
+			entry.Observation != "listener" || entry.IteratorSnapshots != 0 {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertInfraNWTableSubqFilteredCorrelTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraNWTableSubqFilteredCorrelID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 28 {
+		t.Fatalf("trace records = %d, want 28", len(trace.Records))
+	}
+	nullState := map[string]any{"state": "null"}
+	// Every one of the seven cases emits the same four consume records:
+	// val null, -2, -3, null on S0 sends (10,E1), (20,E2), (-3,E3), (20,E4).
+	type step struct {
+		sequence  uint64
+		newFields map[string]any
+	}
+	steps := []step{
+		{1, map[string]any{"val": nullState}},
+		{2, map[string]any{"val": json.Number("-2")}},
+		{3, map[string]any{"val": json.Number("-3")}},
+		{4, map[string]any{"val": nullState}},
+	}
+	offset := 0
+	for _, caseName := range infraNWTableSubqFilteredCorrelCases {
+		for index, want := range steps {
+			record := trace.Records[offset]
+			offset++
+			if record.Case != caseName || record.Statement != "consume" ||
+				record.Sequence != want.sequence || record.Time != "1970-01-01T00:00:00Z" {
+				t.Fatalf("%s record %d metadata = %#v", caseName, index, record)
+			}
+			if len(record.New) != 1 || !reflect.DeepEqual(record.New[0].Fields, want.newFields) {
+				t.Fatalf("%s consume seq %d new = %#v, want %#v", caseName, want.sequence, record.New, want.newFields)
+			}
+			if len(record.Old) != 0 {
+				t.Fatalf("%s consume seq %d unexpected old = %#v", caseName, want.sequence, record.Old)
+			}
+		}
+	}
+	if offset != len(trace.Records) {
+		t.Fatalf("trace has %d trailing records", len(trace.Records)-offset)
+	}
+}
 func mustInt64(t *testing.T, value any) int64 {
 	number, ok := value.(json.Number)
 	if !ok {

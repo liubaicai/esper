@@ -1,0 +1,1645 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-6823e53d322aa502295b",
+    "java-runtime-9ff8e85038e7fa442f0b",
+    "java-runtime-11e662916b4e4bebf3ed",
+    "java-runtime-fdb6dcb460167c720624",
+    "java-runtime-d8db6be7fe12e953f8f2",
+    "java-runtime-df8a638d47fce3bbe9e7",
+    "java-runtime-1e359a7b2b7cee11d210"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqFilteredCorrel.java"
+  ],
+  "javaExecutions": [
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-filtered-correl",
+    "steps": [
+      {
+        "op": "case",
+        "case": "nw-no-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "create",
+        "epl": "@public create window MyInfra#keepall as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "consume",
+        "epl": "@name('consume') select (select intPrimitive from MyInfra(intPrimitive\u003c0) sw where s0.p00=sw.theString) as val from S0 s0"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-no-share"
+      },
+      {
+        "op": "case",
+        "case": "nw-no-share-index"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "create",
+        "epl": "@public create window MyInfra#keepall as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "index",
+        "epl": "@name('index') create index MyIndex on MyInfra(theString)"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "consume",
+        "epl": "@name('consume') select (select intPrimitive from MyInfra(intPrimitive\u003c0) sw where s0.p00=sw.theString) as val from S0 s0"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-no-share-index"
+      },
+      {
+        "op": "case",
+        "case": "nw-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window MyInfra#keepall as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "consume",
+        "epl": "@name('consume') select (select intPrimitive from MyInfra(intPrimitive\u003c0) sw where s0.p00=sw.theString) as val from S0 s0"
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-share"
+      },
+      {
+        "op": "case",
+        "case": "nw-share-disable"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window MyInfra#keepall as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "consume",
+        "epl": "@Hint('disable_window_subquery_indexshare') @name('consume') select (select intPrimitive from MyInfra(intPrimitive\u003c0) sw where s0.p00=sw.theString) as val from S0 s0"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-share-disable"
+      },
+      {
+        "op": "case",
+        "case": "nw-share-disable-index"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window MyInfra#keepall as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "index",
+        "epl": "@name('index') create index MyIndex on MyInfra(theString)"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "consume",
+        "epl": "@Hint('disable_window_subquery_indexshare') @name('consume') select (select intPrimitive from MyInfra(intPrimitive\u003c0) sw where s0.p00=sw.theString) as val from S0 s0"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-share-disable-index"
+      },
+      {
+        "op": "case",
+        "case": "table-no-share"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "create",
+        "epl": "@public create table MyInfra (theString string primary key, intPrimitive int primary key)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "consume",
+        "epl": "@name('consume') select (select intPrimitive from MyInfra(intPrimitive\u003c0) sw where s0.p00=sw.theString) as val from S0 s0"
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "table-no-share"
+      },
+      {
+        "op": "case",
+        "case": "table-no-share-index"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "create",
+        "epl": "@public create table MyInfra (theString string primary key, intPrimitive int primary key)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "index",
+        "epl": "@name('index') create index MyIndex on MyInfra(theString)"
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "consume",
+        "epl": "@name('consume') select (select intPrimitive from MyInfra(intPrimitive\u003c0) sw where s0.p00=sw.theString) as val from S0 s0"
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -3
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -3,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "E4"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "table-no-share-index"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-filtered-correl",
+    "records": [
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-filtered-correl",
+    "records": [
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": -3
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "consume",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

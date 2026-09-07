@@ -2247,7 +2247,8 @@
     "InfraFullOuterJoinNamedAggregationLateStart",
     "InfraNWTableSubqUncorrel",
     "InfraNWTableSubqueryAtEventBean",
-    "InfraNWTableSubqCorrelJoin"
+    "InfraNWTableSubqCorrelJoin",
+    "InfraNWTableSubqFilteredCorrel"
    ],
    "goRefs": [
     "internal/app/parity/infra_named_window_join.go",
@@ -2260,7 +2261,8 @@
     "internal/esper/trigger.go",
     "internal/app/parity/infra_nwtable_subq_uncorrel.go",
     "internal/app/parity/infra_nwtable_subq_at_eventbean.go",
-    "internal/app/parity/infra_nwtable_subq_correl_join.go"
+    "internal/app/parity/infra_nwtable_subq_correl_join.go",
+    "internal/app/parity/infra_nwtable_subq_filtered_correl.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -38953,6 +38955,86 @@
    "notes": [
     "InfraNWTableStartStop pins mid-lifecycle undeploy and redeploy of the unnamed insert-into and the named select consumer over a #keepall named window and a composite-PK table, resolved per statement name. Named-window istream listeners fire per insert while table listeners stay silent; a stopped select leaves its listener silent, and a redeployed consumer immediately observes the current window contents via its first iterator snapshot. Sends landing while a statement is stopped are retained by the infra and appear in later snapshots/streams. Typed Go uses per-statement deployments with engine.Undeploy, Statement.Snapshot iterator reads for the NW and FAF-over-FromTable for the table."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-subq-filtered-correl",
+   "javaRuntimeIds": [
+    "java-runtime-6823e53d322aa502295b",
+    "java-runtime-9ff8e85038e7fa442f0b",
+    "java-runtime-11e662916b4e4bebf3ed",
+    "java-runtime-fdb6dcb460167c720624",
+    "java-runtime-d8db6be7fe12e953f8f2",
+    "java-runtime-df8a638d47fce3bbe9e7",
+    "java-runtime-1e359a7b2b7cee11d210"
+   ],
+   "javaStaticIds": [
+    "java-cef495b8aa35bb19a5ac",
+    "java-cef495b8aa35bb19a5ac",
+    "java-cef495b8aa35bb19a5ac",
+    "java-cef495b8aa35bb19a5ac",
+    "java-cef495b8aa35bb19a5ac",
+    "java-cef495b8aa35bb19a5ac",
+    "java-cef495b8aa35bb19a5ac"
+   ],
+   "javaNames": [
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion",
+    "InfraNWTableSubqFilteredCorrelAssertion"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqFilteredCorrel.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqFilteredCorrelDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqFilteredCorrelDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqFilteredCorrelDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqFilteredCorrelCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqFilteredCorrelRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqFilteredCorrelRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "table",
+    "subselect",
+    "correlated",
+    "filtered",
+    "index",
+    "index-share",
+    "hint",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-subq-filtered-correl.json",
+    "testdata/parity/infra-nwtable-subq-filtered-correl.trace.json",
+    "testdata/parity/infra-nwtable-subq-filtered-correl.go.trace.json",
+    "testdata/parity/infra-nwtable-subq-filtered-correl.evidence.json",
+    "tools/java-oracle/InfraNWTableSubqFilteredCorrelScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-subq-filtered-correl.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6823e53d322aa502295b",
+    "java-runtime-9ff8e85038e7fa442f0b",
+    "java-runtime-11e662916b4e4bebf3ed",
+    "java-runtime-fdb6dcb460167c720624",
+    "java-runtime-d8db6be7fe12e953f8f2",
+    "java-runtime-df8a638d47fce3bbe9e7",
+    "java-runtime-1e359a7b2b7cee11d210"
+   ],
+   "notes": [
+    "InfraNWTableSubqFilteredCorrel pins a filtered correlated scalar subquery (select intPrimitive from MyInfra(intPrimitive<0) sw where s0.p00=sw.theString) over a #keepall named window and a composite-PK table, across all 7 flag combinations (enable_window_subquery_indexshare create hint, disable_window_subquery_indexshare consumer hint, explicit create index on theString). Each case emits four consume records with val null/-2/-3/null; hints are plan-inert for this filtered shape (the shared-index branch requires an empty filter), so all 7 executions are trace-identical and the unit pins the index-choice paths through the scenario metadata instead. Typed Go folds the inner filter into SubqueryWhere(And(Less[int](Field[any,int], Literal(0)), Equal[string](Field[any,string], OuterField[string]))) over FromNamedWindow/FromTable with SubqueryCardinalityMode(SubqueryNullOnMultiple), and applies the explicit index through the live NamedWindow/Table.CreateIndex catalog op (precedent infra_nwtable_create_index_parity_test.go). The Java harness registers SupportBean_S0 under both SupportBean_S0 and S0 and delivers S0 sends under the S0 type name because the pinned EPL consumes `from S0 s0`."
+   ]
   }
  ],
  "mappings": [
@@ -41759,13 +41841,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-start-stop"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-subq-filtered-correl"
   }
  ],
  "summary": {
-  "inventoriedCases": 617,
-  "implementedCases": 615,
-  "differentialVerifiedCases": 230,
-  "differentialVerifiedRuntimeIds": 816,
+  "inventoriedCases": 618,
+  "implementedCases": 616,
+  "differentialVerifiedCases": 231,
+  "differentialVerifiedRuntimeIds": 823,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -41775,14 +41861,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3439,
-  "referencedJavaRuntimeIds": 3198,
+  "runtimeAssociationCount": 3446,
+  "referencedJavaRuntimeIds": 3205,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 938,
+  "unreferencedJavaRuntimeIds": 931,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 617,
+  "totalCases": 618,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 816
+  "differentialVerifiedRuntimeIDs": 823
  }
 }

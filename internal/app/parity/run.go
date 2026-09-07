@@ -95,6 +95,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableSubqAtEventBeanScenario(file)
 	} else if *mode == "infra-nwtable-subq-correl-join" || *mode == "infra-nwtable-subq-correl-join-diff" {
 		scenario, err = loadInfraNWTableSubqCorrelJoinScenario(file)
+	} else if *mode == "infra-nwtable-subq-filtered-correl" || *mode == "infra-nwtable-subq-filtered-correl-diff" {
+		scenario, err = loadInfraNWTableSubqFilteredCorrelScenario(file)
 	} else if *mode == "infra-nwtable-start-stop" || *mode == "infra-nwtable-start-stop-diff" {
 		scenario, err = loadInfraNWTableStartStopScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
@@ -267,6 +269,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableSubqCorrelJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableSubqCorrelJoinJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableSubqCorrelJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-subq-filtered-correl" || *mode == "infra-nwtable-subq-filtered-correl-diff" {
+		trace, err := runInfraNWTableSubqFilteredCorrelScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-subq-filtered-correl-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableSubqFilteredCorrelJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableSubqFilteredCorrelJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableSubqFilteredCorrelJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
