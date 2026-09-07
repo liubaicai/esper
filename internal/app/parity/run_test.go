@@ -36330,6 +36330,435 @@ func assertInfraNamedWindowInsertFromTrace(t *testing.T, trace compat.Trace) {
 	}
 }
 
+func TestRunResultsetAggregateFilterNamedParameterLinearJoinDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetAggregateFilterNamedParameterLinearJoinID,
+		"-scenario", filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultsetAggregateFilterNamedParameterLinearJoinTrace(t, trace)
+}
+
+func TestRunResultsetAggregateFilterNamedParameterLinearJoinDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), resultsetAggregateFilterNamedParameterLinearJoinID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetAggregateFilterNamedParameterLinearJoinID + "-diff",
+		"-scenario", filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".json"),
+		"-java-trace", filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultsetAggregateFilterNamedParameterLinearJoinJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateFilterNamedParameterLinearJoinJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateFilterNamedParameterLinearJoinSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateFilterNamedParameterLinearJoinJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultsetAggregateFilterNamedParameterLinearJoinTrace(t, evidence.JavaTrace)
+	assertResultsetAggregateFilterNamedParameterLinearJoinTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultsetAggregateFilterNamedParameterLinearJoinDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "join-bound-first-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["aFirst"] = json.Number("9")
+			},
+		},
+		{
+			name: "join-bound-window-array-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0].Fields["aWindow"] = []any{json.Number("4"), json.Number("7")}
+			},
+		},
+		{
+			name: "join-unbound-countever-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[14].New[0].Fields["aCountever"] = json.Number("5")
+			},
+		},
+		{
+			name: "mixed-event-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[16].New[0].Fields["c1"] = []any{}
+			},
+		},
+		{
+			name: "null-shape",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["aFirst"] = ""
+			},
+		},
+		{
+			name: "statement-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[11].Statement = "s1"
+			},
+		},
+		{
+			name: "sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].Sequence = 9
+			},
+		},
+		{
+			name: "case-label-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[16].Case = "linear-join-unbound"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:18]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), resultsetAggregateFilterNamedParameterLinearJoinID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", resultsetAggregateFilterNamedParameterLinearJoinID + "-diff",
+				"-scenario", filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultsetAggregateFilterNamedParameterLinearJoinCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != resultsetAggregateFilterNamedParameterLinearJoinJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultsetAggregateFilterNamedParameterLinearJoinJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{resultsetAggregateFilterNamedParameterLinearJoinSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultsetAggregateFilterNamedParameterLinearJoinJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertResultsetAggregateFilterNamedParameterLinearJoinTrace(t, javaTrace)
+	assertResultsetAggregateFilterNamedParameterLinearJoinTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultsetAggregateFilterNamedParameterLinearJoinJavaCommit,
+		resultsetAggregateFilterNamedParameterLinearJoinJavaRuntimeIDs,
+		[]string{resultsetAggregateFilterNamedParameterLinearJoinSource},
+		resultsetAggregateFilterNamedParameterLinearJoinJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", resultsetAggregateFilterNamedParameterLinearJoinID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultsetAggregateFilterNamedParameterLinearJoinTrace(t, replayed)
+}
+
+func TestRunResultsetAggregateFilterNamedParameterLinearJoinRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, resultsetAggregateFilterNamedParameterLinearJoinID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "linear-join-bound"`), []byte(`"case": "linear-join-bound", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-d652fb38c70d8bcc778f"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 9`), []byte(`"ordinal": 8`), 1)
+		}},
+		{name: "epl-filter-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`first(intPrimitive, filter:theString like 'A%') as aFirst`), []byte(`first(intPrimitive, filter:theString like 'Z%') as aFirst`), 1)
+		}},
+		{name: "epl-window-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`SupportBean#length(5)`), []byte(`SupportBean#length(4)`), 1)
+		}},
+		{name: "epl-spacing-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`) as aFirst,last(`), []byte(`) as aFirst, last(`), 1)
+		}},
+		{name: "send-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"theString": "X6", "intPrimitive": 11}`), []byte(`{"theString": "X6", "intPrimitive": 11}, {"theString": "X7", "intPrimitive": 12}`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"theString": "A1", "intPrimitive": 1}`), []byte(`{"theString": "A1", "intPrimitive": 9}`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_S1"`), []byte(`"eventType": "SupportBean_S2"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", resultsetAggregateFilterNamedParameterLinearJoinID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultsetAggregateFilterNamedParameterLinearJoinRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", resultsetAggregateFilterNamedParameterLinearJoinID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != resultsetAggregateFilterNamedParameterLinearJoinID ||
+		document.Description != resultsetAggregateFilterNamedParameterLinearJoinDescription ||
+		document.JavaCommit != resultsetAggregateFilterNamedParameterLinearJoinJavaCommit ||
+		document.JavaSource != resultsetAggregateFilterNamedParameterLinearJoinSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, resultsetAggregateFilterNamedParameterLinearJoinJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, resultsetAggregateFilterNamedParameterLinearJoinJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultsetAggregateFilterNamedParameterLinearJoinJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(resultsetAggregateFilterNamedParameterLinearJoinCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != resultsetAggregateFilterNamedParameterLinearJoinCases[index] ||
+			entry.Ordinal != resultsetAggregateFilterNamedParameterLinearJoinOrdinals[index] ||
+			entry.RuntimeID != resultsetAggregateFilterNamedParameterLinearJoinJavaRuntimeIDs[index] ||
+			entry.ExecutionName != resultsetAggregateFilterNamedParameterLinearJoinJavaExecutions[index] ||
+			entry.Observation != "listener" || entry.IteratorSnapshots != 0 {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertResultsetAggregateFilterNamedParameterLinearJoinTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultsetAggregateFilterNamedParameterLinearJoinID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 19 {
+		t.Fatalf("trace records = %d, want 19", len(trace.Records))
+	}
+	row := func(fields map[string]any) compat.ResultRecord {
+		return compat.ResultRecord{Kind: "row", Fields: fields}
+	}
+	nullState := map[string]any{"state": "null"}
+	beanRow := func(aFirst, aLast, aWindow, bFirst, bLast, bWindow any) compat.ResultRecord {
+		return row(map[string]any{"aFirst": aFirst, "aLast": aLast, "aWindow": aWindow, "bFirst": bFirst, "bLast": bLast, "bWindow": bWindow})
+	}
+	unboundRow := func(count any, first, firstever, last, lastever any) compat.ResultRecord {
+		return row(map[string]any{"aCountever": count, "aFirst": first, "aFirstever": firstever, "aLast": last, "aLastever": lastever})
+	}
+	eventRow := func(theString string, primitive int) map[string]any {
+		return map[string]any{"kind": "row", "fields": map[string]any{"intPrimitive": json.Number(fmt.Sprint(primitive)), "theString": theString}}
+	}
+	// linear-join-bound: 11 records, 6-field rows with int arrays.
+	bound := []compat.ResultRecord{
+		beanRow(nullState, nullState, nullState, nullState, nullState, nullState),
+		beanRow(nullState, nullState, nullState, json.Number("2"), json.Number("2"), []any{json.Number("2")}),
+		beanRow(nullState, nullState, nullState, json.Number("2"), json.Number("3"), []any{json.Number("2"), json.Number("3")}),
+		beanRow(json.Number("4"), json.Number("4"), []any{json.Number("4")}, json.Number("2"), json.Number("3"), []any{json.Number("2"), json.Number("3")}),
+		beanRow(json.Number("4"), json.Number("4"), []any{json.Number("4")}, json.Number("2"), json.Number("5"), []any{json.Number("2"), json.Number("3"), json.Number("5")}),
+		beanRow(json.Number("4"), json.Number("6"), []any{json.Number("4"), json.Number("6")}, json.Number("2"), json.Number("5"), []any{json.Number("2"), json.Number("3"), json.Number("5")}),
+		beanRow(json.Number("4"), json.Number("6"), []any{json.Number("4"), json.Number("6")}, json.Number("3"), json.Number("5"), []any{json.Number("3"), json.Number("5")}),
+		beanRow(json.Number("4"), json.Number("6"), []any{json.Number("4"), json.Number("6")}, json.Number("5"), json.Number("5"), []any{json.Number("5")}),
+		beanRow(json.Number("6"), json.Number("6"), []any{json.Number("6")}, json.Number("5"), json.Number("5"), []any{json.Number("5")}),
+		beanRow(json.Number("6"), json.Number("6"), []any{json.Number("6")}, nullState, nullState, nullState),
+		beanRow(nullState, nullState, nullState, nullState, nullState, nullState),
+	}
+	// linear-join-unbound: 5 records, 5-field rows.
+	unbound := []compat.ResultRecord{
+		unboundRow(json.Number("0"), nullState, nullState, nullState, nullState),
+		unboundRow(json.Number("1"), json.Number("1"), json.Number("1"), json.Number("1"), json.Number("1")),
+		unboundRow(json.Number("1"), json.Number("1"), json.Number("1"), json.Number("1"), json.Number("1")),
+		unboundRow(json.Number("2"), json.Number("1"), json.Number("1"), json.Number("3"), json.Number("3")),
+		unboundRow(json.Number("2"), json.Number("1"), json.Number("1"), json.Number("3"), json.Number("3")),
+	}
+	// mixed-filter-window: 3 records, c0/c1/c2 event arrays.
+	mixed := []compat.ResultRecord{
+		row(map[string]any{"c0": nullState, "c1": []any{eventRow("X1", 1)}, "c2": nullState}),
+		row(map[string]any{"c0": []any{eventRow("A2", 2)}, "c1": []any{eventRow("X1", 1), eventRow("A2", 2)}, "c2": nullState}),
+		row(map[string]any{"c0": []any{eventRow("A2", 2)}, "c1": []any{eventRow("X1", 1), eventRow("A2", 2), eventRow("B3", 3)}, "c2": []any{eventRow("B3", 3)}}),
+	}
+	type expect struct {
+		caseName string
+		sequence uint64
+		rows     []compat.ResultRecord
+	}
+	var expects []expect
+	for i, rows := range bound {
+		expects = append(expects, expect{"linear-join-bound", uint64(i + 1), []compat.ResultRecord{rows}})
+	}
+	for i, rows := range unbound {
+		expects = append(expects, expect{"linear-join-unbound", uint64(i + 1), []compat.ResultRecord{rows}})
+	}
+	for i, rows := range mixed {
+		expects = append(expects, expect{"mixed-filter-window", uint64(i + 1), []compat.ResultRecord{rows}})
+	}
+	for index, want := range expects {
+		record := trace.Records[index]
+		if record.Case != want.caseName || record.Operation != "listener" || record.Statement != "s0" ||
+			record.Sequence != want.sequence || record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d metadata = %#v", index, record)
+		}
+		if len(record.New) != len(want.rows) {
+			t.Fatalf("record %d new rows = %d, want %d", index, len(record.New), len(want.rows))
+		}
+		for i := range want.rows {
+			if !reflect.DeepEqual(record.New[i].Fields, want.rows[i].Fields) {
+				t.Fatalf("record %d new row %d = %#v, want %#v", index, i, record.New[i].Fields, want.rows[i].Fields)
+			}
+		}
+		if len(record.Old) != 0 {
+			t.Fatalf("record %d unexpected old = %#v", index, record.Old)
+		}
+	}
+}
+
 func mustInt64(t *testing.T, value any) int64 {
 	number, ok := value.(json.Number)
 	if !ok {

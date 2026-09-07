@@ -804,7 +804,8 @@
     "internal/esper/plan.go",
     "internal/esper/aggregate_test.go",
     "internal/esper/aggregate_filtered_java_trace_test.go",
-    "internal/esper/aggregate_exact_test.go"
+    "internal/esper/aggregate_exact_test.go",
+    "internal/app/parity/resultset_aggregate_filter_named_parameter_linear_join.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -39242,6 +39243,69 @@
    "notes": [
     "InfraNamedWindowInsertFrom pins insert-from-window semantics for 4 of 7 executions (ordinals 0/1/5/6): type-by-window creation after an existing named window with shared insert delivery (windowOne full-row record plus a selectOne record projected to theString only); the insert-from heart — create-window-insert seeds (plain keepall, where-filtered keepall, unique(intPrimitive) last-per-id dedup-at-seed) whose deploy-time row copies never reach the attach-after-deploy create-statement listeners, verified through ordered and mode-any snapshots (A1..C5, A1/A4, C3/C5) and four per-window filtered routing inserts delivering exactly one listener record each (B9 into Two, A8 into IWT, C7 into Three, D6 into Four, confirming the seed is a one-time copy and ongoing flow requires explicit insert-into); and lenient partial-column inserts (one of two columns per insert, the other null-filled) over MAP and OBJECTARRAY schemas snapshotted as ordered c0/c1 pairs. Typed Go seeds the new windows at the create deploy step through a harness mapping — the source statement Snapshot + Underlying + engine.InsertNamedWindow (retention dedup natural; the where seed filter is a theString first-character check, exact for this scenario's payload set) — while the seeded create statements deploy as plain FromNamedWindow(...).Query(...) consumers so seed rows never reach their attach-after-deploy listeners; ongoing flow uses OnEvent(...).Filter(Like).InsertIntoNamedWindow(CopyMatchingFields) routes, and lenient schemas register with NewMapSchema/NewObjectArraySchema using pointer c1 fields for null-exact rendering. Snapshot rows project to the Java-asserted fields; mode-any snapshots use the differential canonical row order. StatementProperty/assertSame/count-check assertions and the OM toEPL round-trip matrix (ord 2), invalid compiles (ord 3, no Go rejection surface), and variant streams (ord 4, unproven surface) are approved differences/deferrals recorded here."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-filter-named-parameter-linear-join",
+   "javaRuntimeIds": [
+    "java-runtime-d652fb38c70d8bcc778f",
+    "java-runtime-4add988d1015cdae8bb2",
+    "java-runtime-97101f0ae69f6fad8c29"
+   ],
+   "javaStaticIds": [
+    "java-85b8ba64c1be948a5676",
+    "java-97884ae57325e3acd3f2",
+    "java-9d0ccec4c0bb19e6a14c"
+   ],
+   "javaNames": [
+    "ResultSetAggregateAccessAggLinearBound{join=true}",
+    "ResultSetAggregateAccessAggLinearUnbound{join=true}",
+    "ResultSetAggregateAccessAggLinearBoundMixedFilter"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterLinearJoinDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterLinearJoinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterLinearJoinDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterLinearJoinCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterLinearJoinRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterLinearJoinRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "filter-named-parameter",
+    "join",
+    "lastevent",
+    "access-aggregate",
+    "window",
+    "event-array",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-filter-named-parameter-linear-join.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter-linear-join.trace.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter-linear-join.go.trace.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter-linear-join.evidence.json",
+    "tools/java-oracle/ResultSetAggregateFilterNamedParameterLinearJoinScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-filter-named-parameter-linear-join.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d652fb38c70d8bcc778f",
+    "java-runtime-4add988d1015cdae8bb2",
+    "java-runtime-97101f0ae69f6fad8c29"
+   ],
+   "notes": [
+    "ResultSetAggregateFilterNamedParameter linear-join gap executions pin filtered access aggregates over joins and mixed-filter event-array windows for ordinals 9/11/13: first/last/window(intPrimitive, filter:theString like 'A%'|'B%') over a SupportBean_S1#lastevent join with SupportBean#length(5) tracking window eviction through eleven listener records; first/firstever/last/lastever/countever(intPrimitive, filter:...) over the keepall join; and window(sb, filter:A%)/window(sb)/window(filter:B%, sb) event-array projections over keepall rendered as event rows. Join aggregate group rows are join tuples, so the FilterAggregate predicates and inputs bind through JoinField (FilterAggregate evaluates the predicate with each group event as ctx.Event, resolving the joinTuple member); the kickoff SupportBean_S1(0) joins an empty bean side and produces no record. Typed Go builds JoinMany(...).Aggregate(Alias(FilterAggregate(First/Last/WindowValues/FirstEver/LastEver/CountEver(JoinField)))) and From(...).Window(KeepAll()).AsRecord().Aggregate(Alias(FilterAggregate(WindowEvents()))) with event-array fields normalized to row objects. Deferred executions of this file: ordinals 15/17/18 (sorted join and two-key multicriteria, follow-up unit), 19 (audit/reuse), 20 (invalid compiles — no Go rejection surface, approved difference)."
+   ]
   }
  ],
  "mappings": [
@@ -42064,13 +42128,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-named-window-insert-from"
+  },
+  {
+   "capabilityId": "resultset.aggregate-filtered",
+   "caseId": "case.resultset-aggregate-filter-named-parameter-linear-join"
   }
  ],
  "summary": {
-  "inventoriedCases": 621,
-  "implementedCases": 619,
-  "differentialVerifiedCases": 234,
-  "differentialVerifiedRuntimeIds": 835,
+  "inventoriedCases": 622,
+  "implementedCases": 620,
+  "differentialVerifiedCases": 235,
+  "differentialVerifiedRuntimeIds": 838,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42080,14 +42148,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3458,
-  "referencedJavaRuntimeIds": 3217,
+  "runtimeAssociationCount": 3461,
+  "referencedJavaRuntimeIds": 3220,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 919,
+  "unreferencedJavaRuntimeIds": 916,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 621,
+  "totalCases": 622,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 835
+  "differentialVerifiedRuntimeIDs": 838
  }
 }
