@@ -1,0 +1,3227 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0f3833a87dcd9b209935",
+    "java-runtime-f1f621deec2314404f2a",
+    "java-runtime-4f850a69b870e08ebfd5",
+    "java-runtime-1616d20fc73fe4be679c",
+    "java-runtime-0422895f8568f52e0956",
+    "java-runtime-9161da818506b8194079",
+    "java-runtime-3a94283dcac4e9ae4dea",
+    "java-runtime-ce6e53f117adccdf9f59"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqCorrelCoerce.java"
+  ],
+  "javaExecutions": [
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=false, disableIndexShareConsumer=false, createExplicitIndex=false}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=false, disableIndexShareConsumer=false, createExplicitIndex=true}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=false, createExplicitIndex=false}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=false, createExplicitIndex=true}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=true, createExplicitIndex=false}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=true, createExplicitIndex=true}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=false, enableIndexShareCreate=false, disableIndexShareConsumer=false, createExplicitIndex=false}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=false, enableIndexShareCreate=false, disableIndexShareConsumer=false, createExplicitIndex=true}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-correl-coerce",
+    "steps": [
+      {
+        "op": "case",
+        "case": "nw-no-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "c1",
+        "epl": "@public @buseventtype create schema EventSchema(e0 string, e1 int, e2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "c2",
+        "epl": "@public @buseventtype create schema WindowSchema(col0 string, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "create",
+        "epl": "@public create window MyInfra#keepall as WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select * from WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W1",
+          "col1": 10,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E1",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E2",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W2",
+          "col1": 11,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E3",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W3",
+          "col1": 11,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W4",
+          "col1": 10,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E4",
+          "e1": 11,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E5",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-no-share",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-no-share",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-no-share"
+      },
+      {
+        "op": "case",
+        "case": "nw-no-share-index"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "c1",
+        "epl": "@public @buseventtype create schema EventSchema(e0 string, e1 int, e2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "c2",
+        "epl": "@public @buseventtype create schema WindowSchema(col0 string, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "create",
+        "epl": "@public create window MyInfra#keepall as WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "insert",
+        "epl": "insert into MyInfra select * from WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "index",
+        "epl": "@name('index') create index MyIndex on MyInfra (col2, col1)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W1",
+          "col1": 10,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E1",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E2",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W2",
+          "col1": 11,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E3",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W3",
+          "col1": 11,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W4",
+          "col1": 10,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E4",
+          "e1": 11,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E5",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-no-share-index",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share-index",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-no-share-index",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-no-share-index",
+        "statement": "index"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-no-share-index"
+      },
+      {
+        "op": "case",
+        "case": "nw-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "c1",
+        "epl": "@public @buseventtype create schema EventSchema(e0 string, e1 int, e2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "c2",
+        "epl": "@public @buseventtype create schema WindowSchema(col0 string, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window MyInfra#keepall as WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select * from WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W1",
+          "col1": 10,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E1",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E2",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W2",
+          "col1": 11,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E3",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W3",
+          "col1": 11,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W4",
+          "col1": 10,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E4",
+          "e1": 11,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E5",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-share"
+      },
+      {
+        "op": "case",
+        "case": "nw-share-index"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-index",
+        "statement": "c1",
+        "epl": "@public @buseventtype create schema EventSchema(e0 string, e1 int, e2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-index",
+        "statement": "c2",
+        "epl": "@public @buseventtype create schema WindowSchema(col0 string, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-index",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window MyInfra#keepall as WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-index",
+        "statement": "insert",
+        "epl": "insert into MyInfra select * from WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-index",
+        "statement": "index",
+        "epl": "@name('index') create index MyIndex on MyInfra (col2, col1)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-index",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W1",
+          "col1": 10,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E1",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E2",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W2",
+          "col1": 11,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E3",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W3",
+          "col1": 11,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W4",
+          "col1": 10,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E4",
+          "e1": 11,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E5",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share-index",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-index",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share-index",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share-index",
+        "statement": "index"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-share-index"
+      },
+      {
+        "op": "case",
+        "case": "nw-share-disable"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "c1",
+        "epl": "@public @buseventtype create schema EventSchema(e0 string, e1 int, e2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "c2",
+        "epl": "@public @buseventtype create schema WindowSchema(col0 string, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window MyInfra#keepall as WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "insert",
+        "epl": "insert into MyInfra select * from WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "consume",
+        "epl": "@Hint('disable_window_subquery_indexshare') @name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W1",
+          "col1": 10,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E1",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E2",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W2",
+          "col1": 11,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E3",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W3",
+          "col1": 11,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W4",
+          "col1": 10,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E4",
+          "e1": 11,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E5",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share-disable",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable",
+        "statement": "consume",
+        "epl": "@Hint('disable_window_subquery_indexshare') @name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share-disable",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-share-disable"
+      },
+      {
+        "op": "case",
+        "case": "nw-share-disable-index"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "c1",
+        "epl": "@public @buseventtype create schema EventSchema(e0 string, e1 int, e2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "c2",
+        "epl": "@public @buseventtype create schema WindowSchema(col0 string, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window MyInfra#keepall as WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "insert",
+        "epl": "insert into MyInfra select * from WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "index",
+        "epl": "@name('index') create index MyIndex on MyInfra (col2, col1)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "consume",
+        "epl": "@Hint('disable_window_subquery_indexshare') @name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W1",
+          "col1": 10,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E1",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E2",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W2",
+          "col1": 11,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E3",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W3",
+          "col1": 11,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W4",
+          "col1": 10,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E4",
+          "e1": 11,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E5",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share-disable-index",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-share-disable-index",
+        "statement": "consume",
+        "epl": "@Hint('disable_window_subquery_indexshare') @name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "nw-share-disable-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share-disable-index",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-share-disable-index",
+        "statement": "index"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-share-disable-index"
+      },
+      {
+        "op": "case",
+        "case": "table-no-share"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "c1",
+        "epl": "@public @buseventtype create schema EventSchema(e0 string, e1 int, e2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "c2",
+        "epl": "@public @buseventtype create schema WindowSchema(col0 string, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "create",
+        "epl": "@public create table MyInfra (col0 string primary key, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select * from WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W1",
+          "col1": 10,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E1",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E2",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W2",
+          "col1": 11,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E3",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W3",
+          "col1": 11,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W4",
+          "col1": 10,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E4",
+          "e1": 11,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E5",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "table-no-share",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "table-no-share",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "table-no-share",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "table-no-share"
+      },
+      {
+        "op": "case",
+        "case": "table-no-share-index"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "c1",
+        "epl": "@public @buseventtype create schema EventSchema(e0 string, e1 int, e2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "c2",
+        "epl": "@public @buseventtype create schema WindowSchema(col0 string, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "create",
+        "epl": "@public create table MyInfra (col0 string primary key, col1 long, col2 string)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "insert",
+        "epl": "insert into MyInfra select * from WindowSchema"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "index",
+        "epl": "@name('index') create index MyIndex on MyInfra (col2, col1)"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W1",
+          "col1": 10,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E1",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E2",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W2",
+          "col1": 11,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E3",
+          "e1": 11,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W3",
+          "col1": 11,
+          "col2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "WindowSchema",
+        "payload": {
+          "col0": "W4",
+          "col1": 10,
+          "col2": "c32"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E4",
+          "e1": 11,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E5",
+          "e1": 10,
+          "e2": "c31"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "table-no-share-index",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "table-no-share-index",
+        "statement": "consume",
+        "epl": "@name('s0') select e0, (select col0 from MyInfra where col2 = es.e2 and col1 = es.e1) as val from EventSchema es"
+      },
+      {
+        "op": "send",
+        "case": "table-no-share-index",
+        "eventType": "EventSchema",
+        "payload": {
+          "e0": "E6",
+          "e1": 10,
+          "e2": "c32"
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "table-no-share-index",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "table-no-share-index",
+        "statement": "index"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "table-no-share-index"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-correl-coerce",
+    "records": [
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-correl-coerce",
+    "records": [
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-share-disable-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E1",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E2",
+              "val": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E3",
+              "val": "W2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E4",
+              "val": "W3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E5",
+              "val": "W1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "table-no-share-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "e0": "E6",
+              "val": "W4"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

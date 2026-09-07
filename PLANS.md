@@ -35,17 +35,18 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.329 ('infra-named-window-on-update-misc') committed; Git owns identity. InfraNamedWindowOnUpdate.java is now 8/8 executions differential-verified.
 - Shipped: Draft 4.330 ('infra-named-window-insert-from') committed; Git owns identity.
 - Shipped: Draft 4.332 ('resultset-aggregate-filter-named-parameter-sorted-join') committed; Git owns identity. ResultSetAggregateFilterNamedParameter.java is now covered at ordinals 0-18 minus 19/20 (19 audit/reuse and 20 invalid remain).
-- Current target: next selection — remaining sorted-unit siblings are done; candidates from the P1 table (resultset aggregate remainder, context, epl) to be re-gapped at next unit start.
+- Shipped: Draft 4.333 ('infra-nwtable-subq-correl-coerce') committed; Git owns identity. The InfraNWTableSubq* file family is nearly closed: uncorrel, correl-join, filtered-correl, correl-coerce, at-eventbean, subquery, delete-aggregate are all differential-verified; only correl-index-sharing (case.query-subquery-index-sharing) remains implemented-not-DV.
+- Current target: next selection — re-gap the manifest at next unit start (remaining candidates include spatial index files, EPLSubselectNamedWindowPerformance, InfraNWTableFAFIndexPerfWNoQueryPlanLog, EPLOtherPlanInKeywordQuery, EPLOtherStreamExpr, ExprFilterOptimizableBooleanLimitedExpr, ViewGroup, insert-into family files).
 
 ## Current work unit
-Active: none — 4.332 just shipped. Next unit selection re-gaps the manifest.
+Active: none — 4.333 just shipped. Next unit selection re-gaps the manifest.
 
-Closing summary for shipped Draft 4.332 ('resultset-aggregate-filter-named-parameter-sorted-join'): contract frozen from SortedJoinScout (agent_4ab62aa5, zero engine work); asset writer agent_dc05d3dc authored oracle/script/scenario (29 steps, 18-record Java trace validated end-to-end twice; the writer caught the primary's rotated bound-case row table and modeled the S1 map type with doublePrimitive per the extended kickoff payload). Primary wrote resultset_aggregate_filter_named_parameter_sorted_join.go (join sorted columns via SortedEventsBy[esper.Event](JoinEventValue[esper.Event](1), key, false); maxby/minby/ever as FilterAggregate[string](MaxBy/MinBy/MaxByEver/MinByEver(JoinField, key), filter); ord 18 two-key SortedEvents(Ascending, Ascending) with stream-bound filters — the first replay exposed that reusing the JoinField-bound filters on the non-join stream yields all-null, fixed with stream-bound Like predicates; CountEver/MaxBy/MinBy/SortedEventsBy explicit type params), run.go wiring, 6-test family (the multicriteria-order-swap mutation initially encoded the original order — corrected to a true swap); evidence 18/18 zero differences; manifest 623/236/841/3464 (referenced 3223, unreferenced 913); gates green.
+Closing summary for shipped Draft 4.333 ('infra-nwtable-subq-correl-coerce'): contract frozen from CorrelCoerceScout (agent_2df9dff5) + CorrelCoerceGoSurface (agent_80157a16, zero engine work); asset writer agent_fa108645 authored oracle/script/scenario (176 steps — the writer corrected the primary's 172 arithmetic: 4 index cases not 2 — 56-record Java trace validated end-to-end first JVM attempt). Primary wrote infra_nwtable_subq_correl_coerce.go (EqualOf big.Rat int→long coercion inside SubqueryWhere with And; multi-key CreateIndex("MyIndex", []string{"col2","col1"}); selective undeploy op with per-label deployments + s0/consume aliasing; redeployed consume resubscribes with a continuing per-case sequence counter), run.go wiring, 6-test family; first replay exposed and fixed four integration bugs (case-marker offset, c1/c2 label mismatch, sendOrder tail duplicate, missing consume subscribe condition) plus the ord-18-style table-insert branch (InsertIntoTable vs InsertIntoNamedWindow); evidence 56/56 zero differences; manifest 624/237/849/3472 (referenced 3231, unreferenced 905); gates green.
 
-- [x] Freeze sorted-join contract (SortedJoinScout prefetch).
-- [x] Author oracle, script, and scenario via asset writer (18-record Java trace).
+- [x] Freeze correl-coerce contract (parallel prefetch scouts).
+- [x] Author oracle, script, and scenario via asset writer (56-record Java trace).
 - [x] Implement runner, modes, and 6-test family.
-- [x] Generate traces and zero-difference evidence (18/18).
+- [x] Generate traces and zero-difference evidence (56/56).
 - [x] Update manifest, roadmap, and CHANGELOG.
 - [x] Run gates and independent parity review.
 - [x] Commit and push the unit (Git owns identity; no hash recorded here).

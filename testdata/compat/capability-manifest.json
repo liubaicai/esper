@@ -2252,7 +2252,8 @@
     "InfraNWTableSubqCorrelJoin",
     "InfraNWTableSubqFilteredCorrel",
     "InfraNamedWindowOnUpdate",
-    "InfraNamedWindowInsertFrom"
+    "InfraNamedWindowInsertFrom",
+    "InfraNWTableSubqCorrelCoerce"
    ],
    "goRefs": [
     "internal/app/parity/infra_named_window_join.go",
@@ -2269,7 +2270,8 @@
     "internal/app/parity/infra_nwtable_subq_filtered_correl.go",
     "internal/app/parity/infra_named_window_on_update.go",
     "internal/app/parity/infra_named_window_on_update_misc.go",
-    "internal/app/parity/infra_named_window_insert_from.go"
+    "internal/app/parity/infra_named_window_insert_from.go",
+    "internal/app/parity/infra_nwtable_subq_correl_coerce.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -39371,6 +39373,90 @@
    "notes": [
     "ResultSetAggregateFilterNamedParameter sorted-aggregate join executions pin ordinals 15/17/18: maxby/minby(intPrimitive, filter:theString like 'A%'|'B%').theString plus sorted(intPrimitive, filter:...) event-array columns over a SupportBean_S1#lastevent join with SupportBean#length(4) (nine listener records tracking window eviction including the B1-exit that shrinks bSorted to [b2] and null columns for empty filtered sets); maxbyever/minbyever over the keepall join (five records); and two-key sorted(intPrimitive, doublePrimitive, filter:...) multicriteria ordering over keepall where the intPrimitive tie 1==1 is broken ascending by doublePrimitive (4<10 yields [b2,b1]). Join sorted event-array columns must read the bean member via SortedEventsBy[esper.Event](JoinEventValue[esper.Event](1), key, false) — bare SortedEvents would return joinTuple rows with the empty tuple schema; maxby/minby compose as FilterAggregate[string](MaxBy/MinBy(JoinField, key), filter) and MaxByEver/MinByEver are variadic-key. The SupportBean schema carries doublePrimitive in all cases (join-case sends pin the Java 2-arg sendEvent default -1; doubles are integral so both sides render them as integral JSON numbers). Deferred executions of this file: ordinals 19 (audit/reuse) and 20 (invalid compiles — no Go rejection surface, approved difference)."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-subq-correl-coerce",
+   "javaRuntimeIds": [
+    "java-runtime-0f3833a87dcd9b209935",
+    "java-runtime-f1f621deec2314404f2a",
+    "java-runtime-4f850a69b870e08ebfd5",
+    "java-runtime-1616d20fc73fe4be679c",
+    "java-runtime-0422895f8568f52e0956",
+    "java-runtime-9161da818506b8194079",
+    "java-runtime-3a94283dcac4e9ae4dea",
+    "java-runtime-ce6e53f117adccdf9f59"
+   ],
+   "javaStaticIds": [
+    "java-5a8fbdfa647a5bef3660",
+    "java-5a8fbdfa647a5bef3660",
+    "java-5a8fbdfa647a5bef3660",
+    "java-5a8fbdfa647a5bef3660",
+    "java-5a8fbdfa647a5bef3660",
+    "java-5a8fbdfa647a5bef3660",
+    "java-5a8fbdfa647a5bef3660",
+    "java-5a8fbdfa647a5bef3660"
+   ],
+   "javaNames": [
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=false, disableIndexShareConsumer=false, createExplicitIndex=false}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=false, disableIndexShareConsumer=false, createExplicitIndex=true}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=false, createExplicitIndex=false}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=false, createExplicitIndex=true}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=true, createExplicitIndex=false}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=true, enableIndexShareCreate=true, disableIndexShareConsumer=true, createExplicitIndex=true}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=false, enableIndexShareCreate=false, disableIndexShareConsumer=false, createExplicitIndex=false}",
+    "InfraNWTableSubqCorrelCoerceSimple{namedWindow=false, enableIndexShareCreate=false, disableIndexShareConsumer=false, createExplicitIndex=true}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqCorrelCoerce.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelCoerceDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelCoerceDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelCoerceDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelCoerceCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelCoerceRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelCoerceRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "table",
+    "subselect",
+    "correlated",
+    "coercion",
+    "index-share",
+    "create-index",
+    "undeploy-redeploy",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-subq-correl-coerce.json",
+    "testdata/parity/infra-nwtable-subq-correl-coerce.trace.json",
+    "testdata/parity/infra-nwtable-subq-correl-coerce.go.trace.json",
+    "testdata/parity/infra-nwtable-subq-correl-coerce.evidence.json",
+    "tools/java-oracle/InfraNWTableSubqCorrelCoerceScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-subq-correl-coerce.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0f3833a87dcd9b209935",
+    "java-runtime-f1f621deec2314404f2a",
+    "java-runtime-4f850a69b870e08ebfd5",
+    "java-runtime-1616d20fc73fe4be679c",
+    "java-runtime-0422895f8568f52e0956",
+    "java-runtime-9161da818506b8194079",
+    "java-runtime-3a94283dcac4e9ae4dea",
+    "java-runtime-ce6e53f117adccdf9f59"
+   ],
+   "notes": [
+    "InfraNWTableSubqCorrelCoerce pins correlated scalar subqueries with int-to-long coercion across all 8 flag combinations (named window or col0-primary-key table; enable_window_subquery_indexshare create hint; disable_window_subquery_indexshare consumer hint; explicit two-key create index MyIndex (col2, col1)). The correlation col2 = es.e2 (string) and col1 = es.e1 (outer Integer coerced to the indexed long column) probes the infra through implicit, shared, or explicit indexes — hints are plan-inert here so all 8 executions emit the identical seven s0 records (val W1/null/W2/W3/W1/W4/W4). The mid-case undeploy(s0) + redeploy proves the subquery index repopulates from existing infra contents at statement start (sequence 7 re-derives W4 from the pre-existing keepall/table rows). Typed Go builds SubqueryValueWithOptions(col0, SubqueryWhere(And(Equal(col2, OuterField(e2)), EqualOf(Field[any,int64](col1), OuterField[int](e1))))) over FromNamedWindow/FromTable — EqualOf's big.Rat comparison covers the int-to-long coercion and the engine's subquery index probe collector recognizes equal-of with probe-value coercion — plus multi-key CreateIndex(\"MyIndex\", []string{\"col2\",\"col1\"}, IndexHash, false) and the selective undeploy/redeploy harness ops."
+   ]
   }
  ],
  "mappings": [
@@ -42201,13 +42287,17 @@
   {
    "capabilityId": "resultset.aggregate-filtered",
    "caseId": "case.resultset-aggregate-filter-named-parameter-sorted-join"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-subq-correl-coerce"
   }
  ],
  "summary": {
-  "inventoriedCases": 623,
-  "implementedCases": 621,
-  "differentialVerifiedCases": 236,
-  "differentialVerifiedRuntimeIds": 841,
+  "inventoriedCases": 624,
+  "implementedCases": 622,
+  "differentialVerifiedCases": 237,
+  "differentialVerifiedRuntimeIds": 849,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42217,14 +42307,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3464,
-  "referencedJavaRuntimeIds": 3223,
+  "runtimeAssociationCount": 3472,
+  "referencedJavaRuntimeIds": 3231,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 913,
+  "unreferencedJavaRuntimeIds": 905,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 623,
+  "totalCases": 624,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 841
+  "differentialVerifiedRuntimeIDs": 849
  }
 }
