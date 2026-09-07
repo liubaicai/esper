@@ -1,0 +1,98 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-named-window-on-update-misc",
+  "description": "InfraNamedWindowOnUpdate on-update variants: method-call set clauses ported as approved-difference literal assignments with the update statement's own old/new delivery, subclass-typed named-window updates through a collapsed Go struct, copy-method bean updates under the field-wise-copy approved difference, and wrapper-select windows with an extra projected property, captured from update/create listeners and window snapshots projected to the Java-asserted fields (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnUpdate.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnUpdate.java",
+  "javaRuntimes": [
+    "java-runtime-5d041a3958410a90fa9a",
+    "java-runtime-9ea51cb84d163be79693",
+    "java-runtime-43feff597147c7867ca7",
+    "java-runtime-09f56f49bab53388bb2d"
+  ],
+  "javaNames": [
+    "InfraUpdateNonPropertySet",
+    "InfraSubclass",
+    "InfraUpdateCopyMethodBean",
+    "InfraUpdateWrapper"
+  ],
+  "javaStaticIds": [
+    "java-26306de901985e70904f",
+    "java-d920e63f2081f1d72d2f",
+    "java-6eb1ea7dc80c3078f47f",
+    "java-6b566143dbbb00ea202b"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "non-property-set",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-5d041a3958410a90fa9a",
+      "executionName": "InfraUpdateNonPropertySet",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('update') on SupportBean_S0 as sb update MyWindowUNP as mywin set mywin.setIntPrimitive(10),     setBeanLongPrimitive999(mywin)"
+    },
+    {
+      "case": "subclass",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-9ea51cb84d163be79693",
+      "executionName": "InfraSubclass",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('create') create window MyWindowSC#keepall as select * from SupportBeanAbstractSub"
+    },
+    {
+      "case": "copy-method",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-43feff597147c7867ca7",
+      "executionName": "InfraUpdateCopyMethodBean",
+      "observation": "listener",
+      "iteratorSnapshots": 1,
+      "epl": "@name('window') create window MyWindowBeanCopyMethod#keepall as SupportBeanCopyMethod"
+    },
+    {
+      "case": "wrapper",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-09f56f49bab53388bb2d",
+      "executionName": "InfraUpdateWrapper",
+      "observation": "listener",
+      "iteratorSnapshots": 1,
+      "epl": "@name('window') create window MyWindow#keepall as select *, 1 as p0 from SupportBean"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "non-property-set"},
+    {"op": "deploy", "case": "non-property-set", "statement": "create", "epl": "@public create window MyWindowUNP#keepall as SupportBean"},
+    {"op": "deploy", "case": "non-property-set", "statement": "insert", "epl": "insert into MyWindowUNP select * from SupportBean"},
+    {"op": "deploy", "case": "non-property-set", "statement": "update", "epl": "@name('update') on SupportBean_S0 as sb update MyWindowUNP as mywin set mywin.setIntPrimitive(10),     setBeanLongPrimitive999(mywin)"},
+    {"op": "send", "case": "non-property-set", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "send", "case": "non-property-set", "eventType": "SupportBean_S0", "payload": {"id": 1}},
+    {"op": "undeploy-all", "case": "non-property-set"},
+
+    {"op": "case", "case": "subclass"},
+    {"op": "deploy", "case": "subclass", "statement": "create", "epl": "@name('create') @public create window MyWindowSC#keepall as select * from SupportBeanAbstractSub"},
+    {"op": "deploy", "case": "subclass", "statement": "insert", "epl": "insert into MyWindowSC select * from SupportBeanAbstractSub"},
+    {"op": "deploy", "case": "subclass", "statement": "update", "epl": "on SupportBean update MyWindowSC set v1=theString, v2=theString"},
+    {"op": "send", "case": "subclass", "eventType": "SupportBeanAbstractSub", "payload": {"v1": null, "v2": "value2"}},
+    {"op": "send", "case": "subclass", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "undeploy-all", "case": "subclass"},
+
+    {"op": "case", "case": "copy-method"},
+    {"op": "deploy", "case": "copy-method", "statement": "create", "epl": "@name('window') @public create window MyWindowBeanCopyMethod#keepall as SupportBeanCopyMethod"},
+    {"op": "deploy", "case": "copy-method", "statement": "insert", "epl": "insert into MyWindowBeanCopyMethod select * from SupportBeanCopyMethod"},
+    {"op": "deploy", "case": "copy-method", "statement": "update", "epl": "on SupportBean update MyWindowBeanCopyMethod set valOne = 'x'"},
+    {"op": "send", "case": "copy-method", "eventType": "SupportBeanCopyMethod", "payload": {"valOne": "a", "valTwo": "b"}},
+    {"op": "send", "case": "copy-method", "eventType": "SupportBean", "payload": {"theString": null, "intPrimitive": 0}},
+    {"op": "snapshot", "case": "copy-method", "statement": "window", "mode": "any"},
+    {"op": "undeploy-all", "case": "copy-method"},
+
+    {"op": "case", "case": "wrapper"},
+    {"op": "deploy", "case": "wrapper", "statement": "create", "epl": "@name('window') @public create window MyWindow#keepall as select *, 1 as p0 from SupportBean;\ninsert into MyWindow select *, 2 as p0 from SupportBean"},
+    {"op": "deploy", "case": "wrapper", "statement": "update", "epl": "on SupportBean_S0 update MyWindow set theString = 'x', p0 = 2"},
+    {"op": "send", "case": "wrapper", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100}},
+    {"op": "send", "case": "wrapper", "eventType": "SupportBean_S0", "payload": {"id": -1}},
+    {"op": "snapshot", "case": "wrapper", "statement": "window", "mode": "any"},
+    {"op": "undeploy-all", "case": "wrapper"}
+  ]
+}

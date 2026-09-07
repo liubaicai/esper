@@ -1,0 +1,421 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5d041a3958410a90fa9a",
+    "java-runtime-9ea51cb84d163be79693",
+    "java-runtime-43feff597147c7867ca7",
+    "java-runtime-09f56f49bab53388bb2d"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnUpdate.java"
+  ],
+  "javaExecutions": [
+    "InfraUpdateNonPropertySet",
+    "InfraSubclass",
+    "InfraUpdateCopyMethodBean",
+    "InfraUpdateWrapper"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-update-misc",
+    "steps": [
+      {
+        "op": "case",
+        "case": "non-property-set"
+      },
+      {
+        "op": "deploy",
+        "case": "non-property-set",
+        "statement": "create",
+        "epl": "@public create window MyWindowUNP#keepall as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "non-property-set",
+        "statement": "insert",
+        "epl": "insert into MyWindowUNP select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "non-property-set",
+        "statement": "update",
+        "epl": "@name('update') on SupportBean_S0 as sb update MyWindowUNP as mywin set mywin.setIntPrimitive(10),     setBeanLongPrimitive999(mywin)"
+      },
+      {
+        "op": "send",
+        "case": "non-property-set",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "non-property-set",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "non-property-set"
+      },
+      {
+        "op": "case",
+        "case": "subclass"
+      },
+      {
+        "op": "deploy",
+        "case": "subclass",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindowSC#keepall as select * from SupportBeanAbstractSub"
+      },
+      {
+        "op": "deploy",
+        "case": "subclass",
+        "statement": "insert",
+        "epl": "insert into MyWindowSC select * from SupportBeanAbstractSub"
+      },
+      {
+        "op": "deploy",
+        "case": "subclass",
+        "statement": "update",
+        "epl": "on SupportBean update MyWindowSC set v1=theString, v2=theString"
+      },
+      {
+        "op": "send",
+        "case": "subclass",
+        "eventType": "SupportBeanAbstractSub",
+        "payload": {
+          "v1": null,
+          "v2": "value2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subclass",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "subclass"
+      },
+      {
+        "op": "case",
+        "case": "copy-method"
+      },
+      {
+        "op": "deploy",
+        "case": "copy-method",
+        "statement": "create",
+        "epl": "@name('window') @public create window MyWindowBeanCopyMethod#keepall as SupportBeanCopyMethod"
+      },
+      {
+        "op": "deploy",
+        "case": "copy-method",
+        "statement": "insert",
+        "epl": "insert into MyWindowBeanCopyMethod select * from SupportBeanCopyMethod"
+      },
+      {
+        "op": "deploy",
+        "case": "copy-method",
+        "statement": "update",
+        "epl": "on SupportBean update MyWindowBeanCopyMethod set valOne = 'x'"
+      },
+      {
+        "op": "send",
+        "case": "copy-method",
+        "eventType": "SupportBeanCopyMethod",
+        "payload": {
+          "valOne": "a",
+          "valTwo": "b"
+        }
+      },
+      {
+        "op": "send",
+        "case": "copy-method",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "copy-method",
+        "statement": "window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "copy-method"
+      },
+      {
+        "op": "case",
+        "case": "wrapper"
+      },
+      {
+        "op": "deploy",
+        "case": "wrapper",
+        "statement": "create",
+        "epl": "@name('window') @public create window MyWindow#keepall as select *, 1 as p0 from SupportBean;\ninsert into MyWindow select *, 2 as p0 from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "wrapper",
+        "statement": "update",
+        "epl": "on SupportBean_S0 update MyWindow set theString = 'x', p0 = 2"
+      },
+      {
+        "op": "send",
+        "case": "wrapper",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "wrapper",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": -1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "wrapper",
+        "statement": "window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "wrapper"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-update-misc",
+    "records": [
+      {
+        "case": "non-property-set",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "longPrimitive": 999
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "longPrimitive": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "subclass",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "v1": {
+                "state": "null"
+              },
+              "v2": "value2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subclass",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "v1": "E1",
+              "v2": "E1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "v1": {
+                "state": "null"
+              },
+              "v2": "value2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "copy-method",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "valOne": "x"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wrapper",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": 2,
+              "theString": "x"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-on-update-misc",
+    "records": [
+      {
+        "case": "non-property-set",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "longPrimitive": 999
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "longPrimitive": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "subclass",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "v1": {
+                "state": "null"
+              },
+              "v2": "value2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subclass",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "v1": "E1",
+              "v2": "E1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "v1": {
+                "state": "null"
+              },
+              "v2": "value2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "copy-method",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "valOne": "x"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wrapper",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": 2,
+              "theString": "x"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

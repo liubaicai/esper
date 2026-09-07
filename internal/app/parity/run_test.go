@@ -35465,6 +35465,404 @@ func assertOnUpdateRows(t *testing.T, caseName string, index int, stream string,
 	}
 }
 
+func TestRunInfraNamedWindowOnUpdateMiscDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNamedWindowOnUpdateMiscID,
+		"-scenario", filepath.Join(root, infraNamedWindowOnUpdateMiscID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraNamedWindowOnUpdateMiscTrace(t, trace)
+}
+
+func TestRunInfraNamedWindowOnUpdateMiscDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraNamedWindowOnUpdateMiscID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNamedWindowOnUpdateMiscID + "-diff",
+		"-scenario", filepath.Join(root, infraNamedWindowOnUpdateMiscID+".json"),
+		"-java-trace", filepath.Join(root, infraNamedWindowOnUpdateMiscID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraNamedWindowOnUpdateMiscJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNamedWindowOnUpdateMiscJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNamedWindowOnUpdateMiscSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNamedWindowOnUpdateMiscJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraNamedWindowOnUpdateMiscTrace(t, evidence.JavaTrace)
+	assertInfraNamedWindowOnUpdateMiscTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraNamedWindowOnUpdateMiscDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "update-new-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["intPrimitive"] = json.Number("11")
+			},
+		},
+		{
+			name: "update-old-missing",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Old = nil
+			},
+		},
+		{
+			name: "subclass-insert-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["v2"] = "other"
+			},
+		},
+		{
+			name: "subclass-update-old-dropped",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Old = nil
+			},
+		},
+		{
+			name: "copy-method-snapshot-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["valOne"] = "y"
+			},
+		},
+		{
+			name: "wrapper-snapshot-null-shape",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["p0"] = nil
+			},
+		},
+		{
+			name: "statement-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Statement = "update"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:4]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraNamedWindowOnUpdateMiscID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraNamedWindowOnUpdateMiscID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraNamedWindowOnUpdateMiscID + "-diff",
+				"-scenario", filepath.Join(root, infraNamedWindowOnUpdateMiscID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraNamedWindowOnUpdateMiscCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraNamedWindowOnUpdateMiscID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraNamedWindowOnUpdateMiscID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraNamedWindowOnUpdateMiscID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != infraNamedWindowOnUpdateMiscJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNamedWindowOnUpdateMiscJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNamedWindowOnUpdateMiscSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNamedWindowOnUpdateMiscJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertInfraNamedWindowOnUpdateMiscTrace(t, javaTrace)
+	assertInfraNamedWindowOnUpdateMiscTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, infraNamedWindowOnUpdateMiscID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		infraNamedWindowOnUpdateMiscJavaCommit,
+		infraNamedWindowOnUpdateMiscJavaRuntimeIDs,
+		[]string{infraNamedWindowOnUpdateMiscSource},
+		infraNamedWindowOnUpdateMiscJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNamedWindowOnUpdateMiscID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertInfraNamedWindowOnUpdateMiscTrace(t, replayed)
+}
+
+func TestRunInfraNamedWindowOnUpdateMiscRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNamedWindowOnUpdateMiscID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "non-property-set"`), []byte(`"case": "non-property-set", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-5d041a3958410a90fa9a"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 0`), []byte(`"ordinal": 1`), 1)
+		}},
+		{name: "create-public-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`@name('create') @public create window MyWindowSC#keepall`), []byte(`@name('create') create window MyWindowSC#keepall`), 1)
+		}},
+		{name: "update-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`set mywin.setIntPrimitive(10)`), []byte(`set mywin.setIntPrimitive(11)`), 1)
+		}},
+		{name: "update-epl-spacing-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(` setBeanLongPrimitive999(mywin)`), []byte(`  setBeanLongPrimitive999(mywin)`), 1)
+		}},
+		{name: "snapshot-statement-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "window"`), []byte(`"statement": "create"`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"valOne": "a"`), []byte(`"valOne": "a", "extra": 0`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"theString": "E1", "intPrimitive": 100}`), []byte(`{"theString": "E1", "intPrimitive": 101}`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraNamedWindowOnUpdateMiscID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraNamedWindowOnUpdateMiscRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", infraNamedWindowOnUpdateMiscID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != infraNamedWindowOnUpdateMiscID ||
+		document.Description != infraNamedWindowOnUpdateMiscDescription ||
+		document.JavaCommit != infraNamedWindowOnUpdateMiscJavaCommit ||
+		document.JavaSource != infraNamedWindowOnUpdateMiscSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, infraNamedWindowOnUpdateMiscJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, infraNamedWindowOnUpdateMiscJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, infraNamedWindowOnUpdateMiscJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 || len(document.Cases) != len(infraNamedWindowOnUpdateMiscCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != infraNamedWindowOnUpdateMiscCases[index] ||
+			entry.Ordinal != infraNamedWindowOnUpdateMiscOrdinals[index] ||
+			entry.RuntimeID != infraNamedWindowOnUpdateMiscJavaRuntimeIDs[index] ||
+			entry.ExecutionName != infraNamedWindowOnUpdateMiscJavaExecutions[index] ||
+			entry.Observation != "listener" || entry.IteratorSnapshots != infraNamedWindowOnUpdateMiscIterSnaps[index] {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertInfraNamedWindowOnUpdateMiscTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraNamedWindowOnUpdateMiscID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 5 {
+		t.Fatalf("trace records = %d, want 5", len(trace.Records))
+	}
+	row := func(fields map[string]any) compat.ResultRecord {
+		return compat.ResultRecord{Kind: "row", Fields: fields}
+	}
+	nullState := map[string]any{"state": "null"}
+	type step struct {
+		caseName  string
+		operation string
+		statement string
+		sequence  uint64
+		newRows   []compat.ResultRecord
+		oldRows   []compat.ResultRecord
+	}
+	steps := []step{
+		{"non-property-set", "listener", "update", 1,
+			[]compat.ResultRecord{row(map[string]any{"intPrimitive": json.Number("10"), "longPrimitive": json.Number("999")})},
+			[]compat.ResultRecord{row(map[string]any{"intPrimitive": json.Number("1"), "longPrimitive": json.Number("0")})}},
+		{"subclass", "listener", "create", 1,
+			[]compat.ResultRecord{row(map[string]any{"v1": nullState, "v2": "value2"})}, nil},
+		{"subclass", "listener", "create", 2,
+			[]compat.ResultRecord{row(map[string]any{"v1": "E1", "v2": "E1"})},
+			[]compat.ResultRecord{row(map[string]any{"v1": nullState, "v2": "value2"})}},
+		{"copy-method", "snapshot", "window", 0,
+			[]compat.ResultRecord{row(map[string]any{"valOne": "x"})}, nil},
+		{"wrapper", "snapshot", "window", 0,
+			[]compat.ResultRecord{row(map[string]any{"theString": "x", "p0": json.Number("2")})}, nil},
+	}
+	for index, want := range steps {
+		record := trace.Records[index]
+		if record.Case != want.caseName || record.Operation != want.operation || record.Statement != want.statement ||
+			record.Sequence != want.sequence || record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d metadata = %#v", index, record)
+		}
+		if len(record.New) != len(want.newRows) {
+			t.Fatalf("record %d new rows = %d, want %d", index, len(record.New), len(want.newRows))
+		}
+		for i := range want.newRows {
+			if !reflect.DeepEqual(record.New[i].Fields, want.newRows[i].Fields) {
+				t.Fatalf("record %d new row %d = %#v, want %#v", index, i, record.New[i].Fields, want.newRows[i].Fields)
+			}
+		}
+		if len(record.Old) != len(want.oldRows) {
+			t.Fatalf("record %d old rows = %d, want %d", index, len(record.Old), len(want.oldRows))
+		}
+		for i := range want.oldRows {
+			if !reflect.DeepEqual(record.Old[i].Fields, want.oldRows[i].Fields) {
+				t.Fatalf("record %d old row %d = %#v, want %#v", index, i, record.Old[i].Fields, want.oldRows[i].Fields)
+			}
+		}
+	}
+}
+
 func mustInt64(t *testing.T, value any) int64 {
 	number, ok := value.(json.Number)
 	if !ok {

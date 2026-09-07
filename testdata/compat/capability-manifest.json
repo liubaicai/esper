@@ -2264,7 +2264,8 @@
     "internal/app/parity/infra_nwtable_subq_at_eventbean.go",
     "internal/app/parity/infra_nwtable_subq_correl_join.go",
     "internal/app/parity/infra_nwtable_subq_filtered_correl.go",
-    "internal/app/parity/infra_named_window_on_update.go"
+    "internal/app/parity/infra_named_window_on_update.go",
+    "internal/app/parity/infra_named_window_on_update_misc.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -39103,7 +39104,74 @@
     "java-runtime-a25a18f2754aeae08015"
    ],
    "notes": [
-    "InfraNamedWindowOnUpdate pins on-update statements over named windows for 4 of 8 executions (ordinals 1/2/6/7): intersect (#unique(theString)#length(2)) and retain-union composite windows deliver update old/new on the create-statement listener (new=post-update E2/300, old=pre-update E2/3, preceded by the two insert deliveries), and multikey-with-array updates match through single-field and two-field int[] deep-equality where clauses including the empty-array match and untouched no-match rows, asserted through window snapshots (E1=13/E2=10/E3=11/E4=12; ID1=12/ID2=10/ID3=11). Snapshot rows are projected to the Java-asserted fields (theString,intPrimitive / id,value) symmetrically on both sides, and mode-any snapshots are emitted in the differential canonical row order so checked-in traces are stable against engine iteration order; the union snapshot keeps the Java test's theString-ordered pin. Typed Go uses CreateNamedWindow with NamedWindowRetention(IntersectWindows/UnionWindows(Unique,LengthWindow)), OnEvent(...).InsertIntoNamedWindow(CopyMatchingFields), OnEvent(...).UpdateNamedWindow with NamedWindowField-vs-Field predicates (Equal for scalars, EqualOf for int[] deep equality) and SetColumn assignments, plus statement.Snapshot for iterator reads. The Go union-update composite-retention branch (updateCompositeWhereState union path) is exercised differentially for the first time. Remaining executions 0/3/4/5 (method-call set clauses, subclass typing, copy-method config, wrapper select) are deferred with approved-difference adaptations registered for a follow-up unit."
+    "InfraNamedWindowOnUpdate pins a filtered correlated scalar subquery (select intPrimitive from MyInfra(intPrimitive<0) sw where s0.p00=sw.theString) over a #keepall named window and a composite-PK table, across all 7 flag combinations (enable_window_subquery_indexshare create hint, disable_window_subquery_indexshare consumer hint, explicit create index on theString). Each case emits four consume records with val null/-2/-3/null; hints are plan-inert for this filtered shape (the shared-index branch requires an empty filter), so all 7 executions are trace-identical and the unit pins the index-choice paths through the scenario metadata instead. Typed Go folds the inner filter into SubqueryWhere(And(Less[int](Field[any,int], Literal(0)), Equal[string](Field[any,string], OuterField[string]))) over FromNamedWindow/FromTable with SubqueryCardinalityMode(SubqueryNullOnMultiple), and applies the explicit index through the live NamedWindow/Table.CreateIndex catalog op (precedent infra_nwtable_create_index_parity_test.go). The Java harness registers SupportBean_S0 under both SupportBean_S0 and S0 and delivers S0 sends under the S0 type name because the pinned EPL consumes `from S0 s0`. Executions 0/3/4/5 of this source file shipped in the follow-up case.infra-named-window-on-update-misc unit (the file is now 8/8 differential-verified)."
+   ]
+  },
+  {
+   "id": "case.infra-named-window-on-update-misc",
+   "javaRuntimeIds": [
+    "java-runtime-5d041a3958410a90fa9a",
+    "java-runtime-9ea51cb84d163be79693",
+    "java-runtime-43feff597147c7867ca7",
+    "java-runtime-09f56f49bab53388bb2d"
+   ],
+   "javaStaticIds": [
+    "java-26306de901985e70904f",
+    "java-d920e63f2081f1d72d2f",
+    "java-6eb1ea7dc80c3078f47f",
+    "java-6b566143dbbb00ea202b"
+   ],
+   "javaNames": [
+    "InfraUpdateNonPropertySet",
+    "InfraSubclass",
+    "InfraUpdateCopyMethodBean",
+    "InfraUpdateWrapper"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnUpdate.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowOnUpdateMiscDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowOnUpdateMiscDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowOnUpdateMiscDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowOnUpdateMiscCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowOnUpdateMiscRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNamedWindowOnUpdateMiscRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "on-update",
+    "subclass",
+    "copy-method",
+    "wrapper-select",
+    "approved-difference",
+    "snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-named-window-on-update-misc.json",
+    "testdata/parity/infra-named-window-on-update-misc.trace.json",
+    "testdata/parity/infra-named-window-on-update-misc.go.trace.json",
+    "testdata/parity/infra-named-window-on-update-misc.evidence.json",
+    "tools/java-oracle/InfraNamedWindowOnUpdateMiscScenarioOracle.java",
+    "tools/java-oracle/run-infra-named-window-on-update-misc.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5d041a3958410a90fa9a",
+    "java-runtime-9ea51cb84d163be79693",
+    "java-runtime-43feff597147c7867ca7",
+    "java-runtime-09f56f49bab53388bb2d"
+   ],
+   "notes": [
+    "InfraNamedWindowOnUpdate misc variants pin the remaining 4 executions (ordinals 0/3/4/5), closing the file at 8/8: the non-property-set update (method-call set clauses setIntPrimitive(10) + plugin single-row function setBeanLongPrimitive999, compiled verbatim by the Java oracle via a suite-faithful plugin registration and ported to Go as the approved-difference literal assignments) delivers the update statement's own old/new pair (new 10/999, old 1/0 projected to intPrimitive,longPrimitive); the subclass update routes a SupportBean trigger into a SupportBeanAbstractSub-typed window through a collapsed Go struct with pointer fields for null-exact v1 and carries the old pre-image on the create consumer (Java default irstream delivery); the copy-method bean update runs under the field-wise-copy approved difference (no copy hook); the wrapper-select window (select *, 1 as p0) declares p0 in the schema, inserts via CopyMatchingFields plus a SetColumn p0 assignment, and snapshots to theString,p0. The wrapper create+insert is one merged deploy step (probe-proven: a create-window-as-select with wildcard + extra property never registers its type among public types on the fixed tree, so a separate insert module cannot resolve it; mirrors the Java suite's own single-module compile). Snapshot rows project to the Java-asserted fields and mode-any snapshots use the differential canonical row order. javaFlags pins [] per runtime-inventory truth (static-manifest over-approximates file-scoped SERDEREQUIRED; only InfraUpdateCopyMethodBean declares it, with no Go-harness effect)."
    ]
   }
  ],
@@ -41919,13 +41987,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-named-window-on-update"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-named-window-on-update-misc"
   }
  ],
  "summary": {
-  "inventoriedCases": 619,
-  "implementedCases": 617,
-  "differentialVerifiedCases": 232,
-  "differentialVerifiedRuntimeIds": 827,
+  "inventoriedCases": 620,
+  "implementedCases": 618,
+  "differentialVerifiedCases": 233,
+  "differentialVerifiedRuntimeIds": 831,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -41935,14 +42007,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3450,
-  "referencedJavaRuntimeIds": 3209,
+  "runtimeAssociationCount": 3454,
+  "referencedJavaRuntimeIds": 3213,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 927,
+  "unreferencedJavaRuntimeIds": 923,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 619,
+  "totalCases": 620,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 827
+  "differentialVerifiedRuntimeIDs": 831
  }
 }
