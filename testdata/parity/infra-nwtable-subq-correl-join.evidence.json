@@ -1,0 +1,694 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-a1f99ce62c1931e994d8",
+    "java-runtime-00bf2cd9669115eb2950",
+    "java-runtime-ffb6fe55a1ecde12a134"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqCorrelJoin.java"
+  ],
+  "javaExecutions": [
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=true",
+    "enableIndexShareCreate=false}",
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=true",
+    "enableIndexShareCreate=true}",
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=false",
+    "enableIndexShareCreate=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-correl-join",
+    "steps": [
+      {
+        "op": "case",
+        "case": "nw-no-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "create",
+        "epl": "@public create window MyInfra#unique(theString) as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-no-share",
+        "statement": "s0",
+        "epl": "@name('s0') select (select intPrimitive from MyInfra where theString = s1.p10) as val from SupportBean_S0#lastevent as s0, SupportBean_S1#lastevent as s1"
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-no-share",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E3"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-no-share"
+      },
+      {
+        "op": "case",
+        "case": "nw-index-share"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-index-share",
+        "statement": "create",
+        "epl": "@Hint('enable_window_subquery_indexshare') @public create window MyInfra#unique(theString) as select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-index-share",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-index-share",
+        "statement": "s0",
+        "epl": "@name('s0') select (select intPrimitive from MyInfra where theString = s1.p10) as val from SupportBean_S0#lastevent as s0, SupportBean_S1#lastevent as s1"
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nw-index-share",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E3"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-index-share"
+      },
+      {
+        "op": "case",
+        "case": "table"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "create",
+        "epl": "@public create table MyInfra(theString string primary key, intPrimitive int primary key)"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "insert",
+        "epl": "insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "table",
+        "statement": "s0",
+        "epl": "@name('s0') select (select intPrimitive from MyInfra where theString = s1.p10) as val from SupportBean_S0#lastevent as s0, SupportBean_S1#lastevent as s1"
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "table",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "E3"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-correl-join",
+    "records": [
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 30
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-subq-correl-join",
+    "records": [
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-no-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "nw-index-share",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "table",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": 30
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

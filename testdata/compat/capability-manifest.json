@@ -2246,7 +2246,8 @@
     "InfraRightOuterJoinLateStart",
     "InfraFullOuterJoinNamedAggregationLateStart",
     "InfraNWTableSubqUncorrel",
-    "InfraNWTableSubqueryAtEventBean"
+    "InfraNWTableSubqueryAtEventBean",
+    "InfraNWTableSubqCorrelJoin"
    ],
    "goRefs": [
     "internal/app/parity/infra_named_window_join.go",
@@ -2258,7 +2259,8 @@
     "internal/esper/state.go",
     "internal/esper/trigger.go",
     "internal/app/parity/infra_nwtable_subq_uncorrel.go",
-    "internal/app/parity/infra_nwtable_subq_at_eventbean.go"
+    "internal/app/parity/infra_nwtable_subq_at_eventbean.go",
+    "internal/app/parity/infra_nwtable_subq_correl_join.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -38821,6 +38823,69 @@
    "notes": [
     "InfraNWTableSubqueryAtEventBean pins whole-event subselects: (select * from MyInfra) @eventbean as detail over a keepall named window and a primary-key table. The empty infra yields a null fragment (Java assertNull; rendered {\"state\":\"null\"} with the key present), and populated windows yield row arrays [{c0,c1}] in insertion order. Engine: SubqueryValueWithOptions[[]Event](inner, WindowEvents()) — the aggregate group path accumulates named-window/table candidates so values[0] is the full snapshot and the empty case yields Null() matching the Java getFragment null."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-subq-correl-join",
+   "javaRuntimeIds": [
+    "java-runtime-a1f99ce62c1931e994d8",
+    "java-runtime-00bf2cd9669115eb2950",
+    "java-runtime-ffb6fe55a1ecde12a134"
+   ],
+   "javaStaticIds": [
+    "java-0ce6cd8b5317076e9a5a",
+    "java-0ce6cd8b5317076e9a5a",
+    "java-0ce6cd8b5317076e9a5a"
+   ],
+   "javaNames": [
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=true, enableIndexShareCreate=false}",
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=true, enableIndexShareCreate=true}",
+    "InfraNWTableSubqCorrelJoinAssertion{namedWindow=false, enableIndexShareCreate=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableSubqCorrelJoin.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelJoinDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelJoinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelJoinDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelJoinCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelJoinRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableSubqCorrelJoinRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "infra",
+    "named-window",
+    "table",
+    "subselect",
+    "correlated",
+    "join",
+    "lastevent",
+    "index-share",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-subq-correl-join.json",
+    "testdata/parity/infra-nwtable-subq-correl-join.trace.json",
+    "testdata/parity/infra-nwtable-subq-correl-join.go.trace.json",
+    "testdata/parity/infra-nwtable-subq-correl-join.evidence.json",
+    "tools/java-oracle/InfraNWTableSubqCorrelJoinScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-subq-correl-join.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a1f99ce62c1931e994d8",
+    "java-runtime-00bf2cd9669115eb2950",
+    "java-runtime-ffb6fe55a1ecde12a134"
+   ],
+   "notes": [
+    "InfraNWTableSubqCorrelJoin pins correlated scalar subqueries (select intPrimitive from MyInfra where theString = s1.p10) inside a 2-stream last-event join select, over a #unique(theString) named window and a composite-PK table. The first S0 send is silent (join incomplete: S1 lastevent empty); subsequent fires yield 20/20/10/30 from unique-keyed lookups (with subquery reads pinned to s1.p10 regardless of the new S0 p00). Index-share hints are plan-only. Typed Go uses JoinMany(JoinSource(LastEvent) x2).Select(SelectLeft(\"val\", SubqueryValueWithOptions[int](inner, Field[any,int], SubqueryWhere(Equal[string](Field[any,string], JoinField[string](1,\"p10\")))))) over FromNamedWindow/FromTable."
+   ]
   }
  ],
  "mappings": [
@@ -41619,13 +41684,17 @@
   {
    "capabilityId": "infra.namedwindow.views",
    "caseId": "case.infra-nwtable-subq-at-eventbean"
+  },
+  {
+   "capabilityId": "infra.namedwindow.views",
+   "caseId": "case.infra-nwtable-subq-correl-join"
   }
  ],
  "summary": {
-  "inventoriedCases": 615,
-  "implementedCases": 613,
-  "differentialVerifiedCases": 228,
-  "differentialVerifiedRuntimeIds": 809,
+  "inventoriedCases": 616,
+  "implementedCases": 614,
+  "differentialVerifiedCases": 229,
+  "differentialVerifiedRuntimeIds": 812,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -41635,14 +41704,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3432,
-  "referencedJavaRuntimeIds": 3191,
+  "runtimeAssociationCount": 3435,
+  "referencedJavaRuntimeIds": 3194,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 945,
+  "unreferencedJavaRuntimeIds": 942,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 615,
+  "totalCases": 616,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 809
+  "differentialVerifiedRuntimeIDs": 812
  }
 }

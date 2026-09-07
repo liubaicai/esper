@@ -93,6 +93,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableSubqUncorrelScenario(file)
 	} else if *mode == "infra-nwtable-subq-at-eventbean" || *mode == "infra-nwtable-subq-at-eventbean-diff" {
 		scenario, err = loadInfraNWTableSubqAtEventBeanScenario(file)
+	} else if *mode == "infra-nwtable-subq-correl-join" || *mode == "infra-nwtable-subq-correl-join-diff" {
+		scenario, err = loadInfraNWTableSubqCorrelJoinScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
 		scenario, err = loadResultSetQueryTypeRowForAllSelectAvgExprStdGroupByScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni" || *mode == "resultset-querytype-row-for-all-select-avg-std-group-by-uni-diff" {
@@ -247,6 +249,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableSubqAtEventBeanJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableSubqAtEventBeanJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableSubqAtEventBeanJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-subq-correl-join" || *mode == "infra-nwtable-subq-correl-join-diff" {
+		trace, err := runInfraNWTableSubqCorrelJoinScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-subq-correl-join-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableSubqCorrelJoinJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableSubqCorrelJoinJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableSubqCorrelJoinJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
