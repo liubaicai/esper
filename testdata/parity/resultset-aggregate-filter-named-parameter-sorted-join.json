@@ -1,0 +1,85 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-aggregate-filter-named-parameter-sorted-join",
+  "description": "ResultSetAggregateFilterNamedParameter sorted-aggregate join executions: maxby/minby/maxbyever/minbyever with theString value projections and sorted event-array columns under named filter parameters over a last-event join with length(4) or keepall SupportBean windows, plus two-key sorted(intPrimitive, doublePrimitive) multicriteria ordering with null rendered for empty filtered sets (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java",
+  "javaRuntimes": [
+    "java-runtime-6b6e0d2290261cb8cd93",
+    "java-runtime-236d99a9d77ed3932510",
+    "java-runtime-398a780be4d755650285"
+  ],
+  "javaNames": [
+    "ResultSetAggregateAccessAggSortedBound{join=true}",
+    "ResultSetAggregateAccessAggSortedUnbound{join=true}",
+    "ResultSetAggregateAccessAggSortedMulticriteria"
+  ],
+  "javaStaticIds": [
+    "java-ea6830fd215ba36a098b",
+    "java-d726134be3446919675e",
+    "java-a26ba8e7bb8f4e6c9f2d"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "sorted-join-bound",
+      "ordinal": 15,
+      "runtimeId": "java-runtime-6b6e0d2290261cb8cd93",
+      "executionName": "ResultSetAggregateAccessAggSortedBound{join=true}",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select maxby(intPrimitive, filter:theString like 'A%').theString as aMaxby,minby(intPrimitive, filter:theString like 'A%').theString as aMinby,sorted(intPrimitive, filter:theString like 'A%') as aSorted,maxby(intPrimitive, filter:theString like 'B%').theString as bMaxby,minby(intPrimitive, filter:theString like 'B%').theString as bMinby,sorted(intPrimitive, filter:theString like 'B%') as bSorted from SupportBean_S1#lastevent, SupportBean#length(4)"
+    },
+    {
+      "case": "sorted-join-unbound",
+      "ordinal": 17,
+      "runtimeId": "java-runtime-236d99a9d77ed3932510",
+      "executionName": "ResultSetAggregateAccessAggSortedUnbound{join=true}",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select maxby(intPrimitive, filter:theString like 'A%').theString as aMaxby,maxbyever(intPrimitive, filter:theString like 'A%').theString as aMaxbyever,minby(intPrimitive, filter:theString like 'A%').theString as aMinby,minbyever(intPrimitive, filter:theString like 'A%').theString as aMinbyever from SupportBean_S1#lastevent, SupportBean#keepall"
+    },
+    {
+      "case": "sorted-multicriteria",
+      "ordinal": 18,
+      "runtimeId": "java-runtime-398a780be4d755650285",
+      "executionName": "ResultSetAggregateAccessAggSortedMulticriteria",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select sorted(intPrimitive, doublePrimitive, filter:theString like 'A%') as aSorted,sorted(intPrimitive, doublePrimitive, filter:theString like 'B%') as bSorted from SupportBean#keepall"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "sorted-join-bound"},
+    {"op": "deploy", "case": "sorted-join-bound", "statement": "s0", "epl": "@name('s0') select maxby(intPrimitive, filter:theString like 'A%').theString as aMaxby,minby(intPrimitive, filter:theString like 'A%').theString as aMinby,sorted(intPrimitive, filter:theString like 'A%') as aSorted,maxby(intPrimitive, filter:theString like 'B%').theString as bMaxby,minby(intPrimitive, filter:theString like 'B%').theString as bMinby,sorted(intPrimitive, filter:theString like 'B%') as bSorted from SupportBean_S1#lastevent, SupportBean#length(4)"},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean_S1", "payload": {"id": 0, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "B1", "intPrimitive": 1, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "A10", "intPrimitive": 10, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 2, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "A5", "intPrimitive": 5, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "A15", "intPrimitive": 15, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "X3", "intPrimitive": 3, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "X4", "intPrimitive": 4, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "X5", "intPrimitive": 5, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-bound", "eventType": "SupportBean", "payload": {"theString": "X6", "intPrimitive": 6, "doublePrimitive": -1}},
+    {"op": "undeploy-all", "case": "sorted-join-bound"},
+
+    {"op": "case", "case": "sorted-join-unbound"},
+    {"op": "deploy", "case": "sorted-join-unbound", "statement": "s0", "epl": "@name('s0') select maxby(intPrimitive, filter:theString like 'A%').theString as aMaxby,maxbyever(intPrimitive, filter:theString like 'A%').theString as aMaxbyever,minby(intPrimitive, filter:theString like 'A%').theString as aMinby,minbyever(intPrimitive, filter:theString like 'A%').theString as aMinbyever from SupportBean_S1#lastevent, SupportBean#keepall"},
+    {"op": "send", "case": "sorted-join-unbound", "eventType": "SupportBean_S1", "payload": {"id": 0, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-unbound", "eventType": "SupportBean", "payload": {"theString": "B1", "intPrimitive": 1, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-unbound", "eventType": "SupportBean", "payload": {"theString": "A10", "intPrimitive": 10, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-unbound", "eventType": "SupportBean", "payload": {"theString": "A5", "intPrimitive": 5, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-unbound", "eventType": "SupportBean", "payload": {"theString": "A15", "intPrimitive": 15, "doublePrimitive": -1}},
+    {"op": "send", "case": "sorted-join-unbound", "eventType": "SupportBean", "payload": {"theString": "B1000", "intPrimitive": 1000, "doublePrimitive": -1}},
+    {"op": "undeploy-all", "case": "sorted-join-unbound"},
+
+    {"op": "case", "case": "sorted-multicriteria"},
+    {"op": "deploy", "case": "sorted-multicriteria", "statement": "s0", "epl": "@name('s0') select sorted(intPrimitive, doublePrimitive, filter:theString like 'A%') as aSorted,sorted(intPrimitive, doublePrimitive, filter:theString like 'B%') as bSorted from SupportBean#keepall"},
+    {"op": "send", "case": "sorted-multicriteria", "eventType": "SupportBean", "payload": {"theString": "B1", "intPrimitive": 1, "doublePrimitive": 10}},
+    {"op": "send", "case": "sorted-multicriteria", "eventType": "SupportBean", "payload": {"theString": "A1", "intPrimitive": 100, "doublePrimitive": 2}},
+    {"op": "send", "case": "sorted-multicriteria", "eventType": "SupportBean", "payload": {"theString": "B2", "intPrimitive": 1, "doublePrimitive": 4}},
+    {"op": "send", "case": "sorted-multicriteria", "eventType": "SupportBean", "payload": {"theString": "A2", "intPrimitive": 100, "doublePrimitive": 3}},
+    {"op": "undeploy-all", "case": "sorted-multicriteria"}
+  ]
+}

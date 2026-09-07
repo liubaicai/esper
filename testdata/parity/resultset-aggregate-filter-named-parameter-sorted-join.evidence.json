@@ -1,0 +1,1545 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-6b6e0d2290261cb8cd93",
+    "java-runtime-236d99a9d77ed3932510",
+    "java-runtime-398a780be4d755650285"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateAccessAggSortedBound{join=true}",
+    "ResultSetAggregateAccessAggSortedUnbound{join=true}",
+    "ResultSetAggregateAccessAggSortedMulticriteria"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-filter-named-parameter-sorted-join",
+    "steps": [
+      {
+        "op": "case",
+        "case": "sorted-join-bound"
+      },
+      {
+        "op": "deploy",
+        "case": "sorted-join-bound",
+        "statement": "s0",
+        "epl": "@name('s0') select maxby(intPrimitive, filter:theString like 'A%').theString as aMaxby,minby(intPrimitive, filter:theString like 'A%').theString as aMinby,sorted(intPrimitive, filter:theString like 'A%') as aSorted,maxby(intPrimitive, filter:theString like 'B%').theString as bMaxby,minby(intPrimitive, filter:theString like 'B%').theString as bMinby,sorted(intPrimitive, filter:theString like 'B%') as bSorted from SupportBean_S1#lastevent, SupportBean#length(4)"
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 1,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A10",
+          "intPrimitive": 10,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A5",
+          "intPrimitive": 5,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A15",
+          "intPrimitive": 15,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X3",
+          "intPrimitive": 3,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X4",
+          "intPrimitive": 4,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X5",
+          "intPrimitive": 5,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-bound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "X6",
+          "intPrimitive": 6,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sorted-join-bound"
+      },
+      {
+        "op": "case",
+        "case": "sorted-join-unbound"
+      },
+      {
+        "op": "deploy",
+        "case": "sorted-join-unbound",
+        "statement": "s0",
+        "epl": "@name('s0') select maxby(intPrimitive, filter:theString like 'A%').theString as aMaxby,maxbyever(intPrimitive, filter:theString like 'A%').theString as aMaxbyever,minby(intPrimitive, filter:theString like 'A%').theString as aMinby,minbyever(intPrimitive, filter:theString like 'A%').theString as aMinbyever from SupportBean_S1#lastevent, SupportBean#keepall"
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-unbound",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-unbound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 1,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-unbound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A10",
+          "intPrimitive": 10,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-unbound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A5",
+          "intPrimitive": 5,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-unbound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A15",
+          "intPrimitive": 15,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-join-unbound",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1000",
+          "intPrimitive": 1000,
+          "doublePrimitive": -1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sorted-join-unbound"
+      },
+      {
+        "op": "case",
+        "case": "sorted-multicriteria"
+      },
+      {
+        "op": "deploy",
+        "case": "sorted-multicriteria",
+        "statement": "s0",
+        "epl": "@name('s0') select sorted(intPrimitive, doublePrimitive, filter:theString like 'A%') as aSorted,sorted(intPrimitive, doublePrimitive, filter:theString like 'B%') as bSorted from SupportBean#keepall"
+      },
+      {
+        "op": "send",
+        "case": "sorted-multicriteria",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 1,
+          "doublePrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-multicriteria",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 100,
+          "doublePrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-multicriteria",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 1,
+          "doublePrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "sorted-multicriteria",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 100,
+          "doublePrimitive": 3
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sorted-multicriteria"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-filter-named-parameter-sorted-join",
+    "records": [
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": {
+                "state": "null"
+              },
+              "aMinby": {
+                "state": "null"
+              },
+              "aSorted": {
+                "state": "null"
+              },
+              "bMaxby": "B1",
+              "bMinby": "B1",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMinby": "A10",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 10,
+                    "theString": "A10"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B1",
+              "bMinby": "B1",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMinby": "A10",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 10,
+                    "theString": "A10"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B2",
+              "bMinby": "B1",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 2,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMinby": "A5",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 5,
+                    "theString": "A5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 10,
+                    "theString": "A10"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B2",
+              "bMinby": "B1",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 2,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMinby": "A5",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 5,
+                    "theString": "A5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 10,
+                    "theString": "A10"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 15,
+                    "theString": "A15"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B2",
+              "bMinby": "B2",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 2,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMinby": "A5",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 5,
+                    "theString": "A5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 15,
+                    "theString": "A15"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B2",
+              "bMinby": "B2",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 2,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMinby": "A5",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 5,
+                    "theString": "A5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 15,
+                    "theString": "A15"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": {
+                "state": "null"
+              },
+              "bMinby": {
+                "state": "null"
+              },
+              "bSorted": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMinby": "A15",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 15,
+                    "theString": "A15"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": {
+                "state": "null"
+              },
+              "bMinby": {
+                "state": "null"
+              },
+              "bSorted": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": {
+                "state": "null"
+              },
+              "aMinby": {
+                "state": "null"
+              },
+              "aSorted": {
+                "state": "null"
+              },
+              "bMaxby": {
+                "state": "null"
+              },
+              "bMinby": {
+                "state": "null"
+              },
+              "bSorted": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": {
+                "state": "null"
+              },
+              "aMaxbyever": {
+                "state": "null"
+              },
+              "aMinby": {
+                "state": "null"
+              },
+              "aMinbyever": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMaxbyever": "A10",
+              "aMinby": "A10",
+              "aMinbyever": "A10"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMaxbyever": "A10",
+              "aMinby": "A5",
+              "aMinbyever": "A5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMaxbyever": "A15",
+              "aMinby": "A5",
+              "aMinbyever": "A5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMaxbyever": "A15",
+              "aMinby": "A5",
+              "aMinbyever": "A5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-multicriteria",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aSorted": {
+                "state": "null"
+              },
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 10,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-multicriteria",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 2,
+                    "intPrimitive": 100,
+                    "theString": "A1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 10,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-multicriteria",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 2,
+                    "intPrimitive": 100,
+                    "theString": "A1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 4,
+                    "intPrimitive": 1,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": 10,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-multicriteria",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 2,
+                    "intPrimitive": 100,
+                    "theString": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": 3,
+                    "intPrimitive": 100,
+                    "theString": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 4,
+                    "intPrimitive": 1,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": 10,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-filter-named-parameter-sorted-join",
+    "records": [
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": {
+                "state": "null"
+              },
+              "aMinby": {
+                "state": "null"
+              },
+              "aSorted": {
+                "state": "null"
+              },
+              "bMaxby": "B1",
+              "bMinby": "B1",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMinby": "A10",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 10,
+                    "theString": "A10"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B1",
+              "bMinby": "B1",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMinby": "A10",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 10,
+                    "theString": "A10"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B2",
+              "bMinby": "B1",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 2,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMinby": "A5",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 5,
+                    "theString": "A5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 10,
+                    "theString": "A10"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B2",
+              "bMinby": "B1",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 2,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMinby": "A5",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 5,
+                    "theString": "A5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 10,
+                    "theString": "A10"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 15,
+                    "theString": "A15"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B2",
+              "bMinby": "B2",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 2,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMinby": "A5",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 5,
+                    "theString": "A5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 15,
+                    "theString": "A15"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": "B2",
+              "bMinby": "B2",
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 2,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMinby": "A5",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 5,
+                    "theString": "A5"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 15,
+                    "theString": "A15"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": {
+                "state": "null"
+              },
+              "bMinby": {
+                "state": "null"
+              },
+              "bSorted": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMinby": "A15",
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": -1,
+                    "intPrimitive": 15,
+                    "theString": "A15"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bMaxby": {
+                "state": "null"
+              },
+              "bMinby": {
+                "state": "null"
+              },
+              "bSorted": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-bound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": {
+                "state": "null"
+              },
+              "aMinby": {
+                "state": "null"
+              },
+              "aSorted": {
+                "state": "null"
+              },
+              "bMaxby": {
+                "state": "null"
+              },
+              "bMinby": {
+                "state": "null"
+              },
+              "bSorted": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": {
+                "state": "null"
+              },
+              "aMaxbyever": {
+                "state": "null"
+              },
+              "aMinby": {
+                "state": "null"
+              },
+              "aMinbyever": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMaxbyever": "A10",
+              "aMinby": "A10",
+              "aMinbyever": "A10"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A10",
+              "aMaxbyever": "A10",
+              "aMinby": "A5",
+              "aMinbyever": "A5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMaxbyever": "A15",
+              "aMinby": "A5",
+              "aMinbyever": "A5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-join-unbound",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aMaxby": "A15",
+              "aMaxbyever": "A15",
+              "aMinby": "A5",
+              "aMinbyever": "A5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-multicriteria",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aSorted": {
+                "state": "null"
+              },
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 10,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-multicriteria",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 2,
+                    "intPrimitive": 100,
+                    "theString": "A1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 10,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-multicriteria",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 2,
+                    "intPrimitive": 100,
+                    "theString": "A1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 4,
+                    "intPrimitive": 1,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": 10,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "sorted-multicriteria",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 2,
+                    "intPrimitive": 100,
+                    "theString": "A1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": 3,
+                    "intPrimitive": 100,
+                    "theString": "A2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "bSorted": [
+                {
+                  "fields": {
+                    "doublePrimitive": 4,
+                    "intPrimitive": 1,
+                    "theString": "B2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "doublePrimitive": 10,
+                    "intPrimitive": 1,
+                    "theString": "B1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

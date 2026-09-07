@@ -805,7 +805,8 @@
     "internal/esper/aggregate_test.go",
     "internal/esper/aggregate_filtered_java_trace_test.go",
     "internal/esper/aggregate_exact_test.go",
-    "internal/app/parity/resultset_aggregate_filter_named_parameter_linear_join.go"
+    "internal/app/parity/resultset_aggregate_filter_named_parameter_linear_join.go",
+    "internal/app/parity/resultset_aggregate_filter_named_parameter_sorted_join.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -39306,6 +39307,70 @@
    "notes": [
     "ResultSetAggregateFilterNamedParameter linear-join gap executions pin filtered access aggregates over joins and mixed-filter event-array windows for ordinals 9/11/13: first/last/window(intPrimitive, filter:theString like 'A%'|'B%') over a SupportBean_S1#lastevent join with SupportBean#length(5) tracking window eviction through eleven listener records; first/firstever/last/lastever/countever(intPrimitive, filter:...) over the keepall join; and window(sb, filter:A%)/window(sb)/window(filter:B%, sb) event-array projections over keepall rendered as event rows. Join aggregate group rows are join tuples, so the FilterAggregate predicates and inputs bind through JoinField (FilterAggregate evaluates the predicate with each group event as ctx.Event, resolving the joinTuple member); the kickoff SupportBean_S1(0) joins an empty bean side and produces no record. Typed Go builds JoinMany(...).Aggregate(Alias(FilterAggregate(First/Last/WindowValues/FirstEver/LastEver/CountEver(JoinField)))) and From(...).Window(KeepAll()).AsRecord().Aggregate(Alias(FilterAggregate(WindowEvents()))) with event-array fields normalized to row objects. Deferred executions of this file: ordinals 15/17/18 (sorted join and two-key multicriteria, follow-up unit), 19 (audit/reuse), 20 (invalid compiles — no Go rejection surface, approved difference)."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-filter-named-parameter-sorted-join",
+   "javaRuntimeIds": [
+    "java-runtime-6b6e0d2290261cb8cd93",
+    "java-runtime-236d99a9d77ed3932510",
+    "java-runtime-398a780be4d755650285"
+   ],
+   "javaStaticIds": [
+    "java-ea6830fd215ba36a098b",
+    "java-d726134be3446919675e",
+    "java-a26ba8e7bb8f4e6c9f2d"
+   ],
+   "javaNames": [
+    "ResultSetAggregateAccessAggSortedBound{join=true}",
+    "ResultSetAggregateAccessAggSortedUnbound{join=true}",
+    "ResultSetAggregateAccessAggSortedMulticriteria"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterSortedJoinDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterSortedJoinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterSortedJoinDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterSortedJoinCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterSortedJoinRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultsetAggregateFilterNamedParameterSortedJoinRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "filter-named-parameter",
+    "sorted",
+    "join",
+    "lastevent",
+    "maxby",
+    "minby",
+    "multicriteria",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-filter-named-parameter-sorted-join.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter-sorted-join.trace.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter-sorted-join.go.trace.json",
+    "testdata/parity/resultset-aggregate-filter-named-parameter-sorted-join.evidence.json",
+    "tools/java-oracle/ResultSetAggregateFilterNamedParameterSortedJoinScenarioOracle.java",
+    "tools/java-oracle/run-resultset-aggregate-filter-named-parameter-sorted-join.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6b6e0d2290261cb8cd93",
+    "java-runtime-236d99a9d77ed3932510",
+    "java-runtime-398a780be4d755650285"
+   ],
+   "notes": [
+    "ResultSetAggregateFilterNamedParameter sorted-aggregate join executions pin ordinals 15/17/18: maxby/minby(intPrimitive, filter:theString like 'A%'|'B%').theString plus sorted(intPrimitive, filter:...) event-array columns over a SupportBean_S1#lastevent join with SupportBean#length(4) (nine listener records tracking window eviction including the B1-exit that shrinks bSorted to [b2] and null columns for empty filtered sets); maxbyever/minbyever over the keepall join (five records); and two-key sorted(intPrimitive, doublePrimitive, filter:...) multicriteria ordering over keepall where the intPrimitive tie 1==1 is broken ascending by doublePrimitive (4<10 yields [b2,b1]). Join sorted event-array columns must read the bean member via SortedEventsBy[esper.Event](JoinEventValue[esper.Event](1), key, false) — bare SortedEvents would return joinTuple rows with the empty tuple schema; maxby/minby compose as FilterAggregate[string](MaxBy/MinBy(JoinField, key), filter) and MaxByEver/MinByEver are variadic-key. The SupportBean schema carries doublePrimitive in all cases (join-case sends pin the Java 2-arg sendEvent default -1; doubles are integral so both sides render them as integral JSON numbers). Deferred executions of this file: ordinals 19 (audit/reuse) and 20 (invalid compiles — no Go rejection surface, approved difference)."
+   ]
   }
  ],
  "mappings": [
@@ -42132,13 +42197,17 @@
   {
    "capabilityId": "resultset.aggregate-filtered",
    "caseId": "case.resultset-aggregate-filter-named-parameter-linear-join"
+  },
+  {
+   "capabilityId": "resultset.aggregate-filtered",
+   "caseId": "case.resultset-aggregate-filter-named-parameter-sorted-join"
   }
  ],
  "summary": {
-  "inventoriedCases": 622,
-  "implementedCases": 620,
-  "differentialVerifiedCases": 235,
-  "differentialVerifiedRuntimeIds": 838,
+  "inventoriedCases": 623,
+  "implementedCases": 621,
+  "differentialVerifiedCases": 236,
+  "differentialVerifiedRuntimeIds": 841,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42148,14 +42217,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3461,
-  "referencedJavaRuntimeIds": 3220,
+  "runtimeAssociationCount": 3464,
+  "referencedJavaRuntimeIds": 3223,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 916,
+  "unreferencedJavaRuntimeIds": 913,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 622,
+  "totalCases": 623,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 838
+  "differentialVerifiedRuntimeIDs": 841
  }
 }

@@ -105,6 +105,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNamedWindowInsertFromScenario(file)
 	} else if *mode == "resultset-aggregate-filter-named-parameter-linear-join" || *mode == "resultset-aggregate-filter-named-parameter-linear-join-diff" {
 		scenario, err = loadResultsetAggregateFilterNamedParameterLinearJoinScenario(file)
+	} else if *mode == "resultset-aggregate-filter-named-parameter-sorted-join" || *mode == "resultset-aggregate-filter-named-parameter-sorted-join-diff" {
+		scenario, err = loadResultsetAggregateFilterNamedParameterSortedJoinScenario(file)
 	} else if *mode == "infra-nwtable-start-stop" || *mode == "infra-nwtable-start-stop-diff" {
 		scenario, err = loadInfraNWTableStartStopScenario(file)
 	} else if *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by" || *mode == "resultset-querytype-row-for-all-select-avg-expr-std-group-by-diff" {
@@ -277,6 +279,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableSubqCorrelJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableSubqCorrelJoinJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableSubqCorrelJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-aggregate-filter-named-parameter-sorted-join" || *mode == "resultset-aggregate-filter-named-parameter-sorted-join-diff" {
+		trace, err := runResultsetAggregateFilterNamedParameterSortedJoinScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-filter-named-parameter-sorted-join-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateFilterNamedParameterSortedJoinJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetAggregateFilterNamedParameterSortedJoinJavaSources),
+				splitMetadata(*javaExecutions, resultsetAggregateFilterNamedParameterSortedJoinJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
