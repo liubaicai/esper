@@ -2057,3 +2057,145 @@ func TestEPLInsertIntoWindowAggregationAtEventBeanParity(t *testing.T) {
 		t.Fatalf("row1 array[1] = %v", s)
 	}
 }
+
+// ---- 4.339: CharSequence widening and factory-origin targets (ords 7/8) ----
+
+// TestEPLInsertIntoCharSequenceCompatParity covers
+// EPLInsertIntoCharSequenceCompat (java-runtime-f04a53b7cbe0320f681f):
+// `create schema ConcreteType as (value java.lang.CharSequence)` plus
+// `insert into ConcreteType select "Test" as value from SupportBean` must
+// compile and deploy per representation — Java loops OBJECTARRAY/MAP/AVRO/
+// DEFAULT with no sends, so the observable is successful deployment and a
+// silent stream. Go models the objectarray and map/default representations
+// with a string-typed value field (the CharSequence widening is native);
+// the producer deploys and the stream stays silent (the trigger send
+// exercises live population into the unobserved route).
+func TestEPLInsertIntoCharSequenceCompatParity(t *testing.T) {
+	for _, rep := range []string{"objectarray", "map", "default"} {
+		t.Run(rep, func(t *testing.T) {
+			env := NewEnvironment()
+			iipuRegisterCommon(t, env)
+			switch rep {
+			case "objectarray":
+				if _, err := RegisterObjectArray(env, "ConcreteType", []FieldSpec{
+					FieldDef("value", reflect.TypeOf("")),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			default:
+				if _, err := RegisterMap(env, "ConcreteType", []FieldSpec{
+					FieldDef("value", reflect.TypeOf("")),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			engine := NewEngine(env, WithRuntimeURI("java-runtime-f04a53b7cbe0320f681f"))
+			defer func() { _ = engine.Close(context.Background()) }()
+
+			producer, err := env.Build(Select(From[iipuSupportBean](env, "SupportBean"),
+				Alias("value", Literal("Test")),
+			).InsertInto("ConcreteType", StatementName("i1")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := engine.Deploy(context.Background(), producer); err != nil {
+				t.Fatal(err)
+			}
+			// Java never sends; a live trigger send exercises the route's
+			// population without breaking the observable silence (the routed
+			// row has no consumer statement).
+			if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "trigger"}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+type iipuFactoryString struct {
+	TheString string `esper:"theString"`
+}
+
+type iipuSensorEvent struct {
+	ID          int     `esper:"id"`
+	Type        string  `esper:"type"`
+	Device      string  `esper:"device"`
+	Measurement float64 `esper:"measurement"`
+	Confidence  float64 `esper:"confidence"`
+}
+
+// TestEPLInsertIntoBeanFactoryMethodParity covers
+// EPLInsertIntoBeanFactoryMethod (java-runtime-e79b48b60120e27bafbc):
+// Java pre-configures SupportBeanString and SupportSensorEvent with
+// factory methods; the Go model registers the same property shapes as
+// plain struct targets (approved adaptation — the populated observable is
+// identical). Stage 1 routes theString=abc (Java asserts the row via both
+// a listener and a subscriber; one Go subscription observes the same routed
+// row). Stage 2 routes the 5-column projection with the int literal
+// widening into the double columns.
+func TestEPLInsertIntoBeanFactoryMethodParity(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		env := NewEnvironment()
+		iipuRegisterCommon(t, env)
+		if _, err := RegisterStruct[iipuFactoryString](env, "SupportBeanString"); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithRuntimeURI("java-runtime-e79b48b60120e27bafbc"))
+		defer func() { _ = engine.Close(context.Background()) }()
+
+		producer, err := env.Build(FromAny(env, "MyMap").Select(
+			Alias("theString", Literal("abc")),
+		).InsertInto("SupportBeanString", StatementName("i1")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), producer); err != nil {
+			t.Fatal(err)
+		}
+		received := iipuSubscribeUnderlying[iipuFactoryString](t, env, engine, "SupportBeanString")
+
+		if err := engine.Send(context.Background(), "MyMap", map[string]any{}); err != nil {
+			t.Fatal(err)
+		}
+		got := *received
+		if len(got) != 1 || got[0].TheString != "abc" {
+			t.Fatalf("rows = %#v", got)
+		}
+	})
+
+	t.Run("sensor", func(t *testing.T) {
+		env := NewEnvironment()
+		iipuRegisterCommon(t, env)
+		if _, err := RegisterStruct[iipuSensorEvent](env, "SupportSensorEvent"); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithRuntimeURI("java-runtime-e79b48b60120e27bafbc"))
+		defer func() { _ = engine.Close(context.Background()) }()
+
+		producer, err := env.Build(FromAny(env, "MyMap").Select(
+			Alias("id", Literal(2)),
+			Alias("type", Literal("A01")),
+			Alias("device", Literal("DHC1000")),
+			Alias("measurement", Literal(100)),
+			Alias("confidence", Literal(5)),
+		).InsertInto("SupportSensorEvent", StatementName("i1")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), producer); err != nil {
+			t.Fatal(err)
+		}
+		received := iipuSubscribeUnderlying[iipuSensorEvent](t, env, engine, "SupportSensorEvent")
+
+		if err := engine.Send(context.Background(), "MyMap", map[string]any{}); err != nil {
+			t.Fatal(err)
+		}
+		got := *received
+		if len(got) != 1 {
+			t.Fatalf("rows = %d, want 1", len(got))
+		}
+		if got[0].ID != 2 || got[0].Type != "A01" || got[0].Device != "DHC1000" ||
+			got[0].Measurement != 100 || got[0].Confidence != 5 {
+			t.Fatalf("row = %#v", got[0])
+		}
+	})
+}

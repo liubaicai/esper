@@ -345,6 +345,36 @@
     "theString": "E2",
     "intPrimitive": 2
    }
+  },
+  {
+   "op": "case",
+   "case": "charsequence-compat-objectarray"
+  },
+  {
+   "op": "case",
+   "case": "charsequence-compat-map"
+  },
+  {
+   "op": "case",
+   "case": "charsequence-compat-default"
+  },
+  {
+   "op": "case",
+   "case": "factory-method-string"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMap",
+   "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "factory-method-sensor"
+  },
+  {
+   "op": "send",
+   "eventType": "MyMap",
+   "payload": {}
   }
  ]
 }

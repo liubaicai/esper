@@ -31,7 +31,9 @@ import com.espertech.esper.regressionlib.support.bean.SupportBeanCtorOne;
 import com.espertech.esper.regressionlib.support.bean.SupportBeanCtorThree;
 import com.espertech.esper.regressionlib.support.bean.SupportBeanCtorTwo;
 import com.espertech.esper.regressionlib.support.bean.SupportBeanObject;
+import com.espertech.esper.regressionlib.support.bean.SupportBeanString;
 import com.espertech.esper.regressionlib.support.bean.SupportEventWithCtorSameType;
+import com.espertech.esper.regressionlib.support.bean.SupportSensorEvent;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Modifier;
@@ -54,15 +56,23 @@ import static org.apache.avro.SchemaBuilder.record;
  * PopulateUnderlyingSimple (map/object-array/avro), EPLInsertIntoCtor
  * (select-names, boxable-null-into-primitive, join-wildcard, ignored column
  * list, same-type ctor), EPLInsertIntoCtorWithPattern,
- * EPLInsertIntoBeanJoin (wildcard, select-names, local-class target) and
- * EPLInsertIntoWindowAggregationAtEventBean. Multi-stage Java executions
+ * EPLInsertIntoBeanJoin (wildcard, select-names, local-class target),
+ * EPLInsertIntoWindowAggregationAtEventBean, EPLInsertIntoCharSequenceCompat
+ * (objectarray/map/default forms, compile+deploy only, zero records) and
+ * EPLInsertIntoBeanFactoryMethod (target classes registered plainly).
+ * Multi-stage Java executions
  * replay as one scenario case per stage because the case protocol deploys
  * each case into a fresh runtime (the Java suite undeploys between stages).
  * Registered event types mirror the Go parity test's registered schemas;
  * MyLocalTarget registers the suite's public static nested class. BeanJoin
  * stage 3 (fully-qualified class-name target) is a Java naming artifact and
- * is not replayed. CharSequence compat and the INVALIDITY execution are
- * compile-only in Java and covered by Go Build-time rejection instead.
+ * is not replayed. CharSequence compat replays the forms this protocol can
+ * express: the Java loop itself skips the JSON representations, and the avro
+ * form is not replayed because it would add per-case avro wiring without an
+ * observable beyond deploy success. The INVALIDITY execution is compile-only
+ * in Java and covered by Go Build-time rejection instead. BeanFactoryMethod
+ * targets are registered plainly; Java configures the same classes through
+ * factory methods and the routed-row observable is identical.
  */
 public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -112,7 +122,12 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
             "bean-join-populate-wildcard",
             "bean-join-populate-select-names",
             "bean-join-populate-local-class",
-            "window-aggregation-eventbean"
+            "window-aggregation-eventbean",
+            "charsequence-compat-objectarray",
+            "charsequence-compat-map",
+            "charsequence-compat-default",
+            "factory-method-string",
+            "factory-method-sensor"
         };
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
@@ -151,6 +166,8 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
         configuration.getCommon().addEventType("SupportEventWithCtorSameType", SupportEventWithCtorSameType.class);
         configuration.getCommon().addEventType("SupportBeanObject", SupportBeanObject.class);
         configuration.getCommon().addEventType("SupportBeanArrayEvent", SupportBeanArrayEvent.class);
+        configuration.getCommon().addEventType("SupportBeanString", SupportBeanString.class);
+        configuration.getCommon().addEventType("SupportSensorEvent", SupportSensorEvent.class);
         // The suite's local target is a public static nested class; register
         // it by name so the scenario EPL can use the simple name instead of
         // the suite's fully-qualified "$MyLocalTarget" spelling.
@@ -283,6 +300,28 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
                 epls.add("@name('s0') insert into MyLocalTarget select 1 as value from SupportBean_N");
             case "window-aggregation-eventbean" ->
                 epls.add("@name('s0') insert into SupportBeanArrayEvent select window(*) @eventbean from SupportBean#keepall");
+            // CharSequence compat: the Java execution compiles and deploys a
+            // create-schema plus an insert-into per representation and sends
+            // nothing, so the observable is deploy success with zero records.
+            // EPL strings stay byte-exact with the suite (annotation text has
+            // no trailing space before "create").
+            case "charsequence-compat-objectarray" -> {
+                epls.add("@EventRepresentation('objectarray')create schema ConcreteType as (value java.lang.CharSequence)");
+                epls.add("@name('s0') insert into ConcreteType select \"Test\" as value from SupportBean");
+            }
+            case "charsequence-compat-map" -> {
+                epls.add("@EventRepresentation('map')create schema ConcreteType as (value java.lang.CharSequence)");
+                epls.add("@name('s0') insert into ConcreteType select \"Test\" as value from SupportBean");
+            }
+            case "charsequence-compat-default" -> {
+                epls.add("create schema ConcreteType as (value java.lang.CharSequence)");
+                epls.add("@name('s0') insert into ConcreteType select \"Test\" as value from SupportBean");
+            }
+            case "factory-method-string" ->
+                epls.add("@name('s0') insert into SupportBeanString select 'abc' as theString from MyMap");
+            case "factory-method-sensor" ->
+                epls.add("@name('s0') insert into SupportSensorEvent(id, type, device, measurement, confidence)" +
+                    "select 2, 'A01', 'DHC1000', 100, 5 from MyMap");
             default -> throw new IllegalArgumentException("unsupported case " + caseName);
         }
         return epls;

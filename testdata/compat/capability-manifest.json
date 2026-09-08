@@ -32122,7 +32122,9 @@
     "java-runtime-706d3ed19b9a9b680430",
     "java-runtime-42b687e10ab403b319bd",
     "java-runtime-43b50e297c1593da8ec3",
-    "java-runtime-5c663b3a17e6e4aac880"
+    "java-runtime-5c663b3a17e6e4aac880",
+    "java-runtime-f04a53b7cbe0320f681f",
+    "java-runtime-e79b48b60120e27bafbc"
    ],
    "javaNames": [
     "EPLInsertIntoPopulateBeanSimple",
@@ -32132,7 +32134,9 @@
     "EPLInsertIntoCtor",
     "EPLInsertIntoCtorWithPattern",
     "EPLInsertIntoBeanJoin",
-    "EPLInsertIntoWindowAggregationAtEventBean"
+    "EPLInsertIntoWindowAggregationAtEventBean",
+    "EPLInsertIntoCharSequenceCompat",
+    "EPLInsertIntoBeanFactoryMethod"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateUnderlying.java"
@@ -32151,7 +32155,9 @@
     "TestEPLInsertIntoCtorVariantsParity",
     "TestEPLInsertIntoCtorWithPatternParity",
     "TestEPLInsertIntoBeanJoinPopulateParity",
-    "TestEPLInsertIntoWindowAggregationAtEventBeanParity"
+    "TestEPLInsertIntoWindowAggregationAtEventBeanParity",
+    "TestEPLInsertIntoCharSequenceCompatParity",
+    "TestEPLInsertIntoBeanFactoryMethodParity"
    ],
    "tags": [
     "correctness"
@@ -32171,7 +32177,9 @@
     "java-runtime-706d3ed19b9a9b680430",
     "java-runtime-42b687e10ab403b319bd",
     "java-runtime-43b50e297c1593da8ec3",
-    "java-runtime-5c663b3a17e6e4aac880"
+    "java-runtime-5c663b3a17e6e4aac880",
+    "java-runtime-f04a53b7cbe0320f681f",
+    "java-runtime-e79b48b60120e27bafbc"
    ],
    "evidence": [
     "testdata/parity/epl-insert-into-populate-underlying.json",
@@ -32183,7 +32191,8 @@
     "go-unit"
    ],
    "notes": [
-    "4.338 extension covers ords 0/1/2/11 (constructor-position population): 4-column and positional projections into constructor-shape struct targets with null String/boxed columns, boxed-into-primitive positional binding, lastevent join wildcard and stream-name projections with identity-preserving Event members, column-list-ignored constructor defaults via WithJSONDefaults, same-type constructor over filtered lastevent streams, [2]-repeat pattern captures via MatchUntil(2,2)+TagEvents into []Event targets, and window(*) @eventbean via Aggregate(WindowEvents()) over KeepAll. Approved adaptations: Java constructor/factory targets are Go struct targets populated by named projection; column-list-ignored and stage-3 fully-qualified-name syntax have no Go surface (observably identical). Remaining ords: 7 (CharSequenceCompat deploy smoke) and 8 (factory-method observable half) as a small follow-up unit; 9/10 (until-pattern per-representation array population, invalid halves implemented-only); 12 (invalidity, implemented-only Build-error unit restricted to reproducible sub-cases)."
+    "4.338 extension covers ords 0/1/2/11 (constructor-position population): 4-column and positional projections into constructor-shape struct targets with null String/boxed columns, boxed-into-primitive positional binding, lastevent join wildcard and stream-name projections with identity-preserving Event members, column-list-ignored constructor defaults via WithJSONDefaults, same-type constructor over filtered lastevent streams, [2]-repeat pattern captures via MatchUntil(2,2)+TagEvents into []Event targets, and window(*) @eventbean via Aggregate(WindowEvents()) over KeepAll. Approved adaptations: Java constructor/factory targets are Go struct targets populated by named projection; column-list-ignored and stage-3 fully-qualified-name syntax have no Go surface (observably identical). Remaining ords: 7 (CharSequenceCompat deploy smoke) and 8 (factory-method observable half) as a small follow-up unit; 9/10 (until-pattern per-representation array population, invalid halves implemented-only); 12 (invalidity, implemented-only Build-error unit restricted to reproducible sub-cases).",
+    "4.339 extension covers ords 7/8: charsequence-compat replays the create-schema + insert-into deploy smoke per representation (objectarray/map/default; Java's Avro leg is not modeled by the map-based oracle) with zero sends, and the factory-method observable half routes theString=abc and the 5-column sensor projection with int-to-double widening through plain struct registrations (Java configures factory methods; approved adaptation; Java's no-default-constructor reflection checks are support-class introspection, not engine behavior). Remaining ords: 9/10 (until-pattern per-representation array population, invalid halves implemented-only) and 12 (invalidity, implemented-only Build-error unit restricted to reproducible sub-cases)."
    ]
   },
   {
@@ -42482,7 +42491,7 @@
   "inventoriedCases": 626,
   "implementedCases": 624,
   "differentialVerifiedCases": 239,
-  "differentialVerifiedRuntimeIds": 867,
+  "differentialVerifiedRuntimeIds": 869,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42492,14 +42501,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3490,
-  "referencedJavaRuntimeIds": 3249,
+  "runtimeAssociationCount": 3492,
+  "referencedJavaRuntimeIds": 3251,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 887,
+  "unreferencedJavaRuntimeIds": 885,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 626,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 867
+  "differentialVerifiedRuntimeIDs": 869
  }
 }
