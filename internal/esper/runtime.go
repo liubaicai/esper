@@ -18095,13 +18095,17 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	if definition == nil {
 		return ResultBatch{}, NewError(ErrorInvalidRule, "aggregate runtime has no definition")
 	}
-	if len(definition.groupBy) == 0 && (plan.query.tableTarget != "" || aggregateDefinitionReadsNonKeyEvent(definition) || aggregateDefinitionUsesUnivariateStatistics(definition)) {
+	if len(definition.groupBy) == 0 && (plan.query.tableTarget != "" || aggregateDefinitionUsesUnivariateStatistics(definition)) {
 		if keys := implicitAggregateGroupBy(definition.input); len(keys) > 0 {
-			// A grouped retention is an implicit aggregate dimension when the
-			// projection reads a non-aggregate event property (or when an
-			// into-table materialization needs the retention key). A pure
-			// aggregate projection remains row-for-all across all group-window
-			// partitions, matching Esper's `avg(price)` contract.
+			// An into-table materialization needs the retention key as the
+			// aggregate dimension, and Java binds derived-value statistics
+			// views (#uni/#correl/#linest) as per-group child views of a
+			// groupwin. An ordinary aggregate projection has no implicit
+			// grouping: Java's groupwin parent is a merge/union point whose
+			// downstream sees the union of all groups' subview contents, so
+			// `select p1,sum(p2) from ...#groupwin(p1)#length(2)` keeps one
+			// ungrouped aggregate over that union (ViewGroup.java ord 0:
+			// 10/21/33/36 with in-group eviction subtracted).
 			copyDefinition := *definition
 			copyDefinition.groupBy = keys
 			definition = &copyDefinition
@@ -19556,7 +19560,8 @@ func expressionTreeContainsUnivariateStatistics(expression Expr) bool {
 		if node == nil {
 			return false
 		}
-		if node.kind == "univariate-statistics" || strings.HasPrefix(node.kind, "univariate-statistics-") {
+		if node.kind == "univariate-statistics" || strings.HasPrefix(node.kind, "univariate-statistics-") ||
+			node.kind == "correlation" || strings.HasPrefix(node.kind, "linear-regression") {
 			return true
 		}
 		for _, child := range node.children {

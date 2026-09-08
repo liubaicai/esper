@@ -39430,3 +39430,108 @@ func assertInfraNWTableStartStopTrace(t *testing.T, trace compat.Trace) {
 		}
 	}
 }
+
+func TestRunViewGroupMergeViewDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "viewgroup-merge-view.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "viewgroup-merge-view.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "viewgroup-merge-view.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "viewgroup-merge-view-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunViewGroupMergeViewDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "union-sum-per-group-drift",
+			mutate: func(trace *compat.Trace) {
+				// The eviction send must keep the union sum (36 = 33 + 13 - 10),
+				// not the per-group sum (25 = 22 + 13 - 10) the old implicit
+				// group-by produced.
+				trace.Records[3].New[0].Fields["sp2"] = 25
+			},
+		},
+		{
+			name: "union-sum-second-send-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["sp2"] = 11
+			},
+		},
+		{
+			name: "merge-scalar-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["p1"] = "X"
+			},
+		},
+		{
+			name: "groupwin-eviction-old-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].Old = nil
+			},
+		},
+		{
+			name: "groupwin-eviction-new-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].New[0].Fields["c1"] = 99
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:11]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "viewgroup-merge-view.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "viewgroup-merge-view.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "viewgroup-merge-view.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "viewgroup-merge-view-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

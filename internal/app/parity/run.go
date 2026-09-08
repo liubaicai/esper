@@ -307,6 +307,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "viewgroup-merge-view" || *mode == "viewgroup-merge-view-diff" {
+		trace, err := runViewGroupMergeViewScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "viewgroup-merge-view-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewGroupMergeViewJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewGroupMergeViewJavaSources),
+				splitMetadata(*javaExecutions, viewGroupMergeViewJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "epl-other-select-expr-stream-selector" || *mode == "epl-other-select-expr-stream-selector-diff" {
 		trace, err := runEplOtherSelectExprStreamSelectorScenario(context.Background(), scenario)
 		if err != nil {

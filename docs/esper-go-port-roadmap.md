@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.345（2026-09-09），`view.window-core` 引擎单元新增 `case-viewgroup-merge-view` differential-verified 场景，对照固定 Java `ViewGroup.java` 的 ords 0/14（`ViewGroupObjectArrayEvent` `java-runtime-a3b6bef89e22a122cc7a` static `java-4c1562348946dab6dc09`、`ViewGroupLengthWin` `java-runtime-639bc9b69621f3b6a417` static `java-48fb0b51c8d6abc3e858`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 12 条 records、0 differences，闭环 4.334 期间 spike 发现的关键分歧：Go 的隐式聚合分组注入不再对 groupwin 上的普通 select 聚合触发（runtime.go 注入门去掉 aggregateDefinitionReadsNonKeyEvent 触发臂）——Java 的 groupwin 父视图是合并/联合点，`select p1,sum(p2) from ...#groupwin(p1)#length(2)` 保持单一非分组聚合于跨组联合之上（sp2 演进 10/21/33/36，组内驱逐 13−10），标量列读当前事件；同时 univariate 注入触发器扩展匹配 #correl/#linest 表达式（Java 将其绑定为 groupwin 的按组子视图，与 #uni 相同）。ViewGroupLengthWin 钉定分组 length 窗口保留与组内驱逐的 irstream 对。oracle 以 object-array 事件类型注册 OAEventStringInt（逐字节镜像套件注册）并使用 common 模块的 SupportBean。批准适配：Java 的 #uni/#correl/#linest 派生值子视图（ords 1/4/5/6，逐插入发布 irstream 旧行）在 Go 以分组聚合表达、旧行无可表达对应物，延后至派生值视图单元；reclaim ords 2/3/9 需视图级回收加调度计数内省面；时间窗 ords 10-13/16/18 需虚拟时间批次机制；ord 7 编译消息、ord 8 性能门、ord 19 SERDEREQUIRED 各自延后。全量 internal/esper 套件无回归（含既有 view-group 矩阵与 avg-per-sym DV）。该类累计 2/20 execution DV；manifest 更新为 627 cases、240 个 differential-verified case、879 个 differential runtime IDs、3504 条 associations（referenced 3262、unreferenced 874）；capability 120 个（37 DV）。
+
 > 最新补充：Draft 4.344（2026-09-09），`query.insert-into-route` 以 implemented-not-DV 登记 `EPLInsertIntoEventPrecInvalid`（`java-runtime-eb5b556ae1a0a4b15822` static `java-a98a462920f6d64d6172`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）收尾该类至 11/11 全处置（10 DV + 1 implemented-not-DV）。按 invalidity 政策（无 trace 行）新增 Build 时 `validateEventPrecedence` 校验通路，横跨 route、split-branch 与 named-window-merge 三个路径：event-precedence 表达式必须返回 int（拒绝 string、null 指针、int16/short 等非整型，对齐 Java 的 Integer-only 规则），且当输出 schema 静态已知时只能引用输出事件的属性（对齐 Java 的 "considering only the result event itself and not incoming streams"）；子查询内部表达式按其自身源解析、不做遍历。批准差异：消息文本为引擎内部诊断；FAF 子 case 以 Go 消息拒绝（Java 文本不同）；表目标 precedence 因「路由目标须预注册」的既有理由拒绝；保留字解析错误在类型化 API 中不可表示。Go 引擎改动全量套件无回归。manifest 更新为 626 cases、239 个 differential-verified case、877 个 differential runtime IDs（不变）、3502 条 associations（referenced 3261、unreferenced 875）；capability 120 个（37 DV）。
 
 > 最新补充：Draft 4.343（2026-09-09），`query.insert-into-route` 引擎单元扩展 `case.insertinto-event-precedence` differential-verified 场景，对照固定 Java `EPLInsertIntoEventPrecedence.java` 追加 ords 5-8 四个子查询驱动 precedence execution（`EPLInsertIntoEventPrecSubqueryOnSplitSODA` `java-runtime-9e3c8c45438c687465e7` static `java-f4c03617f60ee0545ce7`、`EPLInsertIntoEventPrecSubqueryInsertIntoSODA` `java-runtime-03a6d8b8db3ead5f09f1` static `java-fb9b48e8cd69b99e0c59`、`EPLInsertIntoEventPrecSubqueryMergeSODA` `java-runtime-e153c3dff68d79fbb048` static `java-650346dcf5e73c9412fd`、`EPLInsertIntoEventPrecSubqueryOnInsertSODA` `java-runtime-d021d80d0590fb79c637` static `java-41715255e7a576306856`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 79 条 records（既有 57 条字节不变 + 22 条新记录）、0 differences：四个路由上下文（on-split、insert-into、on-merge not-matched、on-select-from-window）重放同一契约——子查询为 null 时 FIFO a,b，`SupportBeanNumeric#lastevent` 预置后按 intOne/intTwo 逆序翻转（b,a），反向预置后还原（a,b）；Java 的 SODA 标志仅编译路径（harness 内文本往返），行为可观测相同。Go 引擎三缺口修复：(1) visitQueryExpressions 现访问 query.eventPrecedence、merge-action 与 split-branch precedence 表达式，使 precedence 子查询进入语句子查询运行时注册表；(2) evaluatePrecedenceExpr 携带语句附加变量（含注册表），路由与 split 调用点传入——此前子查询优先级静默降 0/FIFO；(3) TriggerQuery.Query 复制 spec.eventPrecedence（此前 on-select 路由丢弃）；完整性巡检另修复 OnDemand 与 Pattern 查询字面量缺复制（使 FAF "fire-and-forget routes do not allow event-precedence" 拒绝由死代码变为活路径；JoinQuery/Aggregate/From 路径原本已复制）。oracle 新增多模块部署约定与 @FAF 模块（ord-8 窗口预填充）、SupportBeanNumeric 本地镜像类（run script classpath 不含 regression-lib）。Go 引擎改动全量套件无回归。剩余：ord 10 invalid 子 case 1-4（precedence 表达式 Build 校验）与 6/7 无 Go 拒绝面处置；该类累计 10/11 execution DV；manifest 更新为 626 cases、239 个 differential-verified case、877 个 differential runtime IDs、3501 条 associations（referenced 3260、unreferenced 876）；capability 120 个（37 DV）。
@@ -1520,7 +1522,7 @@
 | multithread | 56 | 并发回归 |
 | context | 45 | Context 分区、嵌套、生命周期 |
 | rowrecog | 34 | Match Recognize |
-| view | 27 | 视图高级组合 |
+| view | 26 | 视图高级组合 |
 
 ### 5.3 P2 — 清单与能力拆分
 
@@ -1550,7 +1552,7 @@
 | context | 45 | Context 分区、嵌套、生命周期 |
 | multithread | 56 | 并发回归 |
 | rowrecog | 34 | Match Recognize |
-| view | 27 | 视图高级组合 |
+| view | 26 | 视图高级组合 |
 ### 6.2 清单与追踪遗漏
 
 - static-manifest.json 目前几乎为空，需要把静态/编译期候选登记进去。

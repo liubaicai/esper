@@ -24235,10 +24235,60 @@
     "java-source",
     "go-unit"
    ],
-   "difference": "Go maps groupwin child retention through GroupWindow and exposes grouped derived statistics through fluent Aggregate; Java #uni/#correl/#linest view properties and EPL/SODA forms collapse to typed selection expressions. Group reclaim hints, performance thresholds, serde-only escaped property parsing, and full shared Java/Go trace remain outside this matrix.",
+   "difference": "Go maps groupwin child retention through GroupWindow and exposes grouped derived statistics through fluent Aggregate; as of Draft 4.345 ordinary select-clause aggregates over a groupwin keep Java's ungrouped union semantics (no implicit per-key group-by); Java #uni/#correl/#linest view properties and EPL/SODA forms collapse to typed selection expressions. Group reclaim hints, performance thresholds, serde-only escaped property parsing, and full shared Java/Go trace remain outside this matrix.",
    "verification": [
     "inventoried",
     "implemented"
+   ]
+  },
+  {
+   "id": "case-viewgroup-merge-view",
+   "javaRuntimeIds": [
+    "java-runtime-a3b6bef89e22a122cc7a",
+    "java-runtime-639bc9b69621f3b6a417"
+   ],
+   "javaStaticIds": [
+    "java-4c1562348946dab6dc09",
+    "java-48fb0b51c8d6abc3e858"
+   ],
+   "javaNames": [
+    "ViewGroupObjectArrayEvent",
+    "ViewGroupLengthWin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewGroupMergeViewDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewGroupMergeViewDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "view",
+    "groupwin",
+    "merge-view",
+    "union-aggregate",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/viewgroup-merge-view.json",
+    "testdata/parity/viewgroup-merge-view.trace.json",
+    "testdata/parity/viewgroup-merge-view.evidence.json",
+    "tools/java-oracle/ViewGroupMergeViewScenarioOracle.java",
+    "tools/java-oracle/run-viewgroup-merge-view.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a3b6bef89e22a122cc7a",
+    "java-runtime-639bc9b69621f3b6a417"
+   ],
+   "notes": [
+    "Draft 4.345 ENGINE unit closes the groupwin union-aggregate divergence: the implicit aggregate group-by injection no longer fires for ordinary select-clause aggregates over a groupwin (scalar projections like p1 no longer force per-key sums), so `select p1,sum(p2) from ...#groupwin(p1)#length(2)` keeps one ungrouped union aggregate over the merged cross-group deltas exactly like Java's groupwin merge-view (sp2 evolution 10/21/33/36 with in-group eviction subtracted). The univariate-statistics injection trigger now also matches #correl and #linest expressions, mirroring Java's per-group derived-value child views. ViewGroupLengthWin pins grouped length-window retention with irstream eviction pairs. Derived-value stat-view executions (ords 1/4/5/6 — Java #uni/#correl/#linest post irstream old rows on every insert, which the select-aggregate adaptation cannot express over a keepall group window) are deferred to a derived-value-view unit; reclaim ords 2/3/9 need view-level reclaim plus a schedule-count introspection surface; time-window ords 10-13/16/18 need virtual-time batch machinery; ord 7 is compile-messages; ord 8 is performance-gated; ord 19 is SERDEREQUIRED."
    ]
   },
   {
@@ -41126,6 +41176,10 @@
   },
   {
    "capabilityId": "view.window-core",
+   "caseId": "case-viewgroup-merge-view"
+  },
+  {
+   "capabilityId": "view.window-core",
    "caseId": "case.view-intersect-matrix"
   },
   {
@@ -42542,10 +42596,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 626,
-  "implementedCases": 624,
-  "differentialVerifiedCases": 239,
-  "differentialVerifiedRuntimeIds": 877,
+  "inventoriedCases": 627,
+  "implementedCases": 625,
+  "differentialVerifiedCases": 240,
+  "differentialVerifiedRuntimeIds": 879,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42555,14 +42609,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3502,
-  "referencedJavaRuntimeIds": 3261,
+  "runtimeAssociationCount": 3504,
+  "referencedJavaRuntimeIds": 3262,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 875,
+  "unreferencedJavaRuntimeIds": 874,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 626,
+  "totalCases": 627,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 877
+  "differentialVerifiedRuntimeIDs": 879
  }
 }
