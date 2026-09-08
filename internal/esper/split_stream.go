@@ -149,6 +149,9 @@ func (e *Environment) validateSplitStream(definition *triggerDefinition) error {
 		if !targetOK {
 			return NewError(ErrorUnknownName, fmt.Sprintf("split-stream branch %d references unknown event type %q", index, branch.Target))
 		}
+		if err := validateEventPrecedence(branch.Precedence, targetSchema, fmt.Sprintf("split-stream branch %d", index)); err != nil {
+			return err
+		}
 		if branch.Condition != nil {
 			if branch.Condition.Type() != typeOf[bool]() {
 				return NewError(ErrorTypeMismatch, fmt.Sprintf("split-stream branch %d condition must return bool", index))

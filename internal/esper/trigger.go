@@ -1078,6 +1078,17 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 					if action.InsertTarget != "" && action.InsertIntoTarget {
 						return fmt.Errorf("table merge clause %d action %d cannot target an event type and the merge target", index, actionIndex)
 					}
+					if action.InsertTarget != "" {
+						insertSchema, schemaOK := e.Schema(action.InsertTarget)
+						if !schemaOK {
+							return NewError(ErrorUnknownName, fmt.Sprintf("table merge clause %d action %d references unknown event type %q", index, actionIndex, action.InsertTarget))
+						}
+						if err := validateEventPrecedence(action.Precedence, insertSchema, fmt.Sprintf("table merge clause %d action %d", index, actionIndex)); err != nil {
+							return err
+						}
+					} else if err := validateEventPrecedence(action.Precedence, table.schema, fmt.Sprintf("table merge clause %d action %d", index, actionIndex)); err != nil {
+						return err
+					}
 					var targetFields []string
 					if !clause.Matched {
 						action.Condition.node().referencedTargetFields("table-field", &targetFields)
@@ -1292,7 +1303,17 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 						if err := validateMergeInsertSelectionsForTarget(e, definition.input, action.InsertTarget, action.InsertSelections, targetKind, targetSchema); err != nil {
 							return fmt.Errorf("named-window merge clause %d action %d: %w", index, actionIndex, err)
 						}
+						insertSchema, schemaOK := e.Schema(action.InsertTarget)
+						if !schemaOK {
+							insertSchema = targetSchema
+						}
+						if err := validateEventPrecedence(action.Precedence, insertSchema, fmt.Sprintf("named-window merge clause %d action %d", index, actionIndex)); err != nil {
+							return err
+						}
 					} else {
+						if err := validateEventPrecedence(action.Precedence, targetSchema, fmt.Sprintf("named-window merge clause %d action %d", index, actionIndex)); err != nil {
+							return err
+						}
 						if action.Delete || len(action.InsertSelections) != 0 {
 							return fmt.Errorf("named-window merge clause %d action %d target insert has an invalid action shape", index, actionIndex)
 						}

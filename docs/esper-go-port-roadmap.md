@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.344（2026-09-09），`query.insert-into-route` 以 implemented-not-DV 登记 `EPLInsertIntoEventPrecInvalid`（`java-runtime-eb5b556ae1a0a4b15822` static `java-a98a462920f6d64d6172`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）收尾该类至 11/11 全处置（10 DV + 1 implemented-not-DV）。按 invalidity 政策（无 trace 行）新增 Build 时 `validateEventPrecedence` 校验通路，横跨 route、split-branch 与 named-window-merge 三个路径：event-precedence 表达式必须返回 int（拒绝 string、null 指针、int16/short 等非整型，对齐 Java 的 Integer-only 规则），且当输出 schema 静态已知时只能引用输出事件的属性（对齐 Java 的 "considering only the result event itself and not incoming streams"）；子查询内部表达式按其自身源解析、不做遍历。批准差异：消息文本为引擎内部诊断；FAF 子 case 以 Go 消息拒绝（Java 文本不同）；表目标 precedence 因「路由目标须预注册」的既有理由拒绝；保留字解析错误在类型化 API 中不可表示。Go 引擎改动全量套件无回归。manifest 更新为 626 cases、239 个 differential-verified case、877 个 differential runtime IDs（不变）、3502 条 associations（referenced 3261、unreferenced 875）；capability 120 个（37 DV）。
+
 > 最新补充：Draft 4.343（2026-09-09），`query.insert-into-route` 引擎单元扩展 `case.insertinto-event-precedence` differential-verified 场景，对照固定 Java `EPLInsertIntoEventPrecedence.java` 追加 ords 5-8 四个子查询驱动 precedence execution（`EPLInsertIntoEventPrecSubqueryOnSplitSODA` `java-runtime-9e3c8c45438c687465e7` static `java-f4c03617f60ee0545ce7`、`EPLInsertIntoEventPrecSubqueryInsertIntoSODA` `java-runtime-03a6d8b8db3ead5f09f1` static `java-fb9b48e8cd69b99e0c59`、`EPLInsertIntoEventPrecSubqueryMergeSODA` `java-runtime-e153c3dff68d79fbb048` static `java-650346dcf5e73c9412fd`、`EPLInsertIntoEventPrecSubqueryOnInsertSODA` `java-runtime-d021d80d0590fb79c637` static `java-41715255e7a576306856`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 79 条 records（既有 57 条字节不变 + 22 条新记录）、0 differences：四个路由上下文（on-split、insert-into、on-merge not-matched、on-select-from-window）重放同一契约——子查询为 null 时 FIFO a,b，`SupportBeanNumeric#lastevent` 预置后按 intOne/intTwo 逆序翻转（b,a），反向预置后还原（a,b）；Java 的 SODA 标志仅编译路径（harness 内文本往返），行为可观测相同。Go 引擎三缺口修复：(1) visitQueryExpressions 现访问 query.eventPrecedence、merge-action 与 split-branch precedence 表达式，使 precedence 子查询进入语句子查询运行时注册表；(2) evaluatePrecedenceExpr 携带语句附加变量（含注册表），路由与 split 调用点传入——此前子查询优先级静默降 0/FIFO；(3) TriggerQuery.Query 复制 spec.eventPrecedence（此前 on-select 路由丢弃）；完整性巡检另修复 OnDemand 与 Pattern 查询字面量缺复制（使 FAF "fire-and-forget routes do not allow event-precedence" 拒绝由死代码变为活路径；JoinQuery/Aggregate/From 路径原本已复制）。oracle 新增多模块部署约定与 @FAF 模块（ord-8 窗口预填充）、SupportBeanNumeric 本地镜像类（run script classpath 不含 regression-lib）。Go 引擎改动全量套件无回归。剩余：ord 10 invalid 子 case 1-4（precedence 表达式 Build 校验）与 6/7 无 Go 拒绝面处置；该类累计 10/11 execution DV；manifest 更新为 626 cases、239 个 differential-verified case、877 个 differential runtime IDs、3501 条 associations（referenced 3260、unreferenced 876）；capability 120 个（37 DV）。
 
 > 最新补充：Draft 4.342（2026-09-07），`query.insert-into-route` 扩展 `case.insertinto-event-precedence` differential-verified 场景，对照固定 Java `EPLInsertIntoEventPrecedence.java` 追加 ords 4/9 两个 execution（`EPLInsertIntoEventPrecNonConstInsertIntoContainedEvent` `java-runtime-e99c72ba6838bd3b23f2` static `java-54f031b12e38a8768102`、`EPLInsertIntoEventPrecConstantInsertIntoOutputRate` `java-runtime-aa3e3052e879188342c6` static `java-facdb3c80027dcca2998`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 57 条 records（既有 21 条字节不变 + 36 条新记录）、0 differences：两级包含事件路由（`LvlA[b]` 进 LvlB、`LvlB[c]` 进 LvlC）各携带针对被路由目标事件求值的非常量 event-precedence，链式路由经共享优先级队列交错，五次 LvlA 发送的 LvlC id 展开序逐条钉定（C,B,D,A / C,A,B,D / A,B,C,D / H,D,A,G,F,B,I,E,C / B,G,H,D,F,A,C,I,E）；三条 `output every 2 events` 路由（precedence 1/2/3、各语句 id 偏移 1/2/3）两次发送后单批次按语句间优先级、语句内 FIFO 输出 13,23,12,22,11,21（Java 的 `computeEventPrecedence(3, *)` 静态调用对路由输出事件求值恒为常量 3，Go 直接钉常量——批准适配）。Go 零引擎工作；oracle 以镜像类与本地 computeEventPrecedence 注册（run script classpath 不含 regression-lib，形状与语义逐字节复制套件）。延后：ords 5-8（子查询驱动 precedence）需引擎单元（visitQueryExpressions 不注册 eventPrecedence/split/merge precedence 子查询、evaluatePrecedenceExpr 缺语句变量致子查询优先级静默降 0、TriggerQuery.Query 丢弃 spec.eventPrecedence 三个具体缺口）；ord 10 的 invalid 子 case 拆分为该引擎单元（precedence 表达式校验 1-4）与无 Go 拒绝面处置（表目标 precedence、保留字解析错；FAF 子 case 5 已由 faf 拒绝测试覆盖）。该类累计 6/11 execution DV；manifest 更新为 626 cases、239 个 differential-verified case、873 个 differential runtime IDs、3497 条 associations（referenced 3256、unreferenced 880）；capability 120 个（37 DV）。
@@ -1463,7 +1465,7 @@
 
 重点领域：
 
-- epl 剩余 271 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 270 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1488,7 +1490,7 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 271 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 270 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1510,7 +1512,7 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 271 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 270 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
@@ -1540,7 +1542,7 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 271 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 270 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |

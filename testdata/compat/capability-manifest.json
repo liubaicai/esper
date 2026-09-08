@@ -32433,7 +32433,8 @@
     "java-runtime-9e3c8c45438c687465e7",
     "java-runtime-03a6d8b8db3ead5f09f1",
     "java-runtime-e153c3dff68d79fbb048",
-    "java-runtime-d021d80d0590fb79c637"
+    "java-runtime-d021d80d0590fb79c637",
+    "java-runtime-eb5b556ae1a0a4b15822"
    ],
    "javaNames": [
     "EPLInsertIntoEventPrecConstantInsertInto",
@@ -32444,7 +32445,8 @@
     "EPLInsertIntoEventPrecSubqueryOnSplitSODA",
     "EPLInsertIntoEventPrecSubqueryInsertIntoSODA",
     "EPLInsertIntoEventPrecSubqueryMergeSODA",
-    "EPLInsertIntoEventPrecSubqueryOnInsertSODA"
+    "EPLInsertIntoEventPrecSubqueryOnInsertSODA",
+    "EPLInsertIntoEventPrecInvalid"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoEventPrecedence.java"
@@ -32459,7 +32461,12 @@
     "TestEPLInsertIntoEventPrecSubqueryOnSplitParity",
     "TestEPLInsertIntoEventPrecSubqueryInsertIntoParity",
     "TestEPLInsertIntoEventPrecSubqueryMergeParity",
-    "TestEPLInsertIntoEventPrecSubqueryOnInsertParity"
+    "TestEPLInsertIntoEventPrecSubqueryOnInsertParity",
+    "TestEPLInsertIntoEventPrecInvalidStringPrecedenceRejected",
+    "TestEPLInsertIntoEventPrecInvalidForeignPropertyRejected",
+    "TestEPLInsertIntoEventPrecInvalidNullPrecedenceRejected",
+    "TestEPLInsertIntoEventPrecInvalidMergeShortPrecedenceRejected",
+    "TestEPLInsertIntoEventPrecInvalidFAFRejected"
    ],
    "tags": [],
    "status": "differential-verified",
@@ -32492,7 +32499,8 @@
    ],
    "notes": [
     "4.342 extension covers ords 4/9: the two-level contained-event routes with non-constant event-precedence evaluated against the routed target event (Unnest + zero-selection projection; chained routes interleave through the shared precedence queue reproducing Java's two-stage ordering), and the output-every-2-events routes with precedences 1/2/3 whose single flush batch orders by precedence across statements and FIFO within (Java's computeEventPrecedence(3, *) static call is pinned as the constant 3 — approved adaptation). Remaining ords: 5-8 (subquery-driven precedence) require an engine unit — visitQueryExpressions does not register eventPrecedence/split/merge precedence subqueries, evaluatePrecedenceExpr lacks statement variables so subquery precedence silently degrades to 0, and TriggerQuery.Query drops spec.eventPrecedence; ord 10's invalid sub-cases split between that engine unit (precedence-expression validation, sub-cases 1-4) and no-Go-rejection-surface dispositions (table-target precedence, reserved-keyword parse error; the FAF sub-case 5 is already covered by the faf rejection test).",
-    "4.343 ENGINE unit covers ords 5-8 (subquery-driven event precedence): visitQueryExpressions now registers eventPrecedence, merge-action and split-branch precedence expressions (so precedence subqueries join the statement's subquery runtime registry), evaluatePrecedenceExpr evaluates with the statement's attached variables (route and split paths — previously subquery precedence silently degraded to 0/FIFO), and TriggerQuery.Query copies spec.eventPrecedence for on-select routes; the OnDemand query copies eventPrecedence so the FAF rejection is live. The four routed contexts (on-split, insert-into, on-merge not-matched, on-select-from-window) replay one contract: a,b with null subqueries, flipped after priming the last-event subquery, restored after the opposite prime (Java's SODA flag is compile-path only). Remaining ords: 4-adjacent ord 10 invalid sub-cases 1-4 (precedence-expression Build validation — integer-valued, non-null, output-event scope) and no-Go-rejection-surface dispositions for 6/7 (table-target precedence; reserved-keyword parse error); FAF sub-case 5 covered by the faf rejection test."
+    "4.343 ENGINE unit covers ords 5-8 (subquery-driven event precedence): visitQueryExpressions now registers eventPrecedence, merge-action and split-branch precedence expressions (so precedence subqueries join the statement's subquery runtime registry), evaluatePrecedenceExpr evaluates with the statement's attached variables (route and split paths — previously subquery precedence silently degraded to 0/FIFO), and TriggerQuery.Query copies spec.eventPrecedence for on-select routes; the OnDemand query copies eventPrecedence so the FAF rejection is live. The four routed contexts (on-split, insert-into, on-merge not-matched, on-select-from-window) replay one contract: a,b with null subqueries, flipped after priming the last-event subquery, restored after the opposite prime (Java's SODA flag is compile-path only). Remaining ords: 4-adjacent ord 10 invalid sub-cases 1-4 (precedence-expression Build validation — integer-valued, non-null, output-event scope) and no-Go-rejection-surface dispositions for 6/7 (table-target precedence; reserved-keyword parse error); FAF sub-case 5 covered by the faf rejection test.",
+    "4.344 closes the class with ord 10 (EPLInsertIntoEventPrecInvalid) registered implemented-not-DV per the invalidity policy — no trace rows. A Build-time validation pass (validateEventPrecedence) now mirrors Java's validateEventPrecedence across the route, split-branch and named-window-merge paths: the precedence expression must return int (rejecting string, null-pointer, int16/short and other non-int types, matching Java's Integer-only rule) and, when the output schema is statically known, may only reference properties of the output event (Java's 'considering only the result event itself and not incoming streams'); subquery-internal expressions resolve against their own source and are not walked. Review follow-up: the table-merge path (distinct from the route path) validates event-precedence with the same integer rule, matching Java's shared InfraOnMergeHelperForge validation for tables and named windows. Approved differences: exact message texts are engine-internal; the FAF sub-case rejects with the Go message (Java's text differs); the table-target precedence rejection exists for the pre-registered-target reason rather than a precedence-specific rule; the reserved-keyword parse error is unrepresentable in the typed API. Class disposition: 10/11 executions differential-verified, 1 implemented-not-DV."
    ]
   },
   {
@@ -42547,10 +42555,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3501,
-  "referencedJavaRuntimeIds": 3260,
+  "runtimeAssociationCount": 3502,
+  "referencedJavaRuntimeIds": 3261,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 876,
+  "unreferencedJavaRuntimeIds": 875,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 626,

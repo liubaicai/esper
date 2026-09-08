@@ -1427,6 +1427,43 @@ func expressionFieldNames(node *exprNode) map[string]struct{} {
 	return names
 }
 
+// validateEventPrecedence mirrors Java's validateEventPrecedence: an
+// event-precedence expression must return an integer (the typed API states
+// the intent as Expression[int]) and — when the output schema is statically
+// known — may only reference properties of the output event. Java validates
+// the expression "considering only the result event itself and not incoming
+// streams"; subquery-internal expressions resolve against the subquery's own
+// source and are therefore not walked.
+func validateEventPrecedence(expr Expr, output Schema, scope string) error {
+	if expr == nil {
+		return nil
+	}
+	if typ := expr.Type(); typ != nil && typ != typeOf[int]() {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("%s: event-precedence expects an expression returning int but the expression returns %s", scope, typ))
+	}
+	return validateEventPrecedenceFields(expr.node(), output, scope)
+}
+
+func validateEventPrecedenceFields(node *exprNode, output Schema, scope string) error {
+	if node == nil {
+		return nil
+	}
+	if node.subquery != nil {
+		return nil
+	}
+	if node.kind == "field" && output.valid() {
+		if _, ok := output.Property(node.fieldName); !ok {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("%s: event-precedence property %q is not a property of the output event type %q", scope, node.fieldName, output.Name()))
+		}
+	}
+	for _, child := range node.children {
+		if err := validateEventPrecedenceFields(child, output, scope); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (e *Environment) validateRoute(query Query) error {
 	if query.routeTarget == "" {
 		return nil
@@ -1443,6 +1480,9 @@ func (e *Environment) validateRoute(query Query) error {
 	}
 	if query.rowRecog != nil {
 		return fmt.Errorf("route target %q is not supported for match-recognize queries", query.routeTarget)
+	}
+	if err := validateEventPrecedence(query.eventPrecedence, target, "route"); err != nil {
+		return err
 	}
 	selections := append([]Selection(nil), query.selections...)
 	switch {

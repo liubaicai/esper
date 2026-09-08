@@ -45,30 +45,33 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.340 ('insert-into-until-pattern-array') committed as 6addb61ea; Git owns identity. EPLInsertIntoPopulateUnderlying.java now 12/13 executions DV.
 - Shipped: Draft 4.341 ('insert-into-invalidity') committed as 121fdf06a; Git owns identity. EPLInsertIntoPopulateUnderlying.java fully dispositioned (12/13 DV + 1 implemented-not-DV).
 - Shipped: Draft 4.342 ('event-precedence-contained-outputrate') committed as 888916ba3; Git owns identity. EPLInsertIntoEventPrecedence.java now 6/11 executions DV.
-- Current target: Draft 4.343 'event-precedence-subquery-engine' — EPLInsertIntoEventPrecedence ords 5-8; engine unit implementing the three frozen gaps (contracts pinned by EventPrecedenceJavaContract agent_53742bea + EventPrecedenceGoSurface agent_5ec65a8f).
+- Shipped: Draft 4.343 ('event-precedence-subquery-engine') committed as 7b26930a1; Git owns identity. EPLInsertIntoEventPrecedence.java now 10/11 executions DV.
+- Current target: Draft 4.344 'event-precedence-validation' — EPLInsertIntoEventPrecedence ord 10 (implemented-not-DV, closes the class 11/11 dispositioned); contract pinned by EventPrecedenceJavaContract (agent_53742bea) + EventPrecedenceGoSurface (agent_5ec65a8f).
 
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: Draft 4.343 ('event-precedence-subquery-engine') — ENGINE unit closing the three frozen gaps so subquery-driven event precedence works, then differential-verifying ords 5-8 (class 10/11 DV after this unit).
+Active: Draft 4.344 ('event-precedence-validation') — implemented-not-DV engine unit: Build-time validation of event-precedence expressions over route/split/merge targets, closing EPLInsertIntoEventPrecedence at 11/11 dispositioned (10 DV + 1 implemented-not-DV). No oracle/scenario/trace changes (invalidity policy).
 
-Engine changes (implemented, all 10 event-precedence tests PASS, full internal/esper suite green):
-1. plan.go visitQueryExpressions now visits query.eventPrecedence, merge-action Precedence, and split-branch Precedence — precedence subqueries register in the statement's subquery runtime registry (querySubqueryDefinitions).
-2. runtime.go evaluatePrecedenceExpr takes the statement's attached variables (registry included) and sets EvalContext.Variables; the route path passes statement.runtime.variables.
-3. split_stream.go deliverSplitStreamEvent passes its in-scope variables (previously dropped).
-4. trigger.go TriggerQuery.Query copies spec.eventPrecedence (previously dropped for on-select routes).
-5. Completeness sweep: stream.go OnDemand query now copies eventPrecedence (making the FAF "fire-and-forget routes do not allow event-precedence" rejection live instead of dead code); JoinQuery/AggregateStream/PatternQuery/From-path literals already copied it. PatternQuery literal was missing it and now copies.
+Frozen contract (Java EPLInsertIntoEventPrecInvalid sub-cases 1-4, pinned by the 4.342 scouts):
+- (1) string-valued precedence (event-precedence('a')) rejected — "expected an expression returning an integer value";
+- (2) property reference resolving against the OUTPUT event type only (event-precedence(intPrimitive) with select theString into Out(id string)) rejected — properties of incoming streams are not in scope;
+- (3) null-valued precedence (event-precedence(null)) rejected;
+- (4) merge-action precedence returning Short rejected (merge wrapper "Validation failed in when-not-matched (clause 1)").
 
-- [x] Freeze contract (4.342 scouts pinned ords 5-8 contracts and the engine gaps; no re-scout needed).
-- [x] Engine implementation (primary = single writer on internal/esper).
-- [x] Go parity tests: 4 new tests (on-split, insert-into, merge, on-insert-from-window; each SB → a,b; prime N; SB → flipped; prime N; SB → restored).
-- [x] Asset writer: 4 cases appended (agent_fb35b3c7; multi-module deploy convention mirroring each Java compileDeploy, @FAF module for the ord-8 window pre-population, SupportBeanNumeric mirror class; trace 79 records = 57 prior byte-identical + 22 new, double-run byte-identical).
-- [x] Manifest (+4 runtime IDs/names/goTests, notes — class 10/11 DV), summary 873→877 DV runtime IDs / associations 3497→3501 / referenced 3256→3260 / unreferenced 880→876.
-- [x] Evidence extension; Roadmap supplement + epl 275→271 (5.2/6.1 and section-4 prose); CHANGELOG 4.343 entry.
-- [x] Gates + independent parity review (agent_cdf5a08e-9467-4c01-8a24-f0ca39fdab5b): OVERALL PASS on all five dimensions — the reviewer verified all three gaps genuinely closed with no missed evaluatePrecedenceExpr call site, the completeness sweep exact (JoinQuery/Aggregate/From pre-existing; OnDemand/Pattern added; RowRecog correctly out of scope per the Java grammar), the FAF rejection live, the full internal/esper suite green (64.8s), an independent oracle rerun byte-identical to the checked-in trace, and manifest/domain arithmetic recomputed-exact (epl 271 matching). Two P3s fixed in the same work unit: the roadmap supplement incorrectly listed PatternQuery as already-copied (reworded to OnDemand/Pattern added in this unit), and the lagging checkboxes.
+Approved differences (documented): exact message texts are engine-internal; sub-case 5 FAF already rejected (faf.go, message "fire-and-forget routes do not allow event-precedence" vs Java's "Fire-and-forget insert-queries do not allow event-precedence"); sub-case 6 table-target rejection exists for a different reason (Go requires pre-registered route targets); sub-case 7 reserved-keyword parse error unrepresentable in the typed API.
+
+- [x] Freeze contract (4.342 scouts; implemented-only unit with no oracle/scenario assets and all remaining files primary-owned — delegation-gate serial exception recorded).
+- [x] Primary: implemented validateEventPrecedence (integer-typed via Expr.Type() == int; output-schema field walk skipping subquery internals) wired into validateRoute, named-window-merge actions and split branches; 5 Go Build-rejection tests all PASS (fixes: Schema is a struct using valid(), SplitInto→SplitIntoWithPrecedence for the null case, FAF test via RouteFireAndForget with the newRow/resultRow composition); full internal/esper suite + vet green.
+- [x] Manifest: ord 10 runtime id added to javaRuntimeIds (not DV list), goTests + note (class 11/11 dispositioned: 10 DV + 1 implemented-not-DV); summary associations 3501→3502 / referenced 3260→3261 / unreferenced 876→875 (DV runtime IDs stay 877); per-domain recount verified epl 270.
+- [x] Evidence note; Roadmap supplement + epl 271→270 (5.2/6.1 and section-4 prose); CHANGELOG 4.344 entry.
+- [x] Gates + independent parity review (agent_81c4de6d-ab46-4f7f-9f74-2c6e5294204c): OVERALL PASS on all five dimensions — the integer rule verified against Java's exact IntegerBoxed check (EPLValidationUtil.java:56-61), the subquery skip verified against the children-vs-subquery distinction, the FAF/table/parse dispositions verified accurate, full internal/esper suite green, manifest arithmetic recomputed-exact including the inventory ordinal correction (EPLInsertIntoEventPrecInvalid is ordinal 10, not 12). One P2 fixed in the same work unit: the table-merge path (Java validates table and named-window merges alike via InfraOnMergeHelperForge) now validates event-precedence with the same integer rule and a dedicated test; two narrow Build-time leniencies (nil-typed expressions, NullLiteral[int]) documented in the test header; lagging checkbox ticked.
 - [ ] Commit and push (Git owns identity; no hash recorded here).
 
 ## Delegation checkpoint
+
+Draft 4.344 unit:
+- Delegation gate: the ord-10 sub-case list and dispositions were pinned by the 4.342 scouts (agent_53742bea / agent_5ec65a8f). The unit is implemented-only (invalidity policy: no oracle/scenario/trace assets) and every remaining file is primary-owned; no agent task has an independent scope. Serial exception recorded here.
 
 Draft 4.343 unit:
 - Delegation gate: the ords 5-8 contracts, Go shapes and the three engine gaps were pinned by the 4.342 scouts (agent_53742bea / agent_5ec65a8f) covering all 7 open executions of the class. The engine implementation is primary-only (single writer on shared internal/esper semantics per AGENTS.md); the disjoint scenario/oracle/trace asset extension is dispatched to an isolated asset writer in parallel.
