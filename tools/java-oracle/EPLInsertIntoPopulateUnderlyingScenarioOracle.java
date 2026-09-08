@@ -60,6 +60,14 @@ import static org.apache.avro.SchemaBuilder.record;
  * EPLInsertIntoWindowAggregationAtEventBean, EPLInsertIntoCharSequenceCompat
  * (objectarray/map/default forms, compile+deploy only, zero records) and
  * EPLInsertIntoBeanFactoryMethod (target classes registered plainly).
+ * EPLInsertIntoArrayPOJOInsert and EPLInsertIntoArrayMapInsert replay the
+ * valid until-pattern halves only (the invalid compile halves are covered by
+ * Go implemented-only rejection tests — array-into-non-array at Build,
+ * single-into-array at route execution); the array-map trio mirrors the suite's
+ * objectarray/map/default representations, whose avro and json iterations the
+ * protocol cannot express, and its sends dispatch on the case's
+ * representation. The advanceTime step op drives the external clock exactly
+ * like env.advanceTime and records nothing.
  * Multi-stage Java executions
  * replay as one scenario case per stage because the case protocol deploys
  * each case into a fresh runtime (the Java suite undeploys between stages).
@@ -127,7 +135,11 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
             "charsequence-compat-map",
             "charsequence-compat-default",
             "factory-method-string",
-            "factory-method-sensor"
+            "factory-method-sensor",
+            "array-pojo-until",
+            "array-map-until-objectarray",
+            "array-map-until-map",
+            "array-map-until-default"
         };
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
@@ -322,9 +334,33 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
             case "factory-method-sensor" ->
                 epls.add("@name('s0') insert into SupportSensorEvent(id, type, device, measurement, confidence)" +
                     "select 2, 'A01', 'DHC1000', 100, 5 from MyMap");
+            // Array-until cases: the valid halves only. EPL strings stay
+            // byte-exact with the suite; the FinalEventInvalid* schema
+            // creates belong to the invalid compile halves, which are not
+            // scenario cases. The suite's schema text is the annotation, a
+            // space, then "@public @buseventtype create schema ..." with
+            // ";\n" separators, so the default representation keeps its
+            // leading space.
+            case "array-pojo-until" -> {
+                epls.add("@public create schema FinalEventValid as " +
+                    "com.espertech.esper.regressionlib.suite.epl.insertinto.EPLInsertIntoPopulateUnderlying$FinalEventValid;\n");
+                epls.add("@name('s0') INSERT INTO FinalEventValid SELECT s as startEvent, e as endEvent FROM PATTERN [" +
+                    "every s=SupportBean_S0 -> e=SupportBean(theString=s.p00) until timer:interval(10 sec)]");
+            }
+            case "array-map-until-objectarray" -> arrayMapUntilEpls(epls, "@EventRepresentation('objectarray')");
+            case "array-map-until-map" -> arrayMapUntilEpls(epls, "@EventRepresentation('map')");
+            case "array-map-until-default" -> arrayMapUntilEpls(epls, "");
             default -> throw new IllegalArgumentException("unsupported case " + caseName);
         }
         return epls;
+    }
+
+    private static void arrayMapUntilEpls(List<String> epls, String annotation) {
+        epls.add(annotation + " @public @buseventtype create schema EventOne(id string);\n" +
+            annotation + " @public @buseventtype create schema EventTwo(id string, val int);\n" +
+            annotation + " @public @buseventtype create schema FinalEventValid (startEvent EventOne, endEvent EventTwo[]);\n");
+        epls.add("@name('s0') INSERT INTO FinalEventValid SELECT s as startEvent, e as endEvent FROM PATTERN [" +
+            "every s=EventOne -> e=EventTwo(id=s.id) until timer:interval(10 sec)]");
     }
 
     private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime) {
@@ -340,12 +376,16 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
                 continue;
             }
             if ("send".equals(op)) {
-                send(runtime, step);
+                send(runtime, step, caseName);
+            } else if ("advanceTime".equals(op)) {
+                // External-clock time control, mirroring the suite's
+                // env.advanceTime; the protocol records nothing for it.
+                runtime.getEventService().advanceTime(step.getLong("millis", 0L));
             }
         }
     }
 
-    private static void send(EPRuntime runtime, JsonObject step) {
+    private static void send(EPRuntime runtime, JsonObject step, String caseName) {
         String eventType = step.getString("eventType", "");
         JsonObject payload = step.get("payload").asObject();
         Map<String, Object> event = new LinkedHashMap<>();
@@ -426,9 +466,17 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
             case "SupportBean_ST1" ->
                 runtime.getEventService().sendEventBean(
                     new SupportBean_ST1(payload.getString("id", null), payload.getInt("p10", 0)), eventType);
-            case "SupportBean_S0" ->
-                runtime.getEventService().sendEventBean(
-                    new SupportBean_S0(payload.getInt("id", 0)), eventType);
+            case "SupportBean_S0" -> {
+                JsonValue p00 = payload.get("p00");
+                if (p00 != null && !p00.isNull()) {
+                    runtime.getEventService().sendEventBean(
+                        new SupportBean_S0(payload.getInt("id", 0), p00.asString()), eventType);
+                } else {
+                    runtime.getEventService().sendEventBean(
+                        new SupportBean_S0(payload.getInt("id", 0)), eventType);
+                }
+            }
+            case "EventOne", "EventTwo" -> sendMapRepEvent(runtime, eventType, payload, caseName);
             case "SupportBean_N" ->
                 runtime.getEventService().sendEventBean(
                     new SupportBean_N(
@@ -439,6 +487,29 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
                         payload.getBoolean("boolPrimitive", false),
                         nullableBoolean(payload, "boolBoxed")), eventType);
             default -> throw new IllegalArgumentException("unsupported event type " + eventType);
+        }
+    }
+
+    // EventOne/EventTwo sends mirror the suite's sendEventOne/sendEventTwo
+    // helpers: object-array events for the objectarray representation and
+    // map events for the map and default (map-underlying) representations.
+    private static void sendMapRepEvent(EPRuntime runtime, String eventType, JsonObject payload,
+                                        String caseName) {
+        String id = payload.getString("id", null);
+        if (caseName.endsWith("objectarray")) {
+            if ("EventOne".equals(eventType)) {
+                runtime.getEventService().sendEventObjectArray(new Object[]{id}, eventType);
+            } else {
+                runtime.getEventService().sendEventObjectArray(
+                    new Object[]{id, payload.getInt("val", 0)}, eventType);
+            }
+        } else {
+            Map<String, Object> event = new LinkedHashMap<>();
+            event.put("id", id);
+            if ("EventTwo".equals(eventType)) {
+                event.put("val", payload.getInt("val", 0));
+            }
+            runtime.getEventService().sendEventMap(event, eventType);
         }
     }
 
@@ -559,10 +630,29 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
                     nestedBean.getNestedNested() == null ? null : nestedBean.getNestedNested().getNestedNestedValue()));
                 return object;
             }
+            if (value instanceof EventBean member) {
+                // Event-typed members of routed rows arrive as EventBean
+                // wrappers when the target underlying is map or object-array
+                // (the getters expose the stored wrappers, matching the Java
+                // assertions that read .get("id")/.get("val") from them).
+                // Expand into sorted property maps instead of the wrapper's
+                // identity-bearing toString.
+                return normalizeEventBeanProperties(member);
+            }
             if (EXPANDABLE_EVENT_BEAN_MEMBERS.contains(value.getClass())) {
                 return normalizeBeanProperties(value);
             }
             return Json.value(String.valueOf(value));
+        }
+
+        private JsonValue normalizeEventBeanProperties(EventBean member) {
+            JsonObject object = new JsonObject();
+            String[] names = member.getEventType().getPropertyNames().clone();
+            java.util.Arrays.sort(names);
+            for (String name : names) {
+                object.add(name, normalize(member.get(name)));
+            }
+            return object;
         }
 
         // Event-typed members of routed rows (constructor targets, join

@@ -375,6 +375,131 @@
    "op": "send",
    "eventType": "MyMap",
    "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "array-pojo-until"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "advanceTime",
+   "millis": 10000
+  },
+  {
+   "op": "case",
+   "case": "array-map-until-objectarray"
+  },
+  {
+   "op": "send",
+   "eventType": "EventOne",
+   "payload": {
+    "id": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "EventTwo",
+   "payload": {
+    "id": "G1",
+    "val": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "EventTwo",
+   "payload": {
+    "id": "G1",
+    "val": 3
+   }
+  },
+  {
+   "op": "advanceTime",
+   "millis": 10000
+  },
+  {
+   "op": "case",
+   "case": "array-map-until-map"
+  },
+  {
+   "op": "send",
+   "eventType": "EventOne",
+   "payload": {
+    "id": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "EventTwo",
+   "payload": {
+    "id": "G1",
+    "val": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "EventTwo",
+   "payload": {
+    "id": "G1",
+    "val": 3
+   }
+  },
+  {
+   "op": "advanceTime",
+   "millis": 10000
+  },
+  {
+   "op": "case",
+   "case": "array-map-until-default"
+  },
+  {
+   "op": "send",
+   "eventType": "EventOne",
+   "payload": {
+    "id": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "EventTwo",
+   "payload": {
+    "id": "G1",
+    "val": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "EventTwo",
+   "payload": {
+    "id": "G1",
+    "val": 3
+   }
+  },
+  {
+   "op": "advanceTime",
+   "millis": 10000
   }
  ]
 }

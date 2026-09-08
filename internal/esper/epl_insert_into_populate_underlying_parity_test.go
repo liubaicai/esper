@@ -3,7 +3,9 @@ package esper
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 )
 
 // This file locks the observable behavior of the Java regression suite
@@ -2196,6 +2198,304 @@ func TestEPLInsertIntoBeanFactoryMethodParity(t *testing.T) {
 		if got[0].ID != 2 || got[0].Type != "A01" || got[0].Device != "DHC1000" ||
 			got[0].Measurement != 100 || got[0].Confidence != 5 {
 			t.Fatalf("row = %#v", got[0])
+		}
+	})
+}
+
+// ---- 4.340: until-pattern event-array population (ords 9/10) ----
+
+type iipuFinalEventValid struct {
+	StartEvent Event   `esper:"startEvent"`
+	EndEvent   []Event `esper:"endEvent"`
+}
+
+type iipuEventOne struct {
+	ID string `esper:"id"`
+}
+
+type iipuEventTwo struct {
+	ID  string `esper:"id"`
+	Val int    `esper:"val"`
+}
+
+// TestEPLInsertIntoArrayPOJOUntilParity covers EPLInsertIntoArrayPOJOInsert
+// (java-runtime-56175b64c415bf33ddf1) valid half: INSERT INTO FinalEventValid
+// SELECT s as startEvent, e as endEvent FROM PATTERN [every s=SupportBean_S0
+// -> e=SupportBean(theString=s.p00) until timer:interval(10 sec)]. Contract:
+// three sends, then the 10-second timer fires one routed row with
+// startEvent(id=1,p00=G1) and endEvent[intPrimitive 2,3]. Java's two invalid
+// compile halves are Go Build-error tests below.
+func TestEPLInsertIntoArrayPOJOUntilParity(t *testing.T) {
+	env := NewEnvironment()
+	iipuRegisterCommon(t, env)
+	if _, err := RegisterStruct[iipuJoinS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[iipuFinalEventValid](env, "FinalEventValid"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env,
+		WithRuntimeURI("java-runtime-56175b64c415bf33ddf1"),
+		WithStartTime(time.Unix(0, 0).UTC()))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	sb := From[iipuSupportBean](env, "SupportBean")
+	repeated := PatternFrom(sb, "e",
+		Equal[string](
+			Field[iipuSupportBean, string]("theString"),
+			TagField[string]("s", "p00")),
+	).MatchUntilExpr(nil, nil).Until(TimerInterval(sb, 10*time.Second))
+	producer, err := env.Build(PatternFrom(From[iipuJoinS0](env, "SupportBean_S0"), "s", Literal[bool](true)).
+		Then(repeated).
+		Select(
+			Alias("startEvent", PatternEvent("s")),
+			Alias("endEvent", TagEvents("e")),
+		).InsertInto("FinalEventValid", StatementName("i1")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), producer); err != nil {
+		t.Fatal(err)
+	}
+	received := iipuSubscribeUnderlying[iipuFinalEventValid](t, env, engine, "FinalEventValid")
+
+	if err := engine.Send(context.Background(), "SupportBean_S0", iipuJoinS0{ID: 1, P00: "G1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "G1", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "G1", IntPrimitive: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*received) != 0 {
+		t.Fatalf("pre-timer rows = %d, want 0", len(*received))
+	}
+	if err := engine.AdvanceTime(context.Background(), time.Unix(0, 0).UTC().Add(10*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	got := *received
+	if len(got) != 1 {
+		t.Fatalf("routed rows = %d, want 1", len(got))
+	}
+	if id := got[0].StartEvent.Get("id").Any(); id != 1 {
+		t.Fatalf("startEvent.id = %v", id)
+	}
+	if p00 := got[0].StartEvent.Get("p00").Any(); p00 != "G1" {
+		t.Fatalf("startEvent.p00 = %v", p00)
+	}
+	if len(got[0].EndEvent) != 2 {
+		t.Fatalf("endEvent length = %d, want 2", len(got[0].EndEvent))
+	}
+	if v := got[0].EndEvent[0].Get("intPrimitive").Any(); v != 2 {
+		t.Fatalf("endEvent[0].intPrimitive = %v", v)
+	}
+	if v := got[0].EndEvent[1].Get("intPrimitive").Any(); v != 3 {
+		t.Fatalf("endEvent[1].intPrimitive = %v", v)
+	}
+}
+
+// TestEPLInsertIntoArrayMapUntilParity covers EPLInsertIntoArrayMapInsert
+// (java-runtime-facd4a0c64ae48571ee6) valid half over the objectarray, map
+// and default representations (Java also loops Avro/JSON; the Go model
+// registers the map-family reps and the normalized routed row is identical
+// across representations, matching the Java suite asserting the same values
+// per rep). Sources register per representation; the FinalEventValid target
+// is the established struct shape for event-array members (JSON-provided
+// precedent). Java's two invalid compile halves are Go Build-error tests
+// below.
+func TestEPLInsertIntoArrayMapUntilParity(t *testing.T) {
+	for _, rep := range []string{"objectarray", "map", "default"} {
+		t.Run(rep, func(t *testing.T) {
+			env := NewEnvironment()
+			iipuRegisterCommon(t, env)
+			if rep == "objectarray" {
+				if _, err := RegisterObjectArray(env, "EventOne", []FieldSpec{
+					FieldDef("id", reflect.TypeOf("")),
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := RegisterObjectArray(env, "EventTwo", []FieldSpec{
+					FieldDef("id", reflect.TypeOf("")),
+					FieldDef("val", reflect.TypeOf(0)),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if _, err := RegisterMap(env, "EventOne", []FieldSpec{
+					FieldDef("id", reflect.TypeOf("")),
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := RegisterMap(env, "EventTwo", []FieldSpec{
+					FieldDef("id", reflect.TypeOf("")),
+					FieldDef("val", reflect.TypeOf(0)),
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := RegisterStruct[iipuFinalEventValid](env, "FinalEventValid"); err != nil {
+				t.Fatal(err)
+			}
+			engine := NewEngine(env,
+				WithRuntimeURI("java-runtime-facd4a0c64ae48571ee6"),
+				WithStartTime(time.Unix(0, 0).UTC()))
+			defer func() { _ = engine.Close(context.Background()) }()
+
+			two := From[iipuEventTwo](env, "EventTwo")
+			repeated := PatternFrom(two, "e",
+				Equal[string](
+					Field[iipuEventTwo, string]("id"),
+					TagField[string]("s", "id")),
+			).MatchUntilExpr(nil, nil).Until(TimerInterval(two, 10*time.Second))
+			producer, err := env.Build(PatternFrom(From[iipuEventOne](env, "EventOne"), "s", Literal[bool](true)).
+				Then(repeated).
+				Select(
+					Alias("startEvent", PatternEvent("s")),
+					Alias("endEvent", TagEvents("e")),
+				).InsertInto("FinalEventValid", StatementName("i1")))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := engine.Deploy(context.Background(), producer); err != nil {
+				t.Fatal(err)
+			}
+			received := iipuSubscribeUnderlying[iipuFinalEventValid](t, env, engine, "FinalEventValid")
+
+			// Object-array events send positional underlyings; map-family
+			// events send field maps (mirroring the suite's per-representation
+			// sendEventOne/sendEventTwo).
+			if rep == "objectarray" {
+				if err := engine.Send(context.Background(), "EventOne", []any{"G1"}); err != nil {
+					t.Fatal(err)
+				}
+				if err := engine.Send(context.Background(), "EventTwo", []any{"G1", 2}); err != nil {
+					t.Fatal(err)
+				}
+				if err := engine.Send(context.Background(), "EventTwo", []any{"G1", 3}); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if err := engine.Send(context.Background(), "EventOne", map[string]any{"id": "G1"}); err != nil {
+					t.Fatal(err)
+				}
+				if err := engine.Send(context.Background(), "EventTwo", map[string]any{"id": "G1", "val": 2}); err != nil {
+					t.Fatal(err)
+				}
+				if err := engine.Send(context.Background(), "EventTwo", map[string]any{"id": "G1", "val": 3}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if len(*received) != 0 {
+				t.Fatalf("pre-timer rows = %d, want 0", len(*received))
+			}
+			if err := engine.AdvanceTime(context.Background(), time.Unix(0, 0).UTC().Add(10*time.Second)); err != nil {
+				t.Fatal(err)
+			}
+			got := *received
+			if len(got) != 1 {
+				t.Fatalf("routed rows = %d, want 1", len(got))
+			}
+			if id := got[0].StartEvent.Get("id").Any(); id != "G1" {
+				t.Fatalf("startEvent.id = %v", id)
+			}
+			if len(got[0].EndEvent) != 2 {
+				t.Fatalf("endEvent length = %d, want 2", len(got[0].EndEvent))
+			}
+			if v := got[0].EndEvent[0].Get("val").Any(); v != 2 {
+				t.Fatalf("endEvent[0].val = %v", v)
+			}
+			if v := got[0].EndEvent[1].Get("val").Any(); v != 3 {
+				t.Fatalf("endEvent[1].val = %v", v)
+			}
+		})
+	}
+}
+
+// TestEPLInsertIntoArrayUntilInvalidParity pins the Go disposition of Java's
+// two invalid compile halves (implemented-only, no differential trace): the
+// event-array column into a non-array target property is rejected at Build,
+// and the single event into an array property — accepted at Build/deploy —
+// is rejected at route-execution time (the timer-fire advance returns the
+// TypeMismatch Java reports at compile).
+func TestEPLInsertIntoArrayUntilInvalidParity(t *testing.T) {
+	t.Run("array-column-into-non-array-rejected", func(t *testing.T) {
+		env := NewEnvironment()
+		iipuRegisterCommon(t, env)
+		if _, err := RegisterStruct[iipuJoinS0](env, "SupportBean_S0"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := RegisterStruct[struct {
+			StartEvent Event `esper:"startEvent"`
+			EndEvent   Event `esper:"endEvent"`
+		}](env, "FinalEventInvalidNonArray"); err != nil {
+			t.Fatal(err)
+		}
+		sb := From[iipuSupportBean](env, "SupportBean")
+		repeated := PatternFrom(sb, "e",
+			Equal[string](
+				Field[iipuSupportBean, string]("theString"),
+				TagField[string]("s", "p00")),
+		).MatchUntilExpr(nil, nil).Until(TimerInterval(sb, 10*time.Second))
+		_, err := env.Build(PatternFrom(From[iipuJoinS0](env, "SupportBean_S0"), "s", Literal[bool](true)).
+			Then(repeated).
+			Select(
+				Alias("startEvent", PatternEvent("s")),
+				Alias("endEvent", TagEvents("e")),
+			).InsertInto("FinalEventInvalidNonArray", StatementName("i1")))
+		if err == nil {
+			t.Fatal("array column into non-array property was accepted at Build")
+		}
+	})
+
+	t.Run("single-into-array-rejected", func(t *testing.T) {
+		env := NewEnvironment()
+		iipuRegisterCommon(t, env)
+		if _, err := RegisterStruct[iipuJoinS0](env, "SupportBean_S0"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := RegisterStruct[struct {
+			StartEvent []Event `esper:"startEvent"`
+			EndEvent   []Event `esper:"endEvent"`
+		}](env, "FinalEventInvalidArray"); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+		defer func() { _ = engine.Close(context.Background()) }()
+		sb := From[iipuSupportBean](env, "SupportBean")
+		repeated := PatternFrom(sb, "e",
+			Equal[string](
+				Field[iipuSupportBean, string]("theString"),
+				TagField[string]("s", "p00")),
+		).MatchUntilExpr(nil, nil).Until(TimerInterval(sb, 10*time.Second))
+		plan, err := env.Build(PatternFrom(From[iipuJoinS0](env, "SupportBean_S0"), "s", Literal[bool](true)).
+			Then(repeated).
+			Select(
+				Alias("startEvent", PatternEvent("s")),
+				Alias("endEvent", TagEvents("e")),
+			).InsertInto("FinalEventInvalidArray", StatementName("i1")))
+		if err != nil {
+			t.Fatalf("single event into array property should pass Build: %v", err)
+		}
+		// Build and deploy accept the projection (the wrap intent), but the
+		// struct-target route rejects the single event at route-execution
+		// time — the timer-fire advance returns the same TypeMismatch
+		// rejection Java applies at compile time.
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatalf("deploy accepted single-into-array route at Build scope: %v", err)
+		}
+		if err := engine.Send(context.Background(), "SupportBean_S0", iipuJoinS0{ID: 1, P00: "G1"}); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "G1", IntPrimitive: 2}); err != nil {
+			t.Fatal(err)
+		}
+		err = engine.AdvanceTime(context.Background(), time.Unix(0, 0).UTC().Add(10*time.Second))
+		if err == nil {
+			t.Fatal("route execution accepted a single event into the array property")
+		}
+		if !strings.Contains(err.Error(), "startEvent") || !strings.Contains(err.Error(), "expects []esper.Event") {
+			t.Fatalf("advance-time error = %v, want the startEvent type-mismatch", err)
 		}
 	})
 }

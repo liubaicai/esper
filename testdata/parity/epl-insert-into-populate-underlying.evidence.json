@@ -12,7 +12,9 @@
   "java-runtime-43b50e297c1593da8ec3",
   "java-runtime-5c663b3a17e6e4aac880",
   "java-runtime-f04a53b7cbe0320f681f",
-  "java-runtime-e79b48b60120e27bafbc"
+  "java-runtime-e79b48b60120e27bafbc",
+  "java-runtime-56175b64c415bf33ddf1",
+  "java-runtime-facd4a0c64ae48571ee6"
  ],
  "goTests": [
   "TestEPLInsertIntoPopulateBeanSimpleSelectNamesParity",
@@ -30,10 +32,13 @@
   "TestEPLInsertIntoBeanJoinPopulateParity",
   "TestEPLInsertIntoWindowAggregationAtEventBeanParity",
   "TestEPLInsertIntoCharSequenceCompatParity",
-  "TestEPLInsertIntoBeanFactoryMethodParity"
+  "TestEPLInsertIntoBeanFactoryMethodParity",
+  "TestEPLInsertIntoArrayPOJOUntilParity",
+  "TestEPLInsertIntoArrayMapUntilParity",
+  "TestEPLInsertIntoArrayUntilInvalidParity"
  ],
  "javaTraceFile": "testdata/parity/epl-insert-into-populate-underlying.trace.json",
- "javaTraceRecordCount": 26,
+ "javaTraceRecordCount": 30,
  "caseMatchSummary": {
   "populate-bean-simple-select-names": {
    "expected": 1,
@@ -159,6 +164,26 @@
    "expected": 1,
    "actual": 1,
    "match": true
+  },
+  "array-pojo-until": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "array-map-until-objectarray": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "array-map-until-map": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "array-map-until-default": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
   }
  },
  "differences": 0,
@@ -167,6 +192,7 @@
  "notes": [
   "All 10 cases match between Java oracle trace (11 listener records) and Go test assertions. Field-level values confirmed: 12-column simple projections (theString/intPrimitive/intBoxed/longPrimitive/longBoxed/boolPrimitive/charPrimitive/bytePrimitive/floatPrimitive/doublePrimitive/shortPrimitive/enumValue), wildcard 4-property map copy (boolPrimitive included via declared MySupportMap property), boxed Integer->Long/Float->Double conversion, arrays/maps/nested-bean population, null-value primitive default sequence (0 then 20), and map/ObjectArray/Avro provided-underlying routing (intVal=1000, stringVal=E1, doubleVal=1001). Java oracle registers the real SupportBean/SupportBeanComplexProps bean classes from the fixed esper-common classpath, so trace values reflect the original bean assertions exactly. Go struct targets represent unprojected non-pointer properties as Go zero values (struct-vs-map representation, matching Java bean primitive defaults); nullable pointer properties arrive as null as in the Java trace.",
   "4.338 extension (ords 0/1/2/11): Java constructor/factory targets are modeled as Go struct targets populated by named projection (approved adaptation); constructor defaults reproduce via WithJSONDefaults (ord 0 stage 4's intPrimitive=99 where Java ignores the insert-into column list for constructor targets \u2014 the column-list syntax itself has no Go surface); ord 0 stage 2's positional boxed-into-primitive binding reproduces by named projection (theString, null->intBoxed, intBoxed->intPrimitive); ord 2 (EPLInsertIntoBeanJoin) stage 3 is a Java comment/text artifact (observable identical to stage 2) and is not separately pinned; event members route with identity preserved (Java assertSame maps to Go Event identity); window(*) @eventbean is Aggregate(WindowEvents()) over KeepAll with insertion-order []Event routing. Multi-stage executions split into fresh-runtime sub-cases mirroring the Java undeploy boundaries.",
-  "4.339 extension (ords 7/8): charsequence-compat deploys the create-schema + insert-into pair per representation (objectarray/map/default; Java also runs Avro which the Go oracle does not model, and Go's JSON registrations are a superset not pinned here) with zero sends \u2014 the observable is deploy success and a silent stream. factory-method targets register plainly (Java configures factory methods; approved adaptation, population observable identical); one Go subscription stands in for Java's listener+subscriber pair; the 5-column sensor projection widens the int literals into the double columns; Java's two no-default-constructor reflection checks are support-class introspection, not engine behavior (deferred as non-engine)."
+  "4.339 extension (ords 7/8): charsequence-compat deploys the create-schema + insert-into pair per representation (objectarray/map/default; Java also runs Avro which the Go oracle does not model, and Go's JSON registrations are a superset not pinned here) with zero sends \u2014 the observable is deploy success and a silent stream. factory-method targets register plainly (Java configures factory methods; approved adaptation, population observable identical); one Go subscription stands in for Java's listener+subscriber pair; the 5-column sensor projection widens the int literals into the double columns; Java's two no-default-constructor reflection checks are support-class introspection, not engine behavior (deferred as non-engine).",
+  "4.340 extension (ords 9/10 valid halves): the until-pattern `every s=... -> e=... until timer:interval(10 sec)` routes the single start capture and the repeated-capture array after virtual-time advance (Engine.AdvanceTime over WithStartTime(0); the oracle gained a no-record advanceTime op for the same effect); ord 9's POJO target registers the suite's public static local class by FQN and ord 10 loops objectarray/map/default source representations (object-array events send positional underlyings, map-family events send field maps; Java's Avro/JSON legs are not modeled \u2014 normalized routed rows are identical across reps, matching the suite asserting the same values per rep). Java's two invalid compile halves are Go implemented-only tests (no differential trace): array-column-into-non-array rejects at Build; single-into-array is accepted at Build/deploy but the route rejects it at execution time \u2014 the timer-fire advance returns the TypeMismatch Java reports at compile."
  ]
 }
