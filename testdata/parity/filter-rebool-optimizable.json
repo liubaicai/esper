@@ -90,6 +90,23 @@
         {"type": "SupportBean", "theString": "test.org", "intPrimitive": 0, "received": false},
         {"type": "SupportBean", "theString": "x.com", "intPrimitive": 0, "received": false}
       ]
+    },
+    {
+      "case": "mixed-value-regexp-rhs",
+      "epl": "@name('var') create constant variable string MYVAR = '.*abc.*';\n@name('s0') select * from SupportBean(theString regexp MYVAR);\n@name('ctx') create context MyContext start SupportBean_S0 as s0;\n@name('s1') context MyContext select * from SupportBean(theString regexp context.s0.p00);\n@name('s2') select * from pattern[s0=SupportBean_S0 -> every SupportBean(theString regexp s0.p00)];\n@name('s3') select * from SupportBean(theString regexp '.*' || 'abc' || '.*');\n",
+      "send": [
+        {"type": "SupportBean_S0", "id": 1, "p00": ".*abc.*"},
+        {"type": "SupportBean", "theString": "xabsx", "intPrimitive": 0, "received": [false, false, false, false]},
+        {"type": "SupportBean", "theString": "xabcx", "intPrimitive": 0, "received": [true, true, true, true]}
+      ]
+    },
+    {
+      "case": "no-value-expr-regexp-self",
+      "epl": "@name('s0') select * from SupportBean_S0(p00 regexp p01) as a;\n@name('s1') select * from SupportBean_S0(s0.p00 regexp s0.p01) as s0",
+      "send": [
+        {"type": "SupportBean_S0", "id": 1, "p00": "abc", "p01": ".*c", "received": [true, true]},
+        {"type": "SupportBean_S0", "id": 2, "p00": "abc", "p01": ".*d", "received": [false, false]}
+      ]
     }
   ]
 }

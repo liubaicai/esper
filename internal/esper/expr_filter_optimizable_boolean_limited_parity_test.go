@@ -541,3 +541,149 @@ func TestExprFilterOptReboolDuplicateRegexpParity(t *testing.T) {
 		}
 	}
 }
+
+// TestExprFilterOptReboolNoValueExprRegexpSelfParity covers
+// ExprFilterOptReboolNoValueExprRegexpSelf (java-runtime-c21cb50c065d46513b04):
+// p00 regexp p01 across two statements (Java deploys them via two
+// compileDeploy calls with ` as a` / ` as s0` stream aliases; the aliases
+// have no filter-side analogue). Contract: S0(1,"abc",".*c") true on both,
+// S0(2,"abc",".*d") false on both.
+func TestExprFilterOptReboolNoValueExprRegexpSelfParity(t *testing.T) {
+	env := newReboolEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	pred := RegexpMatch(
+		Field[reboolSupportBeanS0, string]("p00"),
+		Field[reboolSupportBeanS0, string]("p01"))
+	var fireds []func() bool
+	for i := 0; i < 2; i++ {
+		plan, err := env.Build(
+			From[reboolSupportBeanS0](env, "SupportBean_S0").Filter(pred).Query(StatementName("s" + string(rune('0'+i)))))
+		if err != nil {
+			t.Fatal(err)
+		}
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = deployment.Undeploy(context.Background()) }()
+		fireds = append(fireds, subscribeRebool(t, deployment, "s"+string(rune('0'+i))))
+	}
+
+	for _, tc := range []struct {
+		id       int
+		p00, p01 string
+		want     bool
+	}{
+		{1, "abc", ".*c", true},
+		{2, "abc", ".*d", false},
+	} {
+		if err := engine.SendEvent(context.Background(), reboolSupportBeanS0{ID: tc.id, P00: tc.p00, P01: tc.p01}); err != nil {
+			t.Fatal(err)
+		}
+		for i, fired := range fireds {
+			if got := fired(); got != tc.want {
+				t.Fatalf("stmt%d id=%d p00=%q p01=%q: fired=%v want %v", i, tc.id, tc.p00, tc.p01, got, tc.want)
+			}
+		}
+	}
+}
+
+// TestExprFilterOptReboolMixedValueRegexpRHSParity covers
+// ExprFilterOptReboolMixedValueRegexpRHS (java-runtime-f6199a434eee24910555):
+// four monitored statements whose regexp right-hand values come from
+// non-literal sources — a constant variable (s0), a context partition value
+// (s1), a pattern tag inside an every leg (s2), and a constant concat (s3).
+// Java's shared REBOOL index/value plan assertions are engine-internal and
+// out of scope. Contract: S0(1,".*abc.*") starts the context and arms the
+// pattern silently; SB("xabsx",0) false on all four; SB("xabcx",0) true on
+// all four. The context uses the pattern-start adaptation (see
+// TestExprFilterOptReboolContextValueDeepParity).
+func TestExprFilterOptReboolMixedValueRegexpRHSParity(t *testing.T) {
+	env := newReboolEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	if err := env.RegisterVariable("MYVAR", ".*abc.*", ConstantVariable()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreatePatternInitiatedContext(env, "MyContext",
+		PatternFrom(From[reboolSupportBeanS0](env, "SupportBean_S0"), "s0", Literal[bool](true))); err != nil {
+		t.Fatal(err)
+	}
+
+	planDefs := []struct {
+		name  string
+		build func() (Plan, error)
+	}{
+		{"s0", func() (Plan, error) {
+			return env.Build(From[filterOptimizableBean](env, "SupportBean").
+				Filter(RegexpMatch(
+					Field[filterOptimizableBean, string]("theString"),
+					VariableRef[string]("MYVAR"))).
+				Query(StatementName("s0")))
+		}},
+		{"s1", func() (Plan, error) {
+			return env.Build(From[filterOptimizableBean](env, "SupportBean").
+				Filter(RegexpMatch(
+					Field[filterOptimizableBean, string]("theString"),
+					ContextPatternField[string]("s0", "p00"))).
+				Query(StatementName("s1"), WithContext("MyContext")))
+		}},
+		{"s2", func() (Plan, error) {
+			s0Step := PatternFrom(From[reboolSupportBeanS0](env, "SupportBean_S0"), "s0", Literal[bool](true))
+			sbStep := PatternFrom(From[filterOptimizableBean](env, "SupportBean"), "sb",
+				RegexpMatch(
+					Field[filterOptimizableBean, string]("theString"),
+					TagField[string]("s0", "p00"))).Every()
+			return env.Build(s0Step.Then(sbStep).
+				Select(Alias("sb", PatternEvent("sb"))).
+				Query(StatementName("s2")))
+		}},
+		{"s3", func() (Plan, error) {
+			return env.Build(From[filterOptimizableBean](env, "SupportBean").
+				Filter(RegexpMatch(
+					Field[filterOptimizableBean, string]("theString"),
+					Concat(Literal(".*"), Literal("abc"), Literal(".*")))).
+				Query(StatementName("s3")))
+		}},
+	}
+
+	var fireds []func() bool
+	for _, def := range planDefs {
+		plan, err := def.build()
+		if err != nil {
+			t.Fatalf("build %s: %v", def.name, err)
+		}
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatalf("deploy %s: %v", def.name, err)
+		}
+		defer func() { _ = deployment.Undeploy(context.Background()) }()
+		fireds = append(fireds, subscribeRebool(t, deployment, def.name))
+	}
+
+	if err := engine.SendEvent(context.Background(), reboolSupportBeanS0{ID: 1, P00: ".*abc.*"}); err != nil {
+		t.Fatal(err)
+	}
+	for i, fired := range fireds {
+		if fired() {
+			t.Fatalf("stmt%d: context start / first pattern leg must not deliver", i)
+		}
+	}
+	for _, tc := range []struct {
+		theString string
+		want      bool
+	}{
+		{"xabsx", false},
+		{"xabcx", true},
+	} {
+		sendOptimizableBean(t, engine, filterOptimizableBean{TheString: tc.theString, IntPrimitive: 0})
+		for i, fired := range fireds {
+			if got := fired(); got != tc.want {
+				t.Fatalf("stmt%d theString=%q: fired=%v want %v", i, tc.theString, got, tc.want)
+			}
+		}
+	}
+}

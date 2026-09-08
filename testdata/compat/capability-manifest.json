@@ -33232,7 +33232,9 @@
     "java-runtime-1da34c09fa675957b063",
     "java-runtime-11f60c98a851b822d97f",
     "java-runtime-0f83ba904d5457bbc6d2",
-    "java-runtime-5253f42525fa48e8784c"
+    "java-runtime-5253f42525fa48e8784c",
+    "java-runtime-f6199a434eee24910555",
+    "java-runtime-c21cb50c065d46513b04"
    ],
    "javaNames": [
     "ExprFilterOptReboolWithEquals",
@@ -33244,7 +33246,9 @@
     "ExprFilterOptReboolContextValueWithConst",
     "ExprFilterOptReboolPatternValueWithConst",
     "ExprFilterOptReboolDuplicateLike",
-    "ExprFilterOptReboolDuplicateRegexp"
+    "ExprFilterOptReboolDuplicateRegexp",
+    "ExprFilterOptReboolMixedValueRegexpRHS",
+    "ExprFilterOptReboolNoValueExprRegexpSelf"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableBooleanLimitedExpr.java"
@@ -33259,7 +33263,9 @@
     "TestExprFilterOptReboolContextValueWithConstParity",
     "TestExprFilterOptReboolPatternValueWithConstParity",
     "TestExprFilterOptReboolDuplicateLikeParity",
-    "TestExprFilterOptReboolDuplicateRegexpParity"
+    "TestExprFilterOptReboolDuplicateRegexpParity",
+    "TestExprFilterOptReboolMixedValueRegexpRHSParity",
+    "TestExprFilterOptReboolNoValueExprRegexpSelfParity"
    ],
    "tags": [],
    "status": "differential-verified",
@@ -33288,10 +33294,12 @@
     "java-runtime-1da34c09fa675957b063",
     "java-runtime-11f60c98a851b822d97f",
     "java-runtime-0f83ba904d5457bbc6d2",
-    "java-runtime-5253f42525fa48e8784c"
+    "java-runtime-5253f42525fa48e8784c",
+    "java-runtime-f6199a434eee24910555",
+    "java-runtime-c21cb50c065d46513b04"
    ],
    "notes": [
-    "ExprFilterOptimizableBooleanLimitedExpr REBOOL slice now covers 10 of 14 executions (ords 0/3/5/9/10 plus 4.336's 6/7/8/12/13): context partition values read inside filter regexp operands (p10 regexp p11||context.s0.p00 and p10||'abc' regexp context.s0.p00), pattern tag values inside followed-by filter operands, and duplicate like / not-regexp conjunction guards. Approved adaptation: Java filter-started contexts with a start stream different from the consuming statement map to Go pattern-initiated contexts (CreatePatternInitiatedContext), because Go filter-start evaluation observes only the consuming statement's stream events; partition lifecycle and context value reads are observably identical, and engine-level filter-start contexts remain an engine backlog item. Scenario create-context statements carry @name('ctx') because Java auto-names the unnamed create-context stmt-0, which would enter the oracle's s* monitoring rule. Deferred: ord 1+4 (MixedValueRegexpRHS 6-statement block; NoValueExprRegexpSelf) to the next unit; ord 2 (wall-clock delta<1000 primary assertion, EXCLUDEWHENINSTRUMENTED); ord 11 intentionally-different (compile-only SupportFilterPlanHook plan forge, same as case.expr-filter-optimizable-value-limited-disqualify)."
+    "ExprFilterOptimizableBooleanLimitedExpr REBOOL slice now covers 12 of 14 executions (ords 0/3/5/9/10, 4.336's 6/7/8/12/13, and 4.337's 1/4): regexp/like right-hand values from constant variables (RegisterVariable + ConstantVariable + VariableRef), context partition values (pattern-start adaptation + ContextPatternField), pattern tags inside every legs (TagField), constant concats, self-comparison (p00 regexp p01), duplicate like / not-regexp guards, and a mixed 4-statement deployment matrix. Approved adaptations: Java filter-started contexts with a start stream different from the consuming statement map to Go pattern-initiated contexts (filter-start evaluation observes only the consuming statement's stream; engine-level filter-start contexts remain backlog); separate Go deployments stand in for Java's single 6-statement deployment (runtime-wide filter service, behaviorally equivalent); scenario statements carry @name annotations and ;\\n separators to satisfy the oracle's single-deployment compile and s* monitoring rule. Remaining: ord 2 (wall-clock delta<1000 primary assertion, EXCLUDEWHENINSTRUMENTED, behavioral core duplicates verified ord 0) and ord 11 intentionally-different (compile-only SupportFilterPlanHook plan forge, same as case.expr-filter-optimizable-value-limited-disqualify)."
    ]
   },
   {
@@ -42455,7 +42463,7 @@
   "inventoriedCases": 626,
   "implementedCases": 624,
   "differentialVerifiedCases": 239,
-  "differentialVerifiedRuntimeIds": 861,
+  "differentialVerifiedRuntimeIds": 863,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42465,14 +42473,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3484,
-  "referencedJavaRuntimeIds": 3243,
+  "runtimeAssociationCount": 3486,
+  "referencedJavaRuntimeIds": 3245,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 893,
+  "unreferencedJavaRuntimeIds": 891,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 626,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 861
+  "differentialVerifiedRuntimeIDs": 863
  }
 }

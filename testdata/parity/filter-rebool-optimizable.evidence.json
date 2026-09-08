@@ -11,7 +11,9 @@
     "TestExprFilterOptReboolContextValueWithConstParity",
     "TestExprFilterOptReboolPatternValueWithConstParity",
     "TestExprFilterOptReboolDuplicateLikeParity",
-    "TestExprFilterOptReboolDuplicateRegexpParity"
+    "TestExprFilterOptReboolDuplicateRegexpParity",
+    "TestExprFilterOptReboolMixedValueRegexpRHSParity",
+    "TestExprFilterOptReboolNoValueExprRegexpSelfParity"
   ],
   "javaRuntimeIds": [
     "java-runtime-8941f4303767754556dd",
@@ -23,13 +25,15 @@
     "java-runtime-1da34c09fa675957b063",
     "java-runtime-11f60c98a851b822d97f",
     "java-runtime-0f83ba904d5457bbc6d2",
-    "java-runtime-5253f42525fa48e8784c"
+    "java-runtime-5253f42525fa48e8784c",
+    "java-runtime-f6199a434eee24910555",
+    "java-runtime-c21cb50c065d46513b04"
   ],
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "traceComparison": {
     "javaTrace": "testdata/parity/filter-rebool-optimizable.trace.json",
     "goTrace": "go-test assertions inline (subscribeRebool per-statement fired flags)",
-    "records": 29,
+    "records": 34,
     "zeroDifference": true,
     "perCase": [
       {
@@ -81,6 +85,16 @@
         "case": "duplicate-regexp",
         "steps": 4,
         "match": true
+      },
+      {
+        "case": "mixed-value-regexp-rhs",
+        "steps": 3,
+        "match": true
+      },
+      {
+        "case": "no-value-expr-regexp-self",
+        "steps": 2,
+        "match": true
       }
     ]
   },
@@ -90,6 +104,7 @@
     "Go uses Then(PatternFrom(...)) for the mixed-type pattern in rebool-with-equals; both PatternFrom steps carry their own source schema.",
     "4.336 extension (ords 6/7/8/12/13): Java filter-started contexts (start SupportBean_S0 as s0 consumed by an S1 statement) are modeled as Go pattern-initiated contexts (CreatePatternInitiatedContext with an unfiltered s0 leg) because Go filter-start evaluation observes only the consuming statement's stream events; partition lifecycle and context.s0.* value reads are observably identical. The scenario create-context statements carry @name('ctx') because Java auto-names the unnamed create-context stmt-0, which would fall into the oracle's s* monitoring rule. Engine-level filter-start contexts with a start stream different from the statement stream remain an engine backlog item.",
     "duplicate-regexp reproduces the Java double-quoted EPL regex literals with \\. escapes verbatim; trailing ;\\n artifacts of the Java source are preserved in the scenario epl where present.",
-    "Trace header java field moved 17.0.19 to 17.0.20 on regeneration (oracle environment metadata); records unaffected and all 14 pre-existing records stayed byte-identical."
+    "Trace header java field moved 17.0.19 to 17.0.20 on regeneration (oracle environment metadata); records unaffected and all 14 pre-existing records stayed byte-identical.",
+    "4.337 extension (ords 1/4): mixed-value-regexp-rhs deploys the Java 6-statement block (constant variable MYVAR, context value, every-leg pattern tag, constant concat) as separate Go deployments \u2014 behaviorally equivalent since the filter service is runtime-wide; the context uses the established pattern-start adaptation. no-value-expr-regexp-self joins the two Java runTwoStmt statements with ;\\n in the scenario because the oracle compiles one deployment per case, and the ` as a`/` as s0` stream aliases have no Go filter-side analogue."
   ]
 }
