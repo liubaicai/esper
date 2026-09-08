@@ -37,23 +37,27 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.332 ('resultset-aggregate-filter-named-parameter-sorted-join') committed; Git owns identity. ResultSetAggregateFilterNamedParameter.java is now covered at ordinals 0-18 minus 19/20 (19 audit/reuse and 20 invalid remain).
 - Shipped: Draft 4.333 ('infra-nwtable-subq-correl-coerce') committed; Git owns identity. The InfraNWTableSubq* file family is nearly closed: uncorrel, correl-join, filtered-correl, correl-coerce, at-eventbean, subquery, delete-aggregate are all differential-verified; only correl-index-sharing (case.query-subquery-index-sharing) remains implemented-not-DV.
 - Shipped: Draft 4.334 ('epl-other-stream-expr') committed at `b793bbd13`; Git owns identity.
-- Current target: Draft 4.335 candidate 'epl-other-select-expr-stream-selector' (re-scoped) — EPLOtherSelectExprStreamSelector ords 8/9 (alias-with-properties pair); contract frozen from SelectExprScout (agent_f18af34d) + SelectExprGoSurface (agent_710001ea, zero engine work for 8/9); asset writer dispatch + primary runner implementation pending. Prefetched scout results recorded below.
+- Current target: Draft 4.335 'epl-other-select-expr-stream-selector' — implementation complete, pending gates + independent parity review + commit.
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates: ExprFilterOptimizableBooleanLimitedExpr (9), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: none — 4.334 just shipped. Next unit selection re-gaps the manifest.
+Active: Draft 4.335 ('epl-other-select-expr-stream-selector') — EPLOtherSelectExprStreamSelector ords 8/9.
 
-Closing summary for shipped Draft 4.334 ('epl-other-stream-expr'): contract frozen from StreamExprScout (agent_ed647cf0) + StreamExprGoSurface (agent_1dadf555, 8-of-9 zero engine work); asset writer agent_72a20a4b authored oracle/script/scenario (30 steps after re-scope, 10-record Java trace validated end-to-end ×3, byte-identical). Primary wrote epl_other_stream_expr.go (8 builds: chained Method[EventValue], Func1[esper.Event,bool] where-filter, LeftOuter joins with SelectFrom(1, Method) null propagation, SelectSourceEvent stream-as-object, PatternFrom.Then(Property(PatternEvent)) UDF pattern; bean TheString as *string for null-exact rendering), run.go wiring, 6-test family; first replay exposed and fixed four integration bugs (self-Field→EventValue, marker offset, label scheme, no-alias send count + trail space); re-scoped from 8 to 5 cases dropping chained/outer-join/static (divergences) per first-replay evidence; evidence 10/10 zero differences; manifest 625/238/854/3477 (referenced 3236, unreferenced 900); gates green.
+State: contract was frozen in the prior session (SelectExprScout agent_f18af34d + SelectExprGoSurface agent_710001ea, zero engine work; Java oracle `EPLOtherSelectExprStreamSelectorScenarioOracle.java` + run script + committed Java trace pre-shipped at `b110f3f5d` after the prior session's tree cleanup lost the runner). This session rebuilt from the frozen artifacts: scenario `testdata/parity/epl-other-select-expr-stream-selector.json` (9 steps: 4 no-join + 5 join), runner `internal/app/parity/epl_other_select_expr_stream_selector.go` (no-join: `Alias(name, EventValue[esper.Event]())` stream-dot aliases + property aliases; join: `JoinMany(JoinSource ×2).Select(SelectFrom/SelectSourceEvent)` mixed projection; MD `Feed *string` keeps null/"" distinct), run.go loader+runner wiring, 6-test family in run_test.go.
 
-- [x] Freeze stream-expr contract (parallel prefetch scouts).
-- [x] Author oracle, script, and scenario via asset writer (10-record Java trace).
-- [x] Implement runner, modes, and 6-test family.
-- [x] Generate traces and zero-difference evidence (10/10).
-- [x] Update manifest, roadmap, and CHANGELOG.
-- [x] Run gates and independent parity review.
-- [x] Commit and push the unit (Git owns identity; no hash recorded here).
+- [x] Freeze contract (prior session scouts; delegation gate satisfied — asset writer already delivered the committed oracle, remaining tasks are primary-owned shared files).
+- [x] Rebuild scenario + runner + wiring + 6-test family.
+- [x] First replay 2/2 records zero differences; regenerated Go trace + evidence after the Feed pointer fix.
+- [x] Re-ran committed Java oracle script against rebuilt scenario: output byte-identical to committed Java trace.
+- [x] Manifest: inserted `case-epl-other-select-expr-stream-selector` after `case-epl-other-stream-expr`; summary 626/624/239 DV cases, 856 DV runtime IDs, 3479 associations, referenced 3238, unreferenced 898.
+- [x] Roadmap section-0 supplement + epl uncovered 305→303 (5.2/6.1); CHANGELOG 4.335 entry.
+- [x] make check + git diff --check gates.
+- [x] Independent parity review (agent_98d542c4-8fa6-42d1-bdc8-1c4ab9e48289): OVERALL PASS on all five dimensions with fresh end-to-end reproduction (Java oracle rerun byte-identical, Go replay byte-identical, evidence byte-identical); single P2 (manifest note said "invalid-compiles ord 13" instead of ords 0/16) fixed in the same work unit and re-confirmed RESOLVED by the same reviewer with an independent validator rerun.
+- [ ] Commit and push (Git owns identity; no hash recorded here).
 
-## ## Delegation checkpoint
+## Delegation checkpoint
+
+Draft 4.335 unit (recorded pre-implementation): prefetch scouts for this unit ran in the prior session ('SelectExprScout' agent_f18af34d Java contract; 'SelectExprGoSurface' agent_710001ea Go surface, adjudicated zero engine work for ords 8/9). The isolated asset writer's deliverable (oracle + run script + validated Java trace) was already committed at `b110f3f5d`. Remaining tasks this session (scenario, Go runner, run.go wiring, run_test.go family, traces/evidence, manifest, roadmap, CHANGELOG, PLANS.md, gates, review, commit, push) are all primary-owned shared-surface or central-fact files with no file-disjoint independent task, so no second writer is dispatched; independent parity review will run after targeted validation per the unit convention.
 
 Draft 4.329 unit:
 - Prefetch scouts: 'OnUpdateJavaContract' (agent_480e7832, all 8 executions' contracts, complete before 4.328) + 'OnUpdateVariantsGoSurface' (`agent_8dd095cb-8ee4-484c-80f1-406e44f5ec68`, adjudicated ordinals 0/3/4/5 READY, zero engine work, with the approved-difference precedents and the listenerReset two-record convention).

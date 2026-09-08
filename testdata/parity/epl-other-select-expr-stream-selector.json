@@ -1,0 +1,99 @@
+{
+  "version": "esper-parity/v1",
+  "id": "epl-other-select-expr-stream-selector",
+  "description": "EPLOtherSelectExprStreamSelector alias-with-properties executions: stream-dot notation with alias (theString.* as s0/s1) beside plain property aliases (intPrimitive as a/b) over a length window, and mixed join select with stream-as-object columns (s0stream/s1stream), plain properties (intPrimitive, theString), and aliased columns (symbol as sym) over a length-keepall inner join (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java",
+  "javaRuntimes": [
+    "java-runtime-89123cf55af0a7f5987e",
+    "java-runtime-b53494cb36a6b54c2c6f"
+  ],
+  "javaNames": [
+    "EPLOtherNoJoinWithAliasWithProperties",
+    "EPLOtherJoinWithAliasWithProperties"
+  ],
+  "javaStaticIds": [
+    "java-b5352434faea014585a8",
+    "java-9682b92ad00f7295162d"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "no-join-alias-props",
+      "ordinal": 8,
+      "runtimeId": "java-runtime-89123cf55af0a7f5987e",
+      "executionName": "EPLOtherNoJoinWithAliasWithProperties",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select theString.* as s0, intPrimitive as a, theString.* as s1, intPrimitive as b from SupportBean#length(3) as theString"
+    },
+    {
+      "case": "join-alias-props",
+      "ordinal": 9,
+      "runtimeId": "java-runtime-b53494cb36a6b54c2c6f",
+      "executionName": "EPLOtherJoinWithAliasWithProperties",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select intPrimitive, s1.* as s1stream, theString, symbol as sym, s0.* as s0stream from SupportBean#length(3) as s0, SupportMarketDataBean#keepall as s1"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "no-join-alias-props"
+    },
+    {
+      "op": "deploy",
+      "case": "no-join-alias-props",
+      "statement": "s0",
+      "epl": "@name('s0') select theString.* as s0, intPrimitive as a, theString.* as s1, intPrimitive as b from SupportBean#length(3) as theString"
+    },
+    {
+      "op": "send",
+      "case": "no-join-alias-props",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 12
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "no-join-alias-props"
+    },
+    {
+      "op": "case",
+      "case": "join-alias-props"
+    },
+    {
+      "op": "deploy",
+      "case": "join-alias-props",
+      "statement": "s0",
+      "epl": "@name('s0') select intPrimitive, s1.* as s1stream, theString, symbol as sym, s0.* as s0stream from SupportBean#length(3) as s0, SupportMarketDataBean#keepall as s1"
+    },
+    {
+      "op": "send",
+      "case": "join-alias-props",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 13
+      }
+    },
+    {
+      "op": "send",
+      "case": "join-alias-props",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "E2",
+        "price": 0,
+        "volume": 0,
+        "feed": ""
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "join-alias-props"
+    }
+  ]
+}

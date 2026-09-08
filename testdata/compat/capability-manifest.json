@@ -39527,6 +39527,63 @@
    "notes": [
     "EPLOtherStreamExpr pins stream method expressions across 5 of 9 executions (ordinals 1/4/5/6/7): static-method where filters on a plain stream with stream-name, wildcard, and EventBean argument forms (volumeGreaterZero / volumeGreaterZeroEventBean); aliased and no-alias instance-method projections with verbatim expression-text output names (s0.getVolume(), s0.getPriceTimesVolume(3)) and Double/Long value rendering; stream-as-object join columns (s0stream/s1stream and s0/s1) over keepall inner joins; and a followed-by pattern with a static UDF filter comparing prior-tag properties. Method expressions compose via Method[T](EventValue[T](), ...) for event-receiver calls and Property[T](PatternEvent(tag), name) for pattern-tag navigation. Deferred executions: ord 0 (chained parameterized — chained Method resolution returns missing in Go, needs engine work), ord 2/3 (instance methods on absent join sides return missing instead of null — needs Method null-propagation alignment), ord 8 (invalid compiles — no Go rejection surface). All four deferred items are approved differences / engine-work items."
    ]
+  },
+  {
+   "id": "case-epl-other-select-expr-stream-selector",
+   "javaRuntimeIds": [
+    "java-runtime-89123cf55af0a7f5987e",
+    "java-runtime-b53494cb36a6b54c2c6f"
+   ],
+   "javaStaticIds": [
+    "java-b5352434faea014585a8",
+    "java-9682b92ad00f7295162d"
+   ],
+   "javaNames": [
+    "EPLOtherNoJoinWithAliasWithProperties",
+    "EPLOtherJoinWithAliasWithProperties"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplOtherSelectExprStreamSelectorDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherSelectExprStreamSelectorDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplOtherSelectExprStreamSelectorDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunEplOtherSelectExprStreamSelectorCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunEplOtherSelectExprStreamSelectorRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunEplOtherSelectExprStreamSelectorRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "epl",
+    "other",
+    "select-expr",
+    "stream-selector",
+    "alias",
+    "join",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-select-expr-stream-selector.json",
+    "testdata/parity/epl-other-select-expr-stream-selector.trace.json",
+    "testdata/parity/epl-other-select-expr-stream-selector.go.trace.json",
+    "testdata/parity/epl-other-select-expr-stream-selector.evidence.json",
+    "tools/java-oracle/EPLOtherSelectExprStreamSelectorScenarioOracle.java",
+    "tools/java-oracle/run-epl-other-select-expr-stream-selector.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-89123cf55af0a7f5987e",
+    "java-runtime-b53494cb36a6b54c2c6f"
+   ],
+   "notes": [
+    "EPLOtherSelectExprStreamSelector closes the alias-with-properties pair (ordinals 8/9) left uncovered by case.stream-selector: stream-dot notation with alias (theString.* as s0/s1) beside plain property aliases (intPrimitive as a/b) over a length window, and a mixed join select combining stream-as-object columns (s0stream/s1stream via SelectSourceEvent) with plain and aliased properties (intPrimitive, theString, symbol as sym) over a length-keepall inner join. The Go surface is pure composition (Alias with EventValue[esper.Event], SelectFrom, SelectSourceEvent) with zero engine work. Remaining ords 0-7/10-16 are covered by case.stream-selector, case.stream-selector-extended, or remain unrepresented (invalid-compiles ords 0/16 have no Go rejection surface)."
+   ]
   }
  ],
  "mappings": [
@@ -42365,13 +42422,17 @@
   {
    "capabilityId": "epl.other.distinct",
    "caseId": "case-epl-other-stream-expr"
+  },
+  {
+   "capabilityId": "epl.other.distinct",
+   "caseId": "case-epl-other-select-expr-stream-selector"
   }
  ],
  "summary": {
-  "inventoriedCases": 625,
-  "implementedCases": 623,
-  "differentialVerifiedCases": 238,
-  "differentialVerifiedRuntimeIds": 854,
+  "inventoriedCases": 626,
+  "implementedCases": 624,
+  "differentialVerifiedCases": 239,
+  "differentialVerifiedRuntimeIds": 856,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42381,14 +42442,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3477,
-  "referencedJavaRuntimeIds": 3236,
+  "runtimeAssociationCount": 3479,
+  "referencedJavaRuntimeIds": 3238,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 900,
+  "unreferencedJavaRuntimeIds": 898,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 625,
+  "totalCases": 626,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 854
+  "differentialVerifiedRuntimeIDs": 856
  }
 }
