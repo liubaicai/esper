@@ -32429,14 +32429,22 @@
     "java-runtime-83ed465ce8a8ff29e1a0",
     "java-runtime-d96c25e6af1350fca5db",
     "java-runtime-e99c72ba6838bd3b23f2",
-    "java-runtime-aa3e3052e879188342c6"
+    "java-runtime-aa3e3052e879188342c6",
+    "java-runtime-9e3c8c45438c687465e7",
+    "java-runtime-03a6d8b8db3ead5f09f1",
+    "java-runtime-e153c3dff68d79fbb048",
+    "java-runtime-d021d80d0590fb79c637"
    ],
    "javaNames": [
     "EPLInsertIntoEventPrecConstantInsertInto",
     "EPLInsertIntoEventPrecConstantInfraMergeInsertInto",
     "EPLInsertIntoEventPrecConstantOnSplit",
     "EPLInsertIntoEventPrecNonConstInsertIntoContainedEvent",
-    "EPLInsertIntoEventPrecConstantInsertIntoOutputRate"
+    "EPLInsertIntoEventPrecConstantInsertIntoOutputRate",
+    "EPLInsertIntoEventPrecSubqueryOnSplitSODA",
+    "EPLInsertIntoEventPrecSubqueryInsertIntoSODA",
+    "EPLInsertIntoEventPrecSubqueryMergeSODA",
+    "EPLInsertIntoEventPrecSubqueryOnInsertSODA"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoEventPrecedence.java"
@@ -32447,7 +32455,11 @@
     "TestEPLInsertIntoEventPrecConstantInfraMergeInsertIntoWindowParity",
     "TestEPLInsertIntoEventPrecConstantOnSplitParity",
     "TestEPLInsertIntoEventPrecContainedChainParity",
-    "TestEPLInsertIntoEventPrecOutputRateParity"
+    "TestEPLInsertIntoEventPrecOutputRateParity",
+    "TestEPLInsertIntoEventPrecSubqueryOnSplitParity",
+    "TestEPLInsertIntoEventPrecSubqueryInsertIntoParity",
+    "TestEPLInsertIntoEventPrecSubqueryMergeParity",
+    "TestEPLInsertIntoEventPrecSubqueryOnInsertParity"
    ],
    "tags": [],
    "status": "differential-verified",
@@ -32472,10 +32484,15 @@
     "java-runtime-83ed465ce8a8ff29e1a0",
     "java-runtime-d96c25e6af1350fca5db",
     "java-runtime-e99c72ba6838bd3b23f2",
-    "java-runtime-aa3e3052e879188342c6"
+    "java-runtime-aa3e3052e879188342c6",
+    "java-runtime-9e3c8c45438c687465e7",
+    "java-runtime-03a6d8b8db3ead5f09f1",
+    "java-runtime-e153c3dff68d79fbb048",
+    "java-runtime-d021d80d0590fb79c637"
    ],
    "notes": [
-    "4.342 extension covers ords 4/9: the two-level contained-event routes with non-constant event-precedence evaluated against the routed target event (Unnest + zero-selection projection; chained routes interleave through the shared precedence queue reproducing Java's two-stage ordering), and the output-every-2-events routes with precedences 1/2/3 whose single flush batch orders by precedence across statements and FIFO within (Java's computeEventPrecedence(3, *) static call is pinned as the constant 3 — approved adaptation). Remaining ords: 5-8 (subquery-driven precedence) require an engine unit — visitQueryExpressions does not register eventPrecedence/split/merge precedence subqueries, evaluatePrecedenceExpr lacks statement variables so subquery precedence silently degrades to 0, and TriggerQuery.Query drops spec.eventPrecedence; ord 10's invalid sub-cases split between that engine unit (precedence-expression validation, sub-cases 1-4) and no-Go-rejection-surface dispositions (table-target precedence, reserved-keyword parse error; the FAF sub-case 5 is already covered by the faf rejection test)."
+    "4.342 extension covers ords 4/9: the two-level contained-event routes with non-constant event-precedence evaluated against the routed target event (Unnest + zero-selection projection; chained routes interleave through the shared precedence queue reproducing Java's two-stage ordering), and the output-every-2-events routes with precedences 1/2/3 whose single flush batch orders by precedence across statements and FIFO within (Java's computeEventPrecedence(3, *) static call is pinned as the constant 3 — approved adaptation). Remaining ords: 5-8 (subquery-driven precedence) require an engine unit — visitQueryExpressions does not register eventPrecedence/split/merge precedence subqueries, evaluatePrecedenceExpr lacks statement variables so subquery precedence silently degrades to 0, and TriggerQuery.Query drops spec.eventPrecedence; ord 10's invalid sub-cases split between that engine unit (precedence-expression validation, sub-cases 1-4) and no-Go-rejection-surface dispositions (table-target precedence, reserved-keyword parse error; the FAF sub-case 5 is already covered by the faf rejection test).",
+    "4.343 ENGINE unit covers ords 5-8 (subquery-driven event precedence): visitQueryExpressions now registers eventPrecedence, merge-action and split-branch precedence expressions (so precedence subqueries join the statement's subquery runtime registry), evaluatePrecedenceExpr evaluates with the statement's attached variables (route and split paths — previously subquery precedence silently degraded to 0/FIFO), and TriggerQuery.Query copies spec.eventPrecedence for on-select routes; the OnDemand query copies eventPrecedence so the FAF rejection is live. The four routed contexts (on-split, insert-into, on-merge not-matched, on-select-from-window) replay one contract: a,b with null subqueries, flipped after priming the last-event subquery, restored after the opposite prime (Java's SODA flag is compile-path only). Remaining ords: 4-adjacent ord 10 invalid sub-cases 1-4 (precedence-expression Build validation — integer-valued, non-null, output-event scope) and no-Go-rejection-surface dispositions for 6/7 (table-target precedence; reserved-keyword parse error); FAF sub-case 5 covered by the faf rejection test."
    ]
   },
   {
@@ -42520,7 +42537,7 @@
   "inventoriedCases": 626,
   "implementedCases": 624,
   "differentialVerifiedCases": 239,
-  "differentialVerifiedRuntimeIds": 873,
+  "differentialVerifiedRuntimeIds": 877,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42530,14 +42547,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3497,
-  "referencedJavaRuntimeIds": 3256,
+  "runtimeAssociationCount": 3501,
+  "referencedJavaRuntimeIds": 3260,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 880,
+  "unreferencedJavaRuntimeIds": 876,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 626,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 873
+  "differentialVerifiedRuntimeIDs": 877
  }
 }

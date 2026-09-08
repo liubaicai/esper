@@ -7,7 +7,11 @@
     "EPLInsertIntoEventPrecConstantInfraMergeInsertInto(namedWindow=true)",
     "EPLInsertIntoEventPrecConstantOnSplit",
     "EPLInsertIntoEventPrecNonConstInsertIntoContainedEvent",
-    "EPLInsertIntoEventPrecConstantInsertIntoOutputRate"
+    "EPLInsertIntoEventPrecConstantInsertIntoOutputRate",
+    "EPLInsertIntoEventPrecSubqueryOnSplitSODA",
+    "EPLInsertIntoEventPrecSubqueryInsertIntoSODA",
+    "EPLInsertIntoEventPrecSubqueryMergeSODA",
+    "EPLInsertIntoEventPrecSubqueryOnInsertSODA"
   ],
   "cases": [
     {"case": "constant-insertinto"},
@@ -15,7 +19,11 @@
     {"case": "constant-merge-window"},
     {"case": "constant-on-split"},
     {"case": "nonconst-contained-event"},
-    {"case": "constant-output-rate"}
+    {"case": "constant-output-rate"},
+    {"case": "subquery-on-split"},
+    {"case": "subquery-insertinto"},
+    {"case": "subquery-merge"},
+    {"case": "subquery-on-insert"}
   ],
   "steps": [
     {"op": "case", "case": "constant-insertinto"},
@@ -56,6 +64,32 @@
 
     {"op": "case", "case": "constant-output-rate"},
     {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 1},
-    {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 2}
+    {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 2},
+
+    {"op": "case", "case": "subquery-on-split"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportBeanNumeric", "intOne": 1, "intTwo": 2},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportBeanNumeric", "intOne": 2, "intTwo": 1},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+
+    {"op": "case", "case": "subquery-insertinto"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportBeanNumeric", "intOne": -2, "intTwo": -1},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+
+    {"op": "case", "case": "subquery-merge"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportBeanNumeric", "intOne": 1, "intTwo": 2},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportBeanNumeric", "intOne": 2, "intTwo": 1},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+
+    {"op": "case", "case": "subquery-on-insert"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportBeanNumeric", "intOne": 1, "intTwo": 2},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+    {"op": "send", "type": "SupportBeanNumeric", "intOne": 2, "intTwo": 1},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0}
   ]
 }

@@ -3489,6 +3489,12 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 			return err
 		}
 	}
+	// The event-precedence expression is part of the statement surface: it
+	// can carry subqueries (registered via this traversal) and participates
+	// in context/variable scope validation like any other projection.
+	if err := visit(query.eventPrecedence); err != nil {
+		return err
+	}
 	for _, assignment := range query.output.Then {
 		if err := visit(assignment.Expr); err != nil {
 			return err
@@ -3682,6 +3688,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 						return err
 					}
 				}
+				if err := visit(action.Precedence); err != nil {
+					return err
+				}
 			}
 		}
 		if err := visitSelectionsExpressions(query.trigger.selections, visit); err != nil {
@@ -3695,6 +3704,9 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 				return err
 			}
 			if err := visitSelectionsExpressions(branch.Selections, visit); err != nil {
+				return err
+			}
+			if err := visit(branch.Precedence); err != nil {
 				return err
 			}
 		}

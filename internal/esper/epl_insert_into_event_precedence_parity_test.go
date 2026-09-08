@@ -645,3 +645,305 @@ func TestEPLInsertIntoEventPrecOutputRateParity(t *testing.T) {
 		t.Fatalf("routed ids = %v, want %v", receivedIDs, want)
 	}
 }
+
+// ---- 4.343: subquery-driven event precedence (ords 5-8) ----
+
+type epSupportBeanNumeric struct {
+	IntOne int `esper:"intOne"`
+	IntTwo int `esper:"intTwo"`
+}
+
+// epSubqueryPrecedence builds the uncorrelated last-event subquery over
+// SupportBeanNumeric that Java's event-precedence expressions use.
+func epSubqueryPrecedence(t *testing.T, env *Environment, column string) Expr {
+	t.Helper()
+	inner := Select(From[epSupportBeanNumeric](env, "SupportBeanNumeric")).Window(LastEvent())
+	field := Field[epSupportBeanNumeric, int](column)
+	return SubqueryValue[int](inner, field)
+}
+
+// epRegisterOut registers the Out route target before producers build.
+func epRegisterOut(t *testing.T, env *Environment) {
+	t.Helper()
+	if _, err := RegisterMap(env, "Out", []FieldSpec{
+		FieldDef("id", reflect.TypeOf("")),
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// epOutConsumer deploys a select-all consumer over Out and subscribes it,
+// returning the routed id order.
+func epOutConsumer(t *testing.T, env *Environment, engine *Engine) *[]string {
+	t.Helper()
+	consumer, err := env.Build(FromAny(env, "Out").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), consumer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var received []string
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			received = append(received, result.Get("id").Any().(string))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return &received
+}
+
+// epAssertIDs asserts the ids accumulated since offset match the pinned
+// order for one trigger round.
+func epAssertIDs(t *testing.T, received *[]string, offset int, want ...string) {
+	t.Helper()
+	got := (*received)[offset:]
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("routed ids = [%s], want [%s]", strings.Join(got, ","), strings.Join(want, ","))
+	}
+}
+
+// TestEPLInsertIntoEventPrecSubqueryOnSplitParity covers
+// EPLInsertIntoEventPrecSubqueryOnSplitSODA
+// (java-runtime-9e3c8c45438c687465e7): an on-supportBean split-all with two
+// Out branches whose event-precedence expressions are uncorrelated
+// last-event subqueries over SupportBeanNumeric. Null subquery results act
+// as no precedence (FIFO). Contract per trigger: SB → a,b; N(1,2) → b,a;
+// N(2,1) → a,b. Java's SODA flag is compile-path only.
+func TestEPLInsertIntoEventPrecSubqueryOnSplitParity(t *testing.T) {
+	env := NewEnvironment()
+	epRegisterSupportBean(t, env)
+	if _, err := RegisterStruct[epSupportBeanNumeric](env, "SupportBeanNumeric"); err != nil {
+		t.Fatal(err)
+	}
+	epRegisterOut(t, env)
+	engine := NewEngine(env, WithRuntimeURI("java-runtime-9e3c8c45438c687465e7"))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	producer, err := env.Build(OnEvent(From[epSupportBean](env, "SupportBean")).SplitAll(
+		SplitIntoWithPrecedence(
+			epSubqueryPrecedence(t, env, "intOne"), "Out", Alias("id", Literal("a"))),
+		SplitIntoWithPrecedence(
+			epSubqueryPrecedence(t, env, "intTwo"), "Out", Alias("id", Literal("b"))),
+	).Query())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), producer); err != nil {
+		t.Fatal(err)
+	}
+	received := epOutConsumer(t, env, engine)
+
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 0, "a", "b")
+	// The numeric sends only prime the subquery; the next SupportBean
+	// trigger routes with the primed precedences.
+	if err := engine.Send(context.Background(), "SupportBeanNumeric", epSupportBeanNumeric{IntOne: 1, IntTwo: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 2, "b", "a")
+	if err := engine.Send(context.Background(), "SupportBeanNumeric", epSupportBeanNumeric{IntOne: 2, IntTwo: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 4, "a", "b")
+}
+
+// TestEPLInsertIntoEventPrecSubqueryInsertIntoParity covers
+// EPLInsertIntoEventPrecSubqueryInsertIntoSODA
+// (java-runtime-03a6d8b8db3ead5f09f1): two insert-into routes whose
+// event-precedence expressions are the same uncorrelated subqueries.
+// Contract per trigger: SB → a,b; N(-2,-1) → b,a (−1 sorts before −2).
+func TestEPLInsertIntoEventPrecSubqueryInsertIntoParity(t *testing.T) {
+	env := NewEnvironment()
+	epRegisterSupportBean(t, env)
+	if _, err := RegisterStruct[epSupportBeanNumeric](env, "SupportBeanNumeric"); err != nil {
+		t.Fatal(err)
+	}
+	epRegisterOut(t, env)
+	engine := NewEngine(env, WithRuntimeURI("java-runtime-03a6d8b8db3ead5f09f1"))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	pa, err := env.Build(Select(From[epSupportBean](env, "SupportBean"),
+		Alias("id", Literal("a")),
+	).InsertInto("Out", StatementName("pa"),
+		EventPrecedence(epSubqueryPrecedence(t, env, "intOne"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pb, err := env.Build(Select(From[epSupportBean](env, "SupportBean"),
+		Alias("id", Literal("b")),
+	).InsertInto("Out", StatementName("pb"),
+		EventPrecedence(epSubqueryPrecedence(t, env, "intTwo"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, plan := range []Plan{pa, pb} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	received := epOutConsumer(t, env, engine)
+
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 0, "a", "b")
+	if err := engine.Send(context.Background(), "SupportBeanNumeric", epSupportBeanNumeric{IntOne: -2, IntTwo: -1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 2, "b", "a")
+}
+
+// TestEPLInsertIntoEventPrecSubqueryMergeParity covers
+// EPLInsertIntoEventPrecSubqueryMergeSODA
+// (java-runtime-e153c3dff68d79fbb048): an on-supportBean merge of an empty
+// keepall window whose when-not-matched actions route two Out rows with
+// subquery precedences. Contract per trigger: SB → a,b; N(1,2) → b,a;
+// N(2,1) → a,b.
+func TestEPLInsertIntoEventPrecSubqueryMergeParity(t *testing.T) {
+	env := NewEnvironment()
+	epRegisterSupportBean(t, env)
+	if _, err := RegisterStruct[epSupportBeanNumeric](env, "SupportBeanNumeric"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := NewMapSchema("MyWindow", []FieldSpec{
+		FieldDef("id", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindow", windowSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	epRegisterOut(t, env)
+	engine := NewEngine(env, WithRuntimeURI("java-runtime-e153c3dff68d79fbb048"))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	producer, err := env.Build(OnEvent(From[epSupportBean](env, "SupportBean")).
+		MergeIntoNamedWindowWhen("MyWindow", nil,
+			WhenNotMatchedActions(
+				ThenInsertIntoWithPrecedence(
+					epSubqueryPrecedence(t, env, "intOne"), "Out", Alias("id", Literal("a"))),
+				ThenInsertIntoWithPrecedence(
+					epSubqueryPrecedence(t, env, "intTwo"), "Out", Alias("id", Literal("b"))),
+			)).Query())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), producer); err != nil {
+		t.Fatal(err)
+	}
+	received := epOutConsumer(t, env, engine)
+
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 0, "a", "b")
+	if err := engine.Send(context.Background(), "SupportBeanNumeric", epSupportBeanNumeric{IntOne: 1, IntTwo: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 2, "b", "a")
+	if err := engine.Send(context.Background(), "SupportBeanNumeric", epSupportBeanNumeric{IntOne: 2, IntTwo: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 4, "a", "b")
+}
+
+// TestEPLInsertIntoEventPrecSubqueryOnInsertParity covers
+// EPLInsertIntoEventPrecSubqueryOnInsertSODA
+// (java-runtime-d021d80d0590fb79c637): two on-supportBean on-select
+// statements reading a pre-populated one-row window, each routing one Out
+// row with a subquery precedence. Java pre-populates the window with a FAF
+// `insert into MyWindow select 'x' as value`; Go uses the OnDemand insert.
+// Contract per trigger: SB → a,b; N(1,2) → b,a; N(2,1) → a,b.
+func TestEPLInsertIntoEventPrecSubqueryOnInsertParity(t *testing.T) {
+	env := NewEnvironment()
+	epRegisterSupportBean(t, env)
+	if _, err := RegisterStruct[epSupportBeanNumeric](env, "SupportBeanNumeric"); err != nil {
+		t.Fatal(err)
+	}
+	windowSchema, err := NewMapSchema("MyWindow", []FieldSpec{
+		FieldDef("value", reflect.TypeOf("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindow", windowSchema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	epRegisterOut(t, env)
+	engine := NewEngine(env, WithRuntimeURI("java-runtime-d021d80d0590fb79c637"))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	faf, err := env.Build(FromNamedWindow(env, "MyWindow").OnDemand().InsertRows(
+		InsertValues(Literal("x")),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.ExecuteFireAndForget(context.Background(), faf); err != nil {
+		t.Fatal(err)
+	}
+
+	pa, err := env.Build(OnEvent(From[epSupportBean](env, "SupportBean")).
+		SelectFromNamedWindow("MyWindow", nil, Alias("id", Literal("a"))).
+		Query(StatementName("pa"),
+			RouteTo("Out"),
+			EventPrecedence(epSubqueryPrecedence(t, env, "intOne"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pb, err := env.Build(OnEvent(From[epSupportBean](env, "SupportBean")).
+		SelectFromNamedWindow("MyWindow", nil, Alias("id", Literal("b"))).
+		Query(StatementName("pb"),
+			RouteTo("Out"),
+			EventPrecedence(epSubqueryPrecedence(t, env, "intTwo"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, plan := range []Plan{pa, pb} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	received := epOutConsumer(t, env, engine)
+
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 0, "a", "b")
+	if err := engine.Send(context.Background(), "SupportBeanNumeric", epSupportBeanNumeric{IntOne: 1, IntTwo: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 2, "b", "a")
+	if err := engine.Send(context.Background(), "SupportBeanNumeric", epSupportBeanNumeric{IntOne: 2, IntTwo: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{}); err != nil {
+		t.Fatal(err)
+	}
+	epAssertIDs(t, received, 4, "a", "b")
+}

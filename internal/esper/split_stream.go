@@ -355,7 +355,7 @@ func (s *Statement) deliverSplitStreamEvent(ctx context.Context, branch SplitStr
 	if _, ok := s.engine.env.NamedWindow(branch.Target); !ok {
 		re := routedEvent{event: routed}
 		if branch.Precedence != nil {
-			re.precedence = evaluatePrecedenceExpr(branch.Precedence, resultEvent(routed), s.engine)
+			re.precedence = evaluatePrecedenceExpr(branch.Precedence, resultEvent(routed), s.engine, variables)
 			re.hasPrec = true
 		}
 		s.engine.insertRoutedEventLocked(re)

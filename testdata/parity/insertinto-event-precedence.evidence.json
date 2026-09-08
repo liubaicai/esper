@@ -8,7 +8,11 @@
     "java-runtime-83ed465ce8a8ff29e1a0",
     "java-runtime-d96c25e6af1350fca5db",
     "java-runtime-e99c72ba6838bd3b23f2",
-    "java-runtime-aa3e3052e879188342c6"
+    "java-runtime-aa3e3052e879188342c6",
+    "java-runtime-9e3c8c45438c687465e7",
+    "java-runtime-03a6d8b8db3ead5f09f1",
+    "java-runtime-e153c3dff68d79fbb048",
+    "java-runtime-d021d80d0590fb79c637"
   ],
   "goTests": [
     "TestEPLInsertIntoEventPrecConstantInsertIntoParity",
@@ -16,10 +20,14 @@
     "TestEPLInsertIntoEventPrecConstantInfraMergeInsertIntoWindowParity",
     "TestEPLInsertIntoEventPrecConstantOnSplitParity",
     "TestEPLInsertIntoEventPrecContainedChainParity",
-    "TestEPLInsertIntoEventPrecOutputRateParity"
+    "TestEPLInsertIntoEventPrecOutputRateParity",
+    "TestEPLInsertIntoEventPrecSubqueryOnSplitParity",
+    "TestEPLInsertIntoEventPrecSubqueryInsertIntoParity",
+    "TestEPLInsertIntoEventPrecSubqueryMergeParity",
+    "TestEPLInsertIntoEventPrecSubqueryOnInsertParity"
   ],
   "javaTraceFile": "testdata/parity/insertinto-event-precedence.trace.json",
-  "javaTraceRecordCount": 57,
+  "javaTraceRecordCount": 79,
   "caseMatchSummary": {
     "constant-insertinto": {
       "expected": 6,
@@ -50,6 +58,26 @@
       "expected": 6,
       "actual": 6,
       "match": true
+    },
+    "subquery-on-split": {
+      "expected": 6,
+      "actual": 6,
+      "match": true
+    },
+    "subquery-insertinto": {
+      "expected": 4,
+      "actual": 4,
+      "match": true
+    },
+    "subquery-merge": {
+      "expected": 6,
+      "actual": 6,
+      "match": true
+    },
+    "subquery-on-insert": {
+      "expected": 6,
+      "actual": 6,
+      "match": true
     }
   },
   "differences": 0,
@@ -57,6 +85,7 @@
   "verification": "differential-verified",
   "notes": [
     "All 4 cases match between Java oracle trace and Go test assertions. constant-insertinto: consumer receives events in precedence order (5,4,3,2,1,0); window iteration order also follows precedence order (5,4,3,2,1,0) \u2014 verified by Java oracle only (Go implementation does not support inserting into a named window from a regular select statement). constant-merge-table: insert-into actions execute in precedence order (c,a,b). constant-merge-window: insert-into actions execute in precedence order (c,a,b). constant-on-split: split-stream branches execute in precedence order (3,2,1). Go implementation: (1) regular insert-into routes events with precedence via EventPrecedence option; (2) merge-into table/window routes insert-into actions with precedence via ThenInsertIntoWithPrecedence; (3) split-stream routes branches with precedence via SplitIntoWithPrecedence/SplitIntoWhenWithPrecedence.",
-    "4.342 extension (ords 4/9): nonconst-contained-event replays the two-level contained-event routes LvlA[b]->LvlB and LvlB[c]->LvlC, each with event-precedence(precedence) evaluated against the routed target event; chained routes interleave through the shared precedence queue and the flattened LvlC id order per LvlA send matches the Java pins (C,B,D,A / C,A,B,D / A,B,C,D / H,D,A,G,F,B,I,E,C / B,G,H,D,F,A,C,I,E). constant-output-rate replays the three output-every-2-events routes with precedences 1/2/3 and per-statement id offsets 1/2/3 (Java's computeEventPrecedence(3, *) static call over the routed output event is pinned as the constant 3 in Go \u2014 approved adaptation); two sends produce one batch ordered 13,23,12,22,11,21 (precedence across statements, FIFO within). The oracle registers mirror classes/computeEventPrecedence locally because the run-script classpath excludes regression-lib; shapes and semantics replicate the suite byte-for-byte."
+    "4.342 extension (ords 4/9): nonconst-contained-event replays the two-level contained-event routes LvlA[b]->LvlB and LvlB[c]->LvlC, each with event-precedence(precedence) evaluated against the routed target event; chained routes interleave through the shared precedence queue and the flattened LvlC id order per LvlA send matches the Java pins (C,B,D,A / C,A,B,D / A,B,C,D / H,D,A,G,F,B,I,E,C / B,G,H,D,F,A,C,I,E). constant-output-rate replays the three output-every-2-events routes with precedences 1/2/3 and per-statement id offsets 1/2/3 (Java's computeEventPrecedence(3, *) static call over the routed output event is pinned as the constant 3 in Go \u2014 approved adaptation); two sends produce one batch ordered 13,23,12,22,11,21 (precedence across statements, FIFO within). The oracle registers mirror classes/computeEventPrecedence locally because the run-script classpath excludes regression-lib; shapes and semantics replicate the suite byte-for-byte.",
+    "4.343 extension (ords 5-8, ENGINE unit): the event-precedence expressions now register their subqueries (visitQueryExpressions visits query.eventPrecedence, merge-action and split-branch precedence) and evaluate with the statement's attached variables (route and split paths), and TriggerQuery.Query copies spec.eventPrecedence for on-select routes \u2014 previously subquery precedence silently degraded to 0 (FIFO). The four routed contexts replay one contract: a,b with null subqueries, b,a after priming N(1,2), a,b after N(2,1) (insertinto uses N(-2,-1)). The OnDemand query now also copies eventPrecedence, making the FAF rejection live. The oracle gained a multi-module deploy convention and an @FAF module for the ord-8 window pre-population; SupportBeanNumeric is a local mirror class (run-script classpath excludes regression-lib)."
   ]
 }

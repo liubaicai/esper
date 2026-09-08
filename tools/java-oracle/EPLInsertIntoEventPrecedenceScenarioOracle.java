@@ -28,16 +28,29 @@ import java.util.List;
  *
  * Covers the ConstantInsertInto, ConstantInfraMergeInsertInto (table),
  * ConstantInfraMergeInsertInto (named window), ConstantOnSplit,
- * NonConstInsertIntoContainedEvent, and ConstantInsertIntoOutputRate
+ * NonConstInsertIntoContainedEvent, ConstantInsertIntoOutputRate,
+ * SubqueryOnSplit, SubqueryInsertInto, SubqueryMerge, and SubqueryOnInsert
  * runtimes by replaying deterministic event sequences and recording the
  * observable output order.
  *
- * The LvlA/LvlB/LvlC event classes and the computeEventPrecedence function
- * are oracle-local mirrors of the suite's nested classes and static method:
- * the fixed run script classpath does not include regression-lib, so the
- * EPL references these mirrors instead of the suite FQNs. Getters, fields,
- * and the function contract (param must be the HashMap underlying of the
- * output event; returns the constant) match the suite byte-for-byte.
+ * The LvlA/LvlB/LvlC event classes, SupportBeanNumeric mirror, and the
+ * computeEventPrecedence function are oracle-local mirrors of the suite's
+ * nested classes, support bean, and static method: the fixed run script
+ * classpath does not include regression-lib, so the EPL references these
+ * mirrors instead of the suite FQNs. Getters, fields, and the function
+ * contract (param must be the HashMap underlying of the output event;
+ * returns the constant) match the suite byte-for-byte. The SupportBeanNumeric
+ * mirror keeps the suite's two-arg (intOne, intTwo) constructor, field types,
+ * and getters; the unused suite fields (bigint, bigdec, doubles, floats) do
+ * not participate in the subquery precedence scenarios.
+ *
+ * The subquery cases replay each suite compileDeploy call as one module in
+ * order (multi-module deployment); a module prefixed with the FAF marker is
+ * executed as a fire-and-forget query instead, mirroring the suite's
+ * env.compileExecuteFAF ordering for the SubqueryOnInsert window
+ * pre-population. The suite's SODA compile flag is a compile-path detail
+ * (text round-trip inside the harness); the replayed EPL text is identical
+ * behaviorally.
  */
 public class EPLInsertIntoEventPrecedenceScenarioOracle {
 
@@ -72,6 +85,7 @@ public class EPLInsertIntoEventPrecedenceScenarioOracle {
     private static void runCase(JsonArray allSteps, String caseName, List<JsonObject> records) throws Exception {
         Configuration configuration = new Configuration();
         configuration.getCommon().addEventType("SupportBean", SupportBean.class);
+        configuration.getCommon().addEventType("SupportBeanNumeric", SupportBeanNumeric.class);
         configuration.getRuntime().getThreading().setInternalTimerEnabled(false);
         configuration.getRuntime().getExecution().setPrecedenceEnabled(true);
 
@@ -79,6 +93,11 @@ public class EPLInsertIntoEventPrecedenceScenarioOracle {
         runtime.initialize();
 
         try {
+            if (isMultiModuleCase(caseName)) {
+                deployModulesAndReplay(allSteps, caseName, configuration, runtime, records);
+                runtime.getDeploymentService().undeployAll();
+                return;
+            }
             String epl = eplFor(caseName);
             CompilerArguments compilerArguments = new CompilerArguments(configuration);
             compilerArguments.getPath().add(runtime.getRuntimePath());
@@ -222,6 +241,111 @@ public class EPLInsertIntoEventPrecedenceScenarioOracle {
         return sb.toString();
     }
 
+    /**
+     * Marker prefix for scenario modules that must run as fire-and-forget
+     * queries rather than deployments; the remainder of the string is the
+     * FAF EPL text.
+     */
+    private static final String FAF_MODULE_PREFIX = "@FAF:";
+
+    private static boolean isMultiModuleCase(String caseName) {
+        switch (caseName) {
+            case "subquery-on-split":
+            case "subquery-insertinto":
+            case "subquery-merge":
+            case "subquery-on-insert":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Deploys each module of a multi-module subquery case in order, mirroring
+     * the suite's sequential compileDeploy calls against a shared
+     * RegressionPath, then replays the case steps. FAF-marked modules execute
+     * as fire-and-forget queries at their position in the sequence, matching
+     * env.compileExecuteFAF ordering.
+     */
+    private static void deployModulesAndReplay(JsonArray allSteps, String caseName, Configuration configuration, EPRuntime runtime, List<JsonObject> records) throws Exception {
+        List<EPDeployment> deployments = new ArrayList<>();
+        for (String module : eplModulesFor(caseName)) {
+            if (module.startsWith(FAF_MODULE_PREFIX)) {
+                String fafEpl = module.substring(FAF_MODULE_PREFIX.length());
+                CompilerArguments fafArguments = new CompilerArguments(configuration);
+                fafArguments.getPath().add(runtime.getRuntimePath());
+                EPCompiled faf = EPCompilerProvider.getCompiler().compileQuery(fafEpl, fafArguments);
+                runtime.getFireAndForgetService().executeQuery(faf);
+                continue;
+            }
+            CompilerArguments compilerArguments = new CompilerArguments(configuration);
+            compilerArguments.getPath().add(runtime.getRuntimePath());
+            EPCompiled compiled = EPCompilerProvider.getCompiler().compile(module, compilerArguments);
+            deployments.add(runtime.getDeploymentService().deploy(compiled,
+                    new DeploymentOptions().setDeploymentId(
+                            "parity-precedence-" + caseName + "-" + deployments.size())));
+        }
+
+        for (EPDeployment deployment : deployments) {
+            for (EPStatement candidate : deployment.getStatements()) {
+                if ("s0".equals(candidate.getName()) || "c0".equals(candidate.getName())) {
+                    new TraceWriter(records, caseName, candidate);
+                }
+            }
+        }
+
+        replayCase(allSteps, caseName, runtime);
+    }
+
+    private static List<String> eplModulesFor(String caseName) {
+        List<String> modules = new ArrayList<>();
+        switch (caseName) {
+            case "subquery-on-split":
+                // EPLInsertIntoEventPrecSubqueryOnSplitSODA: on-split routes
+                // with uncorrelated last-event subquery precedence.
+                modules.add("@public create schema Out (id string)");
+                modules.add("on SupportBean " +
+                        "insert into Out event-precedence((select intOne from SupportBeanNumeric#lastevent)) select \"a\" as id " +
+                        "insert into Out event-precedence((select intTwo from SupportBeanNumeric#lastevent)) select \"b\" as id " +
+                        "output all");
+                modules.add("@name('s0') select * from Out");
+                break;
+            case "subquery-insertinto":
+                // EPLInsertIntoEventPrecSubqueryInsertIntoSODA: two separately
+                // deployed insert-into statements with subquery precedence.
+                modules.add("@public create schema Out (id string)");
+                modules.add("insert into Out event-precedence((select intOne from SupportBeanNumeric#lastevent)) select \"a\" as id from SupportBean");
+                modules.add("insert into Out event-precedence((select intTwo from SupportBeanNumeric#lastevent)) select \"b\" as id from SupportBean");
+                modules.add("@name('s0') select * from Out");
+                break;
+            case "subquery-merge":
+                // EPLInsertIntoEventPrecSubqueryMergeSODA: on-merge
+                // when-not-matched insert-into pair with subquery precedence;
+                // MyWindow stays empty so every trigger is not-matched.
+                modules.add("@public create window MyWindow#keepall as (id string);\n" +
+                        "@public create schema Out (id string);\n");
+                modules.add("on SupportBean merge MyWindow where theString=id " +
+                        "when not matched " +
+                        "then insert into Out event-precedence((select intOne from SupportBeanNumeric#lastevent)) select \"a\" as id " +
+                        "then insert into Out event-precedence((select intTwo from SupportBeanNumeric#lastevent)) select \"b\" as id");
+                modules.add("@name('s0') select * from Out");
+                break;
+            case "subquery-on-insert":
+                // EPLInsertIntoEventPrecSubqueryOnInsertSODA: the FAF insert
+                // pre-populates MyWindow before the trigger statements deploy.
+                modules.add("@public create schema Out (id string);\n" +
+                        "@public create window MyWindow#keepall as (value string);\n");
+                modules.add(FAF_MODULE_PREFIX + "insert into MyWindow select 'x' as value");
+                modules.add("on SupportBean insert into Out event-precedence((select intOne from SupportBeanNumeric#lastevent)) select \"a\" as id from MyWindow");
+                modules.add("on SupportBean insert into Out event-precedence((select intTwo from SupportBeanNumeric#lastevent)) select \"b\" as id from MyWindow;\n" +
+                        "@name('s0') select * from Out;\n");
+                break;
+            default:
+                throw new IllegalArgumentException("unknown multi-module case: " + caseName);
+        }
+        return modules;
+    }
+
     private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime) {
         boolean active = false;
         for (JsonValue stepVal : allSteps) {
@@ -247,6 +371,10 @@ public class EPLInsertIntoEventPrecedenceScenarioOracle {
             bean.setTheString(step.getString("theString", ""));
             bean.setIntPrimitive(step.getInt("intPrimitive", 0));
             runtime.getEventService().sendEventBean(bean, "SupportBean");
+        } else if ("SupportBeanNumeric".equals(eventType)) {
+            SupportBeanNumeric numeric = new SupportBeanNumeric(
+                    step.getInt("intOne", 0), step.getInt("intTwo", 0));
+            runtime.getEventService().sendEventBean(numeric, "SupportBeanNumeric");
         } else if ("LvlA".equals(eventType)) {
             JsonArray bs = step.get("bs").asArray();
             LvlB[] bArr = new LvlB[bs.size()];
@@ -373,6 +501,33 @@ public class EPLInsertIntoEventPrecedenceScenarioOracle {
 
         public int getPrecedence() {
             return precedence;
+        }
+    }
+
+    /**
+     * Mirror of the suite's SupportBeanNumeric
+     * (com.espertech.esper.regressionlib.support.bean.SupportBeanNumeric),
+     * reduced to the intOne/intTwo fields the subquery precedence scenarios
+     * read. The run script classpath excludes regression-lib, so the EPL
+     * references this mirror; constructor, field types, and getters match
+     * the suite byte-for-byte.
+     */
+    public static class SupportBeanNumeric implements java.io.Serializable {
+        private static final long serialVersionUID = 7460071100684697795L;
+        private final Integer intOne;
+        private final Integer intTwo;
+
+        public SupportBeanNumeric(Integer intOne, Integer intTwo) {
+            this.intOne = intOne;
+            this.intTwo = intTwo;
+        }
+
+        public Integer getIntOne() {
+            return intOne;
+        }
+
+        public Integer getIntTwo() {
+            return intTwo;
         }
     }
 }

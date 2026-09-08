@@ -707,6 +707,7 @@ func (q TriggerQuery) Query(options ...QueryOption) Query {
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
 		subscriberDisallowed:       spec.subscriberDisallowed,
+		eventPrecedence:            spec.eventPrecedence,
 	}
 }
 

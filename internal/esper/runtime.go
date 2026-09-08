@@ -4748,7 +4748,7 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 		if precedenceExpr != nil {
 			// Precedence is evaluated against the target event after route
 			// projection and schema coercion, matching Esper's output router.
-			routed.precedence = evaluatePrecedenceExpr(precedenceExpr, resultEvent(routed.event), e)
+			routed.precedence = evaluatePrecedenceExpr(precedenceExpr, resultEvent(routed.event), e, statement.runtime.variables)
 			routed.hasPrec = true
 		}
 		e.insertRoutedEventLocked(routed)
@@ -4794,12 +4794,16 @@ func (e *Engine) insertRoutedEventLocked(re routedEvent) {
 
 // evaluatePrecedenceExpr evaluates an event-precedence expression against a
 // result row or event. Returns the integer precedence value.
-func evaluatePrecedenceExpr(expr Expr, result Result, engine *Engine) int {
+func evaluatePrecedenceExpr(expr Expr, result Result, engine *Engine, variables map[string]Value) int {
 	if expr == nil {
 		return 0
 	}
 	var evalCtx EvalContext
 	evalCtx.Engine = engine
+	// The statement's attached variables carry the subquery runtime
+	// registry, so a precedence expression containing a subquery resolves
+	// through the same registry as the statement's other expressions.
+	evalCtx.Variables = variables
 	if evt, ok := result.Event(); ok {
 		evalCtx.Event = evt
 	} else if rowEvt, ok := result.RowEvent(); ok {

@@ -1392,6 +1392,7 @@ func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments
 		statementPrioritySet: spec.statementPrioritySet,
 		statementDrop:        spec.statementDrop,
 		subscriberDisallowed: spec.subscriberDisallowed,
+		eventPrecedence:      spec.eventPrecedence,
 	}
 }
 
