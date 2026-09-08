@@ -36,7 +36,8 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.330 ('infra-named-window-insert-from') committed; Git owns identity.
 - Shipped: Draft 4.332 ('resultset-aggregate-filter-named-parameter-sorted-join') committed; Git owns identity. ResultSetAggregateFilterNamedParameter.java is now covered at ordinals 0-18 minus 19/20 (19 audit/reuse and 20 invalid remain).
 - Shipped: Draft 4.333 ('infra-nwtable-subq-correl-coerce') committed; Git owns identity. The InfraNWTableSubq* file family is nearly closed: uncorrel, correl-join, filtered-correl, correl-coerce, at-eventbean, subquery, delete-aggregate are all differential-verified; only correl-index-sharing (case.query-subquery-index-sharing) remains implemented-not-DV.
-- Current target: Draft 4.334 'epl-other-stream-expr' — EPLOtherStreamExpr ordinals 0-7 (8 of 9 executions; ord 8 InvalidSelect excluded, no Go rejection surface); contract frozen from StreamExprScout (agent_ed647cf0) + StreamExprGoSurface (agent_1dadf555, 8-of-9 zero engine work); asset writer dispatch + primary runner implementation in progress.
+- Shipped: Draft 4.334 ('epl-other-stream-expr') committed at `b793bbd13`; Git owns identity.
+- Current target: next selection. Deferred: epl-other-as-keyword-backtick (37 Java oracle compilation errors — asset writer API mismatches need debugging; Go runner was complete but can't be validated without a working Java oracle). Next candidates: ExprFilterOptimizableBooleanLimitedExpr (9), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9).
 
 ## Current work unit
 Active: none — 4.334 just shipped. Next unit selection re-gaps the manifest.
