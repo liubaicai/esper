@@ -32126,7 +32126,8 @@
     "java-runtime-f04a53b7cbe0320f681f",
     "java-runtime-e79b48b60120e27bafbc",
     "java-runtime-56175b64c415bf33ddf1",
-    "java-runtime-facd4a0c64ae48571ee6"
+    "java-runtime-facd4a0c64ae48571ee6",
+    "java-runtime-6ff1f053ec9bfb43434b"
    ],
    "javaNames": [
     "EPLInsertIntoPopulateBeanSimple",
@@ -32140,7 +32141,8 @@
     "EPLInsertIntoCharSequenceCompat",
     "EPLInsertIntoBeanFactoryMethod",
     "EPLInsertIntoArrayPOJOInsert",
-    "EPLInsertIntoArrayMapInsert"
+    "EPLInsertIntoArrayMapInsert",
+    "EPLInsertIntoInvalid"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateUnderlying.java"
@@ -32164,7 +32166,12 @@
     "TestEPLInsertIntoBeanFactoryMethodParity",
     "TestEPLInsertIntoArrayPOJOUntilParity",
     "TestEPLInsertIntoArrayMapUntilParity",
-    "TestEPLInsertIntoArrayUntilInvalidParity"
+    "TestEPLInsertIntoArrayUntilInvalidParity",
+    "TestEPLInsertIntoInvalidUnknownColumnRejected",
+    "TestEPLInsertIntoInvalidInterfaceMismatchRejected",
+    "TestEPLInsertIntoInvalidSetterThrowSurfacesAtSend",
+    "TestEPLInsertIntoInvalidWrongTypeSurfacesAtSend",
+    "TestEPLInsertIntoInvalidSameSchemaCastDeploys"
    ],
    "tags": [
     "correctness"
@@ -32202,7 +32209,8 @@
    "notes": [
     "4.338 extension covers ords 0/1/2/11 (constructor-position population): 4-column and positional projections into constructor-shape struct targets with null String/boxed columns, boxed-into-primitive positional binding, lastevent join wildcard and stream-name projections with identity-preserving Event members, column-list-ignored constructor defaults via WithJSONDefaults, same-type constructor over filtered lastevent streams, [2]-repeat pattern captures via MatchUntil(2,2)+TagEvents into []Event targets, and window(*) @eventbean via Aggregate(WindowEvents()) over KeepAll. Approved adaptations: Java constructor/factory targets are Go struct targets populated by named projection; column-list-ignored and stage-3 fully-qualified-name syntax have no Go surface (observably identical). Remaining ords: 7 (CharSequenceCompat deploy smoke) and 8 (factory-method observable half) as a small follow-up unit; 9/10 (until-pattern per-representation array population, invalid halves implemented-only); 12 (invalidity, implemented-only Build-error unit restricted to reproducible sub-cases).",
     "4.339 extension covers ords 7/8: charsequence-compat replays the create-schema + insert-into deploy smoke per representation (objectarray/map/default; Java's Avro leg is not modeled by the map-based oracle) with zero sends, and the factory-method observable half routes theString=abc and the 5-column sensor projection with int-to-double widening through plain struct registrations (Java configures factory methods; approved adaptation; Java's no-default-constructor reflection checks are support-class introspection, not engine behavior). Remaining ords: 9/10 (until-pattern per-representation array population, invalid halves implemented-only) and 12 (invalidity, implemented-only Build-error unit restricted to reproducible sub-cases).",
-    "4.340 extension covers ords 9/10 valid halves: the until-pattern `until timer:interval(10 sec)` routes the start capture and repeated-capture array after virtual-time advance (oracle advanceTime op; Engine.AdvanceTime), with ord 9's POJO target registered by the suite local class FQN and ord 10 looping objectarray/map/default source representations (Avro/JSON legs not modeled; normalized rows identical across reps). Java's two invalid compile halves are implemented-only Go tests: array-column-into-non-array rejects at Build; single-into-array is accepted at Build/deploy but the route rejects it at execution time (the timer-fire advance returns the TypeMismatch Java reports at compile). Remaining: ord 12 (invalidity, implemented-only Build-error unit restricted to reproducible sub-cases)."
+    "4.340 extension covers ords 9/10 valid halves: the until-pattern `until timer:interval(10 sec)` routes the start capture and repeated-capture array after virtual-time advance (oracle advanceTime op; Engine.AdvanceTime), with ord 9's POJO target registered by the suite local class FQN and ord 10 looping objectarray/map/default source representations (Avro/JSON legs not modeled; normalized rows identical across reps). Java's two invalid compile halves are implemented-only Go tests: array-column-into-non-array rejects at Build; single-into-array is accepted at Build/deploy but the route rejects it at execution time (the timer-fire advance returns the TypeMismatch Java reports at compile). Remaining: ord 12 (invalidity, implemented-only Build-error unit restricted to reproducible sub-cases).",
+    "4.341 closes the class with ord 12 (EPLInsertIntoInvalid) registered implemented-not-DV per the invalidity policy: Go Build/send-rejection unit tests pin the reproducible sub-cases (named-unknown and unnamed columns; interface-hierarchy mismatch; setter-throw surfacing at Send; wrong-type conversion either-behavior observed as a Go-side error in the run; positive same-schema cast deploys), while the sub-cases whose Java rejection relies on unmodeled concepts are documented approved differences (long-to-int and null-to-int mismatch messages — Go converts; constructor-not-found and ctor-throws; ABCStream/xmltype auto-declared insert-into types; null-typed column; xmltype XMLDOM precondition; MyMap(dummy) property-not-found — Go map targets are open, so the Java rejection has no Go counterpart for map targets). Class disposition: 12/13 executions differential-verified, 1 implemented-not-DV."
    ]
   },
   {
@@ -42511,10 +42519,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3494,
-  "referencedJavaRuntimeIds": 3253,
+  "runtimeAssociationCount": 3495,
+  "referencedJavaRuntimeIds": 3254,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 883,
+  "unreferencedJavaRuntimeIds": 882,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 626,
