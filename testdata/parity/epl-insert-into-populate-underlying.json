@@ -137,6 +137,214 @@
     "intPrimitive": 1000,
     "doubleBoxed": 1001.0
    }
+  },
+  {
+   "op": "case",
+   "case": "ctor-variants-select-names"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2,
+    "intBoxed": 100,
+    "boolPrimitive": true
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 3,
+    "intBoxed": 101,
+    "boolPrimitive": false
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "intPrimitive": 4,
+    "intBoxed": null,
+    "boolPrimitive": true
+   }
+  },
+  {
+   "op": "case",
+   "case": "ctor-variants-boxable-null"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": -1,
+    "intBoxed": 100
+   }
+  },
+  {
+   "op": "case",
+   "case": "ctor-variants-join-wildcard"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_ST0",
+   "payload": {
+    "id": "ST0",
+    "p00": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_ST1",
+   "payload": {
+    "id": "ST1",
+    "p10": 2
+   }
+  },
+  {
+   "op": "case",
+   "case": "ctor-variants-column-list-ignored"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "x",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "case",
+   "case": "ctor-variants-same-type-ctor"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "b1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "b2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "case",
+   "case": "ctor-with-pattern"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_ST0",
+   "payload": {
+    "id": "E0",
+    "p00": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_ST1",
+   "payload": {
+    "id": "E1",
+    "p10": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_ST1",
+   "payload": {
+    "id": "E2",
+    "p10": 3
+   }
+  },
+  {
+   "op": "case",
+   "case": "bean-join-populate-wildcard"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_N",
+   "payload": {
+    "intPrimitive": 1,
+    "intBoxed": 10,
+    "doublePrimitive": 100,
+    "doubleBoxed": 1000,
+    "boolPrimitive": true,
+    "boolBoxed": true
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "bean-join-populate-select-names"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_N",
+   "payload": {
+    "intPrimitive": 1,
+    "intBoxed": 10,
+    "doublePrimitive": 100,
+    "doubleBoxed": 1000,
+    "boolPrimitive": true,
+    "boolBoxed": true
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "case",
+   "case": "bean-join-populate-local-class"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_N",
+   "payload": {
+    "intPrimitive": 1,
+    "intBoxed": 10,
+    "doublePrimitive": 100,
+    "doubleBoxed": 1000,
+    "boolPrimitive": true,
+    "boolBoxed": true
+   }
+  },
+  {
+   "op": "case",
+   "case": "window-aggregation-eventbean"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
   }
  ]
 }

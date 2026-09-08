@@ -6,7 +6,11 @@
   "java-runtime-fb0797f4b2c67cbcbcfe",
   "java-runtime-8b69defe88bb5d9753c1",
   "java-runtime-d64fffb49d0b5ce85aa3",
-  "java-runtime-1ee35de773565ac40475"
+  "java-runtime-1ee35de773565ac40475",
+  "java-runtime-706d3ed19b9a9b680430",
+  "java-runtime-42b687e10ab403b319bd",
+  "java-runtime-43b50e297c1593da8ec3",
+  "java-runtime-5c663b3a17e6e4aac880"
  ],
  "goTests": [
   "TestEPLInsertIntoPopulateBeanSimpleSelectNamesParity",
@@ -18,10 +22,14 @@
   "TestEPLInsertIntoPopulateBeanObjectsNullValueParity",
   "TestEPLInsertIntoPopulateUnderlyingMapParity",
   "TestEPLInsertIntoPopulateUnderlyingObjectArrayParity",
-  "TestEPLInsertIntoPopulateUnderlyingAvroParity"
+  "TestEPLInsertIntoPopulateUnderlyingAvroParity",
+  "TestEPLInsertIntoCtorVariantsParity",
+  "TestEPLInsertIntoCtorWithPatternParity",
+  "TestEPLInsertIntoBeanJoinPopulateParity",
+  "TestEPLInsertIntoWindowAggregationAtEventBeanParity"
  ],
  "javaTraceFile": "testdata/parity/epl-insert-into-populate-underlying.trace.json",
- "javaTraceRecordCount": 11,
+ "javaTraceRecordCount": 24,
  "caseMatchSummary": {
   "populate-bean-simple-select-names": {
    "expected": 1,
@@ -72,10 +80,63 @@
    "expected": 1,
    "actual": 1,
    "match": true
+  },
+  "ctor-variants-select-names": {
+   "expected": 3,
+   "actual": 3,
+   "match": true
+  },
+  "ctor-variants-boxable-null": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "ctor-variants-join-wildcard": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "ctor-variants-column-list-ignored": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "ctor-variants-same-type-ctor": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "ctor-with-pattern": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "bean-join-populate-wildcard": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "bean-join-populate-select-names": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "bean-join-populate-local-class": {
+   "expected": 1,
+   "actual": 1,
+   "match": true
+  },
+  "window-aggregation-eventbean": {
+   "expected": 2,
+   "actual": 2,
+   "match": true
   }
  },
  "differences": 0,
  "mutationTested": false,
  "verification": "differential-verified",
- "notes": "All 10 cases match between Java oracle trace (11 listener records) and Go test assertions. Field-level values confirmed: 12-column simple projections (theString/intPrimitive/intBoxed/longPrimitive/longBoxed/boolPrimitive/charPrimitive/bytePrimitive/floatPrimitive/doublePrimitive/shortPrimitive/enumValue), wildcard 4-property map copy (boolPrimitive included via declared MySupportMap property), boxed Integer->Long/Float->Double conversion, arrays/maps/nested-bean population, null-value primitive default sequence (0 then 20), and map/ObjectArray/Avro provided-underlying routing (intVal=1000, stringVal=E1, doubleVal=1001). Java oracle registers the real SupportBean/SupportBeanComplexProps bean classes from the fixed esper-common classpath, so trace values reflect the original bean assertions exactly. Go struct targets represent unprojected non-pointer properties as Go zero values (struct-vs-map representation, matching Java bean primitive defaults); nullable pointer properties arrive as null as in the Java trace."
+ "notes": [
+  "All 10 cases match between Java oracle trace (11 listener records) and Go test assertions. Field-level values confirmed: 12-column simple projections (theString/intPrimitive/intBoxed/longPrimitive/longBoxed/boolPrimitive/charPrimitive/bytePrimitive/floatPrimitive/doublePrimitive/shortPrimitive/enumValue), wildcard 4-property map copy (boolPrimitive included via declared MySupportMap property), boxed Integer->Long/Float->Double conversion, arrays/maps/nested-bean population, null-value primitive default sequence (0 then 20), and map/ObjectArray/Avro provided-underlying routing (intVal=1000, stringVal=E1, doubleVal=1001). Java oracle registers the real SupportBean/SupportBeanComplexProps bean classes from the fixed esper-common classpath, so trace values reflect the original bean assertions exactly. Go struct targets represent unprojected non-pointer properties as Go zero values (struct-vs-map representation, matching Java bean primitive defaults); nullable pointer properties arrive as null as in the Java trace.",
+  "4.338 extension (ords 0/1/2/11): Java constructor/factory targets are modeled as Go struct targets populated by named projection (approved adaptation); constructor defaults reproduce via WithJSONDefaults (ord 0 stage 4's intPrimitive=99 where Java ignores the insert-into column list for constructor targets \u2014 the column-list syntax itself has no Go surface); ord 0 stage 2's positional boxed-into-primitive binding reproduces by named projection (theString, null->intBoxed, intBoxed->intPrimitive); ord 2 (EPLInsertIntoBeanJoin) stage 3 is a Java comment/text artifact (observable identical to stage 2) and is not separately pinned; event members route with identity preserved (Java assertSame maps to Go Event identity); window(*) @eventbean is Aggregate(WindowEvents()) over KeepAll with insertion-order []Event routing. Multi-stage executions split into fresh-runtime sub-cases mirroring the Java undeploy boundaries."
+ ]
 }

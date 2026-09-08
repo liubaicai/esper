@@ -22,22 +22,47 @@ import java.nio.file.Path;
 import java.time.Instant;
 import com.espertech.esper.common.internal.support.SupportBean;
 import com.espertech.esper.common.internal.support.SupportBeanComplexProps;
+import com.espertech.esper.common.internal.support.SupportBean_N;
+import com.espertech.esper.common.internal.support.SupportBean_S0;
+import com.espertech.esper.regressionlib.support.bean.SupportBeanArrayEvent;
+import com.espertech.esper.regressionlib.support.bean.SupportBean_ST0;
+import com.espertech.esper.regressionlib.support.bean.SupportBean_ST1;
+import com.espertech.esper.regressionlib.support.bean.SupportBeanCtorOne;
+import com.espertech.esper.regressionlib.support.bean.SupportBeanCtorThree;
+import com.espertech.esper.regressionlib.support.bean.SupportBeanCtorTwo;
+import com.espertech.esper.regressionlib.support.bean.SupportBeanObject;
+import com.espertech.esper.regressionlib.support.bean.SupportEventWithCtorSameType;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static org.apache.avro.SchemaBuilder.record;
 
 /**
  * Oracle for EPLInsertIntoPopulateUnderlying observable executions:
  * PopulateBeanSimple (select-names, insert-names, boxed-conversion),
- * BeanWildcard, PopulateBeanObjects (arrays/maps, nested, null value) and
- * PopulateUnderlyingSimple (map/object-array/avro). Registered event types
- * mirror the Go parity test's registered schemas. CharSequence compat and
- * the INVALIDITY execution are compile-only in Java and covered by Go
- * Build-time rejection instead.
+ * BeanWildcard, PopulateBeanObjects (arrays/maps, nested, null value),
+ * PopulateUnderlyingSimple (map/object-array/avro), EPLInsertIntoCtor
+ * (select-names, boxable-null-into-primitive, join-wildcard, ignored column
+ * list, same-type ctor), EPLInsertIntoCtorWithPattern,
+ * EPLInsertIntoBeanJoin (wildcard, select-names, local-class target) and
+ * EPLInsertIntoWindowAggregationAtEventBean. Multi-stage Java executions
+ * replay as one scenario case per stage because the case protocol deploys
+ * each case into a fresh runtime (the Java suite undeploys between stages).
+ * Registered event types mirror the Go parity test's registered schemas;
+ * MyLocalTarget registers the suite's public static nested class. BeanJoin
+ * stage 3 (fully-qualified class-name target) is a Java naming artifact and
+ * is not replayed. CharSequence compat and the INVALIDITY execution are
+ * compile-only in Java and covered by Go Build-time rejection instead.
  */
 public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -77,7 +102,17 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
             "populate-bean-objects-null-value",
             "populate-underlying-map",
             "populate-underlying-objectarray",
-            "populate-underlying-avro"
+            "populate-underlying-avro",
+            "ctor-variants-select-names",
+            "ctor-variants-boxable-null",
+            "ctor-variants-join-wildcard",
+            "ctor-variants-column-list-ignored",
+            "ctor-variants-same-type-ctor",
+            "ctor-with-pattern",
+            "bean-join-populate-wildcard",
+            "bean-join-populate-select-names",
+            "bean-join-populate-local-class",
+            "window-aggregation-eventbean"
         };
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
@@ -106,6 +141,21 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
         configuration.getCommon().addEventType("MyMap", myMapType());
         configuration.getCommon().addEventType("MySupportMap", supportBeanType());
         configuration.getCommon().addEventType("SupportBeanComplexProps", SupportBeanComplexProps.class);
+        configuration.getCommon().addEventType("SupportBean_N", SupportBean_N.class);
+        configuration.getCommon().addEventType("SupportBean_S0", SupportBean_S0.class);
+        configuration.getCommon().addEventType("SupportBean_ST0", SupportBean_ST0.class);
+        configuration.getCommon().addEventType("SupportBean_ST1", SupportBean_ST1.class);
+        configuration.getCommon().addEventType("SupportBeanCtorOne", SupportBeanCtorOne.class);
+        configuration.getCommon().addEventType("SupportBeanCtorTwo", SupportBeanCtorTwo.class);
+        configuration.getCommon().addEventType("SupportBeanCtorThree", SupportBeanCtorThree.class);
+        configuration.getCommon().addEventType("SupportEventWithCtorSameType", SupportEventWithCtorSameType.class);
+        configuration.getCommon().addEventType("SupportBeanObject", SupportBeanObject.class);
+        configuration.getCommon().addEventType("SupportBeanArrayEvent", SupportBeanArrayEvent.class);
+        // The suite's local target is a public static nested class; register
+        // it by name so the scenario EPL can use the simple name instead of
+        // the suite's fully-qualified "$MyLocalTarget" spelling.
+        configuration.getCommon().addEventType("MyLocalTarget",
+            "com.espertech.esper.regressionlib.suite.epl.insertinto.EPLInsertIntoPopulateUnderlying$MyLocalTarget");
 
         if (caseName.equals("populate-underlying-map")) {
             Map<String, Object> def = new LinkedHashMap<>();
@@ -212,6 +262,27 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
                 String typeName = caseName.endsWith("-map") ? "MyMapType" : caseName.endsWith("-objectarray") ? "MyOAType" : "MyAvroType";
                 epls.add("@name('s0') insert into " + typeName + " select intPrimitive as intVal, theString as stringVal, doubleBoxed as doubleVal from SupportBean");
             }
+            case "ctor-variants-select-names" ->
+                epls.add("@name('s0') insert into SupportBeanCtorOne select theString, intBoxed, intPrimitive, boolPrimitive from SupportBean");
+            case "ctor-variants-boxable-null" ->
+                epls.add("@name('s0') insert into SupportBeanCtorOne select theString, null, intBoxed from SupportBean");
+            case "ctor-variants-join-wildcard" ->
+                epls.add("@name('s0') insert into SupportBeanCtorTwo select * from SupportBean_ST0#lastevent, SupportBean_ST1#lastevent");
+            case "ctor-variants-column-list-ignored" ->
+                epls.add("@name('s0') insert into SupportBeanCtorOne(theString, intPrimitive) select 'E1', 5 from SupportBean");
+            case "ctor-variants-same-type-ctor" ->
+                epls.add("@name('s0') insert into SupportEventWithCtorSameType select c1,c2 from SupportBean(theString='b1')#lastevent as c1, SupportBean(theString='b2')#lastevent as c2");
+            case "ctor-with-pattern" ->
+                epls.add("@name('s0') insert into SupportBeanCtorThree select s, e FROM PATTERN [" +
+                    "every s=SupportBean_ST0 -> [2] e=SupportBean_ST1]");
+            case "bean-join-populate-wildcard" ->
+                epls.add("@name('s0') insert into SupportBeanObject select * from SupportBean_N#lastevent as one, SupportBean_S0#lastevent as two");
+            case "bean-join-populate-select-names" ->
+                epls.add("@name('s0') insert into SupportBeanObject select one, two from SupportBean_N#lastevent as one, SupportBean_S0#lastevent as two");
+            case "bean-join-populate-local-class" ->
+                epls.add("@name('s0') insert into MyLocalTarget select 1 as value from SupportBean_N");
+            case "window-aggregation-eventbean" ->
+                epls.add("@name('s0') insert into SupportBeanArrayEvent select window(*) @eventbean from SupportBean#keepall");
             default -> throw new IllegalArgumentException("unsupported case " + caseName);
         }
         return epls;
@@ -310,8 +381,41 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
                 }
                 runtime.getEventService().sendEventMap(event, eventType);
             }
+            case "SupportBean_ST0" ->
+                runtime.getEventService().sendEventBean(
+                    new SupportBean_ST0(payload.getString("id", null), payload.getInt("p00", 0)), eventType);
+            case "SupportBean_ST1" ->
+                runtime.getEventService().sendEventBean(
+                    new SupportBean_ST1(payload.getString("id", null), payload.getInt("p10", 0)), eventType);
+            case "SupportBean_S0" ->
+                runtime.getEventService().sendEventBean(
+                    new SupportBean_S0(payload.getInt("id", 0)), eventType);
+            case "SupportBean_N" ->
+                runtime.getEventService().sendEventBean(
+                    new SupportBean_N(
+                        payload.getInt("intPrimitive", 0),
+                        nullableInt(payload, "intBoxed"),
+                        payload.getDouble("doublePrimitive", 0d),
+                        nullableDouble(payload, "doubleBoxed"),
+                        payload.getBoolean("boolPrimitive", false),
+                        nullableBoolean(payload, "boolBoxed")), eventType);
             default -> throw new IllegalArgumentException("unsupported event type " + eventType);
         }
+    }
+
+    private static Integer nullableInt(JsonObject payload, String name) {
+        JsonValue value = payload.get(name);
+        return value == null || value.isNull() ? null : value.asInt();
+    }
+
+    private static Double nullableDouble(JsonObject payload, String name) {
+        JsonValue value = payload.get(name);
+        return value == null || value.isNull() ? null : value.asDouble();
+    }
+
+    private static Boolean nullableBoolean(JsonObject payload, String name) {
+        JsonValue value = payload.get(name);
+        return value == null || value.isNull() ? null : value.asBoolean();
     }
 
     private static final class TraceWriter implements UpdateListener {
@@ -416,7 +520,38 @@ public final class EPLInsertIntoPopulateUnderlyingScenarioOracle {
                     nestedBean.getNestedNested() == null ? null : nestedBean.getNestedNested().getNestedNestedValue()));
                 return object;
             }
+            if (EXPANDABLE_EVENT_BEAN_MEMBERS.contains(value.getClass())) {
+                return normalizeBeanProperties(value);
+            }
             return Json.value(String.valueOf(value));
+        }
+
+        // Event-typed members of routed rows (constructor targets, join
+        // populated object members, window(*) @eventbean arrays) expand into
+        // sorted property maps, mirroring the map-value convention above.
+        private static final Set<Class<?>> EXPANDABLE_EVENT_BEAN_MEMBERS = new HashSet<>(Arrays.asList(
+            SupportBean.class, SupportBean_N.class, SupportBean_S0.class,
+            SupportBean_ST0.class, SupportBean_ST1.class));
+
+        private JsonValue normalizeBeanProperties(Object bean) {
+            JsonObject object = new JsonObject();
+            Map<String, Object> values = new TreeMap<>();
+            try {
+                for (PropertyDescriptor descriptor : Introspector.getBeanInfo(bean.getClass(), Object.class)
+                        .getPropertyDescriptors()) {
+                    if (descriptor.getReadMethod() == null ||
+                        Modifier.isStatic(descriptor.getReadMethod().getModifiers())) {
+                        continue;
+                    }
+                    values.put(descriptor.getName(), descriptor.getReadMethod().invoke(bean));
+                }
+            } catch (java.beans.IntrospectionException | ReflectiveOperationException e) {
+                throw new IllegalStateException("failed to expand bean properties of " + bean.getClass(), e);
+            }
+            for (Map.Entry<String, Object> entry : values.entrySet()) {
+                object.add(entry.getKey(), normalize(entry.getValue()));
+            }
+            return object;
         }
     }
 }

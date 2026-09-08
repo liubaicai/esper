@@ -1492,3 +1492,568 @@ func TestEPLInsertIntoColNonBeanFromSubqueryMultiFilterMapParity(t *testing.T) {
 }
 
 func float64Ptr(value float64) *float64 { return &value }
+
+// ---- 4.338: constructor-position population (ords 0/1/2/11) ----
+//
+// Java populates bean targets through constructors and factory methods;
+// the Go model registers struct targets with the same property names and
+// populates them by named projection (approved adaptation). Constructor
+// defaults reproduce via WithJSONDefaults, and identity of routed event
+// members is preserved through routes.
+
+type iipuCtorSourceBean struct {
+	TheString     *string `esper:"theString"`
+	IntPrimitive  int     `esper:"intPrimitive"`
+	BoolPrimitive bool    `esper:"boolPrimitive"`
+	IntBoxed      *int    `esper:"intBoxed"`
+}
+
+type iipuCtorOne struct {
+	TheString     *string `esper:"theString"`
+	IntBoxed      *int    `esper:"intBoxed"`
+	IntPrimitive  int     `esper:"intPrimitive"`
+	BoolPrimitive bool    `esper:"boolPrimitive"`
+}
+
+type iipuCtorTwo struct {
+	St0 Event `esper:"st0"`
+	St1 Event `esper:"st1"`
+}
+
+type iipuCtorThree struct {
+	St0 Event   `esper:"st0"`
+	St1 []Event `esper:"st1"`
+}
+
+type iipuSameTypeCtor struct {
+	C1 Event `esper:"c1"`
+	C2 Event `esper:"c2"`
+}
+
+type iipuBeanN struct {
+	IntPrimitive    int      `esper:"intPrimitive"`
+	IntBoxed        *int     `esper:"intBoxed"`
+	DoublePrimitive float64  `esper:"doublePrimitive"`
+	DoubleBoxed     *float64 `esper:"doubleBoxed"`
+	BoolPrimitive   bool     `esper:"boolPrimitive"`
+	BoolBoxed       *bool    `esper:"boolBoxed"`
+}
+
+type iipuST0 struct {
+	ID  string `esper:"id"`
+	P00 int    `esper:"p00"`
+}
+
+type iipuST1 struct {
+	ID  string `esper:"id"`
+	P10 int    `esper:"p10"`
+}
+
+type iipuJoinS0 struct {
+	ID  int    `esper:"id"`
+	P00 string `esper:"p00"`
+	P01 string `esper:"p01"`
+	P02 string `esper:"p02"`
+	P03 string `esper:"p03"`
+}
+
+type iipuBeanObject struct {
+	One Event `esper:"one"`
+	Two Event `esper:"two"`
+}
+
+type iipuMyLocalTarget struct {
+	Value int `esper:"value"`
+}
+
+type iipuBeanArrayEvent struct {
+	Array []Event `esper:"array"`
+}
+
+func iipuStringPtr(value string) *string { return &value }
+func iipuIntPtr(value int) *int          { return &value }
+
+func iipuSubscribeUnderlying[T any](t *testing.T, env *Environment, engine *Engine, target string) *[]T {
+	t.Helper()
+	consumer, err := env.Build(FromAny(env, target).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), consumer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var received []T
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			if event, ok := result.Event(); ok {
+				if underlying, ok := event.Underlying().(T); ok {
+					received = append(received, underlying)
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return &received
+}
+
+// TestEPLInsertIntoCtorVariantsParity covers EPLInsertIntoCtor
+// (java-runtime-706d3ed19b9a9b680430) in five fresh-runtime stages mirroring
+// the Java undeploy boundaries: 4-column projection into the
+// (String,Integer,int,boolean) shape with null String and null boxed; a
+// 3-column projection where the boxed value positionally lands in the
+// primitive slot (theString=E1, intBoxed=null, intPrimitive=100); a
+// lastevent join wildcard into the (ST0,ST1) shape; the column-list form
+// whose select-list arity picks the 2-arg shape with intPrimitive keeping
+// its constructor default 99; and the same-type constructor over two
+// filtered lastevent streams of the identical schema.
+func TestEPLInsertIntoCtorVariantsParity(t *testing.T) {
+	send := func(t *testing.T, engine *Engine, underlying any) {
+		t.Helper()
+		if err := engine.Send(context.Background(), "CtorSource", underlying); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("four-column", func(t *testing.T) {
+		env := NewEnvironment()
+		if _, err := RegisterStruct[iipuCtorSourceBean](env, "CtorSource"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := RegisterStruct[iipuCtorOne](env, "SupportBeanCtorOne"); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithRuntimeURI("java-runtime-706d3ed19b9a9b680430"))
+		defer func() { _ = engine.Close(context.Background()) }()
+
+		producer, err := env.Build(Select(From[iipuCtorSourceBean](env, "CtorSource"),
+			Alias("theString", Field[iipuCtorSourceBean, *string]("theString")),
+			Alias("intBoxed", Field[iipuCtorSourceBean, *int]("intBoxed")),
+			Alias("intPrimitive", Field[iipuCtorSourceBean, int]("intPrimitive")),
+			Alias("boolPrimitive", Field[iipuCtorSourceBean, bool]("boolPrimitive")),
+		).InsertInto("SupportBeanCtorOne", StatementName("i1")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), producer); err != nil {
+			t.Fatal(err)
+		}
+		received := iipuSubscribeUnderlying[iipuCtorOne](t, env, engine, "SupportBeanCtorOne")
+
+		for _, tc := range []iipuCtorSourceBean{
+			{TheString: iipuStringPtr("E1"), IntPrimitive: 2, BoolPrimitive: true, IntBoxed: iipuIntPtr(100)},
+			{TheString: iipuStringPtr("E2"), IntPrimitive: 3, BoolPrimitive: false, IntBoxed: iipuIntPtr(101)},
+			{IntPrimitive: 4, BoolPrimitive: true},
+		} {
+			send(t, engine, tc)
+		}
+		got := *received
+		if len(got) != 3 {
+			t.Fatalf("routed rows = %d, want 3", len(got))
+		}
+		if *got[0].TheString != "E1" || *got[0].IntBoxed != 100 || got[0].IntPrimitive != 2 || !got[0].BoolPrimitive {
+			t.Fatalf("row0 = %#v", got[0])
+		}
+		if *got[1].TheString != "E2" || *got[1].IntBoxed != 101 || got[1].IntPrimitive != 3 || got[1].BoolPrimitive {
+			t.Fatalf("row1 = %#v", got[1])
+		}
+		if got[2].TheString != nil || got[2].IntBoxed != nil || got[2].IntPrimitive != 4 || !got[2].BoolPrimitive {
+			t.Fatalf("row2 = %#v", got[2])
+		}
+	})
+
+	t.Run("boxed-into-primitive-slot", func(t *testing.T) {
+		env := NewEnvironment()
+		iipuRegisterCommon(t, env)
+		if _, err := RegisterStruct[iipuCtorOne](env, "SupportBeanCtorOne"); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithRuntimeURI("java-runtime-706d3ed19b9a9b680430"))
+		defer func() { _ = engine.Close(context.Background()) }()
+
+		producer, err := env.Build(Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("theString", Field[iipuSupportBean, string]("theString")),
+			Alias("intBoxed", NullLiteral[*int]()),
+			Alias("intPrimitive", Field[iipuSupportBean, *int]("intBoxed")),
+		).InsertInto("SupportBeanCtorOne", StatementName("i1")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), producer); err != nil {
+			t.Fatal(err)
+		}
+		received := iipuSubscribeUnderlying[iipuCtorOne](t, env, engine, "SupportBeanCtorOne")
+
+		boxed := 100
+		if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "E1", IntBoxed: &boxed, IntPrimitive: -1}); err != nil {
+			t.Fatal(err)
+		}
+		got := *received
+		if len(got) != 1 {
+			t.Fatalf("routed rows = %d, want 1", len(got))
+		}
+		if *got[0].TheString != "E1" || got[0].IntBoxed != nil || got[0].IntPrimitive != 100 || got[0].BoolPrimitive {
+			t.Fatalf("row = %#v", got[0])
+		}
+	})
+
+	t.Run("join-wildcard", func(t *testing.T) {
+		env := NewEnvironment()
+		if _, err := RegisterStruct[iipuST0](env, "SupportBean_ST0"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := RegisterStruct[iipuST1](env, "SupportBean_ST1"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := RegisterStruct[iipuCtorTwo](env, "SupportBeanCtorTwo"); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithRuntimeURI("java-runtime-706d3ed19b9a9b680430"))
+		defer func() { _ = engine.Close(context.Background()) }()
+
+		producer, err := env.Build(JoinMany(
+			JoinSource(From[iipuST0](env, "SupportBean_ST0").Window(LastEvent())),
+			JoinSource(From[iipuST1](env, "SupportBean_ST1").Window(LastEvent())),
+		).On().Select(
+			SelectSourceEvent(0, "st0"),
+			SelectSourceEvent(1, "st1"),
+		).InsertInto("SupportBeanCtorTwo", StatementName("i1")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), producer); err != nil {
+			t.Fatal(err)
+		}
+		received := iipuSubscribeUnderlying[iipuCtorTwo](t, env, engine, "SupportBeanCtorTwo")
+
+		if err := engine.Send(context.Background(), "SupportBean_ST0", iipuST0{ID: "ST0", P00: 1}); err != nil {
+			t.Fatal(err)
+		}
+		if len(*received) != 0 {
+			t.Fatalf("incomplete join must not route, got %d", len(*received))
+		}
+		if err := engine.Send(context.Background(), "SupportBean_ST1", iipuST1{ID: "ST1", P10: 2}); err != nil {
+			t.Fatal(err)
+		}
+		got := *received
+		if len(got) != 1 {
+			t.Fatalf("routed rows = %d, want 1", len(got))
+		}
+		if id := got[0].St0.Get("id").Any(); id != "ST0" {
+			t.Fatalf("st0.id = %v", id)
+		}
+		if id := got[0].St1.Get("id").Any(); id != "ST1" {
+			t.Fatalf("st1.id = %v", id)
+		}
+	})
+
+	t.Run("column-list-ignored", func(t *testing.T) {
+		env := NewEnvironment()
+		iipuRegisterCommon(t, env)
+		if _, err := RegisterStruct[iipuCtorOne](env, "SupportBeanCtorOne",
+			WithJSONDefaults(map[string]any{"intPrimitive": 99})); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithRuntimeURI("java-runtime-706d3ed19b9a9b680430"))
+		defer func() { _ = engine.Close(context.Background()) }()
+
+		// Java's `insert into SupportBeanCtorOne(theString, intPrimitive)
+		// select 'E1', 5` ignores the insert-into column list for
+		// constructor targets: the two select columns positionally bind to
+		// the 2-arg shape and intPrimitive keeps its constructor default.
+		// Go reproduces the observable by named projection plus the
+		// declared default; the column-list-ignored syntax itself has no
+		// Go surface (approved API-surface difference).
+		producer, err := env.Build(Select(From[iipuSupportBean](env, "SupportBean"),
+			Alias("theString", Literal("E1")),
+			Alias("intBoxed", Literal(5)),
+		).InsertInto("SupportBeanCtorOne", StatementName("i1")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), producer); err != nil {
+			t.Fatal(err)
+		}
+		received := iipuSubscribeUnderlying[iipuCtorOne](t, env, engine, "SupportBeanCtorOne")
+
+		if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "x", IntPrimitive: -1}); err != nil {
+			t.Fatal(err)
+		}
+		got := *received
+		if len(got) != 1 {
+			t.Fatalf("routed rows = %d, want 1", len(got))
+		}
+		if *got[0].TheString != "E1" || got[0].IntBoxed == nil || *got[0].IntBoxed != 5 || got[0].IntPrimitive != 99 || got[0].BoolPrimitive {
+			t.Fatalf("row = %#v", got[0])
+		}
+	})
+
+	t.Run("same-type-ctor", func(t *testing.T) {
+		env := NewEnvironment()
+		iipuRegisterCommon(t, env)
+		if _, err := RegisterStruct[iipuSameTypeCtor](env, "SupportEventWithCtorSameType"); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithRuntimeURI("java-runtime-706d3ed19b9a9b680430"))
+		defer func() { _ = engine.Close(context.Background()) }()
+
+		producer, err := env.Build(JoinMany(
+			JoinSource(From[iipuSupportBean](env, "SupportBean").Filter(
+				Equal[string](Field[iipuSupportBean, string]("theString"), Literal("b1"))).Window(LastEvent())),
+			JoinSource(From[iipuSupportBean](env, "SupportBean").Filter(
+				Equal[string](Field[iipuSupportBean, string]("theString"), Literal("b2"))).Window(LastEvent())),
+		).On().Select(
+			SelectSourceEvent(0, "c1"),
+			SelectSourceEvent(1, "c2"),
+		).InsertInto("SupportEventWithCtorSameType", StatementName("i1")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), producer); err != nil {
+			t.Fatal(err)
+		}
+		received := iipuSubscribeUnderlying[iipuSameTypeCtor](t, env, engine, "SupportEventWithCtorSameType")
+
+		if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "b1", IntPrimitive: 1}); err != nil {
+			t.Fatal(err)
+		}
+		if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "b2", IntPrimitive: 2}); err != nil {
+			t.Fatal(err)
+		}
+		got := *received
+		if len(got) != 1 {
+			t.Fatalf("routed rows = %d, want 1", len(got))
+		}
+		if prim := got[0].C1.Get("intPrimitive").Any(); prim != 1 {
+			t.Fatalf("c1.intPrimitive = %v", prim)
+		}
+		if prim := got[0].C2.Get("intPrimitive").Any(); prim != 2 {
+			t.Fatalf("c2.intPrimitive = %v", prim)
+		}
+	})
+}
+
+// TestEPLInsertIntoCtorWithPatternParity covers
+// EPLInsertIntoCtorWithPattern (java-runtime-42b687e10ab403b319bd):
+// pattern [every s=SupportBean_ST0 -> [2] e=SupportBean_ST1] routes the
+// single capture and the 2-element repeated capture array into the
+// (ST0, ST1[]) target. Contract: ST0("E0",1), ST1("E1",2), ST1("E2",3)
+// route one row with st0.id=E0 and st1 ids [E1,E2].
+func TestEPLInsertIntoCtorWithPatternParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[iipuST0](env, "SupportBean_ST0"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[iipuST1](env, "SupportBean_ST1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[iipuCtorThree](env, "SupportBeanCtorThree"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithRuntimeURI("java-runtime-42b687e10ab403b319bd"))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	producer, err := env.Build(PatternFrom(From[iipuST0](env, "SupportBean_ST0"), "s", Literal[bool](true)).
+		Then(PatternFrom(From[iipuST1](env, "SupportBean_ST1"), "e", Literal[bool](true)).MatchUntil(2, 2)).
+		Select(
+			Alias("st0", PatternEvent("s")),
+			Alias("st1", TagEvents("e")),
+		).InsertInto("SupportBeanCtorThree", StatementName("i1")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), producer); err != nil {
+		t.Fatal(err)
+	}
+	received := iipuSubscribeUnderlying[iipuCtorThree](t, env, engine, "SupportBeanCtorThree")
+
+	if err := engine.Send(context.Background(), "SupportBean_ST0", iipuST0{ID: "E0", P00: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean_ST1", iipuST1{ID: "E1", P10: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*received) != 0 {
+		t.Fatalf("incomplete repeat must not route, got %d", len(*received))
+	}
+	if err := engine.Send(context.Background(), "SupportBean_ST1", iipuST1{ID: "E2", P10: 3}); err != nil {
+		t.Fatal(err)
+	}
+	got := *received
+	if len(got) != 1 {
+		t.Fatalf("routed rows = %d, want 1", len(got))
+	}
+	if id := got[0].St0.Get("id").Any(); id != "E0" {
+		t.Fatalf("st0.id = %v", id)
+	}
+	if len(got[0].St1) != 2 {
+		t.Fatalf("st1 length = %d, want 2", len(got[0].St1))
+	}
+	if id := got[0].St1[0].Get("id").Any(); id != "E1" {
+		t.Fatalf("st1[0].id = %v", id)
+	}
+	if id := got[0].St1[1].Get("id").Any(); id != "E2" {
+		t.Fatalf("st1[1].id = %v", id)
+	}
+}
+
+// TestEPLInsertIntoBeanJoinPopulateParity covers EPLInsertIntoBeanJoin
+// (java-runtime-43b50e297c1593da8ec3) stages 1/2/4: a lastevent join of
+// SupportBean_N and SupportBean_S0 populates the Object-property target by
+// wildcard and by stream-name projection (Java's assertSame identity maps
+// to Go route identity), and a local-class target receives value=1. Java
+// stage 3 is a comment/text artifact (same observable as stage 2) and is
+// not separately pinned.
+func TestEPLInsertIntoBeanJoinPopulateParity(t *testing.T) {
+	t.Run("wildcard-and-select-names", func(t *testing.T) {
+		for _, stage := range []string{"wildcard", "select-names"} {
+			t.Run(stage, func(t *testing.T) {
+				env := NewEnvironment()
+				if _, err := RegisterStruct[iipuBeanN](env, "SupportBean_N"); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := RegisterStruct[iipuJoinS0](env, "SupportBean_S0"); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := RegisterStruct[iipuBeanObject](env, "SupportBeanObject"); err != nil {
+					t.Fatal(err)
+				}
+				engine := NewEngine(env, WithRuntimeURI("java-runtime-43b50e297c1593da8ec3"))
+				defer func() { _ = engine.Close(context.Background()) }()
+
+				// Java's wildcard form and its `select one, two` form route the
+				// identical pair of source events under the stream aliases, so
+				// one Go producer stands in for both stages (the observable
+				// rows are the same; Java deploys the statement twice).
+				producer := JoinMany(
+					JoinSource(From[iipuBeanN](env, "SupportBean_N").Window(LastEvent()).As("one")),
+					JoinSource(From[iipuJoinS0](env, "SupportBean_S0").Window(LastEvent()).As("two")),
+				).On().Select(
+					SelectSourceEvent(0, "one"),
+					SelectSourceEvent(1, "two"),
+				).InsertInto("SupportBeanObject", StatementName("i1"))
+				plan, err := env.Build(producer)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := engine.Deploy(context.Background(), plan); err != nil {
+					t.Fatal(err)
+				}
+				received := iipuSubscribeUnderlying[iipuBeanObject](t, env, engine, "SupportBeanObject")
+
+				if err := engine.Send(context.Background(), "SupportBean_N", iipuBeanN{
+					IntPrimitive: 1, IntBoxed: iipuIntPtr(10),
+					DoublePrimitive: 100, DoubleBoxed: func() *float64 { v := 1000.0; return &v }(),
+					BoolPrimitive: true, BoolBoxed: func() *bool { v := true; return &v }(),
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if len(*received) != 0 {
+					t.Fatalf("incomplete join must not route, got %d", len(*received))
+				}
+				if err := engine.Send(context.Background(), "SupportBean_S0", iipuJoinS0{ID: 1}); err != nil {
+					t.Fatal(err)
+				}
+				got := *received
+				if len(got) != 1 {
+					t.Fatalf("routed rows = %d, want 1", len(got))
+				}
+				if prim := got[0].One.Get("intPrimitive").Any(); prim != 1 {
+					t.Fatalf("one.intPrimitive = %v", prim)
+				}
+				if boxed := iipuBoxed(got[0].One.Get("intBoxed")); boxed != 10 {
+					t.Fatalf("one.intBoxed = %v", boxed)
+				}
+				if id := got[0].Two.Get("id").Any(); id != 1 {
+					t.Fatalf("two.id = %v", id)
+				}
+			})
+		}
+	})
+
+	t.Run("local-class", func(t *testing.T) {
+		env := NewEnvironment()
+		if _, err := RegisterStruct[iipuBeanN](env, "SupportBean_N"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := RegisterStruct[iipuMyLocalTarget](env, "MyLocalTarget"); err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env, WithRuntimeURI("java-runtime-43b50e297c1593da8ec3"))
+		defer func() { _ = engine.Close(context.Background()) }()
+
+		producer, err := env.Build(Select(From[iipuBeanN](env, "SupportBean_N"),
+			Alias("value", Literal(1)),
+		).InsertInto("MyLocalTarget", StatementName("i1")))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := engine.Deploy(context.Background(), producer); err != nil {
+			t.Fatal(err)
+		}
+		received := iipuSubscribeUnderlying[iipuMyLocalTarget](t, env, engine, "MyLocalTarget")
+
+		if err := engine.Send(context.Background(), "SupportBean_N", iipuBeanN{IntPrimitive: 1, IntBoxed: iipuIntPtr(10)}); err != nil {
+			t.Fatal(err)
+		}
+		got := *received
+		if len(got) != 1 || got[0].Value != 1 {
+			t.Fatalf("rows = %#v", got)
+		}
+	})
+}
+
+// TestEPLInsertIntoWindowAggregationAtEventBeanParity covers
+// EPLInsertIntoWindowAggregationAtEventBean
+// (java-runtime-5c663b3a17e6e4aac880): insert into
+// SupportBeanArrayEvent select window(*) @eventbean from
+// SupportBean#keepall routes the full retained window in insertion order
+// per event.
+func TestEPLInsertIntoWindowAggregationAtEventBeanParity(t *testing.T) {
+	env := NewEnvironment()
+	iipuRegisterCommon(t, env)
+	if _, err := RegisterStruct[iipuBeanArrayEvent](env, "SupportBeanArrayEvent"); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithRuntimeURI("java-runtime-5c663b3a17e6e4aac880"))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	producer, err := env.Build(From[iipuSupportBean](env, "SupportBean").Window(KeepAll()).
+		Aggregate(Alias("array", WindowEvents())).
+		InsertInto("SupportBeanArrayEvent", StatementName("i1")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.Deploy(context.Background(), producer); err != nil {
+		t.Fatal(err)
+	}
+	received := iipuSubscribeUnderlying[iipuBeanArrayEvent](t, env, engine, "SupportBeanArrayEvent")
+
+	if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "E1", IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", iipuSupportBean{TheString: "E2", IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	got := *received
+	if len(got) != 2 {
+		t.Fatalf("routed rows = %d, want 2", len(got))
+	}
+	if len(got[0].Array) != 1 {
+		t.Fatalf("row0 array length = %d, want 1", len(got[0].Array))
+	}
+	if str := got[0].Array[0].Get("theString").Any(); str != "E1" {
+		t.Fatalf("row0 array[0] = %v", str)
+	}
+	if len(got[1].Array) != 2 {
+		t.Fatalf("row1 array length = %d, want 2", len(got[1].Array))
+	}
+	if s := got[1].Array[0].Get("theString").Any(); s != "E1" {
+		t.Fatalf("row1 array[0] = %v", s)
+	}
+	if s := got[1].Array[1].Get("theString").Any(); s != "E2" {
+		t.Fatalf("row1 array[1] = %v", s)
+	}
+}

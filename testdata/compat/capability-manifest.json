@@ -32118,13 +32118,21 @@
     "java-runtime-fb0797f4b2c67cbcbcfe",
     "java-runtime-8b69defe88bb5d9753c1",
     "java-runtime-d64fffb49d0b5ce85aa3",
-    "java-runtime-1ee35de773565ac40475"
+    "java-runtime-1ee35de773565ac40475",
+    "java-runtime-706d3ed19b9a9b680430",
+    "java-runtime-42b687e10ab403b319bd",
+    "java-runtime-43b50e297c1593da8ec3",
+    "java-runtime-5c663b3a17e6e4aac880"
    ],
    "javaNames": [
     "EPLInsertIntoPopulateBeanSimple",
     "EPLInsertIntoBeanWildcard",
     "EPLInsertIntoPopulateBeanObjects",
-    "EPLInsertIntoPopulateUnderlyingSimple"
+    "EPLInsertIntoPopulateUnderlyingSimple",
+    "EPLInsertIntoCtor",
+    "EPLInsertIntoCtorWithPattern",
+    "EPLInsertIntoBeanJoin",
+    "EPLInsertIntoWindowAggregationAtEventBean"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateUnderlying.java"
@@ -32139,7 +32147,11 @@
     "TestEPLInsertIntoPopulateBeanObjectsNullValueParity",
     "TestEPLInsertIntoPopulateUnderlyingMapParity",
     "TestEPLInsertIntoPopulateUnderlyingObjectArrayParity",
-    "TestEPLInsertIntoPopulateUnderlyingAvroParity"
+    "TestEPLInsertIntoPopulateUnderlyingAvroParity",
+    "TestEPLInsertIntoCtorVariantsParity",
+    "TestEPLInsertIntoCtorWithPatternParity",
+    "TestEPLInsertIntoBeanJoinPopulateParity",
+    "TestEPLInsertIntoWindowAggregationAtEventBeanParity"
    ],
    "tags": [
     "correctness"
@@ -32155,7 +32167,11 @@
     "java-runtime-fb0797f4b2c67cbcbcfe",
     "java-runtime-8b69defe88bb5d9753c1",
     "java-runtime-d64fffb49d0b5ce85aa3",
-    "java-runtime-1ee35de773565ac40475"
+    "java-runtime-1ee35de773565ac40475",
+    "java-runtime-706d3ed19b9a9b680430",
+    "java-runtime-42b687e10ab403b319bd",
+    "java-runtime-43b50e297c1593da8ec3",
+    "java-runtime-5c663b3a17e6e4aac880"
    ],
    "evidence": [
     "testdata/parity/epl-insert-into-populate-underlying.json",
@@ -32165,6 +32181,9 @@
     "tools/java-oracle/run-epl-insert-into-populate-underlying.sh",
     "java-oracle-trace",
     "go-unit"
+   ],
+   "notes": [
+    "4.338 extension covers ords 0/1/2/11 (constructor-position population): 4-column and positional projections into constructor-shape struct targets with null String/boxed columns, boxed-into-primitive positional binding, lastevent join wildcard and stream-name projections with identity-preserving Event members, column-list-ignored constructor defaults via WithJSONDefaults, same-type constructor over filtered lastevent streams, [2]-repeat pattern captures via MatchUntil(2,2)+TagEvents into []Event targets, and window(*) @eventbean via Aggregate(WindowEvents()) over KeepAll. Approved adaptations: Java constructor/factory targets are Go struct targets populated by named projection; column-list-ignored and stage-3 fully-qualified-name syntax have no Go surface (observably identical). Remaining ords: 7 (CharSequenceCompat deploy smoke) and 8 (factory-method observable half) as a small follow-up unit; 9/10 (until-pattern per-representation array population, invalid halves implemented-only); 12 (invalidity, implemented-only Build-error unit restricted to reproducible sub-cases)."
    ]
   },
   {
@@ -42463,7 +42482,7 @@
   "inventoriedCases": 626,
   "implementedCases": 624,
   "differentialVerifiedCases": 239,
-  "differentialVerifiedRuntimeIds": 863,
+  "differentialVerifiedRuntimeIds": 867,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42473,14 +42492,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3486,
-  "referencedJavaRuntimeIds": 3245,
+  "runtimeAssociationCount": 3490,
+  "referencedJavaRuntimeIds": 3249,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 891,
+  "unreferencedJavaRuntimeIds": 887,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 626,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 863
+  "differentialVerifiedRuntimeIDs": 867
  }
 }
