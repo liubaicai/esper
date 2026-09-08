@@ -6,16 +6,20 @@
     "java-runtime-b06231c928bc854b7b09",
     "java-runtime-a9064a1af26ef450b58f",
     "java-runtime-83ed465ce8a8ff29e1a0",
-    "java-runtime-d96c25e6af1350fca5db"
+    "java-runtime-d96c25e6af1350fca5db",
+    "java-runtime-e99c72ba6838bd3b23f2",
+    "java-runtime-aa3e3052e879188342c6"
   ],
   "goTests": [
     "TestEPLInsertIntoEventPrecConstantInsertIntoParity",
     "TestEPLInsertIntoEventPrecConstantInfraMergeInsertIntoTableParity",
     "TestEPLInsertIntoEventPrecConstantInfraMergeInsertIntoWindowParity",
-    "TestEPLInsertIntoEventPrecConstantOnSplitParity"
+    "TestEPLInsertIntoEventPrecConstantOnSplitParity",
+    "TestEPLInsertIntoEventPrecContainedChainParity",
+    "TestEPLInsertIntoEventPrecOutputRateParity"
   ],
   "javaTraceFile": "testdata/parity/insertinto-event-precedence.trace.json",
-  "javaTraceRecordCount": 21,
+  "javaTraceRecordCount": 57,
   "caseMatchSummary": {
     "constant-insertinto": {
       "expected": 6,
@@ -36,10 +40,23 @@
       "expected": 3,
       "actual": 3,
       "match": true
+    },
+    "nonconst-contained-event": {
+      "expected": 30,
+      "actual": 30,
+      "match": true
+    },
+    "constant-output-rate": {
+      "expected": 6,
+      "actual": 6,
+      "match": true
     }
   },
   "differences": 0,
   "mutationTested": false,
   "verification": "differential-verified",
-  "notes": "All 4 cases match between Java oracle trace and Go test assertions. constant-insertinto: consumer receives events in precedence order (5,4,3,2,1,0); window iteration order also follows precedence order (5,4,3,2,1,0) \u2014 verified by Java oracle only (Go implementation does not support inserting into a named window from a regular select statement). constant-merge-table: insert-into actions execute in precedence order (c,a,b). constant-merge-window: insert-into actions execute in precedence order (c,a,b). constant-on-split: split-stream branches execute in precedence order (3,2,1). Go implementation: (1) regular insert-into routes events with precedence via EventPrecedence option; (2) merge-into table/window routes insert-into actions with precedence via ThenInsertIntoWithPrecedence; (3) split-stream routes branches with precedence via SplitIntoWithPrecedence/SplitIntoWhenWithPrecedence."
+  "notes": [
+    "All 4 cases match between Java oracle trace and Go test assertions. constant-insertinto: consumer receives events in precedence order (5,4,3,2,1,0); window iteration order also follows precedence order (5,4,3,2,1,0) \u2014 verified by Java oracle only (Go implementation does not support inserting into a named window from a regular select statement). constant-merge-table: insert-into actions execute in precedence order (c,a,b). constant-merge-window: insert-into actions execute in precedence order (c,a,b). constant-on-split: split-stream branches execute in precedence order (3,2,1). Go implementation: (1) regular insert-into routes events with precedence via EventPrecedence option; (2) merge-into table/window routes insert-into actions with precedence via ThenInsertIntoWithPrecedence; (3) split-stream routes branches with precedence via SplitIntoWithPrecedence/SplitIntoWhenWithPrecedence.",
+    "4.342 extension (ords 4/9): nonconst-contained-event replays the two-level contained-event routes LvlA[b]->LvlB and LvlB[c]->LvlC, each with event-precedence(precedence) evaluated against the routed target event; chained routes interleave through the shared precedence queue and the flattened LvlC id order per LvlA send matches the Java pins (C,B,D,A / C,A,B,D / A,B,C,D / H,D,A,G,F,B,I,E,C / B,G,H,D,F,A,C,I,E). constant-output-rate replays the three output-every-2-events routes with precedences 1/2/3 and per-statement id offsets 1/2/3 (Java's computeEventPrecedence(3, *) static call over the routed output event is pinned as the constant 3 in Go \u2014 approved adaptation); two sends produce one batch ordered 13,23,12,22,11,21 (precedence across statements, FIFO within). The oracle registers mirror classes/computeEventPrecedence locally because the run-script classpath excludes regression-lib; shapes and semantics replicate the suite byte-for-byte."
+  ]
 }

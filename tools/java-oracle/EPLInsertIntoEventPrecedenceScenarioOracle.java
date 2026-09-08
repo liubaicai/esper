@@ -26,9 +26,18 @@ import java.util.List;
 /**
  * Java oracle for EPLInsertIntoEventPrecedence constant-precedence scenarios.
  *
- * Covers the ConstantInsertInto, ConstantInfraMergeInsertInto (table), and
- * ConstantInfraMergeInsertInto (named window) runtimes by replaying
- * deterministic event sequences and recording the observable output order.
+ * Covers the ConstantInsertInto, ConstantInfraMergeInsertInto (table),
+ * ConstantInfraMergeInsertInto (named window), ConstantOnSplit,
+ * NonConstInsertIntoContainedEvent, and ConstantInsertIntoOutputRate
+ * runtimes by replaying deterministic event sequences and recording the
+ * observable output order.
+ *
+ * The LvlA/LvlB/LvlC event classes and the computeEventPrecedence function
+ * are oracle-local mirrors of the suite's nested classes and static method:
+ * the fixed run script classpath does not include regression-lib, so the
+ * EPL references these mirrors instead of the suite FQNs. Getters, fields,
+ * and the function contract (param must be the HashMap underlying of the
+ * output event; returns the constant) match the suite byte-for-byte.
  */
 public class EPLInsertIntoEventPrecedenceScenarioOracle {
 
@@ -188,6 +197,25 @@ public class EPLInsertIntoEventPrecedenceScenarioOracle {
                 sb.append("output all;\n");
                 sb.append("@name('s0') select * from Out;\n");
                 break;
+            case "nonconst-contained-event":
+                // NonConstInsertIntoContainedEvent: contained-event chains
+                // with per-event precedence properties. The schema class FQN
+                // mirrors the suite's LvlA.class.getName() construction.
+                sb.append("@public @buseventtype create schema LvlA as ").append(LvlA.class.getName()).append(";\n");
+                sb.append("insert into LvlB event-precedence(precedence) select * from LvlA[b];\n");
+                sb.append("insert into LvlC event-precedence(precedence) select * from LvlB[c];\n");
+                sb.append("@name('s0') select id from LvlC;\n");
+                break;
+            case "constant-output-rate":
+                // ConstantInsertIntoOutputRate: output-rate batching with
+                // constant and computed event-precedence. The computed
+                // precedence mirrors the suite's FQN static call.
+                sb.append("create schema Out(id int);\n");
+                sb.append("insert into Out event-precedence(1) select 1 + intPrimitive * 10 as id from SupportBean output every 2 events;\n");
+                sb.append("insert into Out event-precedence(2) select 2 + intPrimitive * 10 as id from SupportBean output every 2 events;\n");
+                sb.append("insert into Out event-precedence(").append(EPLInsertIntoEventPrecedenceScenarioOracle.class.getName()).append(".computeEventPrecedence(3, *)) select 3 + intPrimitive * 10 as id from SupportBean output every 2 events;\n");
+                sb.append("@name('s0') select * from Out;\n");
+                break;
             default:
                 throw new IllegalArgumentException("unknown case: " + caseName);
         }
@@ -219,6 +247,20 @@ public class EPLInsertIntoEventPrecedenceScenarioOracle {
             bean.setTheString(step.getString("theString", ""));
             bean.setIntPrimitive(step.getInt("intPrimitive", 0));
             runtime.getEventService().sendEventBean(bean, "SupportBean");
+        } else if ("LvlA".equals(eventType)) {
+            JsonArray bs = step.get("bs").asArray();
+            LvlB[] bArr = new LvlB[bs.size()];
+            for (int i = 0; i < bs.size(); i++) {
+                JsonObject bObj = bs.get(i).asObject();
+                JsonArray cs = bObj.get("cs").asArray();
+                LvlC[] cArr = new LvlC[cs.size()];
+                for (int j = 0; j < cs.size(); j++) {
+                    JsonObject cObj = cs.get(j).asObject();
+                    cArr[j] = new LvlC(cObj.getString("id", ""), cObj.getInt("precedence", 0));
+                }
+                bArr[i] = new LvlB(bObj.getInt("precedence", 0), cArr);
+            }
+            runtime.getEventService().sendEventBean(new LvlA(bArr), "LvlA");
         }
     }
 
@@ -270,6 +312,67 @@ public class EPLInsertIntoEventPrecedenceScenarioOracle {
                 return com.espertech.esper.common.client.json.minimaljson.Json.value((String) value);
             }
             return com.espertech.esper.common.client.json.minimaljson.Json.value(String.valueOf(value));
+        }
+    }
+
+    /**
+     * Mirror of the suite's static single-row function
+     * EPLInsertIntoEventPrecedence.computeEventPrecedence(int, Object).
+     * The event-precedence wildcard passes the output event's underlying,
+     * which is a HashMap for the map-schema Out type.
+     */
+    public static int computeEventPrecedence(int value, Object param) {
+        if (!(param instanceof java.util.HashMap)) {
+            throw new IllegalArgumentException("expected HashMap event underlying");
+        }
+        return value;
+    }
+
+    public static class LvlA implements java.io.Serializable {
+        private final LvlB[] b;
+
+        public LvlA(LvlB... b) {
+            this.b = b;
+        }
+
+        public LvlB[] getB() {
+            return b;
+        }
+    }
+
+    public static class LvlB implements java.io.Serializable {
+        private final int precedence;
+        private final LvlC[] c;
+
+        public LvlB(int precedence, LvlC[] c) {
+            this.precedence = precedence;
+            this.c = c;
+        }
+
+        public int getPrecedence() {
+            return precedence;
+        }
+
+        public LvlC[] getC() {
+            return c;
+        }
+    }
+
+    public static class LvlC implements java.io.Serializable {
+        private final String id;
+        private final int precedence;
+
+        public LvlC(String id, int precedence) {
+            this.id = id;
+            this.precedence = precedence;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public int getPrecedence() {
+            return precedence;
         }
     }
 }

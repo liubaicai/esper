@@ -5,13 +5,17 @@
     "EPLInsertIntoEventPrecConstantInsertInto",
     "EPLInsertIntoEventPrecConstantInfraMergeInsertInto(namedWindow=false)",
     "EPLInsertIntoEventPrecConstantInfraMergeInsertInto(namedWindow=true)",
-    "EPLInsertIntoEventPrecConstantOnSplit"
+    "EPLInsertIntoEventPrecConstantOnSplit",
+    "EPLInsertIntoEventPrecNonConstInsertIntoContainedEvent",
+    "EPLInsertIntoEventPrecConstantInsertIntoOutputRate"
   ],
   "cases": [
     {"case": "constant-insertinto"},
     {"case": "constant-merge-table"},
     {"case": "constant-merge-window"},
-    {"case": "constant-on-split"}
+    {"case": "constant-on-split"},
+    {"case": "nonconst-contained-event"},
+    {"case": "constant-output-rate"}
   ],
   "steps": [
     {"op": "case", "case": "constant-insertinto"},
@@ -24,6 +28,34 @@
     {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
 
     {"op": "case", "case": "constant-on-split"},
-    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0}
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 0},
+
+    {"op": "case", "case": "nonconst-contained-event"},
+    {"op": "send", "type": "LvlA", "bs": [
+      {"precedence": 10, "cs": [{"id": "A", "precedence": 0}, {"id": "B", "precedence": 1}]},
+      {"precedence": 11, "cs": [{"id": "C", "precedence": 1}, {"id": "D", "precedence": 0}]}
+    ]},
+    {"op": "send", "type": "LvlA", "bs": [
+      {"precedence": 10, "cs": [{"id": "A", "precedence": 0}, {"id": "B", "precedence": 0}]},
+      {"precedence": 10, "cs": [{"id": "C", "precedence": 1}, {"id": "D", "precedence": 0}]}
+    ]},
+    {"op": "send", "type": "LvlA", "bs": [
+      {"precedence": 0, "cs": [{"id": "A", "precedence": 0}, {"id": "B", "precedence": 0}]},
+      {"precedence": 0, "cs": [{"id": "C", "precedence": 0}, {"id": "D", "precedence": 0}]}
+    ]},
+    {"op": "send", "type": "LvlA", "bs": [
+      {"precedence": 100, "cs": [{"id": "A", "precedence": 2}, {"id": "B", "precedence": 1}, {"id": "C", "precedence": 0}]},
+      {"precedence": 101, "cs": [{"id": "D", "precedence": 2}, {"id": "E", "precedence": 0}, {"id": "F", "precedence": 1}]},
+      {"precedence": 103, "cs": [{"id": "G", "precedence": 1}, {"id": "H", "precedence": 2}, {"id": "I", "precedence": 0}]}
+    ]},
+    {"op": "send", "type": "LvlA", "bs": [
+      {"precedence": 103, "cs": [{"id": "A", "precedence": 0}, {"id": "B", "precedence": 1}, {"id": "C", "precedence": 0}]},
+      {"precedence": 100, "cs": [{"id": "D", "precedence": 1}, {"id": "E", "precedence": 0}, {"id": "F", "precedence": 1}]},
+      {"precedence": 102, "cs": [{"id": "G", "precedence": 1}, {"id": "H", "precedence": 1}, {"id": "I", "precedence": 0}]}
+    ]},
+
+    {"op": "case", "case": "constant-output-rate"},
+    {"op": "send", "type": "SupportBean", "theString": "E1", "intPrimitive": 1},
+    {"op": "send", "type": "SupportBean", "theString": "E2", "intPrimitive": 2}
   ]
 }

@@ -2,7 +2,9 @@ package esper
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -435,5 +437,211 @@ func TestEPLInsertIntoEventPrecConstantOnSplitParity(t *testing.T) {
 		if id != expectedOrder[i] {
 			t.Fatalf("event[%d]: expected id=%d, got id=%d (full order: %v)", i, expectedOrder[i], id, receivedIDs)
 		}
+	}
+}
+
+// ---- 4.342: non-constant precedence over contained events and output-rate
+// routing (ords 4/9) ----
+
+type epLvlC struct {
+	ID         string `esper:"id"`
+	Precedence int    `esper:"precedence"`
+}
+
+type epLvlB struct {
+	Precedence int      `esper:"precedence"`
+	C          []epLvlC `esper:"c"`
+}
+
+type epLvlA struct {
+	B []epLvlB `esper:"b"`
+}
+
+// TestEPLInsertIntoEventPrecContainedChainParity covers
+// EPLInsertIntoEventPrecNonConstInsertIntoContainedEvent
+// (java-runtime-e99c72ba6838bd3b23f2): two chained contained-event routes
+// (LvlA[b] into LvlB, LvlB[c] into LvlC), each carrying a non-constant
+// event-precedence evaluated against the routed target event. The routed
+// LvlB events drive the second route through the shared precedence queue,
+// reproducing Java's two-stage ordering. Contract (flattened LvlC id order
+// per LvlA send): C,B,D,A / C,A,B,D / A,B,C,D / H,D,A,G,F,B,I,E,C /
+// B,G,H,D,F,A,C,I,E.
+func TestEPLInsertIntoEventPrecContainedChainParity(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[epLvlA](env, "LvlA"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[epLvlB](env, "LvlB"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[epLvlC](env, "LvlC"); err != nil {
+		t.Fatal(err)
+	}
+
+	lvlBRoute, err := env.Build(Select(
+		Unnest[epLvlA, epLvlB](From[epLvlA](env, "LvlA"), Property[[]epLvlB](EventValue[epLvlA](), "b")),
+	).InsertInto("LvlB", StatementName("r1"), EventPrecedence(Field[epLvlB, int]("precedence"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lvlCRoute, err := env.Build(Select(
+		Unnest[epLvlB, epLvlC](From[epLvlB](env, "LvlB"), Property[[]epLvlC](EventValue[epLvlB](), "c")),
+	).InsertInto("LvlC", StatementName("r2"), EventPrecedence(Field[epLvlC, int]("precedence"))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumer, err := env.Build(Select(From[epLvlC](env, "LvlC"),
+		Alias("id", Field[epLvlC, string]("id")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env)
+	for _, plan := range []Plan{lvlBRoute, lvlCRoute, consumer} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	var receivedIDs []string
+	for _, deployment := range engine.Deployments() {
+		for _, stmt := range deployment.Statements() {
+			if stmt.Name() == "s0" {
+				if _, err := stmt.Subscribe(func(_ context.Context, batch ResultBatch) error {
+					for _, result := range batch.New {
+						receivedIDs = append(receivedIDs, result.Get("id").Any().(string))
+					}
+					return nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+
+	sends := []struct {
+		lvls  []epLvlB
+		order string
+	}{
+		{
+			[]epLvlB{{Precedence: 10, C: []epLvlC{{ID: "A"}, {ID: "B", Precedence: 1}}}, {Precedence: 11, C: []epLvlC{{ID: "C", Precedence: 1}, {ID: "D"}}}},
+			"C,B,D,A",
+		},
+		{
+			[]epLvlB{{Precedence: 10, C: []epLvlC{{ID: "A"}, {ID: "B"}}}, {Precedence: 10, C: []epLvlC{{ID: "C", Precedence: 1}, {ID: "D"}}}},
+			"C,A,B,D",
+		},
+		{
+			[]epLvlB{{Precedence: 0, C: []epLvlC{{ID: "A"}, {ID: "B"}}}, {Precedence: 0, C: []epLvlC{{ID: "C"}, {ID: "D"}}}},
+			"A,B,C,D",
+		},
+		{
+			[]epLvlB{
+				{Precedence: 100, C: []epLvlC{{ID: "A", Precedence: 2}, {ID: "B", Precedence: 1}, {ID: "C"}}},
+				{Precedence: 101, C: []epLvlC{{ID: "D", Precedence: 2}, {ID: "E"}, {ID: "F", Precedence: 1}}},
+				{Precedence: 103, C: []epLvlC{{ID: "G", Precedence: 1}, {ID: "H", Precedence: 2}, {ID: "I"}}},
+			},
+			"H,D,A,G,F,B,I,E,C",
+		},
+		{
+			[]epLvlB{
+				{Precedence: 103, C: []epLvlC{{ID: "A"}, {ID: "B", Precedence: 1}, {ID: "C"}}},
+				{Precedence: 100, C: []epLvlC{{ID: "D", Precedence: 1}, {ID: "E"}, {ID: "F", Precedence: 1}}},
+				{Precedence: 102, C: []epLvlC{{ID: "G", Precedence: 1}, {ID: "H", Precedence: 1}, {ID: "I"}}},
+			},
+			"B,G,H,D,F,A,C,I,E",
+		},
+	}
+
+	for i, send := range sends {
+		before := len(receivedIDs)
+		if err := engine.Send(context.Background(), "LvlA", epLvlA{B: send.lvls}); err != nil {
+			t.Fatal(err)
+		}
+		got := strings.Join(receivedIDs[before:], ",")
+		if got != send.order {
+			t.Fatalf("send %d: id order = %q, want %q", i+1, got, send.order)
+		}
+	}
+}
+
+// TestEPLInsertIntoEventPrecOutputRateParity covers
+// EPLInsertIntoEventPrecConstantInsertIntoOutputRate
+// (java-runtime-aa3e3052e879188342c6): three insert-into routes with
+// precedences 1, 2 and 3 (the suite's computeEventPrecedence(3, *) static
+// call reads the routed output event and yields the constant 3 — Go pins
+// the constant directly, an approved adaptation), each buffering with
+// `output every 2 events`. Two sends produce one batch of six routed rows
+// ordered by precedence across statements and FIFO within: 13,23,12,22,11,21.
+func TestEPLInsertIntoEventPrecOutputRateParity(t *testing.T) {
+	env := NewEnvironment()
+	epRegisterSupportBean(t, env)
+	if _, err := RegisterMap(env, "Out", []FieldSpec{
+		FieldDef("id", reflect.TypeOf(0)),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	intPrimitive := Field[epSupportBean, int]("intPrimitive")
+	routes := []struct {
+		precedence, offset int
+	}{
+		{1, 1}, {2, 2}, {3, 3},
+	}
+	var plans []Plan
+	for _, route := range routes {
+		plan, err := env.Build(Select(From[epSupportBean](env, "SupportBean"),
+			Alias("id", Add[int](Literal(route.offset), Multiply[int](Literal(10), intPrimitive))),
+		).InsertInto("Out", StatementName(fmt.Sprintf("p%d", route.precedence)),
+			EventPrecedence(Literal(route.precedence)),
+			WithOutput(OutputEvery(2))))
+		if err != nil {
+			t.Fatal(err)
+		}
+		plans = append(plans, plan)
+	}
+	consumer, err := env.Build(Select(From[map[string]any](env, "Out"),
+		Alias("id", Field[map[string]any, int]("id")),
+	).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plans = append(plans, consumer)
+
+	engine := NewEngine(env)
+	for _, plan := range plans {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	var receivedIDs []int
+	for _, deployment := range engine.Deployments() {
+		for _, stmt := range deployment.Statements() {
+			if stmt.Name() == "s0" {
+				if _, err := stmt.Subscribe(func(_ context.Context, batch ResultBatch) error {
+					for _, result := range batch.New {
+						receivedIDs = append(receivedIDs, result.Get("id").Any().(int))
+					}
+					return nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{IntPrimitive: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", epSupportBean{IntPrimitive: 2}); err != nil {
+		t.Fatal(err)
+	}
+	want := []int{13, 23, 12, 22, 11, 21}
+	if !reflect.DeepEqual(receivedIDs, want) {
+		t.Fatalf("routed ids = %v, want %v", receivedIDs, want)
 	}
 }

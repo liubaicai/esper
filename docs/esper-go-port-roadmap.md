@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.342（2026-09-07），`query.insert-into-route` 扩展 `case.insertinto-event-precedence` differential-verified 场景，对照固定 Java `EPLInsertIntoEventPrecedence.java` 追加 ords 4/9 两个 execution（`EPLInsertIntoEventPrecNonConstInsertIntoContainedEvent` `java-runtime-e99c72ba6838bd3b23f2` static `java-54f031b12e38a8768102`、`EPLInsertIntoEventPrecConstantInsertIntoOutputRate` `java-runtime-aa3e3052e879188342c6` static `java-facdb3c80027dcca2998`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 57 条 records（既有 21 条字节不变 + 36 条新记录）、0 differences：两级包含事件路由（`LvlA[b]` 进 LvlB、`LvlB[c]` 进 LvlC）各携带针对被路由目标事件求值的非常量 event-precedence，链式路由经共享优先级队列交错，五次 LvlA 发送的 LvlC id 展开序逐条钉定（C,B,D,A / C,A,B,D / A,B,C,D / H,D,A,G,F,B,I,E,C / B,G,H,D,F,A,C,I,E）；三条 `output every 2 events` 路由（precedence 1/2/3、各语句 id 偏移 1/2/3）两次发送后单批次按语句间优先级、语句内 FIFO 输出 13,23,12,22,11,21（Java 的 `computeEventPrecedence(3, *)` 静态调用对路由输出事件求值恒为常量 3，Go 直接钉常量——批准适配）。Go 零引擎工作；oracle 以镜像类与本地 computeEventPrecedence 注册（run script classpath 不含 regression-lib，形状与语义逐字节复制套件）。延后：ords 5-8（子查询驱动 precedence）需引擎单元（visitQueryExpressions 不注册 eventPrecedence/split/merge precedence 子查询、evaluatePrecedenceExpr 缺语句变量致子查询优先级静默降 0、TriggerQuery.Query 丢弃 spec.eventPrecedence 三个具体缺口）；ord 10 的 invalid 子 case 拆分为该引擎单元（precedence 表达式校验 1-4）与无 Go 拒绝面处置（表目标 precedence、保留字解析错；FAF 子 case 5 已由 faf 拒绝测试覆盖）。该类累计 6/11 execution DV；manifest 更新为 626 cases、239 个 differential-verified case、873 个 differential runtime IDs、3497 条 associations（referenced 3256、unreferenced 880）；capability 120 个（37 DV）。
+
 > 最新补充：Draft 4.341（2026-09-07），`epl.insertinto.populate` 以 implemented-not-DV 登记 `EPLInsertIntoInvalid`（`java-runtime-6ff1f053ec9bfb43434b` static `java-0f8e12979444ffc17f49`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）收尾该类至 13/13 全处置（12 DV + 1 implemented-not-DV）。按既定 invalidity 政策（无 trace 行），Go Build/send 拒绝测试钉定可复现子 case：未知列（具名 dummyField 与裸未名列）、接口层级不匹配、setter 抛错经 Send 浮出（制造错误逐字断言）、错误类型转换 either-behavior 在运行中观测为 Go 侧错误（Java 明确包络内）、同构 schema 投影正例部署成功；依赖未建模概念的子 case 登记为批准差异（long→int 与 null→int 类型不匹配消息——Go 做转换、构造器未找到与构造器抛错、ABCStream/xmltype 自动声明的 insert-into 类型、null 类型列、xmltype XMLDOM 前置；MyMap(dummy) 属性未找到——Go map 目标开放，该 Java 拒绝在 map 目标上无 Go 对应物）。Go 零引擎工作；manifest 更新为 626 cases、239 个 differential-verified case、871 个 differential runtime IDs（不变）、3495 条 associations（referenced 3254、unreferenced 882）；capability 120 个（37 DV）。
 
 > 最新补充：Draft 4.340（2026-09-07），`epl.insertinto.populate` 扩展 `case.epl-insert-into-populate-underlying` differential-verified 场景，对照固定 Java `EPLInsertIntoPopulateUnderlying.java` 追加 ords 9/10 的 valid 半（`EPLInsertIntoArrayPOJOInsert` `java-runtime-56175b64c415bf33ddf1` static `java-bfd55528c9aca96a5ffe`、`EPLInsertIntoArrayMapInsert` `java-runtime-facd4a0c64ae48571ee6` static `java-3980f002801d7b6b6d3b`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 30 条 records（既有 26 条字节不变 + 4 条新记录）、0 differences：`until timer:interval(10 sec)` 终止的 pattern（`every s=S0 -> e=SB(theString=s.p00) until ...`）在虚拟时间推进后单行路由起始捕获与重复捕获数组（startEvent id=1/p00=G1；endEvent len 2 intPrimitive 2,3）——oracle 新增无记录 advanceTime op（与套件 env.advanceTime 同一调用），Go 以 Engine.AdvanceTime 表达；ord 9 的 POJO 目标按套件 public static 本地类 FQN 注册；ord 10 循环 objectarray/map/default 三表示（object-array 事件按位置 underlying 发送，map 族按字段 map；Avro/JSON leg 未建模，规范化路由行跨表示相同，与套件逐表示断言同值一致）。Java 的两个 invalid 编译半为 implemented-only Go 测试：数组列入非数组属性在 Build 拒绝；单事件入数组属性在 Build/部署被接受但路由执行时拒绝（timer 推进返回 Java 在编译期报告的 TypeMismatch）。Go 零引擎工作。该类累计 12/13 execution DV，仅剩 ord 12（invalidity implemented-only）；manifest 更新为 626 cases、239 个 differential-verified case、871 个 differential runtime IDs、3494 条 associations（referenced 3253、unreferenced 883）；capability 120 个（37 DV）。
@@ -1459,7 +1461,7 @@
 
 重点领域：
 
-- epl 剩余 277 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 275 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1484,7 +1486,7 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 277 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 275 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1506,7 +1508,7 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 277 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 275 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
@@ -1536,7 +1538,7 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 277 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 275 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
