@@ -45,6 +45,51 @@
         {"type": "SupportBean", "theString": "house", "received": [false, false, false]},
         {"type": "SupportBean", "theString": "grub", "received": [false, false, true]}
       ]
+    },
+    {
+      "case": "context-value-deep",
+      "epl": "@name('ctx') create context MyContext start SupportBean_S0 as s0;\n@name('s0') context MyContext select * from SupportBean_S1(p10 regexp p11 || context.s0.p00);",
+      "send": [
+        {"type": "SupportBean_S0", "id": 1, "p00": ".*X"},
+        {"type": "SupportBean_S1", "id": 1, "p10": "gardenX", "p11": "abc", "received": false},
+        {"type": "SupportBean_S1", "id": 1, "p10": "garden", "p11": "gard", "received": false},
+        {"type": "SupportBean_S1", "id": 1, "p10": "gardenX", "p11": "gard", "received": true}
+      ]
+    },
+    {
+      "case": "context-value-with-const",
+      "epl": "@name('ctx') create context MyContext start SupportBean_S0 as s0;\n@name('s0') context MyContext select * from SupportBean_S1(p10 || 'abc' regexp context.s0.p00);",
+      "send": [
+        {"type": "SupportBean_S0", "id": 1, "p00": "x.*abc"},
+        {"type": "SupportBean_S1", "id": 1, "p10": "ydotabc", "p11": null, "received": false},
+        {"type": "SupportBean_S1", "id": 1, "p10": "xdotabc", "p11": null, "received": true}
+      ]
+    },
+    {
+      "case": "pattern-value-with-const",
+      "epl": "@name('s0') select * from pattern[s0=SupportBean_S0 -> SupportBean_S1(p10 || 'abc' regexp s0.p00)];\n",
+      "send": [
+        {"type": "SupportBean_S0", "id": 1, "p00": "x.*abc"},
+        {"type": "SupportBean_S1", "id": 1, "p10": "ydotabc", "p11": null, "received": false},
+        {"type": "SupportBean_S1", "id": 1, "p10": "xdotabc", "p11": null, "received": true}
+      ]
+    },
+    {
+      "case": "duplicate-like",
+      "epl": "@name('s0') select * from SupportBean(theString like '%' and theString like '%')",
+      "send": [
+        {"type": "SupportBean", "theString": "x", "intPrimitive": 0, "received": true}
+      ]
+    },
+    {
+      "case": "duplicate-regexp",
+      "epl": "@name('s0') select * from SupportBean(theString regexp \"test.*\"\n    and theString not regexp \".*\\\\.gov\"\n    and theString not regexp \".*\\\\.org\")",
+      "send": [
+        {"type": "SupportBean", "theString": "test.com", "intPrimitive": 0, "received": true},
+        {"type": "SupportBean", "theString": "test.gov", "intPrimitive": 0, "received": false},
+        {"type": "SupportBean", "theString": "test.org", "intPrimitive": 0, "received": false},
+        {"type": "SupportBean", "theString": "x.com", "intPrimitive": 0, "received": false}
+      ]
     }
   ]
 }

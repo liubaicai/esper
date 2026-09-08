@@ -16,6 +16,12 @@ import (
 // - ExprFilterOptReboolConstValueRegexpLHS: 'abc' regexp theString.
 // - ExprFilterOptReboolConstValueRegexpRHS: theString regexp '.*a.*' (s0/s1)
 //   and '.*b.*' (s2).
+// - ExprFilterOptReboolContextValueDeep / ContextValueWithConst: context
+//   partition values read inside filter regexp operands.
+// - ExprFilterOptReboolPatternValueWithConst: pattern tag value read inside
+//   a followed-by filter regexp operand.
+// - ExprFilterOptReboolDuplicateLike / DuplicateRegexp: duplicate like and
+//   not-regexp conjunction guards.
 //
 // The Java executions additionally assert internal filter-index plan shape
 // (REBOOL operator text, index/value sharing between statements via
@@ -32,6 +38,16 @@ type reboolSupportBeanS0 struct {
 	P03 string `esper:"p03"`
 }
 
+type reboolSupportBeanS1 struct {
+	ID  int     `esper:"id"`
+	P10 string  `esper:"p10"`
+	P11 *string `esper:"p11"`
+	P12 *string `esper:"p12"`
+	P13 *string `esper:"p13"`
+}
+
+func reboolStringPtr(value string) *string { return &value }
+
 func newReboolEnv(t *testing.T) *Environment {
 	t.Helper()
 	env := NewEnvironment()
@@ -39,6 +55,15 @@ func newReboolEnv(t *testing.T) *Environment {
 		t.Fatal(err)
 	}
 	if _, err := RegisterStruct[reboolSupportBeanS0](env, "SupportBean_S0"); err != nil {
+		t.Fatal(err)
+	}
+	return env
+}
+
+func newReboolEnvWithS1(t *testing.T) *Environment {
+	t.Helper()
+	env := newReboolEnv(t)
+	if _, err := RegisterStruct[reboolSupportBeanS1](env, "SupportBean_S1"); err != nil {
 		t.Fatal(err)
 	}
 	return env
@@ -278,6 +303,241 @@ func TestExprFilterOptReboolConstValueRegexpRHSParity(t *testing.T) {
 			if got := fired(); got != tc.want[i] {
 				t.Fatalf("stmt%d theString=%q: fired=%v want %v", i, tc.theString, got, tc.want[i])
 			}
+		}
+	}
+}
+
+// TestExprFilterOptReboolContextValueDeepParity covers
+// ExprFilterOptReboolContextValueDeep (java-runtime-273669bcae26e6ec054d):
+// context MyContext select * from SupportBean_S1(p10 regexp p11 ||
+// context.s0.p00). Java starts the context with a SupportBean_S0 filter;
+// Go expresses the same partition lifecycle as a pattern-initiated context
+// because Go filter-start evaluation observes only the consuming
+// statement's stream (approved adaptation, identical observable behavior).
+// Contract: S0(1,".*X") starts the partition silently; S1("gardenX","abc")
+// false (matches "abc.*X" never), S1("garden","gard") false, S1("gardenX",
+// "gard") true.
+func TestExprFilterOptReboolContextValueDeepParity(t *testing.T) {
+	env := newReboolEnvWithS1(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	if _, err := CreatePatternInitiatedContext(env, "MyContext",
+		PatternFrom(From[reboolSupportBeanS0](env, "SupportBean_S0"), "s0", Literal[bool](true))); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(
+		From[reboolSupportBeanS1](env, "SupportBean_S1").
+			Filter(RegexpMatch(
+				Field[reboolSupportBeanS1, string]("p10"),
+				Concat(Field[reboolSupportBeanS1, string]("p11"), ContextPatternField[string]("s0", "p00")))).
+			Query(StatementName("s0"), WithContext("MyContext")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	fired := subscribeRebool(t, deployment, "s0")
+
+	if err := engine.SendEvent(context.Background(), reboolSupportBeanS0{ID: 1, P00: ".*X"}); err != nil {
+		t.Fatal(err)
+	}
+	if fired() {
+		t.Fatal("context start event must not be delivered to the consumer")
+	}
+	for _, tc := range []struct {
+		p10, p11 string
+		want     bool
+	}{
+		{"gardenX", "abc", false},
+		{"garden", "gard", false},
+		{"gardenX", "gard", true},
+	} {
+		if err := engine.SendEvent(context.Background(), reboolSupportBeanS1{
+			ID: 1, P10: tc.p10, P11: reboolStringPtr(tc.p11),
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if got := fired(); got != tc.want {
+			t.Fatalf("p10=%q p11=%q: fired=%v want %v", tc.p10, tc.p11, got, tc.want)
+		}
+	}
+}
+
+// TestExprFilterOptReboolContextValueWithConstParity covers
+// ExprFilterOptReboolContextValueWithConst (java-runtime-1da34c09fa675957b063):
+// SupportBean_S1(p10 || 'abc' regexp context.s0.p00). Contract:
+// S0(1,"x.*abc") starts the partition; "ydotabc" false ("ydotabcabc" vs
+// "x.*abc"), "xdotabc" true. The Java helper sends p11=null (pointer nil).
+func TestExprFilterOptReboolContextValueWithConstParity(t *testing.T) {
+	env := newReboolEnvWithS1(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	if _, err := CreatePatternInitiatedContext(env, "MyContext",
+		PatternFrom(From[reboolSupportBeanS0](env, "SupportBean_S0"), "s0", Literal[bool](true))); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(
+		From[reboolSupportBeanS1](env, "SupportBean_S1").
+			Filter(RegexpMatch(
+				Concat(Field[reboolSupportBeanS1, string]("p10"), Literal("abc")),
+				ContextPatternField[string]("s0", "p00"))).
+			Query(StatementName("s0"), WithContext("MyContext")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	fired := subscribeRebool(t, deployment, "s0")
+
+	if err := engine.SendEvent(context.Background(), reboolSupportBeanS0{ID: 1, P00: "x.*abc"}); err != nil {
+		t.Fatal(err)
+	}
+	if fired() {
+		t.Fatal("context start event must not be delivered to the consumer")
+	}
+	for _, tc := range []struct {
+		p10  string
+		want bool
+	}{
+		{"ydotabc", false},
+		{"xdotabc", true},
+	} {
+		if err := engine.SendEvent(context.Background(), reboolSupportBeanS1{ID: 1, P10: tc.p10}); err != nil {
+			t.Fatal(err)
+		}
+		if got := fired(); got != tc.want {
+			t.Fatalf("p10=%q: fired=%v want %v", tc.p10, got, tc.want)
+		}
+	}
+}
+
+// TestExprFilterOptReboolPatternValueWithConstParity covers
+// ExprFilterOptReboolPatternValueWithConst (java-runtime-11f60c98a851b822d97f):
+// pattern[s0=SupportBean_S0 -> SupportBean_S1(p10 || 'abc' regexp s0.p00)].
+// Contract: S0(1,"x.*abc") arms the pattern without output; "ydotabc" false,
+// "xdotabc" true.
+func TestExprFilterOptReboolPatternValueWithConstParity(t *testing.T) {
+	env := newReboolEnvWithS1(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	s0Step := PatternFrom(From[reboolSupportBeanS0](env, "SupportBean_S0"), "s0", Literal[bool](true))
+	sbStep := PatternFrom(From[reboolSupportBeanS1](env, "SupportBean_S1"), "sb",
+		RegexpMatch(
+			Concat(Field[reboolSupportBeanS1, string]("p10"), Literal("abc")),
+			TagField[string]("s0", "p00")))
+	plan, err := env.Build(s0Step.Then(sbStep).
+		Select(Alias("sb", PatternEvent("sb"))).
+		Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	fired := subscribeRebool(t, deployment, "s0")
+
+	if err := engine.SendEvent(context.Background(), reboolSupportBeanS0{ID: 1, P00: "x.*abc"}); err != nil {
+		t.Fatal(err)
+	}
+	if fired() {
+		t.Fatal("first pattern leg alone must not deliver")
+	}
+	for _, tc := range []struct {
+		p10  string
+		want bool
+	}{
+		{"ydotabc", false},
+		{"xdotabc", true},
+	} {
+		if err := engine.SendEvent(context.Background(), reboolSupportBeanS1{ID: 1, P10: tc.p10}); err != nil {
+			t.Fatal(err)
+		}
+		if got := fired(); got != tc.want {
+			t.Fatalf("p10=%q: fired=%v want %v", tc.p10, got, tc.want)
+		}
+	}
+}
+
+// TestExprFilterOptReboolDuplicateLikeParity covers
+// ExprFilterOptReboolDuplicateLike (java-runtime-0f83ba904d5457bbc6d2):
+// theString like '%' and theString like '%'. Observable contract: the
+// duplicate conjunction still selects SB("x", 0).
+func TestExprFilterOptReboolDuplicateLikeParity(t *testing.T) {
+	env := newReboolEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	pred := And(
+		Like(Field[filterOptimizableBean, string]("theString"), Literal("%")),
+		Like(Field[filterOptimizableBean, string]("theString"), Literal("%")))
+	plan, err := env.Build(
+		From[filterOptimizableBean](env, "SupportBean").Filter(pred).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	fired := subscribeRebool(t, deployment, "s0")
+
+	sendOptimizableBean(t, engine, filterOptimizableBean{TheString: "x", IntPrimitive: 0})
+	if got := fired(); !got {
+		t.Fatalf("duplicate like: fired=%v want true", got)
+	}
+}
+
+// TestExprFilterOptReboolDuplicateRegexpParity covers
+// ExprFilterOptReboolDuplicateRegexp (java-runtime-5253f42525fa48e8784c):
+// theString regexp "test.*" and theString not regexp ".*\.gov" and
+// theString not regexp ".*\.org" (Go regexp literals via \\. escapes).
+// Contract: test.com true, test.gov false, test.org false, x.com false.
+func TestExprFilterOptReboolDuplicateRegexpParity(t *testing.T) {
+	env := newReboolEnv(t)
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	pred := And(
+		And(
+			RegexpMatch(Field[filterOptimizableBean, string]("theString"), Literal("test.*")),
+			Not(RegexpMatch(Field[filterOptimizableBean, string]("theString"), Literal(`.*\.gov`)))),
+		Not(RegexpMatch(Field[filterOptimizableBean, string]("theString"), Literal(`.*\.org`))))
+	plan, err := env.Build(
+		From[filterOptimizableBean](env, "SupportBean").Filter(pred).Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	fired := subscribeRebool(t, deployment, "s0")
+
+	for _, tc := range []struct {
+		theString string
+		want      bool
+	}{
+		{"test.com", true},
+		{"test.gov", false},
+		{"test.org", false},
+		{"x.com", false},
+	} {
+		sendOptimizableBean(t, engine, filterOptimizableBean{TheString: tc.theString, IntPrimitive: 0})
+		if got := fired(); got != tc.want {
+			t.Fatalf("theString=%q: fired=%v want %v", tc.theString, got, tc.want)
 		}
 	}
 }

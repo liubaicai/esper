@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.336（2026-09-07），`expr.filter.optimizable` 扩展 `case.expr-filter-optimizable-boolean-rebool` differential-verified 场景，对照固定 Java `ExprFilterOptimizableBooleanLimitedExpr.java` 追加 5 个 execution（ordinals 6/7/8/12/13：`ExprFilterOptReboolContextValueDeep` `java-runtime-273669bcae26e6ec054d` static `java-cfeb9cb387bbcf07e580`、`ExprFilterOptReboolContextValueWithConst` `java-runtime-1da34c09fa675957b063` static `java-6f1b75c3a4b2d081eef2`、`ExprFilterOptReboolPatternValueWithConst` `java-runtime-11f60c98a851b822d97f` static `java-c68e1b5ed06f5dbaa49a`、`ExprFilterOptReboolDuplicateLike` `java-runtime-0f83ba904d5457bbc6d2` static `java-6cafa38b41cc5bb01851`、`ExprFilterOptReboolDuplicateRegexp` `java-runtime-5253f42525fa48e8784c` static `java-636dd440a66dbb237561`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 29 条 records（14 条既有记录字节不变 + 15 条新记录）、0 differences：context 值读取进入 filter regexp 操作数（`p10 regexp p11 || context.s0.p00` 与 `p10 || 'abc' regexp context.s0.p00`，S0(1,".*X")/S0(1,"x.*abc") 启动分区后 S1 三条/两条钉定匹配矩阵）；pattern tag 值进入 followed-by filter 操作数（`pattern[s0=SupportBean_S0 -> SupportBean_S1(p10 || 'abc' regexp s0.p00)]`）；重复 like 与 not-regexp 合取守卫（`theString like '%' and theString like '%'`、`regexp "test.*" and not regexp ".*\\.gov" and not regexp ".*\\.org"`——双引号 EPL 字面量与 `\\.` 转义逐字保留）。批准适配：Java filter 启动的 context（start 流与消费语句流不同）在 Go 以 pattern-initiated context 表达（Go filter-start 仅在消费语句自身流事件上求值，pattern-start 状态接收全事件；分区生命周期与 context 值读取可观测等价），引擎级 filter-start context 列入 backlog；scenario 的 create-context 语句加 `@name('ctx')`（Java 自动命名 stmt-0 会落入 oracle 的 s* 监听规则）。Go 零引擎工作：`RegexpMatch` + `Concat`/`Literal`、`ContextPatternField[string]("s0","p00")` + `WithContext`、`TagField`、`Like`、`Not` 全部既有 API 组合。延后：ord 1+4（MixedValueRegexpRHS 6 语句块与 NoValueExprRegexpSelf，N+2 单元）；ord 2（墙钟 delta<1000 主断言，EXCLUDEWHENINSTRUMENTED，行为核心与已验证 ord 0 重复）；ord 11 intentionally-different（compile-only SupportFilterPlanHook plan forge，先例 case.expr-filter-optimizable-value-limited-disqualify）。该类累计 10/14 execution DV；manifest 更新为 626 cases、239 个 differential-verified case、861 个 differential runtime IDs、3484 条 associations（referenced 3243、unreferenced 893）；capability 120 个（37 DV）。
+
 > 最新补充：Draft 4.335（2026-09-07），`epl.other.distinct` 新增 `case-epl-other-select-expr-stream-selector` differential-verified 场景，对照固定 Java `EPLOtherSelectExprStreamSelector.java` 的 alias-with-properties 对（ordinals 8/9：`EPLOtherNoJoinWithAliasWithProperties` `java-runtime-89123cf55af0a7f5987e` static `java-b5352434faea014585a8`、`EPLOtherJoinWithAliasWithProperties` `java-runtime-b53494cb36a6b54c2c6f` static `java-9682b92ad00f7295162d`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；javaFlags 钉 []）。Java/Go 各 2 条 records、0 differences：无 join 的 stream-dot 别名选择（`select theString.* as s0, intPrimitive as a, theString.* as s1, intPrimitive as b from SupportBean#length(3) as theString`——`s0`/`s1` 经事件信封渲染为嵌套事件行，`a`/`b` 为普通属性别名）与 length-keepall 内连接上的混合选择（`select intPrimitive, s1.* as s1stream, theString, symbol as sym, s0.* as s0stream`——`SelectSourceEvent` 渲染两侧源事件行；首条 bean 发送因内连接未完成不产出记录）。typed Go 零引擎工作：`Alias(name, EventValue[esper.Event]())` 做 stream-dot 整事件别名，`JoinMany(JoinSource ×2).Select(SelectFrom(...), SelectSourceEvent(...))` 做混合投影。Java oracle 与 run script 已在前一单元预提交（`b110f3f5d`，端到端 3 次字节一致）；本单元重建 scenario 后重跑 oracle，输出与 committed Java trace 逐字节一致。场景 9 步（4/5）、listener-only，严格 validator 固定逐字 EPL/发送序列/payload 值（MD feed 以指针字段严格区分 `""` 与 null），9 种 raw 畸变 + 6 种 trace 变异全部拒绝；manifest 更新为 626 cases、239 个 differential-verified case、856 个 differential runtime IDs、3479 条 associations（referenced 3238、unreferenced 898）；capability 120 个（37 DV）。该文件累计 12/17 execution DV（ords 4-15）；其余：ord 0/16（invalid 编译，无 Go 拒绝面）、ord 1/2（insert-into transpose 路由与 pattern 起源 insert-from，延后）、ord 3（SODA object model join alias，编译器域）。
 
 > 最新补充：Draft 4.334（2026-09-07），`epl.other.distinct` 新增 `case-epl-other-stream-expr` differential-verified 场景，对照固定 Java `EPLOtherStreamExpr.java` 的 5 个 stream method expression execution（ordinals 1/4/5/6/7：`EPLOtherStreamFunction` `java-runtime-67e9ea0d239585623711` static `java-e571ee83c24576b8aba7`、`EPLOtherStreamInstanceMethodAliased` `java-runtime-cc45d135a75bb01736f0` static `java-b448cd11a74aaf56dbab`、`EPLOtherStreamInstanceMethodNoAlias` `java-runtime-469a37a746e59d25a115` static `java-572869619d74ba3c95be`、`EPLOtherJoinStreamSelectNoWildcard` `java-runtime-a59b12bbe5788257c37b` static `java-534aeb16b8d33707670a`、`EPLOtherPatternStreamSelectNoWildcard` `java-runtime-827ea8daeea9baec40cf` static `java-dfb3493bb3eb08a778db`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；javaFlags 钉 []）。Java/Go 各 10 条 records、0 differences：静态方法 where 过滤（`volumeGreaterZero(s0)`/`(*)`/`EventBean(s0)`/`EventBean(*)` 四种参数形式，零体积事件被过滤、体积 100 事件触发全四条）；keepall 内连接上流对象列（`select s0 as s0stream, s1 as s1stream` 与无别名 `select s0, s1`，经 `SelectSourceEvent` 渲染为事件行）；别名（`s0.getVolume() as volume, s0.getPriceTimesVolume(2) as pvf`）与逐字无别名（`s0.getVolume(), s0.getPriceTimesVolume(3)`）实例方法投影；followed-by pattern（`every e1=MD -> e2=Bean(compareEvents(e1, e2))`）静态 UDF 过滤引用先前 tag。Go Method 表达式经 `Method[T](EventValue[T](), ...)` 事件自身调用，`Func1[esper.Event, bool]` + `EventValue[esper.Event]()` 做 where 过滤，`Property[string](PatternEvent(tag), name)` 做 pattern tag 导航，`SelectSourceEvent` 做 stream-as-object 列。延后：ord 0（chained parameterized — chained Method resolution 返回 missing，需引擎工作）、ord 2/3（absent join side 返回 missing 而非 null）、ord 8（invalid 编译，无 Go 拒绝面）。场景 30 步（8/4/7/6/5）、listener-only，严格 validator 固定逐字 EPL（含尾随空格）/发送序列/payload 值，8 种 raw 畸变 + 7 种 trace 变异全部拒绝；manifest 更新为 625 cases、238 个 differential-verified case、854 个 differential runtime IDs、3477 条 associations（referenced 3236、unreferenced 900）；capability 120 个（37 DV）。
@@ -1447,8 +1449,8 @@
 
 重点领域：
 
-- epl 剩余 305 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
-- infra 剩余 196 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
+- epl 剩余 286 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
 - context 分区 selector、嵌套、生命周期、事务边界。
@@ -1472,8 +1474,8 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 305 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
-- infra 剩余 196 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
+- epl 剩余 286 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
 - context 分区 selector、嵌套、生命周期、事务边界。
@@ -1494,11 +1496,11 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 303 | subselect、insertinto、database、dataflow、方法源 |
-| infra | 196 | 表、Named Window、mutation、transaction |
+| epl | 286 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
-| expr | 102 | 表达式函数、类型、脚本、枚举集合 |
-| resultset | 70 | 聚合、输出、排序、分组 |
+| expr | 97 | 表达式函数、类型、脚本、枚举集合 |
+| resultset | 41 | 聚合、输出、排序、分组 |
 | multithread | 56 | 并发回归 |
 | context | 45 | Context 分区、嵌套、生命周期 |
 | rowrecog | 34 | Match Recognize |
@@ -1524,11 +1526,11 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 303 | subselect、insertinto、database、dataflow、方法源 |
-| infra | 196 | 表、Named Window、mutation、transaction |
+| epl | 286 | subselect、insertinto、database、dataflow、方法源 |
+| infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
-| expr | 102 | 表达式函数、类型、脚本、枚举集合 |
-| resultset | 70 | 聚合、输出、排序、分组 |
+| expr | 97 | 表达式函数、类型、脚本、枚举集合 |
+| resultset | 41 | 聚合、输出、排序、分组 |
 | context | 45 | Context 分区、嵌套、生命周期 |
 | multithread | 56 | 并发回归 |
 | rowrecog | 34 | Match Recognize |
@@ -1539,7 +1541,7 @@
 - source-test-manifest.json 目前几乎为空，需要把非 Regression 源资产（单元测试、集成测试）登记进去。
 - epl/expr/resultset 等 capability 拆分过粗，需要继续细分为可验收的 case。
 - 23 个 intentionally-different case 需要保持书面差异理由和测试证据。
-- 当前未关联的 986 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
+- 当前未关联的 893 个 runtime 中，需要识别哪些属于平台无关核心语义，哪些属于 JVM 特有机制或性能阈值，并分别建立处置记录。
 
 ### 6.3 能力与边界遗漏
 

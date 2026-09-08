@@ -6,20 +6,30 @@
     "TestExprFilterOptReboolMultipleParity",
     "TestExprFilterOptReboolNoValueConcatParity",
     "TestExprFilterOptReboolConstValueRegexpLHSParity",
-    "TestExprFilterOptReboolConstValueRegexpRHSParity"
+    "TestExprFilterOptReboolConstValueRegexpRHSParity",
+    "TestExprFilterOptReboolContextValueDeepParity",
+    "TestExprFilterOptReboolContextValueWithConstParity",
+    "TestExprFilterOptReboolPatternValueWithConstParity",
+    "TestExprFilterOptReboolDuplicateLikeParity",
+    "TestExprFilterOptReboolDuplicateRegexpParity"
   ],
   "javaRuntimeIds": [
     "java-runtime-8941f4303767754556dd",
     "java-runtime-72b50080e9866acde01c",
     "java-runtime-0810493a13196a06434c",
     "java-runtime-90af560a2f7c379a988b",
-    "java-runtime-31bec69937923c05bf89"
+    "java-runtime-31bec69937923c05bf89",
+    "java-runtime-273669bcae26e6ec054d",
+    "java-runtime-1da34c09fa675957b063",
+    "java-runtime-11f60c98a851b822d97f",
+    "java-runtime-0f83ba904d5457bbc6d2",
+    "java-runtime-5253f42525fa48e8784c"
   ],
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "traceComparison": {
     "javaTrace": "testdata/parity/filter-rebool-optimizable.trace.json",
     "goTrace": "go-test assertions inline (subscribeRebool per-statement fired flags)",
-    "records": 14,
+    "records": 29,
     "zeroDifference": true,
     "perCase": [
       {
@@ -46,12 +56,40 @@
         "case": "rebool-const-regexp-rhs",
         "steps": 3,
         "match": true
+      },
+      {
+        "case": "context-value-deep",
+        "steps": 4,
+        "match": true
+      },
+      {
+        "case": "context-value-with-const",
+        "steps": 3,
+        "match": true
+      },
+      {
+        "case": "pattern-value-with-const",
+        "steps": 3,
+        "match": true
+      },
+      {
+        "case": "duplicate-like",
+        "steps": 1,
+        "match": true
+      },
+      {
+        "case": "duplicate-regexp",
+        "steps": 4,
+        "match": true
       }
     ]
   },
   "differences": [],
   "notes": [
     "Java filter-index plan assertions (REBOOL operator, index sharing, SupportFilterPlanHook) are engine-internal with no observable Go equivalent; observable selection behavior verified instead.",
-    "Go uses Then(PatternFrom(...)) for the mixed-type pattern in rebool-with-equals; both PatternFrom steps carry their own source schema."
+    "Go uses Then(PatternFrom(...)) for the mixed-type pattern in rebool-with-equals; both PatternFrom steps carry their own source schema.",
+    "4.336 extension (ords 6/7/8/12/13): Java filter-started contexts (start SupportBean_S0 as s0 consumed by an S1 statement) are modeled as Go pattern-initiated contexts (CreatePatternInitiatedContext with an unfiltered s0 leg) because Go filter-start evaluation observes only the consuming statement's stream events; partition lifecycle and context.s0.* value reads are observably identical. The scenario create-context statements carry @name('ctx') because Java auto-names the unnamed create-context stmt-0, which would fall into the oracle's s* monitoring rule. Engine-level filter-start contexts with a start stream different from the statement stream remain an engine backlog item.",
+    "duplicate-regexp reproduces the Java double-quoted EPL regex literals with \\. escapes verbatim; trailing ;\\n artifacts of the Java source are preserved in the scenario epl where present.",
+    "Trace header java field moved 17.0.19 to 17.0.20 on regeneration (oracle environment metadata); records unaffected and all 14 pre-existing records stayed byte-identical."
   ]
 }

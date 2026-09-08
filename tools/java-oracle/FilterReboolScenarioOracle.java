@@ -61,6 +61,13 @@ public final class FilterReboolScenarioOracle {
         s0Type.put("p02", String.class);
         s0Type.put("p03", String.class);
         config.getCommon().addEventType("SupportBean_S0", s0Type);
+        Map<String, Object> s1Type = new HashMap<>();
+        s1Type.put("id", Integer.class);
+        s1Type.put("p10", String.class);
+        s1Type.put("p11", String.class);
+        s1Type.put("p12", String.class);
+        s1Type.put("p13", String.class);
+        config.getCommon().addEventType("SupportBean_S1", s1Type);
 
         EPRuntime runtime = EPRuntimeProvider.getRuntime("filter-rebool-" + caseName, config);
         try {

@@ -33227,14 +33227,24 @@
     "java-runtime-72b50080e9866acde01c",
     "java-runtime-0810493a13196a06434c",
     "java-runtime-90af560a2f7c379a988b",
-    "java-runtime-31bec69937923c05bf89"
+    "java-runtime-31bec69937923c05bf89",
+    "java-runtime-273669bcae26e6ec054d",
+    "java-runtime-1da34c09fa675957b063",
+    "java-runtime-11f60c98a851b822d97f",
+    "java-runtime-0f83ba904d5457bbc6d2",
+    "java-runtime-5253f42525fa48e8784c"
    ],
    "javaNames": [
     "ExprFilterOptReboolWithEquals",
     "ExprFilterOptReboolMultiple",
     "ExprFilterOptReboolNoValueConcat",
     "ExprFilterOptReboolConstValueRegexpLHS",
-    "ExprFilterOptReboolConstValueRegexpRHS"
+    "ExprFilterOptReboolConstValueRegexpRHS",
+    "ExprFilterOptReboolContextValueDeep",
+    "ExprFilterOptReboolContextValueWithConst",
+    "ExprFilterOptReboolPatternValueWithConst",
+    "ExprFilterOptReboolDuplicateLike",
+    "ExprFilterOptReboolDuplicateRegexp"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterOptimizableBooleanLimitedExpr.java"
@@ -33244,7 +33254,12 @@
     "TestExprFilterOptReboolMultipleParity",
     "TestExprFilterOptReboolNoValueConcatParity",
     "TestExprFilterOptReboolConstValueRegexpLHSParity",
-    "TestExprFilterOptReboolConstValueRegexpRHSParity"
+    "TestExprFilterOptReboolConstValueRegexpRHSParity",
+    "TestExprFilterOptReboolContextValueDeepParity",
+    "TestExprFilterOptReboolContextValueWithConstParity",
+    "TestExprFilterOptReboolPatternValueWithConstParity",
+    "TestExprFilterOptReboolDuplicateLikeParity",
+    "TestExprFilterOptReboolDuplicateRegexpParity"
    ],
    "tags": [],
    "status": "differential-verified",
@@ -33268,7 +33283,15 @@
     "java-runtime-72b50080e9866acde01c",
     "java-runtime-0810493a13196a06434c",
     "java-runtime-90af560a2f7c379a988b",
-    "java-runtime-31bec69937923c05bf89"
+    "java-runtime-31bec69937923c05bf89",
+    "java-runtime-273669bcae26e6ec054d",
+    "java-runtime-1da34c09fa675957b063",
+    "java-runtime-11f60c98a851b822d97f",
+    "java-runtime-0f83ba904d5457bbc6d2",
+    "java-runtime-5253f42525fa48e8784c"
+   ],
+   "notes": [
+    "ExprFilterOptimizableBooleanLimitedExpr REBOOL slice now covers 10 of 14 executions (ords 0/3/5/9/10 plus 4.336's 6/7/8/12/13): context partition values read inside filter regexp operands (p10 regexp p11||context.s0.p00 and p10||'abc' regexp context.s0.p00), pattern tag values inside followed-by filter operands, and duplicate like / not-regexp conjunction guards. Approved adaptation: Java filter-started contexts with a start stream different from the consuming statement map to Go pattern-initiated contexts (CreatePatternInitiatedContext), because Go filter-start evaluation observes only the consuming statement's stream events; partition lifecycle and context value reads are observably identical, and engine-level filter-start contexts remain an engine backlog item. Scenario create-context statements carry @name('ctx') because Java auto-names the unnamed create-context stmt-0, which would enter the oracle's s* monitoring rule. Deferred: ord 1+4 (MixedValueRegexpRHS 6-statement block; NoValueExprRegexpSelf) to the next unit; ord 2 (wall-clock delta<1000 primary assertion, EXCLUDEWHENINSTRUMENTED); ord 11 intentionally-different (compile-only SupportFilterPlanHook plan forge, same as case.expr-filter-optimizable-value-limited-disqualify)."
    ]
   },
   {
@@ -42432,7 +42455,7 @@
   "inventoriedCases": 626,
   "implementedCases": 624,
   "differentialVerifiedCases": 239,
-  "differentialVerifiedRuntimeIds": 856,
+  "differentialVerifiedRuntimeIds": 861,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42442,14 +42465,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3479,
-  "referencedJavaRuntimeIds": 3238,
+  "runtimeAssociationCount": 3484,
+  "referencedJavaRuntimeIds": 3243,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 898,
+  "unreferencedJavaRuntimeIds": 893,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 626,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 856
+  "differentialVerifiedRuntimeIDs": 861
  }
 }
