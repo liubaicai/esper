@@ -5045,6 +5045,8 @@ func (v LinearRegressionValue) YIntercept() float64 { return v.intercept }
 // derived view.
 type LinearRegressionExpression[X Numeric, Y Numeric] struct {
 	aggregateExpr[LinearRegressionValue]
+	x Expression[X]
+	y Expression[Y]
 }
 
 func LinearRegression[X Numeric, Y Numeric](x Expression[X], y Expression[Y]) LinearRegressionExpression[X, Y] {
@@ -5059,7 +5061,7 @@ func LinearRegression[X Numeric, Y Numeric](x Expression[X], y Expression[Y]) Li
 	if x != nil && y != nil {
 		description = "linear-regression(" + x.Description() + "," + y.Description() + ")"
 	}
-	return LinearRegressionExpression[X, Y]{aggregateExpr: aggregateExpr[LinearRegressionValue]{typedExpr: typedExpr[LinearRegressionValue]{
+	return LinearRegressionExpression[X, Y]{x: x, y: y, aggregateExpr: aggregateExpr[LinearRegressionValue]{typedExpr: typedExpr[LinearRegressionValue]{
 		n: &exprNode{kind: "linear-regression", typ: typeOf[LinearRegressionValue](), description: description, children: children},
 		fn: func(ctx EvalContext) Value {
 			if x == nil || y == nil {
@@ -5089,6 +5091,154 @@ func LinearRegression[X Numeric, Y Numeric](x Expression[X], y Expression[Y]) Li
 			return Present(LinearRegressionValue{slope: slope, intercept: meanY - slope*meanX})
 		},
 	}}}
+}
+
+// bivariateSums carries the running sums Java's BaseBivariateStatisticsView
+// accumulates, together with the per-statistic derived values the linest
+// view exposes. Population deviations use n; sample deviations use n-1 and
+// are NaN for a single data point, matching the Java view's pinned contract.
+type bivariateSums struct {
+	n              float64
+	sumX, sumY     float64
+	sumXSq, sumYSq float64
+	sumXY          float64
+	xAverage       float64
+	yAverage       float64
+	xVariance      float64
+	yVariance      float64
+	xStdDevPop     float64
+	yStdDevPop     float64
+	xStdDevSample  float64
+	yStdDevSample  float64
+}
+
+func bivariateSumsFromPairs(xs, ys []float64) bivariateSums {
+	var sums bivariateSums
+	sums.n = float64(len(xs))
+	// Java BaseStatisticsBean reports NaN for the sample statistics until two
+	// data points exist (and for every statistic at zero points).
+	sums.xVariance = math.NaN()
+	sums.yVariance = math.NaN()
+	sums.xStdDevSample = math.NaN()
+	sums.yStdDevSample = math.NaN()
+	sums.xAverage = math.NaN()
+	sums.yAverage = math.NaN()
+	sums.xStdDevPop = math.NaN()
+	sums.yStdDevPop = math.NaN()
+	for index := range xs {
+		sums.sumX += xs[index]
+		sums.sumY += ys[index]
+		sums.sumXSq += xs[index] * xs[index]
+		sums.sumYSq += ys[index] * ys[index]
+		sums.sumXY += xs[index] * ys[index]
+	}
+	if sums.n > 0 {
+		sums.xAverage = sums.sumX / sums.n
+		sums.yAverage = sums.sumY / sums.n
+		// Java BaseStatisticsBean.getXStandardDeviationPop: one-pass shape
+		// (sumXSq - sumX*sumX/n)/n — kept operation-for-operation so the
+		// floating-point rounding matches the Java oracle bit-for-bit.
+		sums.xStdDevPop = math.Sqrt((sums.sumXSq - sums.sumX*sums.sumX/sums.n) / sums.n)
+		sums.yStdDevPop = math.Sqrt((sums.sumYSq - sums.sumY*sums.sumY/sums.n) / sums.n)
+	}
+	if sums.n > 1 {
+		// Java BaseStatisticsBean.getXVariance: (sumXSq - sumX*sumX/n)/(n-1).
+		sums.xVariance = (sums.sumXSq - sums.sumX*sums.sumX/sums.n) / (sums.n - 1)
+		sums.yVariance = (sums.sumYSq - sums.sumY*sums.sumY/sums.n) / (sums.n - 1)
+		sums.xStdDevSample = math.Sqrt(sums.xVariance)
+		sums.yStdDevSample = math.Sqrt(sums.yVariance)
+	}
+	return sums
+}
+
+func (r LinearRegressionExpression[X, Y]) bivariateExpression(name string, selectValue func(bivariateSums) float64) AggregateExpression[float64] {
+	xExpr, yExpr := r.x, r.y
+	return makeAggregateExpr[float64]("linear-regression-"+name, name+"("+r.Description()+")", []*exprNode{xExpr.node(), yExpr.node()}, func(ctx EvalContext) Value {
+		if xExpr == nil || yExpr == nil {
+			return Missing()
+		}
+		xs, ys := numericPairs[X, Y](xExpr, yExpr, ctx)
+		if len(xs) == 0 {
+			return Null()
+		}
+		return Present(selectValue(bivariateSumsFromPairs(xs, ys)))
+	})
+}
+
+func (r LinearRegressionExpression[X, Y]) bivariateIntExpression(name string, selectValue func(bivariateSums) int64) AggregateExpression[int64] {
+	xExpr, yExpr := r.x, r.y
+	return makeAggregateExpr[int64]("linear-regression-"+name, name+"("+r.Description()+")", []*exprNode{xExpr.node(), yExpr.node()}, func(ctx EvalContext) Value {
+		if xExpr == nil || yExpr == nil {
+			return Missing()
+		}
+		xs, ys := numericPairs[X, Y](xExpr, yExpr, ctx)
+		if len(xs) == 0 {
+			return Null()
+		}
+		return Present(selectValue(bivariateSumsFromPairs(xs, ys)))
+	})
+}
+
+// DataPoints and the sum/average/deviation accessors expose the same
+// statistics Java's linest view carries as event properties.
+func (r LinearRegressionExpression[X, Y]) DataPoints() AggregateExpression[int64] {
+	return r.bivariateIntExpression("dataPoints", func(sums bivariateSums) int64 { return int64(sums.n) })
+}
+
+func (r LinearRegressionExpression[X, Y]) N() AggregateExpression[int64] {
+	return r.bivariateIntExpression("n", func(sums bivariateSums) int64 { return int64(sums.n) })
+}
+
+func (r LinearRegressionExpression[X, Y]) XSum() AggregateExpression[float64] {
+	return r.bivariateExpression("XSum", func(sums bivariateSums) float64 { return sums.sumX })
+}
+
+func (r LinearRegressionExpression[X, Y]) YSum() AggregateExpression[float64] {
+	return r.bivariateExpression("YSum", func(sums bivariateSums) float64 { return sums.sumY })
+}
+
+func (r LinearRegressionExpression[X, Y]) SumXSq() AggregateExpression[float64] {
+	return r.bivariateExpression("sumXSq", func(sums bivariateSums) float64 { return sums.sumXSq })
+}
+
+func (r LinearRegressionExpression[X, Y]) SumYSq() AggregateExpression[float64] {
+	return r.bivariateExpression("sumYSq", func(sums bivariateSums) float64 { return sums.sumYSq })
+}
+
+func (r LinearRegressionExpression[X, Y]) SumXY() AggregateExpression[float64] {
+	return r.bivariateExpression("sumXY", func(sums bivariateSums) float64 { return sums.sumXY })
+}
+
+func (r LinearRegressionExpression[X, Y]) XAverage() AggregateExpression[float64] {
+	return r.bivariateExpression("XAverage", func(sums bivariateSums) float64 { return sums.xAverage })
+}
+
+func (r LinearRegressionExpression[X, Y]) YAverage() AggregateExpression[float64] {
+	return r.bivariateExpression("YAverage", func(sums bivariateSums) float64 { return sums.yAverage })
+}
+
+func (r LinearRegressionExpression[X, Y]) XVariance() AggregateExpression[float64] {
+	return r.bivariateExpression("XVariance", func(sums bivariateSums) float64 { return sums.xVariance })
+}
+
+func (r LinearRegressionExpression[X, Y]) YVariance() AggregateExpression[float64] {
+	return r.bivariateExpression("YVariance", func(sums bivariateSums) float64 { return sums.yVariance })
+}
+
+func (r LinearRegressionExpression[X, Y]) XStandardDeviationPop() AggregateExpression[float64] {
+	return r.bivariateExpression("XStandardDeviationPop", func(sums bivariateSums) float64 { return sums.xStdDevPop })
+}
+
+func (r LinearRegressionExpression[X, Y]) YStandardDeviationPop() AggregateExpression[float64] {
+	return r.bivariateExpression("YStandardDeviationPop", func(sums bivariateSums) float64 { return sums.yStdDevPop })
+}
+
+func (r LinearRegressionExpression[X, Y]) XStandardDeviationSample() AggregateExpression[float64] {
+	return r.bivariateExpression("XStandardDeviationSample", func(sums bivariateSums) float64 { return sums.xStdDevSample })
+}
+
+func (r LinearRegressionExpression[X, Y]) YStandardDeviationSample() AggregateExpression[float64] {
+	return r.bivariateExpression("YStandardDeviationSample", func(sums bivariateSums) float64 { return sums.yStdDevSample })
 }
 
 func (r LinearRegressionExpression[X, Y]) Slope() AggregateExpression[float64] {
@@ -5183,18 +5333,24 @@ func UnivariateStatistics[T Numeric](expression Expression[T]) UnivariateStatist
 			}
 			values := numericAggregateValues[T](expression, ctx)
 			result := UnivariateStatisticsValue{count: int64(len(values)), total: 0, average: math.NaN(), variance: math.NaN(), stddev: math.NaN(), stddevpa: math.NaN()}
+			var sumXSq float64
 			for _, value := range values {
 				result.total += value
+				sumXSq += value * value
 			}
 			if len(values) == 0 {
 				return Present(result)
 			}
-			result.average = result.total / float64(len(values))
-			result.stddevpa = math.Sqrt(populationVariance(values))
+			n := float64(len(values))
+			result.average = result.total / n
+			// Java BaseStatisticsBean one-pass formulas: the population and
+			// sample deviations derive from the same running sums so the
+			// floating-point drift matches the Java oracle bit-for-bit.
+			result.stddevpa = math.Sqrt((sumXSq - result.total*result.total/n) / n)
 			if len(values) == 1 {
 				return Present(result)
 			}
-			result.variance = sampleVariance(values)
+			result.variance = (sumXSq - result.total*result.total/n) / (n - 1)
 			result.stddev = math.Sqrt(result.variance)
 			return Present(result)
 		},

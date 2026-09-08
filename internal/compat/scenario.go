@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"sort"
 	"strings"
@@ -641,6 +642,12 @@ func normalizeValue(value esper.Value) any {
 	}
 	if value.IsNull() {
 		return map[string]any{"state": "null"}
+	}
+	if number, ok := value.Any().(float64); ok && math.IsNaN(number) {
+		// Derived-value stat views (correlation/linest) report NaN for
+		// statistically undefined states; JSON cannot carry NaN, so the
+		// differential protocol normalizes it like the null marker.
+		return map[string]any{"state": "nan"}
 	}
 	if events, ok := value.Any().([]esper.Event); ok {
 		// Array-valued event columns (for example prevwindow) normalize to

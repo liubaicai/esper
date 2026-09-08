@@ -1,10 +1,14 @@
 {
  "version": "esper-parity/v1",
  "id": "viewgroup-merge-view",
- "description": "Two pinned ViewGroup executions replayed per pinned module: ViewGroupObjectArrayEvent (ord 0) object-array events over groupwin(p1)#length(2) pinning the per-group sum(p2) Long evolution 10/21/33/36 through istream-only listener records, and ViewGroupLengthWin (ord 14) groupwin(theString)#length(3) pinning istream-only delivery until each group window fills then irstream pairs evicting E2/20 and E1/1; suite milestones record nothing and the suite's AnyOrder iterator assertions stay unpinned; ViewGroupMultiProperty (ord 6, groupwin(symbol, feed, volume)#uni(price)) is deferred from this unit because #uni is a per-group derived-value view delivering irstream pairs whose old row is the previous datapoints, which the Go fluent adaptation (select aggregate over a keepall group window) cannot express yet, the same adaptation gap class as ViewGroup ords 1/4/5",
+ "description": "Six pinned ViewGroup executions replayed per pinned module: ViewGroupObjectArrayEvent (ord 0) object-array events over groupwin(p1)#length(2) pinning the per-group sum(p2) Long evolution 10/21/33/36 through istream-only listener records, ViewGroupLengthWin (ord 14) groupwin(theString)#length(3) pinning istream-only delivery until each group window fills then irstream pairs evicting E2/20 and E1/1, ViewGroupStats (ord 1) four separate @name'd select-* deployments over groupwin(symbol) with #length(3)#uni and #uni price/volume variants pinning per-send single-row averages per statement plus the ordered priceAllStats/priceLast3Stats iterator snapshots, ViewGroupCorrel (ord 4) and ViewGroupLinest (ord 5) select-* per-group derived-value rows over length(1000000) with NaN rendered as the {state:nan} marker, and ViewGroupMultiProperty (ord 6) groupwin(symbol, feed, volume)#uni(price) irstream datapoint pairs plus the ordered iterator snapshot; suite milestones record nothing, every ord-1 listener invocation carries exactly the asserted last-new row because each send updates one group, and AnyOrder iterator assertions stay unpinned",
  "javaRuntimes": [
   "java-runtime-a3b6bef89e22a122cc7a",
-  "java-runtime-639bc9b69621f3b6a417"
+  "java-runtime-639bc9b69621f3b6a417",
+  "java-runtime-03ed11fd1e5c3a3d11c2",
+  "java-runtime-74e476ad16bf62d4a9e0",
+  "java-runtime-942d359f7bb1302684bb",
+  "java-runtime-47877af7a1d114850723"
  ],
  "cases": [
   {
@@ -14,6 +18,22 @@
   {
    "case": "length-win-groups",
    "runtimeId": "java-runtime-639bc9b69621f3b6a417"
+  },
+  {
+   "case": "stats-four-views",
+   "runtimeId": "java-runtime-03ed11fd1e5c3a3d11c2"
+  },
+  {
+   "case": "correl-groups",
+   "runtimeId": "java-runtime-74e476ad16bf62d4a9e0"
+  },
+  {
+   "case": "linest-groups",
+   "runtimeId": "java-runtime-942d359f7bb1302684bb"
+  },
+  {
+   "case": "multi-property-uni",
+   "runtimeId": "java-runtime-47877af7a1d114850723"
   }
  ],
  "steps": [
@@ -120,6 +140,308 @@
     "theString": "E1",
     "intPrimitive": -1
    }
+  },
+  {
+   "op": "case",
+   "case": "stats-four-views"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CSCO.O",
+    "price": 25,
+    "volume": 50000,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CSCO.O",
+    "price": 26,
+    "volume": 60000,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM.N",
+    "price": 10,
+    "volume": 8000,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM.N",
+    "price": 10.5,
+    "volume": 8200,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE.N",
+    "price": 88,
+    "volume": 1000,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CSCO.O",
+    "price": 27,
+    "volume": 70000,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "CSCO.O",
+    "price": 28,
+    "volume": 80000,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM.N",
+    "price": 11,
+    "volume": 8700,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM.N",
+    "price": 12,
+    "volume": 8900,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE.N",
+    "price": 85.5,
+    "volume": 950,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE.N",
+    "price": 85.75,
+    "volume": 900,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE.N",
+    "price": 89,
+    "volume": 1250,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE.N",
+    "price": 86,
+    "volume": 1200,
+    "feed": ""
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE.N",
+    "price": 85,
+    "volume": 1150,
+    "feed": ""
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "priceAllStats"
+  },
+  {
+   "op": "snapshot",
+   "statement": "priceLast3Stats"
+  },
+  {
+   "op": "case",
+   "case": "correl-groups"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "ABC",
+    "price": 10,
+    "volume": 1000,
+    "feed": "f1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DEF",
+    "price": 1,
+    "volume": 2,
+    "feed": "f2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DEF",
+    "price": 2,
+    "volume": 4,
+    "feed": "f3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "ABC",
+    "price": 20,
+    "volume": 2000,
+    "feed": "f4"
+   }
+  },
+  {
+   "op": "case",
+   "case": "linest-groups"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "ABC",
+    "price": 10,
+    "volume": 50000,
+    "feed": "f1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DEF",
+    "price": 1,
+    "volume": 1,
+    "feed": "f2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DEF",
+    "price": 2,
+    "volume": 2,
+    "feed": "f3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "ABC",
+    "price": 11,
+    "volume": 50100,
+    "feed": "f4"
+   }
+  },
+  {
+   "op": "case",
+   "case": "multi-property-uni"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE",
+    "feed": "INFO",
+    "volume": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE",
+    "feed": "INFO",
+    "volume": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE",
+    "feed": "INFO",
+    "volume": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE",
+    "feed": "INFO",
+    "volume": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "GE",
+    "feed": "REU",
+    "volume": 99
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "MSFT",
+    "feed": "INFO",
+    "volume": 100
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
   }
  ]
 }

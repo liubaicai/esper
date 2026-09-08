@@ -7,6 +7,7 @@ import (
 	"io"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -242,7 +243,68 @@ func CanonicalTrace(trace Trace) (Trace, error) {
 	if err != nil {
 		return Trace{}, err
 	}
-	return LoadTrace(bytes.NewReader(data))
+	loaded, err := LoadTrace(bytes.NewReader(data))
+	if err != nil {
+		return Trace{}, err
+	}
+	// Java's minimaljson renders large doubles in scientific notation
+	// (5.0E7) while the Go side renders the same value positionally
+	// (50000000). json.Number preserves both lexical forms, so re-encode
+	// every non-integer number through its float64 value (integers stay
+	// exact through the string form).
+	return normalizeTraceNumbers(loaded), nil
+}
+
+func normalizeTraceNumbers(trace Trace) Trace {
+	normalizeValue := func(value any) any {
+		number, ok := value.(json.Number)
+		if !ok {
+			return value
+		}
+		text := number.String()
+		if !strings.ContainsAny(text, ".eE") {
+			return value
+		}
+		parsed, err := strconv.ParseFloat(text, 64)
+		if err != nil {
+			return value
+		}
+		return json.Number(strconv.FormatFloat(parsed, 'f', -1, 64))
+	}
+	var walk func(any) any
+	walk = func(value any) any {
+		switch typed := value.(type) {
+		case map[string]any:
+			for key, entry := range typed {
+				typed[key] = walk(entry)
+			}
+			return typed
+		case []any:
+			for index, entry := range typed {
+				typed[index] = walk(entry)
+			}
+			return typed
+		default:
+			return normalizeValue(value)
+		}
+	}
+	for index := range trace.Records {
+		trace.Records[index].New = normalizeResultsNumbers(trace.Records[index].New, walk)
+		trace.Records[index].Old = normalizeResultsNumbers(trace.Records[index].Old, walk)
+	}
+	return trace
+}
+
+func normalizeResultsNumbers(records []ResultRecord, walk func(any) any) []ResultRecord {
+	for index := range records {
+		if records[index].Fields == nil {
+			continue
+		}
+		for key, entry := range records[index].Fields {
+			records[index].Fields[key] = walk(entry)
+		}
+	}
+	return records
 }
 
 func canonicalizeTraceDifferences(differences []TraceDifference) ([]TraceDifference, error) {

@@ -24242,6 +24242,75 @@
    ]
   },
   {
+   "id": "case-viewgroup-derived-value-views",
+   "javaRuntimeIds": [
+    "java-runtime-a3b6bef89e22a122cc7a",
+    "java-runtime-03ed11fd1e5c3a3d11c2",
+    "java-runtime-74e476ad16bf62d4a9e0",
+    "java-runtime-942d359f7bb1302684bb",
+    "java-runtime-47877af7a1d114850723",
+    "java-runtime-639bc9b69621f3b6a417"
+   ],
+   "javaStaticIds": [
+    "java-4c1562348946dab6dc09",
+    "java-e4b54babfa2a09c22a65",
+    "java-de5c0d5eec6a2fd1f36f",
+    "java-a523ae3aedcca205e7c5",
+    "java-608b22a211fb780bb332",
+    "java-48fb0b51c8d6abc3e858"
+   ],
+   "javaNames": [
+    "ViewGroupObjectArrayEvent",
+    "ViewGroupStats",
+    "ViewGroupCorrel",
+    "ViewGroupLinest",
+    "ViewGroupMultiProperty",
+    "ViewGroupLengthWin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewGroupMergeViewDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewGroupMergeViewDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "view",
+    "groupwin",
+    "derived-value",
+    "uni",
+    "correl",
+    "linest",
+    "irstream",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/viewgroup-merge-view.json",
+    "testdata/parity/viewgroup-merge-view.trace.json",
+    "testdata/parity/viewgroup-merge-view.evidence.json",
+    "tools/java-oracle/ViewGroupMergeViewScenarioOracle.java",
+    "tools/java-oracle/run-viewgroup-merge-view.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a3b6bef89e22a122cc7a",
+    "java-runtime-03ed11fd1e5c3a3d11c2",
+    "java-runtime-74e476ad16bf62d4a9e0",
+    "java-runtime-942d359f7bb1302684bb",
+    "java-runtime-47877af7a1d114850723",
+    "java-runtime-639bc9b69621f3b6a417"
+   ],
+   "notes": [
+    "Draft 4.346 extends the merge-view chain with the derived-value stat-view executions (ords 1/4/5/6, with ords 0/14 covered by case-viewgroup-merge-view in the same scenario file): grouped #uni average/datapoints/stddev/stddevpa/total/variance, #correl, and #linest slope/YIntercept progressions including Java's NaN states for statistically undefined points, irstream old-on-insert rows from group.previous, and ordered iterator snapshots across merged groups. A validation-first spike proved the listener path needed no behavior change; the grouping injection was relocated from aggregateBatch's per-batch copy to a persistent deploy-time application on the statement's aggregate definition (required for grouped-aggregate Snapshot/output-limit paths, which read plan.query.aggregate.groupBy). LinearRegression accessors replicate Java BaseStatisticsBean's one-pass formulas operation-for-operation. Engine-surface additions are additive accessors only: LinearRegression gains DataPoints/N/XSum/YSum/SumXSq/SumYSq/SumXY/XAverage/YAverage/XVariance/YVariance/XStandardDeviationPop/YStandardDeviationPop/XStandardDeviationSample/YStandardDeviationSample (Java BaseStatisticsBean one-pass formulas, bit-matching the Java oracle's floating-point drift), the UnivariateStatistics computation switched to the same one-pass sums formulas, and the compat differential canonicalizes non-integer JSON numbers numerically (Java minimaljson renders 5.0E7 where Go renders 50000000). Approved adaptations: Java select-* rows carry the full derived-field set which the Go projections pin via accessors; ord-5's in-body property asserts are covered by the full 21-column projection. Remaining ViewGroup ords: 2/3/9 (view-level reclaim + schedule-count introspection), 7 (compile messages), 8 (performance-gated), 10-13/16/18 (virtual-time batch machinery), 17 (expression groupwin), 19 (SERDEREQUIRED)."
+   ]
+  },
+  {
    "id": "case-viewgroup-merge-view",
    "javaRuntimeIds": [
     "java-runtime-a3b6bef89e22a122cc7a",
@@ -41180,6 +41249,10 @@
   },
   {
    "capabilityId": "view.window-core",
+   "caseId": "case-viewgroup-derived-value-views"
+  },
+  {
+   "capabilityId": "view.window-core",
    "caseId": "case.view-intersect-matrix"
   },
   {
@@ -42596,10 +42669,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 627,
-  "implementedCases": 625,
-  "differentialVerifiedCases": 240,
-  "differentialVerifiedRuntimeIds": 879,
+  "inventoriedCases": 628,
+  "implementedCases": 626,
+  "differentialVerifiedCases": 241,
+  "differentialVerifiedRuntimeIds": 883,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42609,14 +42682,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3504,
-  "referencedJavaRuntimeIds": 3262,
+  "runtimeAssociationCount": 3510,
+  "referencedJavaRuntimeIds": 3263,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 874,
+  "unreferencedJavaRuntimeIds": 873,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 627,
+  "totalCases": 628,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 879
+  "differentialVerifiedRuntimeIDs": 883
  }
 }

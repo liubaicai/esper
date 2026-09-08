@@ -26,18 +26,44 @@ type viewGroupMergeBean struct {
 	IntPrimitive int    `esper:"intPrimitive"`
 }
 
+type viewGroupMergeMarket struct {
+	Symbol string  `esper:"symbol"`
+	Feed   string  `esper:"feed"`
+	Volume float64 `esper:"volume"`
+	Price  float64 `esper:"price"`
+}
+
+type viewGroupMergeCorrelMarket struct {
+	Symbol string  `esper:"symbol"`
+	Feed   string  `esper:"feed"`
+	Volume int64   `esper:"volume"`
+	Price  float64 `esper:"price"`
+}
+
 var (
 	viewGroupMergeViewJavaRuntimeIDs = []string{
 		"java-runtime-a3b6bef89e22a122cc7a", // ViewGroupObjectArrayEvent
 		"java-runtime-639bc9b69621f3b6a417", // ViewGroupLengthWin
+		"java-runtime-03ed11fd1e5c3a3d11c2", // ViewGroupStats
+		"java-runtime-74e476ad16bf62d4a9e0", // ViewGroupCorrel
+		"java-runtime-942d359f7bb1302684bb", // ViewGroupLinest
+		"java-runtime-47877af7a1d114850723", // ViewGroupMultiProperty
 	}
 	viewGroupMergeViewJavaExecutions = []string{
 		"ViewGroupObjectArrayEvent",
 		"ViewGroupLengthWin",
+		"ViewGroupStats",
+		"ViewGroupCorrel",
+		"ViewGroupLinest",
+		"ViewGroupMultiProperty",
 	}
 	viewGroupMergeViewCases = []string{
 		"merge-view-union-aggregate",
 		"length-win-groups",
+		"stats-four-views",
+		"correl-groups",
+		"linest-groups",
+		"multi-property-uni",
 	}
 )
 
@@ -50,6 +76,31 @@ func runViewGroupMergeViewScenario(ctx context.Context, scenario compat.Scenario
 	spans := map[string]int{
 		"merge-view-union-aggregate": 5,
 		"length-win-groups":          9,
+		"stats-four-views":           -1, // filled from the scenario's case blocks
+		"correl-groups":              -1,
+		"linest-groups":              -1,
+		"multi-property-uni":         -1,
+	}
+	// New cases use variable-length step blocks: derive each span by scanning
+	// until the next case marker (the scenario protocol has no deploy ops).
+	current := ""
+	stepStart := 0
+	for index, step := range scenario.Steps {
+		if step.Op == "case" {
+			if current != "" {
+				spans[current] = index - stepStart
+			}
+			current = step.Case
+			stepStart = index
+		}
+	}
+	if current != "" {
+		spans[current] = len(scenario.Steps) - stepStart
+	}
+	for _, caseName := range viewGroupMergeViewCases {
+		if spans[caseName] <= 0 {
+			return compat.Trace{}, fmt.Errorf("viewgroup-merge-view case %q has no steps", caseName)
+		}
 	}
 	for _, caseName := range viewGroupMergeViewCases {
 		caseSteps := scenario.Steps[offset : offset+spans[caseName]]
@@ -130,6 +181,131 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 		if err != nil {
 			return compat.Trace{}, err
 		}
+	case "stats-four-views":
+		if _, err := esper.RegisterStruct[viewGroupMergeMarket](env, "SupportMarketDataBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		symbol := esper.Field[viewGroupMergeMarket, string]("symbol")
+		price := esper.Field[viewGroupMergeMarket, float64]("price")
+		volume := esper.Field[viewGroupMergeMarket, float64]("volume")
+		// Java ord 1: four select-* statements over the uni derived-value
+		// views; the Go adaptation pins the full uni column set (average,
+		// datapoints, stddev, stddevpa, total, variance + symbol) via the
+		// grouped aggregate accessors.
+		last3 := esper.GroupWindow(symbol, esper.LengthWindow(3))
+		all := esper.GroupWindow(symbol, esper.KeepAll())
+		uniColumns := func(statistic esper.Expression[float64]) []esper.Selection {
+			stats := esper.UnivariateStatistics[float64](statistic)
+			return []esper.Selection{
+				esper.Alias("average", stats.Average()),
+				esper.Alias("datapoints", stats.Datapoints()),
+				esper.Alias("stddev", stats.StdDev()),
+				esper.Alias("stddevpa", stats.StdDevPop()),
+				esper.Alias("total", stats.Total()),
+				esper.Alias("variance", stats.Variance()),
+				esper.Alias("symbol", symbol),
+			}
+		}
+		if err := build("priceLast3Stats", true, esper.From[viewGroupMergeMarket](env, "SupportMarketDataBean").
+			Window(last3).
+			Aggregate(uniColumns(price)...).
+			Query(esper.StatementName("priceLast3Stats"), esper.OrderBy(esper.Ascending(symbol)))); err != nil {
+			return compat.Trace{}, err
+		}
+		if err := build("volumeLast3Stats", true, esper.From[viewGroupMergeMarket](env, "SupportMarketDataBean").
+			Window(last3).
+			Aggregate(uniColumns(volume)...).
+			Query(esper.StatementName("volumeLast3Stats"), esper.OrderBy(esper.Ascending(symbol)))); err != nil {
+			return compat.Trace{}, err
+		}
+		if err := build("priceAllStats", true, esper.From[viewGroupMergeMarket](env, "SupportMarketDataBean").
+			Window(all).
+			Aggregate(uniColumns(price)...).
+			Query(esper.StatementName("priceAllStats"), esper.OrderBy(esper.Ascending(symbol)))); err != nil {
+			return compat.Trace{}, err
+		}
+		if err := build("volumeAllStats", true, esper.From[viewGroupMergeMarket](env, "SupportMarketDataBean").
+			Window(all).
+			Aggregate(uniColumns(volume)...).
+			Query(esper.StatementName("volumeAllStats"), esper.OrderBy(esper.Ascending(symbol)))); err != nil {
+			return compat.Trace{}, err
+		}
+	case "correl-groups":
+		if _, err := esper.RegisterStruct[viewGroupMergeCorrelMarket](env, "SupportMarketDataBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		symbol := esper.Field[viewGroupMergeCorrelMarket, string]("symbol")
+		feed := esper.Field[viewGroupMergeCorrelMarket, string]("feed")
+		err := build("s0", true, esper.From[viewGroupMergeCorrelMarket](env, "SupportMarketDataBean").
+			Window(esper.GroupWindow(symbol, esper.LengthWindow(1000000))).
+			Aggregate(esper.Alias("symbol", symbol),
+				esper.Alias("correlation", esper.Correlation[float64, float64](
+					esper.Field[viewGroupMergeCorrelMarket, float64]("price"),
+					esper.Field[viewGroupMergeCorrelMarket, float64]("volume"))),
+				esper.Alias("feed", feed)).
+			Query(esper.StatementName("s0")))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case "linest-groups":
+		if _, err := esper.RegisterStruct[viewGroupMergeCorrelMarket](env, "SupportMarketDataBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		symbol := esper.Field[viewGroupMergeCorrelMarket, string]("symbol")
+		feed := esper.Field[viewGroupMergeCorrelMarket, string]("feed")
+		linest := esper.LinearRegression[float64, float64](
+			esper.Field[viewGroupMergeCorrelMarket, float64]("price"),
+			esper.Field[viewGroupMergeCorrelMarket, float64]("volume"))
+		// Java select-* rows carry the full linest property set plus the
+		// group key and the additional prop; the Go accessors compute the
+		// same statistics from the group pairs.
+		err := build("s0", true, esper.From[viewGroupMergeCorrelMarket](env, "SupportMarketDataBean").
+			Window(esper.GroupWindow(symbol, esper.LengthWindow(1000000))).
+			Aggregate(esper.Alias("symbol", symbol),
+				esper.Alias("slope", linest.Slope()),
+				esper.Alias("YIntercept", linest.YIntercept()),
+				esper.Alias("XAverage", linest.XAverage()),
+				esper.Alias("XStandardDeviationPop", linest.XStandardDeviationPop()),
+				esper.Alias("XStandardDeviationSample", linest.XStandardDeviationSample()),
+				esper.Alias("XSum", linest.XSum()),
+				esper.Alias("XVariance", linest.XVariance()),
+				esper.Alias("YAverage", linest.YAverage()),
+				esper.Alias("YStandardDeviationPop", linest.YStandardDeviationPop()),
+				esper.Alias("YStandardDeviationSample", linest.YStandardDeviationSample()),
+				esper.Alias("YSum", linest.YSum()),
+				esper.Alias("YVariance", linest.YVariance()),
+				esper.Alias("sumX", linest.XSum()),
+				esper.Alias("sumXSq", linest.SumXSq()),
+				esper.Alias("sumXY", linest.SumXY()),
+				esper.Alias("sumY", linest.YSum()),
+				esper.Alias("sumYSq", linest.SumYSq()),
+				esper.Alias("dataPoints", linest.DataPoints()),
+				esper.Alias("n", linest.N()),
+				esper.Alias("feed", feed)).
+			Query(esper.StatementName("s0")))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case "multi-property-uni":
+		if _, err := esper.RegisterStruct[viewGroupMergeMarket](env, "SupportMarketDataBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		symbol := esper.Field[viewGroupMergeMarket, string]("symbol")
+		feed := esper.Field[viewGroupMergeMarket, string]("feed")
+		volume := esper.Field[viewGroupMergeMarket, float64]("volume")
+		price := esper.Field[viewGroupMergeMarket, float64]("price")
+		keys := []esper.Expr{symbol, feed, volume}
+		err := build("s0", true, esper.From[viewGroupMergeMarket](env, "SupportMarketDataBean").
+			Window(esper.GroupWindowKeys(keys, esper.KeepAll())).
+			Aggregate(esper.Alias("size", esper.UnivariateStatistics[float64](price).Datapoints()),
+				esper.Alias("symbol", symbol),
+				esper.Alias("feed", feed),
+				esper.Alias("volume", volume)).
+			Query(esper.StatementName("s0"), esper.WithOldStream(), esper.OrderBy(
+				esper.Ascending(symbol), esper.Ascending(feed), esper.Ascending(volume))))
+		if err != nil {
+			return compat.Trace{}, err
+		}
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported viewgroup-merge-view case %q", caseName)
 	}
@@ -140,11 +316,17 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 	defer func() { _ = engine.Close(context.Background()) }()
 
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
-	seq := uint64(0)
+	// Per-statement sequence counters mirror the Java oracle: each named
+	// statement counts its own delivered batches from 1.
+	seqByStmt := make(map[string]uint64)
+	statements := make(map[string]*esper.Statement)
 	for _, item := range plans {
 		deployment, err := engine.Deploy(ctx, item.plan)
 		if err != nil {
 			return trace, err
+		}
+		for _, st := range deployment.Statements() {
+			statements[st.Name()] = st
 		}
 		if !item.listener {
 			continue
@@ -154,13 +336,13 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 			if len(batch.New) == 0 && len(batch.Old) == 0 {
 				return nil
 			}
-			seq++
+			seqByStmt[st.Name()]++
 			record := compat.TraceRecord{
 				Case:      caseName,
 				Operation: "listener",
 				Statement: st.Name(),
 				Time:      batch.Time.UTC().Format(time.RFC3339),
-				Sequence:  seq,
+				Sequence:  seqByStmt[st.Name()],
 			}
 			record.New = compat.NormalizeResults(batch.New)
 			record.Old = compat.NormalizeResults(batch.Old)
@@ -192,7 +374,24 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 				return trace, err
 			}
 		case "snapshot":
-			return trace, fmt.Errorf("snapshot op is not supported by this runner (ord 6 deferred)")
+			st, ok := statements[step.Statement]
+			if !ok {
+				return trace, fmt.Errorf("snapshot statement %q not found", step.Statement)
+			}
+			result, snapErr := st.Snapshot(ctx)
+			if snapErr != nil {
+				return trace, snapErr
+			}
+			record := compat.TraceRecord{
+				Case:      caseName,
+				Operation: "snapshot",
+				Statement: step.Statement,
+			}
+			record.New = compat.NormalizeResults(result.Batch.New)
+			if record.New == nil {
+				record.New = []compat.ResultRecord{}
+			}
+			trace.Records = append(trace.Records, record)
 		default:
 			return trace, fmt.Errorf("unsupported viewgroup-merge-view step op %q", step.Op)
 		}

@@ -3048,6 +3048,20 @@ func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deploym
 	}
 	e.refreshVariablesLocked()
 	statement.runtime.variables = statementVariables(e.variables, statement.parameters)
+	// A groupwin-derived statistics chain (uni/correl/linest) groups its
+	// aggregate state by the groupwin keys: apply the implicit grouping to
+	// the statement's aggregate definition once at deployment so every
+	// consumer path — listener batches, snapshots and output-limit dispatch
+	// — agrees on the per-key grouping. Ordinary select-clause aggregates
+	// over a groupwin keep Java's ungrouped merge-view semantics (see
+	// aggregateBatch).
+	if statement.runtime.query.aggregate != nil && statement.runtime.query.aggregate.join == nil &&
+		len(statement.runtime.query.aggregate.groupBy) == 0 &&
+		(plan.query.tableTarget != "" || aggregateDefinitionUsesUnivariateStatistics(statement.runtime.query.aggregate)) {
+		if keys := implicitAggregateGroupBy(statement.runtime.query.aggregate.input); len(keys) > 0 {
+			statement.runtime.query.aggregate.groupBy = keys
+		}
+	}
 	statement.runtime.subqueryRegistry = newSubqueryRuntimeRegistry(e.env, e, plan.query)
 	statement.runtime.variables = statement.runtime.subqueryRegistry.attachVariables(statement.runtime.variables)
 	statement.runtime.resolveWindowDurations(plan)
@@ -18095,22 +18109,16 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	if definition == nil {
 		return ResultBatch{}, NewError(ErrorInvalidRule, "aggregate runtime has no definition")
 	}
-	if len(definition.groupBy) == 0 && (plan.query.tableTarget != "" || aggregateDefinitionUsesUnivariateStatistics(definition)) {
-		if keys := implicitAggregateGroupBy(definition.input); len(keys) > 0 {
-			// An into-table materialization needs the retention key as the
-			// aggregate dimension, and Java binds derived-value statistics
-			// views (#uni/#correl/#linest) as per-group child views of a
-			// groupwin. An ordinary aggregate projection has no implicit
-			// grouping: Java's groupwin parent is a merge/union point whose
-			// downstream sees the union of all groups' subview contents, so
-			// `select p1,sum(p2) from ...#groupwin(p1)#length(2)` keeps one
-			// ungrouped aggregate over that union (ViewGroup.java ord 0:
-			// 10/21/33/36 with in-group eviction subtracted).
-			copyDefinition := *definition
-			copyDefinition.groupBy = keys
-			definition = &copyDefinition
-		}
-	}
+	// The groupwin-derived implicit grouping is applied to the statement's
+	// aggregate definition at deployment (see the deploy-time injection), so
+	// listener batches, snapshots and output-limit dispatch all share the
+	// same per-key (or deliberately ungrouped union) aggregate state. An
+	// ordinary aggregate projection has no implicit grouping: Java's groupwin
+	// parent is a merge/union point whose downstream sees the union of all
+	// groups' subview contents, so `select p1,sum(p2) from
+	// ...#groupwin(p1)#length(2)` keeps one ungrouped aggregate over that
+	// union (ViewGroup.java ord 0: 10/21/33/36 with in-group eviction
+	// subtracted).
 	if definition.where != nil {
 		delta.newEvents = filterAggregateEvents(delta.newEvents, definition.where, now, r.variables, r.engine)
 		delta.oldEvents = filterAggregateEvents(delta.oldEvents, definition.where, now, r.variables, r.engine)
