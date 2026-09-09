@@ -31,7 +31,7 @@ import java.util.TreeSet;
 /**
  * Java oracle for ViewGroup grouped-window scenarios (merge-view family).
  *
- * Covers fourteen pinned executions of ViewGroup, each replayed as its own
+ * Covers fifteen pinned executions of ViewGroup, each replayed as its own
  * case against a fresh runtime with the pinned module text transcribed
  * verbatim (only the byte-exact EPL text; no other annotations are added):
  *
@@ -146,6 +146,22 @@ import java.util.TreeSet;
  * stays silent, and each group expires exactly: old [{10}] at 11000, old
  * [{20}] at 15000, old [{30}] at 20000.
  *
+ * expression-groupwin replays ViewGroupExpressionGrouped (ordinal 17,
+ * runtime java-runtime-563f2c37fb66e3d067ca): select irstream * from
+ * SupportBeanTimestamp#groupwin(timestamp.getDayOfWeek())#length(2). The
+ * suite uses the bean's two-arg constructor (id, timestamp) so groupId
+ * stays null; the scenario sends therefore omit the groupId payload key
+ * and the send branch constructs the mirror with a null groupId. The
+ * timestamps are DateTime.parseDefaultMSec results over the JVM default
+ * (UTC) zone: E1 1009875600000 (2002-01-01T09:00:00.000), E2 1010480400000
+ * (2002-01-08T09:00:00.000), and E3 1011085200000 — the lenient
+ * SimpleDateFormat parse of the suite's literal "2002-01-015T09:0:00.000"
+ * as 2002-01-15T09:00:00.000. All three fall on a Tuesday, so they share
+ * one day-of-week group: E1 and E2 deliver istream inserts, and E3 fills
+ * length(2) and evicts E1. The suite pins only the flattened old length
+ * of 1; the oracle records every delivered irstream batch, so the third
+ * record carries the full old [E1] row.
+ *
  * Three further cases replay the reclaim_group_aged/reclaim_group_freq
  * surface and observe it through recorded counts instead of listener rows:
  *
@@ -212,9 +228,11 @@ import java.util.TreeSet;
  * pinned four-arg constructor (symbol, price, volume, feed), field types
  * (String, double, Long, String) and getters byte-equivalent, and the
  * unused id property does not participate in these scenarios. The ord-12
- * SupportBeanTimestamp is regression-lib as well and is mirrored locally
- * with the pinned three-arg constructor (id, groupId, timestamp), field
- * types (String, long, String) and getters. SupportBean
+ * and ord-17 SupportBeanTimestamp is regression-lib as well and is
+ * mirrored locally with the pinned three-arg constructor (id, groupId,
+ * timestamp), field types (String, long, String) and getters; the suite's
+ * two-arg (id, timestamp) constructor of the ord-17 expression-groupwin
+ * sends leaves groupId null, which the mirror reproduces. SupportBean
  * is the common-module class already on the classpath and is constructed
  * with the suite's two-arg (theString, intPrimitive) constructor.
  *
@@ -284,7 +302,8 @@ public class ViewGroupMergeViewScenarioOracle {
         // Local mirror class: regression-lib is outside the oracle classpath.
         config.getCommon().addEventType("SupportMarketDataBean", LocalSupportMarketDataBean.class);
         config.getCommon().addEventType("SupportBean", SupportBean.class);
-        // Regression-lib mirror for the ord-12 time-order case.
+        // Regression-lib mirror for the ord-12 time-order and ord-17
+        // expression-groupwin cases.
         config.getCommon().addEventType("SupportBeanTimestamp", LocalSupportBeanTimestamp.class);
         config.getRuntime().getThreading().setInternalTimerEnabled(false);
         EPRuntime runtime = EPRuntimeProvider.getRuntime("ViewGroupMergeViewScenarioOracle-" + caseName, config);
@@ -564,6 +583,11 @@ public class ViewGroupMergeViewScenarioOracle {
                 modules.add("@name('s0') select irstream * from  SupportMarketDataBean#groupwin(symbol)#time_length_batch(10 sec, 100)");
             case "time-win-groups" ->
                 modules.add("@name('s0') select irstream * from  SupportMarketDataBean#groupwin(symbol)#time(10 sec)");
+            // Ord 17: byte-exact suite text; the suite's lenient
+            // DateTime.parseDefaultMSec literals are pinned as epoch-millis
+            // send payloads in the scenario.
+            case "expression-groupwin" ->
+                modules.add("@name('s0') select irstream * from SupportBeanTimestamp#groupwin(timestamp.getDayOfWeek())#length(2)");
             // Reclaim-group executions: byte-exact transcriptions of the
             // suite's concatenated EPL text (hint annotation adjacent to
             // @name, single space before select).
@@ -612,8 +636,11 @@ public class ViewGroupMergeViewScenarioOracle {
             return;
         }
         if ("SupportBeanTimestamp".equals(eventType)) {
-            // Mirrors sendEventTS(env, id, groupId, timestamp): the suite's
-            // three-arg SupportBeanTimestamp constructor.
+            // Mirrors the suite's three-arg SupportBeanTimestamp constructor
+            // (sendEventTS(env, id, groupId, timestamp)); the ord-17
+            // expression-groupwin sends omit the groupId payload key, so
+            // groupId is null exactly like the suite's two-arg (id,
+            // timestamp) constructor.
             runtime.getEventService().sendEventBean(
                 new LocalSupportBeanTimestamp(payload.getString("id", null),
                     payload.getString("groupId", null), payload.getLong("timestamp", 0)),
@@ -716,8 +743,10 @@ public class ViewGroupMergeViewScenarioOracle {
     /**
      * Local mirror of the pinned SupportBeanTimestamp regression bean
      * (com.espertech.esper.regressionlib.support.bean.SupportBeanTimestamp),
-     * used by the ord-12 time-order case. Constructor parameter order,
-     * field types, and getters match the pinned bean.
+     * used by the ord-12 time-order and ord-17 expression-groupwin cases.
+     * Constructor parameter order, field types, and getters match the
+     * pinned bean; a null groupId reproduces the pinned two-arg (id,
+     * timestamp) constructor used by the ord-17 sends.
      */
     public static class LocalSupportBeanTimestamp {
         private final String id;

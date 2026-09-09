@@ -15,7 +15,8 @@
     "java-runtime-68ef8076bc96595cbfd0",
     "java-runtime-88d7b731431c59d99f3a",
     "java-runtime-afc05b1a18402bb17f56",
-    "java-runtime-33b5cb01913d5d23292b"
+    "java-runtime-33b5cb01913d5d23292b",
+    "java-runtime-563f2c37fb66e3d067ca"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
@@ -34,7 +35,8 @@
     "ViewGroupTimeWin",
     "ViewGroupReclaimTimeWindow",
     "ViewGroupReclaimAgedHint",
-    "ViewGroupReclaimWithFlipTime"
+    "ViewGroupReclaimWithFlipTime",
+    "ViewGroupExpressionGrouped"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -9007,6 +9009,34 @@
         "op": "iterator-count",
         "statement": "s0",
         "count": 2
+      },
+      {
+        "op": "case",
+        "case": "expression-groupwin"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanTimestamp",
+        "payload": {
+          "id": "E1",
+          "timestamp": 1009875600000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanTimestamp",
+        "payload": {
+          "id": "E2",
+          "timestamp": 1010480400000
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanTimestamp",
+        "payload": {
+          "id": "E3",
+          "timestamp": 1011085200000
+        }
       }
     ]
   },
@@ -11497,6 +11527,75 @@
         "statement": "s0",
         "sequence": 0,
         "count": 2
+      },
+      {
+        "case": "expression-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": {
+                "state": "null"
+              },
+              "id": "E1",
+              "timestamp": 1009875600000
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": {
+                "state": "null"
+              },
+              "id": "E2",
+              "timestamp": 1010480400000
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": {
+                "state": "null"
+              },
+              "id": "E3",
+              "timestamp": 1011085200000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": {
+                "state": "null"
+              },
+              "id": "E1",
+              "timestamp": 1009875600000
+            }
+          }
+        ]
       }
     ]
   },
@@ -13987,12 +14086,78 @@
         "statement": "s0",
         "sequence": 0,
         "count": 2
+      },
+      {
+        "case": "expression-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": {
+                "state": "null"
+              },
+              "id": "E1",
+              "timestamp": 1009875600000
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": {
+                "state": "null"
+              },
+              "id": "E2",
+              "timestamp": 1010480400000
+            }
+          }
+        ]
+      },
+      {
+        "case": "expression-groupwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": {
+                "state": "null"
+              },
+              "id": "E3",
+              "timestamp": 1011085200000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": {
+                "state": "null"
+              },
+              "id": "E1",
+              "timestamp": 1009875600000
+            }
+          }
+        ]
       }
     ]
   },
   "status": "passing",
-  "differences": [],
-  "notes": [
-    "4.348 extension (ords 2/3/9, ENGINE unit): view-level reclaim for grouped-view chains \u2014 @Hint('reclaim_group_aged/freq') on a groupwin now sweeps per-group child state (drop groups with inactivity strictly greater than the aged bound; sweep piggybacks on incoming events at most once per frequency window, armed on the first update; Engine.AdvanceTime alone never triggers it; removed groups detach silently with no old-stream rows, matching Java's removeSubview detach). New introspection APIs: Statement.ScheduleCount and Engine.ScheduleCountOverall synthesize the pending callback count from window/pattern/output state (one callback per time-driven window state with live future-deadline work \u2014 mirroring Java TimeWindowView's handle-while-non-empty lifecycle). reclaim-aged-hint trims the suite's 10x1000 sends to 10x100 for replay tractability; both engines replay the same trimmed scenario and pin identical iterator counts (600/601). reclaim-time-window pins the 10\u21921\u21920 schedule-count progression; reclaim-flip-time pins 1\u21922\u21922 across the aged boundary at 4999/5000."
-  ]
+  "differences": []
 }

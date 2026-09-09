@@ -50,27 +50,40 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.345 ('viewgroup-merge-view') committed as 41a3d402d; Git owns identity. ViewGroup.java now 2/20 executions DV.
 - Shipped: Draft 4.346 ('viewgroup-derived-value-views') committed as 1225a63e5; Git owns identity. ViewGroup.java now 6/20 executions DV.
 - Shipped: Draft 4.347 ('viewgroup-time-windows') committed as 51e284b7e; Git owns identity. ViewGroup.java now 11/20 executions DV.
-- Current target: Draft 4.348 'viewgroup-reclaim' — ENGINE unit for ViewGroup reclaim ords 2/3/9 (view-level reclaim of grouped-view retention + schedule-count introspection surface); fresh parallel scouts dispatched.
+- Shipped: Draft 4.348 ('viewgroup-reclaim') committed as 9605dbf76; Git owns identity. ViewGroup.java now 14/20 executions DV.
+- Shipped (recon): Draft 4.349 recon complete — ViewGroup ord 17 GREEN zero engine work (GroupWindow accepts arbitrary Expr keys; Func1 reproduces day-of-week observable); as-keyword-backtick: 7 executions all representable (4.335 blockers STALE), recommended split into 3 units.
+- Current target: Draft 4.349 'viewgroup-expression-groupwin' — ViewGroup ord 17 (java-runtime-563f2c37fb66e3d067ca, expression groupwin key), extending case-viewgroup-merge-view.
 
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: Draft 4.348 ('viewgroup-reclaim') — ENGINE unit for ViewGroup reclaim ords 2/3/9.
+Active: Draft 4.349 ('viewgroup-expression-groupwin') — extends case-viewgroup-merge-view with ViewGroup ord 17.
 
-Known surface (from the 4.334-era spike, to be re-verified by scouts): sweepReclaimGroups (runtime.go ~18578) only covers aggregate group-by state, not grouped-VIEW retention (windowRuntimeState.groups); Java ords use @Hint('reclaim_group_aged=…,reclaim_group_freq=…') over #groupwin(theString)#time(3000000) / #keepall / keepall-with-flipTime; ord 2 asserts SupportScheduleHelper.scheduleCount(stmt) 10→1→0 (one schedule per group); ord 9 uses flipTime=5000 with iterator counts 1→2→2.
+Frozen contract (scouts agent_9dcc7ff0 [Java contract] + agent_c0734ec4 [Go surface]): `@name('s0') select irstream * from SupportBeanTimestamp#groupwin(timestamp.getDayOfWeek())#length(2)`; three sends (E1 ts=1009875600000, E2 ts=1010480400000, E3 ts=1011085200000 — all Tuesdays, one group; groupId null); batches: new=[E1], new=[E2], new=[E3] old=[E1]; the suite pins the flattened OLD list length == 1 (E1). Go shape: GroupWindow(Func1 day-of-week over int64 timestamp, LengthWindow(2)) + WithOldStream; key values never surface in select * rows. Runtime java-runtime-563f2c37fb66e3d067ca, static java-383fcd83c5bd59dead03.
 
-- [x] Fresh parallel scouts dispatched (byte-exact contracts incl. schedule-count assertions and flipTime semantics; Go engine design for view-level reclaim + schedule introspection with blast radius).
-- [x] Freeze contract; implement engine change (view-level sweep + ScheduleCount/ScheduleCountOverall introspection + Count field in TraceRecord/Step); validation-first spike GREEN (10→1→0).
-- [x] Asset writer: 3 scenario cases + oracle + trace (agent_c5c17252; schedule-count/iterator-count/schedule-count-overall ops with observed values; undeploy-all op; SupportScheduleHelper reimplemented against the runtime SPI; trace 116 records, triple-run byte-identical).
-- [x] Manifest (+3 runtime IDs/names — goTests unchanged (the prefixed pair already covers the diff family) — class 14/20 DV), summary recomputed-exact: 891 DV runtime IDs / 3518 associations / referenced 3266 / unreferenced 870 (validator-verified).
-- [x] Evidence note; Roadmap supplement + view 25→22 (3 net-new refs: 88d7b731/afc05b1a/33b5cb01; a3b6bef already referenced via merge-view); CHANGELOG 4.348 entry.
-- [ ] Gates + independent parity review.
+as-keyword-backtick re-audit verdict (7/7 representable, 4.335 blockers STALE): B1 = ords 3/5/1 behavioral; B2 = ords 0/2/4 FAF/on-trigger; ord 6 compile-only split/contained needs two-level unnest adjudication. Deferred to follow-up units.
+
+- [x] Fresh parallel scouts dispatched (byte-exact contract; Go surface GREEN).
+- [x] Freeze contract (adaptation-only; zero engine change).
+- [x] Asset writer: 1 scenario case + oracle module + trace regen (agent_c3e7699d; 119 records = 116 prior byte-identical + 3 new, quadruple-run byte-identical; groupId omitted-key convention).
+- [x] Primary: runner case builder (Func1 day-of-week expression key + nullable-groupId fixture) + replay (119 records matching the Java oracle at record level).
+- [x] Manifest (+1 runtime ID/name — class 15/20 DV; ord 17's runtime already referenced by case.view-group-matrix so referenced stays 3266), summary recomputed-exact via validator: 892 DV runtime IDs / 3519 associations / referenced 3266 / unreferenced 870.
+- [x] Evidence (+1 runtime ID); Roadmap supplement + view 25→24→22 (5.2/6.1 ground-truth verified); CHANGELOG 4.349 entry.
+- [x] Gates + independent parity review (agent_729d889b): initial FAIL on five P2s (evidence javaRuntimeIds duplicated; roadmap '7/20'→wrong, wrong referenced/unreferenced pair; missing CHANGELOG entry; PLANS '7/20' echoed) and one P3 (Func1 Calendar comment). All fixed in the same work unit and re-confirmed by the same reviewer with oracle regeneration byte-identical and manifest arithmetic recomputed-exact (referenced 3266, unreferenced 870, view domain 22 ground-truth verified).
 - [ ] Commit and push (Git owns identity; no hash recorded here).
 
 ## Delegation checkpoint
 
+Draft 4.349 unit:
+- Prefetch scouts (read-only, concurrent, dispatched): 'ViewGroupExpressionGroupwinJavaContract' pins ord 17 byte-exact (datetime-method key chain, send/assert sequence, exact rows) and re-audits epl-other-as-keyword-backtick (EPLOtherAsKeywordBacktick.java: the 4.335-era deferral cited 37 oracle compile errors — the multi-module oracle harness now deployed in 4.346-4.348 may resolve them); 'ViewGroupExpressionGroupwinGoSurface' adjudicates the Go expression-key groupwin surface (GroupWindow with a non-field Expr key) and the as-keyword/backtick surface with file:line evidence.
+
 Draft 4.348 unit:
 - Prefetch scouts (read-only, concurrent, dispatched): 'ViewGroupReclaimJavaContract' pins ords 2/3/9 byte-exact (hint texts, advance-time timelines, schedule-count assertions, flipTime semantics) and 'ViewGroupReclaimGoEngineDesign' designs the view-level reclaim + schedule-count introspection with blast radius over shipped grouped-view tests.
+
+Draft 4.349 unit:
+- Prefetch scouts (read-only, concurrent, complete): 'ViewGroupExpressionGroupwinJavaContract' (agent_9dcc7ff0-0fbd-4115-a3ee-932827e1c1cf) pinned ord 17 byte-exact and re-audited as-keyword-backtick (7/7 representable, 4.335 blockers stale); 'ViewGroupExpressionGroupwinGoSurface' (agent_c0734ec4-f5bc-4357-838f-860cae83fddc) adjudicated GroupWindow arbitrary-Expr keys as GREEN (keyed on expression VALUE at runtime.go:14749-14763) and found all as-keyword surfaces represented.
+- Asset writer (isolated, parallel, same writer continuity): owns viewgroup-merge-view scenario/oracle/trace extension for ord 17.
+- Primary owns the runner case builder, run_test extension, evidence, manifest, roadmap, CHANGELOG, PLANS.md, gates, review, commit, and push.
 
 Draft 4.347 unit:
 - Prefetch scouts (read-only, concurrent, dispatched): 'ViewGroupTimeWindowsJavaContract' pins ords 10-13/16 byte-exact contracts (advance-time timelines, IR pairs, group-key split) and 'ViewGroupTimeWindowsGoSurface' adjudicates the Go time-window/virtual-time surface (TimeBatch/TimeAccum/TimeOrder/TimeLengthBatch/TimeWindow specs, AdvanceTime) with file:line evidence.

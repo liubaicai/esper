@@ -35,9 +35,9 @@ type viewGroupMergeMarket struct {
 }
 
 type viewGroupMergeTimestamp struct {
-	ID        string `esper:"id"`
-	GroupID   string `esper:"groupId"`
-	Timestamp int64  `esper:"timestamp"`
+	ID        string  `esper:"id"`
+	GroupID   *string `esper:"groupId"`
+	Timestamp int64   `esper:"timestamp"`
 }
 
 type viewGroupMergeCorrelMarket struct {
@@ -63,6 +63,7 @@ var (
 		"java-runtime-88d7b731431c59d99f3a", // ViewGroupReclaimTimeWindow
 		"java-runtime-afc05b1a18402bb17f56", // ViewGroupReclaimAgedHint
 		"java-runtime-33b5cb01913d5d23292b", // ViewGroupReclaimWithFlipTime
+		"java-runtime-563f2c37fb66e3d067ca", // ViewGroupExpressionGrouped
 	}
 	viewGroupMergeViewJavaExecutions = []string{
 		"ViewGroupObjectArrayEvent",
@@ -79,6 +80,7 @@ var (
 		"ViewGroupReclaimTimeWindow",
 		"ViewGroupReclaimAgedHint",
 		"ViewGroupReclaimWithFlipTime",
+		"ViewGroupExpressionGrouped",
 	}
 	viewGroupMergeViewCases = []string{
 		"merge-view-union-aggregate",
@@ -95,6 +97,7 @@ var (
 		"reclaim-time-window",
 		"reclaim-aged-hint",
 		"reclaim-flip-time",
+		"expression-groupwin",
 	}
 )
 
@@ -367,7 +370,7 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 		if _, err := esper.RegisterStruct[viewGroupMergeTimestamp](env, "SupportBeanTimestamp"); err != nil {
 			return compat.Trace{}, err
 		}
-		groupID := esper.Field[viewGroupMergeTimestamp, string]("groupId")
+		groupID := esper.Field[viewGroupMergeTimestamp, *string]("groupId")
 		ts := esper.Field[viewGroupMergeTimestamp, int64]("timestamp")
 		err := build("s0", true, esper.From[viewGroupMergeTimestamp](env, "SupportBeanTimestamp").
 			Window(esper.GroupWindow(groupID, esper.TimeOrder(ts, 10*time.Second))).
@@ -397,6 +400,26 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 				esper.Alias("cnt", esper.CountAll()),
 			).
 			Query(esper.StatementName("s0"), esper.WithStatementHints(hints...)))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case "expression-groupwin":
+		if _, err := esper.RegisterStruct[viewGroupMergeTimestamp](env, "SupportBeanTimestamp"); err != nil {
+			return compat.Trace{}, err
+		}
+		ts := esper.Field[viewGroupMergeTimestamp, int64]("timestamp")
+		// Day-of-week over the epoch-milli timestamp — the groupwin key
+		// groups all three Tuesday events into one shared length(2) window.
+		// The mapping is injective per day (the key value never surfaces in
+		// select * rows), so any consistent day-numbering reproduces the
+		// observable grouping.
+		dow := esper.Func1[int64]("getDayOfWeek", func(ms int64) int64 {
+			t := time.Unix(ms/1000, (ms%1000)*int64(time.Millisecond)).UTC()
+			return int64((int(t.Weekday())+1)%7 + 1)
+		}, ts)
+		err := build("s0", true, esper.From[viewGroupMergeTimestamp](env, "SupportBeanTimestamp").
+			Window(esper.GroupWindow(dow, esper.LengthWindow(2))).
+			Query(esper.StatementName("s0"), esper.WithOldStream()))
 		if err != nil {
 			return compat.Trace{}, err
 		}
@@ -492,11 +515,14 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 					int(payload["p2"].(float64)),
 				}
 			case "SupportBeanTimestamp":
-				underlying = viewGroupMergeTimestamp{
-					ID:        payload["id"].(string),
-					GroupID:   payload["groupId"].(string),
-					Timestamp: int64(payload["timestamp"].(float64)),
+				tsEvent := viewGroupMergeTimestamp{ID: payload["id"].(string)}
+				if v, ok := payload["groupId"].(string); ok {
+					tsEvent.GroupID = &v
 				}
+				if v, ok := payload["timestamp"].(float64); ok {
+					tsEvent.Timestamp = int64(v)
+				}
+				underlying = tsEvent
 			case "SupportBean":
 				underlying = viewGroupMergeBean{
 					TheString:    payload["theString"].(string),
