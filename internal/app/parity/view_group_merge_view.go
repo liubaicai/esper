@@ -22,8 +22,9 @@ var viewGroupMergeViewJavaSources = []string{
 }
 
 type viewGroupMergeBean struct {
-	TheString    string `esper:"theString"`
-	IntPrimitive int    `esper:"intPrimitive"`
+	TheString     string `esper:"theString"`
+	IntPrimitive  int    `esper:"intPrimitive"`
+	LongPrimitive int64  `esper:"longPrimitive"`
 }
 
 type viewGroupMergeMarket struct {
@@ -59,6 +60,9 @@ var (
 		"java-runtime-806120fdd2130ab1f275", // ViewGroupTimeOrder
 		"java-runtime-737a5f1ffd4c6a6c8924", // ViewGroupTimeLengthBatch
 		"java-runtime-68ef8076bc96595cbfd0", // ViewGroupTimeWin
+		"java-runtime-88d7b731431c59d99f3a", // ViewGroupReclaimTimeWindow
+		"java-runtime-afc05b1a18402bb17f56", // ViewGroupReclaimAgedHint
+		"java-runtime-33b5cb01913d5d23292b", // ViewGroupReclaimWithFlipTime
 	}
 	viewGroupMergeViewJavaExecutions = []string{
 		"ViewGroupObjectArrayEvent",
@@ -72,6 +76,9 @@ var (
 		"ViewGroupTimeOrder",
 		"ViewGroupTimeLengthBatch",
 		"ViewGroupTimeWin",
+		"ViewGroupReclaimTimeWindow",
+		"ViewGroupReclaimAgedHint",
+		"ViewGroupReclaimWithFlipTime",
 	}
 	viewGroupMergeViewCases = []string{
 		"merge-view-union-aggregate",
@@ -85,6 +92,9 @@ var (
 		"time-order-groups",
 		"time-length-batch-groups",
 		"time-win-groups",
+		"reclaim-time-window",
+		"reclaim-aged-hint",
+		"reclaim-flip-time",
 	}
 )
 
@@ -365,6 +375,56 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 		if err != nil {
 			return compat.Trace{}, err
 		}
+	case "reclaim-time-window":
+		if _, err := esper.RegisterStruct[viewGroupMergeBean](env, "SupportBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		agedHint, hintErr := esper.NewStatementHint(esper.HintReclaimGroupAged, "30")
+		if hintErr != nil {
+			return compat.Trace{}, hintErr
+		}
+		freqHint, hintErr := esper.NewStatementHint(esper.HintReclaimGroupFreq, "5")
+		if hintErr != nil {
+			return compat.Trace{}, hintErr
+		}
+		hints := []esper.StatementHint{agedHint, freqHint}
+		err := build("s0", false, esper.From[viewGroupMergeBean](env, "SupportBean").
+			Window(esper.GroupWindow(
+				esper.Field[viewGroupMergeBean, string]("theString"),
+				esper.TimeWindow(3000000*time.Millisecond))).
+			Aggregate(
+				esper.Alias("longPrimitive", esper.Field[viewGroupMergeBean, int64]("longPrimitive")),
+				esper.Alias("cnt", esper.CountAll()),
+			).
+			Query(esper.StatementName("s0"), esper.WithStatementHints(hints...)))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case "reclaim-aged-hint", "reclaim-flip-time":
+		if _, err := esper.RegisterStruct[viewGroupMergeBean](env, "SupportBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		aged, freq := "5", "1"
+		if caseName == "reclaim-flip-time" {
+			aged, freq = "1", "5"
+		}
+		agedHint, hintErr := esper.NewStatementHint(esper.HintReclaimGroupAged, aged)
+		if hintErr != nil {
+			return compat.Trace{}, hintErr
+		}
+		freqHint, hintErr := esper.NewStatementHint(esper.HintReclaimGroupFreq, freq)
+		if hintErr != nil {
+			return compat.Trace{}, hintErr
+		}
+		hints := []esper.StatementHint{agedHint, freqHint}
+		err := build("s0", false, esper.From[viewGroupMergeBean](env, "SupportBean").
+			Window(esper.GroupWindow(
+				esper.Field[viewGroupMergeBean, string]("theString"),
+				esper.KeepAll())).
+			Query(esper.StatementName("s0"), esper.WithStatementHints(hints...)))
+		if err != nil {
+			return compat.Trace{}, err
+		}
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported viewgroup-merge-view case %q", caseName)
 	}
@@ -378,12 +438,14 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 	// Per-statement sequence counters mirror the Java oracle: each named
 	// statement counts its own delivered batches from 1.
 	seqByStmt := make(map[string]uint64)
+	var deployments []*esper.Deployment
 	statements := make(map[string]*esper.Statement)
 	for _, item := range plans {
 		deployment, err := engine.Deploy(ctx, item.plan)
 		if err != nil {
 			return trace, err
 		}
+		deployments = append(deployments, deployment)
 		for _, st := range deployment.Statements() {
 			statements[st.Name()] = st
 		}
@@ -435,9 +497,20 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 					GroupID:   payload["groupId"].(string),
 					Timestamp: int64(payload["timestamp"].(float64)),
 				}
+			case "SupportBean":
+				underlying = viewGroupMergeBean{
+					TheString:    payload["theString"].(string),
+					IntPrimitive: int(payload["intPrimitive"].(float64)),
+				}
 			}
 			if err := engine.Send(ctx, step.EventType, underlying); err != nil {
 				return trace, err
+			}
+		case "undeploy-all":
+			for _, deployment := range deployments {
+				if err := deployment.Undeploy(ctx); err != nil {
+					return trace, err
+				}
 			}
 		case "advance-time":
 			at, err := time.Parse(time.RFC3339Nano, step.At)
@@ -447,6 +520,43 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 			if err := engine.AdvanceTime(ctx, at.UTC()); err != nil {
 				return trace, err
 			}
+		case "schedule-count", "schedule-count-overall", "iterator-count":
+			var count int64
+			var err error
+			if step.Op == "schedule-count" {
+				st, ok := statements[step.Statement]
+				if !ok {
+					return trace, fmt.Errorf("schedule-count statement %q not found", step.Statement)
+				}
+				var n int
+				n, err = st.ScheduleCount(ctx)
+				count = int64(n)
+			} else if step.Op == "schedule-count-overall" {
+				var n int
+				n, err = engine.ScheduleCountOverall(ctx)
+				count = int64(n)
+			} else {
+				st, ok := statements[step.Statement]
+				if !ok {
+					return trace, fmt.Errorf("iterator-count statement %q not found", step.Statement)
+				}
+				result, snapErr := st.Snapshot(ctx)
+				if snapErr != nil {
+					return trace, snapErr
+				}
+				count = int64(len(result.Batch.New))
+			}
+			if err != nil {
+				return trace, err
+			}
+			pinned := count
+			record := compat.TraceRecord{
+				Case:      caseName,
+				Operation: step.Op,
+				Statement: step.Statement,
+				Count:     &pinned,
+			}
+			trace.Records = append(trace.Records, record)
 		case "snapshot":
 			st, ok := statements[step.Statement]
 			if !ok {

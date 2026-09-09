@@ -49,27 +49,28 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.344 ('event-precedence-validation') committed as f68ec45b4; Git owns identity. EPLInsertIntoEventPrecedence.java fully dispositioned (10/11 DV + 1 implemented-not-DV).
 - Shipped: Draft 4.345 ('viewgroup-merge-view') committed as 41a3d402d; Git owns identity. ViewGroup.java now 2/20 executions DV.
 - Shipped: Draft 4.346 ('viewgroup-derived-value-views') committed as 1225a63e5; Git owns identity. ViewGroup.java now 6/20 executions DV.
-- Current target: Draft 4.347 'viewgroup-time-windows' — ViewGroup ords 10-13 + 16 (time_batch/time_accum/time_order/time_length_batch/time_win, all virtual-time, zero expected engine change); parallel scouts dispatched.
+- Shipped: Draft 4.347 ('viewgroup-time-windows') committed as 51e284b7e; Git owns identity. ViewGroup.java now 11/20 executions DV.
+- Current target: Draft 4.348 'viewgroup-reclaim' — ENGINE unit for ViewGroup reclaim ords 2/3/9 (view-level reclaim of grouped-view retention + schedule-count introspection surface); fresh parallel scouts dispatched.
 
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: Draft 4.347 ('viewgroup-time-windows') — extends case-viewgroup-merge-view (same scenario file + oracle + runner) with the five virtual-time window executions:
-- ord 10 ViewGroupTimeBatch `java-runtime-7bd36b6fe5567b066794`
-- ord 11 ViewGroupTimeAccum `java-runtime-842bde62118b9b8cae2d`
-- ord 12 ViewGroupTimeOrder `java-runtime-806120fdd2130ab1f275`
-- ord 13 ViewGroupTimeLengthBatch `java-runtime-737a5f1ffd4c6a6c8924`
-- ord 16 ViewGroupTimeWin `java-runtime-68ef8076bc96595cbfd0`
-All are `select irstream *` over `#groupwin(<key>)#time*()` chains, advanced via env.advanceTime before/during the send sequence; Go surface = GroupWindowKeys(key, TimeBatch/TimeAccum/TimeOrder(?)/TimeLengthBatch/TimeWindow) + WithOldStream + Engine.AdvanceTime (already differential-proven in ord-16-adjacent prior units? verify via scouts).
+Active: Draft 4.348 ('viewgroup-reclaim') — ENGINE unit for ViewGroup reclaim ords 2/3/9.
 
-- [x] Fresh parallel scouts dispatched (byte-exact contracts incl. advance-time sequences; Go virtual-time + time-window spec adjudication).
-- [x] Freeze contract; asset writer extended scenario/oracle/trace (agent_ff78649b, 5 cases with advance-time ops at RFC3339Nano, 108 records double-run byte-identical); primary extended the runner (5 builders incl. SupportBeanTimestamp fixture, advance-time op, per-case dynamic spans).
-- [x] Manifest (+5 runtime IDs/names — class 11/20 DV; all 5 were already referenced by case.view-group-matrix so referenced/unreferenced are unchanged at 3263/873; goTests deduped to the two prefixed forms), summary recomputed-exact: 888 DV runtime IDs / 3515 associations.
-- [x] Evidence regenerated (passing/0); Roadmap supplement (view rows stay 25 — ground truth verified; remaining-ords list corrected to 2/3/7/8/9/15/17/18/19); CHANGELOG 4.347 entry.
-- [x] Gates + independent parity review (agent_820dc940-1114-45d4-a0e1-463db1468b46): initial FAIL on two P2s — the roadmap view-domain decrement was wrong (all 5 new runtime IDs were already referenced by case.view-group-matrix; view rows reverted to the ground-truth 25) and two bare-name duplicate goTests entries in the case's manifest list; plus a P3 remaining-ords inconsistency. All fixed in the same work unit and re-confirmed by the same reviewer with per-domain ground truth independently recomputed (view 25 exact, total 873).
+Known surface (from the 4.334-era spike, to be re-verified by scouts): sweepReclaimGroups (runtime.go ~18578) only covers aggregate group-by state, not grouped-VIEW retention (windowRuntimeState.groups); Java ords use @Hint('reclaim_group_aged=…,reclaim_group_freq=…') over #groupwin(theString)#time(3000000) / #keepall / keepall-with-flipTime; ord 2 asserts SupportScheduleHelper.scheduleCount(stmt) 10→1→0 (one schedule per group); ord 9 uses flipTime=5000 with iterator counts 1→2→2.
+
+- [x] Fresh parallel scouts dispatched (byte-exact contracts incl. schedule-count assertions and flipTime semantics; Go engine design for view-level reclaim + schedule introspection with blast radius).
+- [x] Freeze contract; implement engine change (view-level sweep + ScheduleCount/ScheduleCountOverall introspection + Count field in TraceRecord/Step); validation-first spike GREEN (10→1→0).
+- [x] Asset writer: 3 scenario cases + oracle + trace (agent_c5c17252; schedule-count/iterator-count/schedule-count-overall ops with observed values; undeploy-all op; SupportScheduleHelper reimplemented against the runtime SPI; trace 116 records, triple-run byte-identical).
+- [x] Manifest (+3 runtime IDs/names — goTests unchanged (the prefixed pair already covers the diff family) — class 14/20 DV), summary recomputed-exact: 891 DV runtime IDs / 3518 associations / referenced 3266 / unreferenced 870 (validator-verified).
+- [x] Evidence note; Roadmap supplement + view 25→22 (3 net-new refs: 88d7b731/afc05b1a/33b5cb01; a3b6bef already referenced via merge-view); CHANGELOG 4.348 entry.
+- [ ] Gates + independent parity review.
 - [ ] Commit and push (Git owns identity; no hash recorded here).
 
 ## Delegation checkpoint
+
+Draft 4.348 unit:
+- Prefetch scouts (read-only, concurrent, dispatched): 'ViewGroupReclaimJavaContract' pins ords 2/3/9 byte-exact (hint texts, advance-time timelines, schedule-count assertions, flipTime semantics) and 'ViewGroupReclaimGoEngineDesign' designs the view-level reclaim + schedule-count introspection with blast radius over shipped grouped-view tests.
 
 Draft 4.347 unit:
 - Prefetch scouts (read-only, concurrent, dispatched): 'ViewGroupTimeWindowsJavaContract' pins ords 10-13/16 byte-exact contracts (advance-time timelines, IR pairs, group-key split) and 'ViewGroupTimeWindowsGoSurface' adjudicates the Go time-window/virtual-time surface (TimeBatch/TimeAccum/TimeOrder/TimeLengthBatch/TimeWindow specs, AdvanceTime) with file:line evidence.

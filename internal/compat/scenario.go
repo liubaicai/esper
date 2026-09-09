@@ -46,6 +46,10 @@ type Step struct {
 	Epl            string            `json:"epl,omitempty"`
 	Mode           string            `json:"mode,omitempty"`
 	Label          string            `json:"label,omitempty"`
+	// Count pins introspection-style observables without a row shape:
+	// pending schedule callbacks (schedule-count/schedule-count-overall) and
+	// iterator sizes (iterator-count). Required for those ops.
+	Count *int64 `json:"count,omitempty"`
 }
 
 func LoadScenario(reader io.Reader) (Scenario, error) {
@@ -105,6 +109,17 @@ func (s Scenario) Validate() error {
 			}
 		case "undeploy", "undeploy-all":
 			// Cleanup targets are selected by the host lifecycle handler.
+		case "schedule-count", "iterator-count":
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
+			}
+			if step.Count == nil {
+				return fmt.Errorf("compat: step %d %s has no count", i, step.Op)
+			}
+		case "schedule-count-overall":
+			if step.Count == nil {
+				return fmt.Errorf("compat: step %d schedule-count-overall has no count", i)
+			}
 		case "read-variable":
 			if strings.TrimSpace(step.Name) == "" {
 				return fmt.Errorf("compat: step %d read-variable has no name", i)
@@ -185,6 +200,10 @@ type TraceRecord struct {
 	Partitions []PartitionRecord `json:"partitions,omitempty"`
 	Name       string            `json:"name,omitempty"`
 	Value      any               `json:"value,omitempty"`
+	// Count pins introspection-style observables that have no row shape:
+	// pending schedule callbacks (SupportScheduleHelper.scheduleCount) and
+	// iterator sizes (EPAssertionUtil.iteratorCount). Nil for row records.
+	Count *int64 `json:"count,omitempty"`
 }
 
 // FormatTraceTime exposes the Java Instant.toString-compatible timestamp

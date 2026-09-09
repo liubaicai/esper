@@ -14,6 +14,10 @@ import com.espertech.esper.runtime.client.EPDeployment;
 import com.espertech.esper.runtime.client.EPRuntime;
 import com.espertech.esper.runtime.client.EPRuntimeProvider;
 import com.espertech.esper.runtime.client.EPStatement;
+import com.espertech.esper.runtime.internal.kernel.service.EPRuntimeSPI;
+import com.espertech.esper.runtime.internal.kernel.statement.EPStatementSPI;
+import com.espertech.esper.runtime.internal.schedulesvcimpl.ScheduleVisitor;
+import com.espertech.esper.runtime.internal.schedulesvcimpl.SchedulingServiceSPI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,9 +31,9 @@ import java.util.TreeSet;
 /**
  * Java oracle for ViewGroup grouped-window scenarios (merge-view family).
  *
- * Covers six pinned executions of ViewGroup, each replayed as its own case
- * against a fresh runtime with the pinned module text transcribed verbatim
- * (only the byte-exact EPL text; no other annotations are added):
+ * Covers fourteen pinned executions of ViewGroup, each replayed as its own
+ * case against a fresh runtime with the pinned module text transcribed
+ * verbatim (only the byte-exact EPL text; no other annotations are added):
  *
  * merge-view-union-aggregate replays ViewGroupObjectArrayEvent (execution
  * ordinal 0, runtime java-runtime-a3b6bef89e22a122cc7a):
@@ -142,6 +146,62 @@ import java.util.TreeSet;
  * stays silent, and each group expires exactly: old [{10}] at 11000, old
  * [{20}] at 15000, old [{30}] at 20000.
  *
+ * Three further cases replay the reclaim_group_aged/reclaim_group_freq
+ * surface and observe it through recorded counts instead of listener rows:
+ *
+ * reclaim-time-window replays ViewGroupReclaimTimeWindow (ordinal 2,
+ * runtime java-runtime-88d7b731431c59d99f3a): select longPrimitive,
+ * count(*) from SupportBean#groupwin(theString)#time(3000000) under
+ * @Hint('reclaim_group_aged=30,reclaim_group_freq=5'). The ten sends
+ * "0".."9" at t=0 arm one time window per group, so a schedule-count step
+ * observes 10 scheduled handles; after the advance to 1000000 the aged
+ * groups are reclaimed, the E1 send arms exactly one group, and a second
+ * schedule-count step observes 1. An explicit undeploy-all step mirrors
+ * env.undeployAll() (it removes every deployment and its schedule handles
+ * and records nothing itself), and the trailing schedule-count-overall
+ * step observes 0 for the whole runtime.
+ *
+ * reclaim-aged-hint replays ViewGroupReclaimAgedHint (ordinal 3, runtime
+ * java-runtime-afc05b1a18402bb17f56): select * from
+ * SupportBean#groupwin(theString)#keepall under
+ * @Hint('reclaim_group_aged=5,reclaim_group_freq=1'). For each of ten
+ * one-second slots the scenario advances to slot*1000+1 and sends one
+ * thousand "E<slot>" events; the reclaim passes keep only the groups
+ * within the aged horizon, so an iterator-count step observes 6000
+ * retained rows (the suite asserts <=6000 there and 6001 after one more
+ * E0 send, which the final iterator-count step observes exactly). The
+ * iterator-count op counts the statement's iteration without
+ * materializing rows.
+ *
+ * reclaim-flip-time replays the flipTime=5000 instantiation of
+ * ViewGroupReclaimWithFlipTime (ordinal 9, runtime
+ * java-runtime-33b5cb01913d5d23292b): select * from
+ * SupportBean#groupwin(theString)#keepall under
+ * @Hint('reclaim_group_aged=1,reclaim_group_freq=5'). Sends E1 at t=0 and
+ * E2 at t=4999 observe keepall counts 1 and 2; the advance to t=5000
+ * crosses the reclaim flip so group E1 ages out before the E3 send, whose
+ * iterator-count step observes 2 again.
+ *
+ * The three reclaim cases record no listener deliveries: the suite
+ * attaches a listener but pins only schedule and iterator counts for
+ * these executions, so attaching no recording listener leaves the
+ * observed counts unchanged (listeners do not affect view state,
+ * scheduling, or iteration) and keeps the trace to the pinned surface.
+ * The suite's pre-deploy advanceTime(0) replays through each case's
+ * existing initialization advance to epoch 0, in the same before-deploy
+ * order, so the reclaim cases carry no leading advance-time step.
+ *
+ * New count-record protocol (no time, no sequence, observed values
+ * only): step {"op":"schedule-count","statement":S} emits
+ * {"case":C,"operation":"schedule-count","statement":S,"count":N} with N
+ * counted from the scheduling service; step
+ * {"op":"schedule-count-overall"} emits
+ * {"case":C,"operation":"schedule-count-overall","count":N} counted over
+ * the whole runtime; step {"op":"iterator-count","statement":S} emits
+ * {"case":C,"operation":"iterator-count","statement":S,"count":N}. The
+ * declared count in each step is informational; the record always
+ * carries the observed value.
+ *
  * Suite milestones are harness ordering markers with no observable engine
  * output and record nothing. The OAEventStringInt event type mirrors the
  * pinned regression-run registration as an object-array type with property
@@ -249,31 +309,13 @@ public class ViewGroupMergeViewScenarioOracle {
             // to every statement it deploys before sending events. Per-
             // statement sequence counters keep each statement's pin unambiguous.
             // Deliveries buffer per statement and flush at the send boundary
-            // so records appear in canonical deployment order.
+            // so records appear in canonical deployment order. The reclaim
+            // cases pin only schedule and iterator counts, so no recording
+            // listener is attached there (listener attachment does not affect
+            // view state, scheduling, or iteration).
             Map<String, List<JsonObject>> pending = new LinkedHashMap<>();
-            for (EPStatement statement : statementsByName.values()) {
-                int[] seq = new int[] {0};
-                statement.addListener((newData, oldData, stmt, rt) -> {
-                    boolean hasNew = newData != null && newData.length > 0;
-                    boolean hasOld = oldData != null && oldData.length > 0;
-                    if (!hasNew && !hasOld) {
-                        return;
-                    }
-                    seq[0]++;
-                    JsonObject record = new JsonObject();
-                    record.add("case", caseName);
-                    record.add("operation", "listener");
-                    record.add("statement", stmt.getName());
-                    record.add("sequence", seq[0]);
-                    record.add("time", java.time.Instant.ofEpochMilli(rt.getEventService().getCurrentTime()).toString());
-                    if (hasNew) {
-                        record.add("new", rows(newData));
-                    }
-                    if (hasOld) {
-                        record.add("old", rows(oldData));
-                    }
-                    pending.computeIfAbsent(stmt.getName(), key -> new ArrayList<>()).add(record);
-                });
+            if (!COUNT_ONLY_CASES.contains(caseName)) {
+                attachRecordListeners(statementsByName, pending, caseName);
             }
 
             boolean inCase = false;
@@ -325,6 +367,52 @@ public class ViewGroupMergeViewScenarioOracle {
                     records.add(record);
                     continue;
                 }
+                if ("schedule-count".equals(op)) {
+                    // Observes the suite's SupportScheduleHelper.scheduleCount:
+                    // schedule handles whose statement id matches the named
+                    // statement. Records the observed count (no time, no
+                    // sequence); the step's declared count is informational.
+                    String statementName = step.getString("statement", "s0");
+                    EPStatement countStatement = requireStatement(statementsByName, statementName, caseName);
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "schedule-count");
+                    record.add("statement", statementName);
+                    record.add("count", scheduleCountForStatement(countStatement));
+                    records.add(record);
+                    continue;
+                }
+                if ("schedule-count-overall".equals(op)) {
+                    // Observes the suite's
+                    // SupportScheduleHelper.scheduleCountOverall over the
+                    // whole runtime (used after undeploy-all).
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "schedule-count-overall");
+                    record.add("count", scheduleCountOverall(runtime));
+                    records.add(record);
+                    continue;
+                }
+                if ("iterator-count".equals(op)) {
+                    // Observes the suite's
+                    // EPAssertionUtil.iteratorCount(statement.iterator()):
+                    // counts the current iteration without materializing rows.
+                    String statementName = step.getString("statement", "s0");
+                    EPStatement countStatement = requireStatement(statementsByName, statementName, caseName);
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "iterator-count");
+                    record.add("statement", statementName);
+                    record.add("count", iteratorCount(countStatement));
+                    records.add(record);
+                    continue;
+                }
+                if ("undeploy-all".equals(op)) {
+                    // Mirrors env.undeployAll(): removes every deployment and
+                    // its schedule handles; records nothing itself.
+                    runtime.getDeploymentService().undeployAll();
+                    continue;
+                }
                 throw new IllegalStateException("unknown op: " + op);
             }
 
@@ -343,6 +431,100 @@ public class ViewGroupMergeViewScenarioOracle {
                 batch.clear();
             }
         }
+    }
+
+    /** Cases that observe schedule and iterator counts only, no listener rows. */
+    private static final java.util.Set<String> COUNT_ONLY_CASES = java.util.Set.of(
+        "reclaim-time-window", "reclaim-aged-hint", "reclaim-flip-time");
+
+    /** Attaches one recording listener per deployed statement (non-count cases). */
+    private static void attachRecordListeners(Map<String, EPStatement> statementsByName,
+        Map<String, List<JsonObject>> pending, String caseName) {
+        for (EPStatement statement : statementsByName.values()) {
+            int[] seq = new int[] {0};
+            statement.addListener((newData, oldData, stmt, rt) -> {
+                boolean hasNew = newData != null && newData.length > 0;
+                boolean hasOld = oldData != null && oldData.length > 0;
+                if (!hasNew && !hasOld) {
+                    return;
+                }
+                seq[0]++;
+                JsonObject record = new JsonObject();
+                record.add("case", caseName);
+                record.add("operation", "listener");
+                record.add("statement", stmt.getName());
+                record.add("sequence", seq[0]);
+                record.add("time", java.time.Instant.ofEpochMilli(rt.getEventService().getCurrentTime()).toString());
+                if (hasNew) {
+                    record.add("new", rows(newData));
+                }
+                if (hasOld) {
+                    record.add("old", rows(oldData));
+                }
+                pending.computeIfAbsent(stmt.getName(), key -> new ArrayList<>()).add(record);
+            });
+        }
+    }
+
+    /** Resolves a deployed statement by name or fails the case. */
+    private static EPStatement requireStatement(Map<String, EPStatement> statementsByName,
+        String statementName, String caseName) {
+        EPStatement statement = statementsByName.get(statementName);
+        if (statement == null) {
+            throw new IllegalStateException(
+                "statement " + statementName + " not deployed for case " + caseName);
+        }
+        return statement;
+    }
+
+    /**
+     * Mirrors the suite's
+     * SupportScheduleHelper.scheduleCount(statement): casts through the
+     * statement SPI to the scheduling service and counts schedule handles
+     * whose statement id matches. Reimplemented locally because the fixed run
+     * script classpath excludes regression-lib; the visited SPI and the
+     * matching predicate are identical.
+     */
+    private static int scheduleCountForStatement(EPStatement statement) {
+        EPStatementSPI spi = (EPStatementSPI) statement;
+        SchedulingServiceSPI schedulingServiceSPI =
+            (SchedulingServiceSPI) spi.getStatementContext().getSchedulingService();
+        int statementId = spi.getStatementId();
+        int[] count = new int[] {0};
+        ScheduleVisitor visitor = visit -> {
+            if (visit.getStatementId() == statementId) {
+                count[0]++;
+            }
+        };
+        schedulingServiceSPI.visitSchedules(visitor);
+        return count[0];
+    }
+
+    /**
+     * Mirrors the suite's SupportScheduleHelper.scheduleCountOverall(runtime):
+     * counts every schedule handle across the runtime through the services
+     * context scheduling service.
+     */
+    private static int scheduleCountOverall(EPRuntime runtime) {
+        EPRuntimeSPI spi = (EPRuntimeSPI) runtime;
+        int[] count = new int[] {0};
+        ScheduleVisitor visitor = visit -> count[0]++;
+        spi.getServicesContext().getSchedulingService().visitSchedules(visitor);
+        return count[0];
+    }
+
+    /**
+     * Mirrors the suite's EPAssertionUtil.iteratorCount: counts the
+     * statement's current iteration without materializing rows.
+     */
+    private static int iteratorCount(EPStatement statement) {
+        int count = 0;
+        Iterator<EventBean> iterator = statement.iterator();
+        while (iterator.hasNext()) {
+            iterator.next();
+            count++;
+        }
+        return count;
     }
 
     /** Verbatim transcriptions of the pinned ViewGroup modules. */
@@ -382,6 +564,17 @@ public class ViewGroupMergeViewScenarioOracle {
                 modules.add("@name('s0') select irstream * from  SupportMarketDataBean#groupwin(symbol)#time_length_batch(10 sec, 100)");
             case "time-win-groups" ->
                 modules.add("@name('s0') select irstream * from  SupportMarketDataBean#groupwin(symbol)#time(10 sec)");
+            // Reclaim-group executions: byte-exact transcriptions of the
+            // suite's concatenated EPL text (hint annotation adjacent to
+            // @name, single space before select).
+            case "reclaim-time-window" ->
+                modules.add("@name('s0') @Hint('reclaim_group_aged=30,reclaim_group_freq=5') " +
+                    "select longPrimitive, count(*) from SupportBean#groupwin(theString)#time(3000000)");
+            case "reclaim-aged-hint" ->
+                modules.add("@name('s0') @Hint('reclaim_group_aged=5,reclaim_group_freq=1') " +
+                    "select * from SupportBean#groupwin(theString)#keepall");
+            case "reclaim-flip-time" ->
+                modules.add("@name('s0') @Hint('reclaim_group_aged=1,reclaim_group_freq=5') select * from SupportBean#groupwin(theString)#keepall");
             default -> throw new IllegalStateException("unknown case: " + caseName);
         }
         return modules;

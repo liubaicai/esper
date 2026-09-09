@@ -24319,11 +24319,17 @@
     "java-runtime-842bde62118b9b8cae2d",
     "java-runtime-806120fdd2130ab1f275",
     "java-runtime-737a5f1ffd4c6a6c8924",
-    "java-runtime-68ef8076bc96595cbfd0"
+    "java-runtime-68ef8076bc96595cbfd0",
+    "java-runtime-88d7b731431c59d99f3a",
+    "java-runtime-afc05b1a18402bb17f56",
+    "java-runtime-33b5cb01913d5d23292b"
    ],
    "javaStaticIds": [
     "java-4c1562348946dab6dc09",
-    "java-48fb0b51c8d6abc3e858"
+    "java-48fb0b51c8d6abc3e858",
+    "java-62dfe7eb67b16a22d54f",
+    "java-dd075b3c1e961a8ae056",
+    "java-582906d19fd45149cfeb"
    ],
    "javaNames": [
     "ViewGroupObjectArrayEvent",
@@ -24332,7 +24338,10 @@
     "ViewGroupTimeAccum",
     "ViewGroupTimeOrder",
     "ViewGroupTimeLengthBatch",
-    "ViewGroupTimeWin"
+    "ViewGroupTimeWin",
+    "ViewGroupReclaimTimeWindow",
+    "ViewGroupReclaimAgedHint",
+    "ViewGroupReclaimWithFlipTime"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
@@ -24369,11 +24378,15 @@
     "java-runtime-842bde62118b9b8cae2d",
     "java-runtime-806120fdd2130ab1f275",
     "java-runtime-737a5f1ffd4c6a6c8924",
-    "java-runtime-68ef8076bc96595cbfd0"
+    "java-runtime-68ef8076bc96595cbfd0",
+    "java-runtime-88d7b731431c59d99f3a",
+    "java-runtime-afc05b1a18402bb17f56",
+    "java-runtime-33b5cb01913d5d23292b"
    ],
    "notes": [
     "Draft 4.345 ENGINE unit closes the groupwin union-aggregate divergence: the implicit aggregate group-by injection no longer fires for ordinary select-clause aggregates over a groupwin (scalar projections like p1 no longer force per-key sums), so `select p1,sum(p2) from ...#groupwin(p1)#length(2)` keeps one ungrouped union aggregate over the merged cross-group deltas exactly like Java's groupwin merge-view (sp2 evolution 10/21/33/36 with in-group eviction subtracted). The univariate-statistics injection trigger now also matches #correl and #linest expressions, mirroring Java's per-group derived-value child views. ViewGroupLengthWin pins grouped length-window retention with irstream eviction pairs. Derived-value stat-view executions (ords 1/4/5/6 — Java #uni/#correl/#linest post irstream old rows on every insert, which the select-aggregate adaptation cannot express over a keepall group window) are deferred to a derived-value-view unit; reclaim ords 2/3/9 need view-level reclaim plus a schedule-count introspection surface; time-window ords 10-13/16/18 need virtual-time batch machinery; ord 7 is compile-messages; ord 8 is performance-gated; ord 19 is SERDEREQUIRED.",
-    "Draft 4.347 extension covers ords 10-13/16 (grouped time windows, all `select irstream *`, virtual-time driven via env.advanceTime): #groupwin(symbol)#time_batch(10 sec) with per-group anchored schedules and the empty re-arm flush at 21000 posting one update with new=null/old=[10,20]; #time_accum(10 sec) immediate inserts and whole-window expiry old pairs; #groupwin(groupId)#time_order(timestamp, 10 sec) release in timestamp order (E2@12000, E4@12500); #time_length_batch(10 sec, 100) time-driven-only; #time(10 sec) per-event expiry. Go shape: GroupWindow/GroupWindowKeys with TimeBatch/TimeAccum/TimeOrder/TimeLengthBatch/TimeWindow inners, WithOldStream, Engine.AdvanceTime; runner formats whole seconds without fraction and non-zero millisecond remainders with three digits, mirroring the Java oracle's optional-section time pattern. Remaining ords: 2/3/9 (view-level reclaim + schedule-count introspection), 7 (compile messages), 8 (performance-gated), 15/18 (implemented by case.view-group-matrix), 17 (expression groupwin), 19 (SERDEREQUIRED)."
+    "Draft 4.347 extension covers ords 10-13/16 (grouped time windows, all `select irstream *`, virtual-time driven via env.advanceTime): #groupwin(symbol)#time_batch(10 sec) with per-group anchored schedules and the empty re-arm flush at 21000 posting one update with new=null/old=[10,20]; #time_accum(10 sec) immediate inserts and whole-window expiry old pairs; #groupwin(groupId)#time_order(timestamp, 10 sec) release in timestamp order (E2@12000, E4@12500); #time_length_batch(10 sec, 100) time-driven-only; #time(10 sec) per-event expiry. Go shape: GroupWindow/GroupWindowKeys with TimeBatch/TimeAccum/TimeOrder/TimeLengthBatch/TimeWindow inners, WithOldStream, Engine.AdvanceTime; runner formats whole seconds without fraction and non-zero millisecond remainders with three digits, mirroring the Java oracle's optional-section time pattern. Remaining ords: 2/3/9 (view-level reclaim + schedule-count introspection), 7 (compile messages), 8 (performance-gated), 15/18 (implemented by case.view-group-matrix), 17 (expression groupwin), 19 (SERDEREQUIRED).",
+    "Draft 4.348 ENGINE unit covers ords 2/3/9 (view-level reclaim): @Hint('reclaim_group_aged/freq') on grouped-view chains now sweeps per-group child state (drop groups with inactivity strictly > aged; sweep piggybacks on incoming events at most once per frequency window armed on first update; Engine.AdvanceTime alone never triggers it; removed groups detach silently with no old-stream rows — Java's removeSubview detach without Go-side schedule cancellation because Go time windows expire lazily). New introspection APIs: Statement.ScheduleCount and Engine.ScheduleCountOverall synthesize pending callback counts from window/pattern/output state (one per time-driven window state with live future-deadline work — Java TimeWindowView holds a handle while non-empty). reclaim-time-window pins the 10→1→0 progression; reclaim-flip-time pins 1→2→2 across the aged boundary at 4999/5000; reclaim-aged-hint trims the suite's 10x1000 sends to 10x100 (both engines replay the same trimmed scenario; counts 600/601). Remaining ords: 7 (compile messages), 8 (performance-gated), 15/18 (implemented by case.view-group-matrix), 17 (expression groupwin), 19 (SERDEREQUIRED)."
    ]
   },
   {
@@ -42688,7 +42701,7 @@
   "inventoriedCases": 628,
   "implementedCases": 626,
   "differentialVerifiedCases": 241,
-  "differentialVerifiedRuntimeIds": 888,
+  "differentialVerifiedRuntimeIds": 891,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42698,14 +42711,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3515,
-  "referencedJavaRuntimeIds": 3263,
+  "runtimeAssociationCount": 3518,
+  "referencedJavaRuntimeIds": 3266,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 873,
+  "unreferencedJavaRuntimeIds": 870,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 628,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 888
+  "differentialVerifiedRuntimeIDs": 891
  }
 }

@@ -1938,6 +1938,185 @@ func (s *Statement) takeOutputAssignments() []VariableAssignment {
 	return assignments
 }
 
+// ScheduleCount returns the number of pending schedule callbacks observable
+// for this statement — the Go counterpart of Java test-support
+// SupportScheduleHelper.scheduleCount(stmt). The engine stores no schedule
+// registry: time-driven windows synthesize their callbacks on demand, so the
+// count walks the same state the nearest-schedule walker reads — one pending
+// callback per time-driven window state that still owns live work.
+// patternOnlyNearestSchedule returns the earliest pending pattern timer for
+// the runtime's own pattern state, without spanning output/window/partition
+// state the way statementRuntimeNearestSchedule does — schedule-count must
+// attribute each pending callback to exactly one source.
+func patternOnlyNearestSchedule(state *patternRuntimeState, pattern *patternDefinition) (time.Time, bool) {
+	if state == nil {
+		return time.Time{}, false
+	}
+	var nearest time.Time
+	found := false
+	if root := pattern.root; root != nil && isPatternTimerRoot(pattern) {
+		switch root.kind {
+		case patternTimerIntervalNode:
+			if state.timerStarted && !state.timerEmitted {
+				nearest, found = earlierSchedule(nearest, found, state.timerNext)
+			}
+		case patternTimerAtNode:
+			if !state.timerEmitted {
+				nearest, found = earlierSchedule(nearest, found, state.timerNext)
+			}
+		case patternTimerScheduleNode:
+			if schedule := state.schedulePeriod; schedule != nil && schedule.active {
+				nearest, found = earlierSchedule(nearest, found, schedule.next)
+			} else if state.scheduleIndex < len(root.schedule) {
+				nearest, found = earlierSchedule(nearest, found, root.schedule[state.scheduleIndex])
+			}
+		case patternTimerCronNode:
+			nearest, found = earlierSchedule(nearest, found, state.cronNext)
+		}
+	}
+	for _, match := range state.active {
+		if at, ok := patternProgressNearestSchedule(match.state); ok {
+			nearest, found = earlierSchedule(nearest, found, at)
+		}
+	}
+	return nearest, found
+}
+
+func (s *Statement) ScheduleCount(ctx context.Context) (int, error) {
+	if s == nil {
+		return 0, NewError(ErrorState, "nil statement")
+	}
+	if s.engine != nil {
+		s.engine.mu.Lock()
+		defer s.engine.mu.Unlock()
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || s.state != StatementStarted {
+		// Java's stop path removes the statement's schedule handles, so a
+		// stopped statement reports zero pending callbacks (matching
+		// SupportScheduleHelper.scheduleCount after undeploy).
+		return 0, nil
+	}
+	now := s.runtime.engine.clock.Now()
+	variables := variablesWithEngineLockState(statementVariables(cloneValues(s.runtime.variables), s.parameters), s.engine, true)
+	return statementScheduleCount(&s.runtime, s.plan.query, now, variables), nil
+}
+
+// ScheduleCountOverall returns the number of pending schedule callbacks
+// across every started statement in the engine — the counterpart of
+// SupportScheduleHelper.scheduleCountOverall(runtime). After undeployAll it
+// is zero: closed statements hold no schedules.
+func (e *Engine) ScheduleCountOverall(ctx context.Context) (int, error) {
+	if e == nil {
+		return 0, NewError(ErrorDependency, "nil engine")
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	now := e.clock.Now()
+	total := 0
+	for _, statement := range e.statements {
+		statement.mu.RLock()
+		if statement.closed || statement.state != StatementStarted {
+			statement.mu.RUnlock()
+			continue
+		}
+		variables := variablesWithEngineLockState(statementVariables(cloneValues(statement.runtime.variables), statement.parameters), e, true)
+		total += statementScheduleCount(&statement.runtime, statement.plan.query, now, variables)
+		statement.mu.RUnlock()
+	}
+	_ = ctx
+	return total, nil
+}
+
+// statementScheduleCount counts pending synthesized callbacks: one per
+// time-driven window state that still owns live work (time windows with an
+// entry whose deadline is in the future, armed batch states), plus pattern
+// timers and output-limit schedules, mirroring the nearest-schedule walker.
+func statementScheduleCount(runtime *statementRuntime, query Query, now time.Time, variables map[string]Value) int {
+	if runtime == nil {
+		return 0
+	}
+	total := 0
+	if query.pattern != nil && runtime.patternState != nil && !runtime.patternState.patternStopped {
+		if at, ok := patternOnlyNearestSchedule(runtime.patternState, query.pattern); ok && at.After(now) {
+			total++
+		}
+	}
+	if state := runtime.outputState; state != nil {
+		if !state.nextOutputAt.IsZero() && state.nextOutputAt.After(now) {
+			total++
+		}
+		if !state.cronNext.IsZero() && state.cronNext.After(now) {
+			total++
+		}
+		for _, at := range state.firstEveryNext {
+			if !at.IsZero() && at.After(now) {
+				total++
+			}
+		}
+	}
+	for node, state := range runtime.windows {
+		if node == nil || node.window == nil {
+			continue
+		}
+		var resolved *time.Duration
+		if state.timeWindowExprResolved {
+			resolved = &state.resolvedTimeWindowDuration
+		}
+		total += windowScheduleCount(node.window, state, now, variables, resolved)
+	}
+	for _, partition := range runtime.partitions {
+		total += statementScheduleCount(partition, query, now, variables)
+	}
+	return total
+}
+
+// windowScheduleCount counts the pending synthesized schedule callbacks a
+// window state owns — the counting twin of windowRuntimeNearestSchedule. A
+// time-driven window state owns one callback while it holds at least one
+// entry whose deadline is still in the future (Java's TimeWindowView holds a
+// handle while non-empty and re-arms on expiry); batch states own one while
+// armed; non-time retention states own none (they expire by insertion, not
+// by schedule).
+func windowScheduleCount(spec WindowSpec, state *windowRuntimeState, now time.Time, variables map[string]Value, resolved *time.Duration) int {
+	if state == nil {
+		return 0
+	}
+	switch window := spec.(type) {
+	case GroupWindowSpec:
+		total := 0
+		for _, key := range state.groupOrder {
+			total += windowScheduleCount(window.Inner, state.groups[key], now, variables, resolved)
+		}
+		return total
+	case TimeWindowSpec:
+		for _, entry := range state.entries {
+			if timeWindowEventDeadline(window, entry.event, entry.receivedAt, now, variables, resolved).After(now) {
+				return 1
+			}
+		}
+		for _, entry := range state.pendingNew {
+			if timeWindowEventDeadline(window, entry.event, entry.receivedAt, now, variables, resolved).After(now) {
+				return 1
+			}
+		}
+		return 0
+	case TimeAccumWindowSpec, TimeOrderWindowSpec:
+		if len(state.entries) > 0 || len(state.pendingNew) > 0 {
+			return 1
+		}
+		return 0
+	case TimeBatchWindowSpec, TimeLengthBatchWindowSpec:
+		if state.started || len(state.pendingNew) > 0 {
+			return 1
+		}
+		return 0
+	default:
+		return 0
+	}
+}
+
 // ContextPartitionCount and ContextPartitionKeys expose the currently
 // materialized key partitions for diagnostics and selector-style tooling.
 func (s *Statement) ContextPartitionCount() int {
@@ -5382,18 +5561,19 @@ func joinDeltaEvents(delta joinDelta, receivedAt time.Time) eventDelta {
 }
 
 type windowRuntimeState struct {
-	entries    []storedEvent
-	pendingNew []storedEvent
-	arrival    []Event
-	started    bool
-	start      time.Time
-	scheduleAt time.Time
-	externalAt time.Time
-	keyed      map[string]storedEvent
-	keyOrder   []string
-	groups     map[string]*windowRuntimeState
-	groupOrder []string
-	children   []*windowRuntimeState
+	entries      []storedEvent
+	pendingNew   []storedEvent
+	arrival      []Event
+	started      bool
+	start        time.Time
+	scheduleAt   time.Time
+	externalAt   time.Time
+	keyed        map[string]storedEvent
+	keyOrder     []string
+	groups       map[string]*windowRuntimeState
+	groupOrder   []string
+	children     []*windowRuntimeState
+	lastActivity time.Time
 	// timeWindowExprResolved/resolvedTimeWindowDuration hold the deployment-time
 	// snapshot of an expression-sized time window (time(<variable>) /
 	// time(<parameter>)), mirroring Esper's view-creation evaluation.
@@ -5426,7 +5606,11 @@ type statementRuntime struct {
 	rowRecogState            *rowRecogRuntimeState
 	outputState              *outputRuntimeState
 	distinctCounts           map[string]int
-	namedWindowArrival       []Event
+	// viewReclaimSweeps holds the per-groupwin-node next-sweep anchor for
+	// reclaim_group_aged/freq hints on grouped-view chains (Java's
+	// GroupByViewReclaimAged.nextSweepTime is per agent instance).
+	viewReclaimSweeps  map[*streamNode]time.Time
+	namedWindowArrival []Event
 	// priorArrival retains the logical input arrival order used by Esper's
 	// prior() expression. Unlike Prev, Prior is not limited to the current
 	// view's retained entries: a length(2) view can still evaluate prior(2,
@@ -13589,6 +13773,10 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
 			hadInput:        inputDelta.hadInput,
 		}
+		// Java's GroupByViewReclaimAged sweeps inside view.update before the
+		// current event is routed, so a reclaimed group does not observe the
+		// triggering event.
+		r.sweepReclaimViewGroups(node, node.window, state, now)
 		for _, candidate := range inputDelta.newEvents {
 			delta, addErr := r.addToWindow(node.window, state, candidate, now)
 			if addErr != nil {
@@ -14033,6 +14221,10 @@ func removeFromWindowState(spec WindowSpec, state *windowRuntimeState, event Eve
 		if child == nil {
 			return false
 		}
+		// Java GroupByViewReclaimAged.handleEvent stamps lastUpdateTime for
+		// routed old-data events too, keeping a surviving group's activity
+		// fresh across removals.
+		child.lastActivity = now
 		removed := removeFromWindowState(window.Inner, child, event, now, variables)
 		if windowStateEmpty(child) {
 			delete(state.groups, key)
@@ -14111,6 +14303,11 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 			child = &windowRuntimeState{}
 			state.groupOrder = append(state.groupOrder, key)
 		}
+		// Java GroupByViewReclaimAged.refreshView stamps lastUpdateTime on
+		// every routed incoming event — the reclaim-aged sweep measures
+		// group inactivity against it (old-data stamping lives in
+		// removeFromWindowState).
+		child.lastActivity = now
 		result, err := r.addToWindow(window.Inner, child, event, now)
 		if err != nil {
 			return eventDelta{}, err
@@ -18643,6 +18840,79 @@ func (r *statementRuntime) sweepReclaimGroups(plan Plan, now time.Time) {
 	for key, group := range r.aggregateState.groups {
 		if !group.lastActivity.IsZero() && now.Sub(group.lastActivity) > aged {
 			removeAggregateGroupKey(r.aggregateState, key)
+		}
+	}
+}
+
+// sweepReclaimViewGroups mirrors Java's GroupByViewReclaimAged for grouped
+// view chains: with @Hint('reclaim_group_aged=...') the groupwin drops
+// per-group child state whose inactivity exceeds the aged bound, sweeping at
+// most once per frequency interval and always before the current event is
+// routed. The sweep piggybacks on incoming events (Java piggybacks on
+// view.update); Engine.AdvanceTime alone never triggers it. Removed groups
+// detach silently — Java's removeSubview runs stop-services but posts no
+// old-stream rows, and Go's lazy time-window expiry needs no schedule
+// cancellation.
+func (r *statementRuntime) sweepReclaimViewGroups(node *streamNode, spec WindowSpec, state *windowRuntimeState, now time.Time) {
+	if r == nil || state == nil {
+		return
+	}
+	if _, ok := spec.(GroupWindowSpec); !ok {
+		return
+	}
+	var agedParam, freqParam string
+	agedSet, freqSet, disabled := false, false, false
+	for _, hint := range r.query.statementMetadata.hints {
+		switch hint.kind {
+		case HintDisableReclaimGroup:
+			disabled = true
+		case HintReclaimGroupAged:
+			if len(hint.parameters) > 0 {
+				agedParam = hint.parameters[0]
+				agedSet = true
+			}
+		case HintReclaimGroupFreq:
+			if len(hint.parameters) > 0 {
+				freqParam = hint.parameters[0]
+				freqSet = true
+			}
+		}
+	}
+	// Java's forge sets isReclaimAged only when the aged hint is present;
+	// the frequency hint defaults to the aged value when absent.
+	if disabled || !agedSet {
+		return
+	}
+	if r.viewReclaimSweeps == nil {
+		r.viewReclaimSweeps = make(map[*streamNode]time.Time)
+	}
+	anchor := r.viewReclaimSweeps[node]
+	if !anchor.IsZero() && now.Before(anchor) {
+		return
+	}
+	aged := reclaimHintDuration(agedParam, r.variables, 0)
+	freq := aged
+	if freqSet {
+		freq = reclaimHintDuration(freqParam, r.variables, aged)
+	}
+	if freq <= 0 {
+		freq = aged
+	}
+	// Java arms nextSweepTime before sweeping, so a sweep due at now does
+	// not re-run within the same frequency window.
+	r.viewReclaimSweeps[node] = now.Add(freq)
+	if aged <= 0 {
+		return
+	}
+	for key, child := range state.groups {
+		if !child.lastActivity.IsZero() && now.Sub(child.lastActivity) > aged {
+			delete(state.groups, key)
+			for index, existing := range state.groupOrder {
+				if existing == key {
+					state.groupOrder = append(state.groupOrder[:index], state.groupOrder[index+1:]...)
+					break
+				}
+			}
 		}
 	}
 }
