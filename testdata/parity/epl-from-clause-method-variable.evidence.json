@@ -1,0 +1,675 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-b6134319ddad78ee7888",
+    "java-runtime-7fa38fe9688391d3f9da",
+    "java-runtime-1c125ff69ef065d76608",
+    "java-runtime-26c863d3cc9d5aca7cc7",
+    "java-runtime-2989d0cd737e30ae5633"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/fromclausemethod/EPLFromClauseMethodVariable.java"
+  ],
+  "javaExecutions": [
+    "EPLFromClauseMethodConstantVariable",
+    "EPLFromClauseMethodNonConstantVariable{soda=true}",
+    "EPLFromClauseMethodNonConstantVariable{soda=false}",
+    "EPLFromClauseMethodContextVariable",
+    "EPLFromClauseMethodVariableMapAndOA"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-from-clause-method-variable",
+    "steps": [
+      {
+        "op": "case",
+        "case": "constant-variable"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "case",
+        "case": "nonconstant-soda-true"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "newpostfix"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "postfix"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "case",
+        "case": "nonconstant-soda-false"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "newpostfix"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "postfix"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "case",
+        "case": "context-variable"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 1,
+          "p20": "a"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S2",
+        "payload": {
+          "id": 2,
+          "p20": "b"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "case",
+        "case": "map-and-oa"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0",
+        "mode": "fifo",
+        "label": "map"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0",
+        "mode": "fifo",
+        "label": "oa"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-from-clause-method-variable",
+    "records": [
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_10_"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_20_"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_10_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_20_newpostfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_30_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_10_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_20_newpostfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_30_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_1_context_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_2_context_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_1_a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_2_b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-and-oa",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "field1": "a",
+              "field2": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-and-oa",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "field1": "a",
+              "field2": "b"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-from-clause-method-variable",
+    "records": [
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_10_"
+            }
+          }
+        ]
+      },
+      {
+        "case": "constant-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_20_"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_10_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_20_newpostfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_30_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_10_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_20_newpostfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nonconstant-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_30_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_1_context_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_2_context_postfix"
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_1_a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-variable",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "_2_b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-and-oa",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "field1": "a",
+              "field2": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-and-oa",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "field1": "a",
+              "field2": "b"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

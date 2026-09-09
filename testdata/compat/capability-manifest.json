@@ -2083,7 +2083,15 @@
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b6134319ddad78ee7888",
+    "java-runtime-7fa38fe9688391d3f9da",
+    "java-runtime-1c125ff69ef065d76608",
+    "java-runtime-26c863d3cc9d5aca7cc7",
+    "java-runtime-2989d0cd737e30ae5633"
    ]
   },
   {
@@ -17120,7 +17128,8 @@
     "EPLFromClauseMethodWithMethodResultParam",
     "EPLFromClauseMethodEventBeanArray",
     "EPLFromClauseMethodInvocationTargetEx",
-    "EPLFromClauseMethodUDFAndScriptReturningEvents"
+    "EPLFromClauseMethodUDFAndScriptReturningEvents",
+    "EPLFromClauseMethodVariableInvalid"
    ],
    "id": "case.epl-fromclausemethod-basic",
    "status": "implemented",
@@ -17267,6 +17276,73 @@
    "verification": [
     "inventoried",
     "implemented"
+   ],
+   "notes": [
+    "Draft 4.355 adds EPLFromClauseMethodVariableInvalid (implemented-not-differential): all three of its compile expectations hinge on reflective method resolution Go does not model (method footprint mismatch; null variable value with instance-method metadata). Go-side Build-rejection coverage for the portable context-variable scoping invalids lives in internal/esper/fromclausemethod_variable_parity_test.go; the differential chain case.epl-fromclausemethod-variable covers the suite's five behavioral executions."
+   ]
+  },
+  {
+   "id": "case.epl-fromclausemethod-variable",
+   "javaRuntimeIds": [
+    "java-runtime-b6134319ddad78ee7888",
+    "java-runtime-7fa38fe9688391d3f9da",
+    "java-runtime-1c125ff69ef065d76608",
+    "java-runtime-26c863d3cc9d5aca7cc7",
+    "java-runtime-2989d0cd737e30ae5633"
+   ],
+   "javaStaticIds": [
+    "java-0c96a9c7a50b74ab775d"
+   ],
+   "javaNames": [
+    "EPLFromClauseMethodConstantVariable",
+    "EPLFromClauseMethodNonConstantVariable{soda=true}",
+    "EPLFromClauseMethodNonConstantVariable{soda=false}",
+    "EPLFromClauseMethodContextVariable",
+    "EPLFromClauseMethodVariableMapAndOA"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/fromclausemethod/EPLFromClauseMethodVariable.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplFromClauseMethodVariableDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplFromClauseMethodVariableDirectReplay",
+    "internal/app/parity/run_test.go:TestRunEplFromClauseMethodVariableDiffRejectsTraceMutations",
+    "internal/esper/fromclausemethod_variable_parity_test.go:TestFromClauseMethodConstantVariableParity",
+    "internal/esper/fromclausemethod_variable_parity_test.go:TestFromClauseMethodNonConstantVariableParity",
+    "internal/esper/fromclausemethod_variable_parity_test.go:TestFromClauseMethodContextVariableParity",
+    "internal/esper/fromclausemethod_variable_parity_test.go:TestFromClauseMethodVariableMapAndOAParity"
+   ],
+   "tags": [
+    "epl",
+    "fromclausemethod",
+    "method-source",
+    "variable",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-from-clause-method-variable.json",
+    "testdata/parity/epl-from-clause-method-variable.trace.json",
+    "testdata/parity/epl-from-clause-method-variable.go.trace.json",
+    "testdata/parity/epl-from-clause-method-variable.evidence.json",
+    "tools/java-oracle/EPLFromClauseMethodVariableScenarioOracle.java",
+    "tools/java-oracle/run-epl-from-clause-method-variable.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b6134319ddad78ee7888",
+    "java-runtime-7fa38fe9688391d3f9da",
+    "java-runtime-1c125ff69ef065d76608",
+    "java-runtime-26c863d3cc9d5aca7cc7",
+    "java-runtime-2989d0cd737e30ae5633"
+   ],
+   "notes": [
+    "Draft 4.355 covers EPLFromClauseMethodVariable's five behavioral executions: a constant-shaped method service (`_10_`/`_20_`), a non-constant service whose postfix variable is re-sampled per trigger row with mid-stream on-set writes (`_10_postfix`/`_20_newpostfix`/`_30_postfix`, both soda compile variants replaying one Go builder), per-partition context variables under an overlapping initiated context with in-context on-set mutation (`_1_context_postfix`/`_2_context_postfix`/`_1_a`/`_2_b`), and triggerless Map/ObjectArray handler sources observed through iterator snapshots (`field1:a,field2:b` twice). Go surface: FromMethod/FromMethodOn + MethodProviderFunc polling per trigger row with a fresh visible-variable snapshot; the provider closes over the variable name, so the constant/non-constant contrast is provider-side. The sixth execution EPLFromClauseMethodVariableInvalid and the context execution's two trailing invalid compiles are compile-only under the invalidity policy: no trace rows; Go Build-rejection coverage lives in internal/esper/fromclausemethod_variable_parity_test.go (context-variable scoping errors) and the reflective-resolution invalids (method footprint mismatch; null variable with instance-method metadata) have no Go equivalent — Java validates reflection footprints Go does not model."
    ]
   },
   {
@@ -42784,30 +42860,34 @@
   {
    "capabilityId": "epl.other.distinct",
    "caseId": "case-epl-other-select-expr-stream-selector"
+  },
+  {
+   "caseId": "case.epl-fromclausemethod-variable",
+   "capabilityId": "epl.fromclausemethod"
   }
  ],
  "summary": {
-  "inventoriedCases": 629,
-  "implementedCases": 627,
-  "differentialVerifiedCases": 242,
-  "differentialVerifiedRuntimeIds": 899,
+  "inventoriedCases": 630,
+  "implementedCases": 628,
+  "differentialVerifiedCases": 243,
+  "differentialVerifiedRuntimeIds": 904,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
-  "differentialVerifiedCapabilities": 37,
+  "differentialVerifiedCapabilities": 38,
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3529,
+  "runtimeAssociationCount": 3534,
   "referencedJavaRuntimeIds": 3276,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 860,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 629,
+  "totalCases": 630,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 899
+  "differentialVerifiedRuntimeIDs": 904
  }
 }

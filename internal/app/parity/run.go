@@ -99,6 +99,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableSubqFilteredCorrelScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "epl-from-clause-method-variable" || *mode == "epl-from-clause-method-variable-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
 		scenario, err = loadInfraNamedWindowOnUpdateScenario(file)
 	} else if *mode == "infra-named-window-on-update-misc" || *mode == "infra-named-window-on-update-misc-diff" {
@@ -303,6 +305,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplOtherStreamExprJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplOtherStreamExprJavaSources),
 				splitMetadata(*javaExecutions, eplOtherStreamExprJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-from-clause-method-variable" || *mode == "epl-from-clause-method-variable-diff" {
+		trace, err := runEplFromClauseMethodVariableScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-from-clause-method-variable-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplFromClauseMethodVariableJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplFromClauseMethodVariableJavaSources),
+				splitMetadata(*javaExecutions, eplFromClauseMethodVariableJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

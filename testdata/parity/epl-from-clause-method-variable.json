@@ -1,0 +1,79 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-from-clause-method-variable",
+ "description": "EPLFromClauseMethodVariable differential chain over variable-sampled method sources: constant-variable replays EPLFromClauseMethodConstantVariable (ordinal 0) where the preconfigured constant variable MyConstantServiceVariable supplies the fetchABean(intPrimitive) join source returning ids _<int>_ (_10_ then _20_); nonconstant-soda-true (ordinal 1) and nonconstant-soda-false (ordinal 2) replay EPLFromClauseMethodNonConstantVariable{soda=true} and {soda=false} with byte-identical steps and records, where the on-set statement mutates the MyNonConstantServiceVariable POJO postfix between SupportBean joins so fetchABean samples the variable's current value per invocation (_10_postfix, _20_newpostfix, _30_postfix; all three SupportBean sends use theString E1 verbatim per the suite quirk), with soda-true compiled through eplToModel plus a toEPL round-trip guard and soda-false compiled from text; context-variable (ordinal 3) replays EPLFromClauseMethodContextVariable with two overlapping MyContext partitions initiated by SupportBean_S0, a per-partition variable var seeded per partition by MyNonConstantServiceVariableFactory.make() with postfix context_postfix, sampled by the context-typed method join and mutated per partition by the on SupportBean_S2 set var.postfix statement (_1_context_postfix, _2_context_postfix, then _1_a and _2_b); map-and-oa (ordinal 4) replays EPLFromClauseMethodVariableMapAndOA as two triggerless deploy/iterate/undeploy cycles whose Map and ObjectArray method sources (MyMethodHandlerMap.getMapData with instance metadata, MyMethodHandlerOA.getOAData with static metadata) are observed under iterator snapshot as the single row field1=a,field2=b. The suite's sixth execution EPLFromClauseMethodVariableInvalid is compile-only and excluded under the invalidity policy, and the two trailing invalid compiles inside EPLFromClauseMethodContextVariable are likewise excluded from this chain and covered by Go-side Build-rejection tests, so the pinned differential scope is the listener and snapshot observables only.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-b6134319ddad78ee7888",
+  "java-runtime-7fa38fe9688391d3f9da",
+  "java-runtime-1c125ff69ef065d76608",
+  "java-runtime-26c863d3cc9d5aca7cc7",
+  "java-runtime-2989d0cd737e30ae5633"
+ ],
+ "cases": [
+  {
+   "case": "constant-variable",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-b6134319ddad78ee7888",
+   "executionName": "EPLFromClauseMethodConstantVariable"
+  },
+  {
+   "case": "nonconstant-soda-true",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-7fa38fe9688391d3f9da",
+   "executionName": "EPLFromClauseMethodNonConstantVariable{soda=true}"
+  },
+  {
+   "case": "nonconstant-soda-false",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-1c125ff69ef065d76608",
+   "executionName": "EPLFromClauseMethodNonConstantVariable{soda=false}"
+  },
+  {
+   "case": "context-variable",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-26c863d3cc9d5aca7cc7",
+   "executionName": "EPLFromClauseMethodContextVariable"
+  },
+  {
+   "case": "map-and-oa",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-2989d0cd737e30ae5633",
+   "executionName": "EPLFromClauseMethodVariableMapAndOA"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "constant-variable"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20}},
+  {"op": "case", "case": "nonconstant-soda-true"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "newpostfix"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 20}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 2, "p00": "postfix"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 30}},
+  {"op": "case", "case": "nonconstant-soda-false"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "newpostfix"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 20}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 2, "p00": "postfix"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 30}},
+  {"op": "case", "case": "context-variable"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1}},
+  {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 2}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "send", "eventType": "SupportBean_S2", "payload": {"id": 1, "p20": "a"}},
+  {"op": "send", "eventType": "SupportBean_S2", "payload": {"id": 2, "p20": "b"}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+  {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+  {"op": "case", "case": "map-and-oa"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "snapshot", "statement": "s0", "label": "map", "mode": "fifo"},
+  {"op": "snapshot", "statement": "s0", "label": "oa", "mode": "fifo"}
+ ]
+}
