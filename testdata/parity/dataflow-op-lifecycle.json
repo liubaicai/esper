@@ -1,0 +1,40 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-op-lifecycle",
+ "description": "dataflow-op-lifecycle differential chain over EPLDataflowAPIOpLifecycle operator lifecycle stages (instantiated/property/open/next/onInput/close) observed across the forge, factory, and operator instances of the fixed Java oracle: type-event (ordinal 0) replays EPLDataflowTypeEvent as one compile-only compilation of create schema MySchema(key string, value int) plus @name('flow') create dataflow MyDataFlowOne MyCaptureOutputPortOp -> outstream<EventBean<MySchema>> {}, where the compile-time forge stores the declared output port and the single port-type record pins the declared event type name outstream=MySchema; flow-graph-source (ordinal 1) replays EPLDataflowFlowGraphSource with byte-exact @name('flow') create dataflow MyDataFlow @Name('Goodie') @Audit SupportGraphSource -> outstream<SupportBean> {propOne:'abc'} plus one replay-shape adaptation — a DefaultSupportCaptureOp(outstream) sink appended to the source-only graph because Go submissions require a connected edge — instantiated with dataFlowInstanceId id1 and dataFlowInstanceUserObject myobject, recording after instantiate the operator-context observables stage=instantiated, propOne=abc, dataflowName=MyDataFlow, instanceId=id1, userObject=myobject, operatorNumber=0, operatorName=SupportGraphSource, and after the blocking run() the stages open, next(numrows=0..2), close plus one capture record pinning the submitted rows E1 and E2; flow-graph-operator (ordinal 2) replays EPLDataflowFlowGraphOperator byte-exact with MyLineFeedSource injected through the operator provider over an abc/def iterator and the factory-realized SupportOperator recording stage=instantiated, stage=open, onInput=abc, onInput=def (each unwrapped from its single-element payload), stage=close; both replay cases end in the terminal state record state=complete after the instance reaches COMPLETE. Replay-shape adaptations frozen with the scouts: the compile-time forge-stage observables (initializeForge annotations and port maps) and the deploy-time factory-initialize observables (statementContext) are drained and discarded because the Go engine has no two-phase forge/factory split, and the post-compileDeploy empty-drain assertion of the third execution is a static-list mechanism artifact that is not represented.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIOpLifecycle.java",
+ "javaRuntimes": [
+  "java-runtime-ff077635ccc5082a06a1",
+  "java-runtime-12a29443119ff32fd057",
+  "java-runtime-4bf013f93c9464b8e890"
+ ],
+ "cases": [
+  {
+   "case": "type-event",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-ff077635ccc5082a06a1",
+   "executionName": "EPLDataflowTypeEvent"
+  },
+  {
+   "case": "flow-graph-source",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-12a29443119ff32fd057",
+   "executionName": "EPLDataflowFlowGraphSource"
+  },
+  {
+   "case": "flow-graph-operator",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-4bf013f93c9464b8e890",
+   "executionName": "EPLDataflowFlowGraphOperator"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "type-event"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "flow-graph-source"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "flow-graph-operator"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

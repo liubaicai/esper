@@ -1544,7 +1544,10 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-1ecb769e10b4a818772c",
     "java-runtime-a277455fea9aac5b640b",
-    "java-runtime-8006afc99e90b53a008c"
+    "java-runtime-8006afc99e90b53a008c",
+    "java-runtime-ff077635ccc5082a06a1",
+    "java-runtime-12a29443119ff32fd057",
+    "java-runtime-4bf013f93c9464b8e890"
    ],
    "representativeScenarioIds": [
     "dataflow-connector-output"
@@ -17395,6 +17398,60 @@
    ],
    "notes": [
     "Draft 4.356 covers EPLDataflowTypes' two executions: dataflow type declarations over a bean class (outstream<SupportBean>) and a public map schema (outstream<MyMap>), a single canned source event fanned out to two capture sinks, drained by the blocking run. The generic WPort sink's port-0 delivery is pinned as the capture-port-0 operation. Go: DefineDataflow + literal BeaconSource + Custom capture operators, synchronous deterministic drain, zero engine change."
+   ]
+  },
+  {
+   "id": "case.dataflow-op-lifecycle",
+   "javaRuntimeIds": [
+    "java-runtime-ff077635ccc5082a06a1",
+    "java-runtime-12a29443119ff32fd057",
+    "java-runtime-4bf013f93c9464b8e890"
+   ],
+   "javaStaticIds": [
+    "java-98b354c267512db37dc0",
+    "java-cacfa8ca979992c1613b",
+    "java-f2fcc162ad4fc03fcdcb"
+   ],
+   "javaNames": [
+    "EPLDataflowTypeEvent",
+    "EPLDataflowFlowGraphSource",
+    "EPLDataflowFlowGraphOperator"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIOpLifecycle.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunDataflowOpLifecycleDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunDataflowOpLifecycleDirectReplay",
+    "internal/app/parity/run_test.go:TestRunDataflowOpLifecycleDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "dataflow",
+    "lifecycle",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dataflow-op-lifecycle.json",
+    "testdata/parity/dataflow-op-lifecycle.trace.json",
+    "testdata/parity/dataflow-op-lifecycle.go.trace.json",
+    "testdata/parity/dataflow-op-lifecycle.evidence.json",
+    "tools/java-oracle/DataflowOpLifecycleScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-op-lifecycle.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-ff077635ccc5082a06a1",
+    "java-runtime-12a29443119ff32fd057",
+    "java-runtime-4bf013f93c9464b8e890"
+   ],
+   "notes": [
+    "Draft 4.357 covers EPLDataflowAPIOpLifecycle's three executions: the declared output port type of a compile-only dataflow (EventBean<MySchema> pinned as the schema name), the full operator lifecycle of a configured custom source (instantiated/property abc/operator context with instance id1 and user object/open/next(0..2)/close ending in the complete state), and a provider-injected line-feed source delivering two payloads to a lifecycle operator. Replay-shape adaptations frozen with the scouts: the Java compile-time forge stage and deploy-time factory-initialize observables have no Go surface (the fluent builder constructs graphs directly) and are dropped on both sides; the source-only graph gains a capture sink so submissions have a connected edge; the post-deploy empty-drain assertion is a static-list artifact. Go surface: CustomSource/Custom + SourceProvider keyed injection + DataflowOptions InstanceID/UserObject + Open/Process/Close hooks, zero engine change."
    ]
   },
   {
@@ -42920,13 +42977,17 @@
   {
    "caseId": "case.dataflow-types",
    "capabilityId": "dataflow.graph"
+  },
+  {
+   "caseId": "case.dataflow-op-lifecycle",
+   "capabilityId": "dataflow.graph"
   }
  ],
  "summary": {
-  "inventoriedCases": 631,
-  "implementedCases": 629,
-  "differentialVerifiedCases": 244,
-  "differentialVerifiedRuntimeIds": 906,
+  "inventoriedCases": 632,
+  "implementedCases": 630,
+  "differentialVerifiedCases": 245,
+  "differentialVerifiedRuntimeIds": 909,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42936,14 +42997,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3536,
-  "referencedJavaRuntimeIds": 3278,
+  "runtimeAssociationCount": 3539,
+  "referencedJavaRuntimeIds": 3281,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 858,
+  "unreferencedJavaRuntimeIds": 855,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 631,
+  "totalCases": 632,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 906
+  "differentialVerifiedRuntimeIDs": 909
  }
 }
