@@ -97,6 +97,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableSubqCorrelJoinScenario(file)
 	} else if *mode == "infra-nwtable-subq-filtered-correl" || *mode == "infra-nwtable-subq-filtered-correl-diff" {
 		scenario, err = loadInfraNWTableSubqFilteredCorrelScenario(file)
+	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
 		scenario, err = loadInfraNamedWindowOnUpdateScenario(file)
 	} else if *mode == "infra-named-window-on-update-misc" || *mode == "infra-named-window-on-update-misc-diff" {
@@ -301,6 +303,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplOtherStreamExprJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplOtherStreamExprJavaSources),
 				splitMetadata(*javaExecutions, eplOtherStreamExprJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
+		trace, err := runEplAsKeywordBacktickScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-as-keyword-backtick-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplAsKeywordBacktickJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplAsKeywordBacktickJavaSources),
+				splitMetadata(*javaExecutions, eplAsKeywordBacktickJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

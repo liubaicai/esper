@@ -24395,6 +24395,60 @@
    ]
   },
   {
+   "id": "case-epl-as-keyword-backtick-behavioral",
+   "javaRuntimeIds": [
+    "java-runtime-5c48441abdc543566dd1",
+    "java-runtime-7ca72ccdfaf2f99f4ca6",
+    "java-runtime-a9b9ecfe0dc6693d0e31"
+   ],
+   "javaStaticIds": [
+    "java-6221f5f24bafea3b2dde",
+    "java-351607a2b5d02174024a",
+    "java-59c7bc096b154685a83b"
+   ],
+   "javaNames": [
+    "EPLOtherUpdateIStream",
+    "EPLOtherSubselect",
+    "EPLOtherFromClause"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherAsKeywordBacktick.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplAsKeywordBacktickDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEplAsKeywordBacktickDirectReplay"
+   ],
+   "tags": [
+    "epl",
+    "other",
+    "as-keyword",
+    "backtick",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-as-keyword-backtick.json",
+    "testdata/parity/epl-as-keyword-backtick.trace.json",
+    "testdata/parity/epl-as-keyword-backtick.evidence.json",
+    "tools/java-oracle/EPLAsKeywordBacktickScenarioOracle.java",
+    "tools/java-oracle/run-epl-as-keyword-backtick.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5c48441abdc543566dd1",
+    "java-runtime-7ca72ccdfaf2f99f4ca6",
+    "java-runtime-a9b9ecfe0dc6693d0e31"
+   ],
+   "notes": [
+    "Draft 4.350 covers EPLOtherAsKeywordBacktick ords 3/5/1 (behavioral trio): update-istream alias rewrite (RecordStream.UpdateStream + SetColumn), lastevent subselect alias (SubqueryValue over S0#lastevent), and two-stream lastevent join with reserved-word backtick aliases (JoinMany + SelectSourceEvent/SelectLeft/SelectRight). Remaining ords 0/2/4 (FAF/on-trigger/merge) and 6 (split-stream contained) are deferred with rationale in the manifest."
+   ]
+  },
+  {
    "id": "case.view-intersect-matrix",
    "javaRuntimeIds": [
     "java-runtime-287c4340cac2789867f8",
@@ -41282,6 +41336,10 @@
    "caseId": "case-viewgroup-merge-view"
   },
   {
+   "capabilityId": "epl.other.distinct",
+   "caseId": "case-epl-as-keyword-backtick-behavioral"
+  },
+  {
    "capabilityId": "view.window-core",
    "caseId": "case-viewgroup-derived-value-views"
   },
@@ -42703,10 +42761,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 628,
-  "implementedCases": 626,
-  "differentialVerifiedCases": 241,
-  "differentialVerifiedRuntimeIds": 892,
+  "inventoriedCases": 629,
+  "implementedCases": 627,
+  "differentialVerifiedCases": 242,
+  "differentialVerifiedRuntimeIds": 895,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42716,14 +42774,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3519,
-  "referencedJavaRuntimeIds": 3266,
+  "runtimeAssociationCount": 3522,
+  "referencedJavaRuntimeIds": 3269,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 870,
+  "unreferencedJavaRuntimeIds": 867,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 628,
+  "totalCases": 629,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 892
+  "differentialVerifiedRuntimeIDs": 895
  }
 }

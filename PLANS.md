@@ -51,28 +51,33 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.346 ('viewgroup-derived-value-views') committed as 1225a63e5; Git owns identity. ViewGroup.java now 6/20 executions DV.
 - Shipped: Draft 4.347 ('viewgroup-time-windows') committed as 51e284b7e; Git owns identity. ViewGroup.java now 11/20 executions DV.
 - Shipped: Draft 4.348 ('viewgroup-reclaim') committed as 9605dbf76; Git owns identity. ViewGroup.java now 14/20 executions DV.
-- Shipped (recon): Draft 4.349 recon complete — ViewGroup ord 17 GREEN zero engine work (GroupWindow accepts arbitrary Expr keys; Func1 reproduces day-of-week observable); as-keyword-backtick: 7 executions all representable (4.335 blockers STALE), recommended split into 3 units.
-- Current target: Draft 4.349 'viewgroup-expression-groupwin' — ViewGroup ord 17 (java-runtime-563f2c37fb66e3d067ca, expression groupwin key), extending case-viewgroup-merge-view.
+- Shipped: Draft 4.349 ('viewgroup-expression-groupwin') committed as 5c2bede02; Git owns identity. ViewGroup.java now 15/20 executions DV.
+- Current target: Draft 4.350 'as-keyword-backtick-behavioral' — EPLOtherAsKeywordBacktick ords 3/5/1 (behavioral trio); contracts pinned by the 4.349 re-audit scouts.
 
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: Draft 4.349 ('viewgroup-expression-groupwin') — extends case-viewgroup-merge-view with ViewGroup ord 17.
+Active: Draft 4.350 ('as-keyword-backtick-behavioral') — NEW differential chain for EPLOtherAsKeywordBacktick ords 3/5/1 (the behavioral trio: update-istream, subquery-projection, two-stream join with reserved-word aliases).
 
-Frozen contract (scouts agent_9dcc7ff0 [Java contract] + agent_c0734ec4 [Go surface]): `@name('s0') select irstream * from SupportBeanTimestamp#groupwin(timestamp.getDayOfWeek())#length(2)`; three sends (E1 ts=1009875600000, E2 ts=1010480400000, E3 ts=1011085200000 — all Tuesdays, one group; groupId null); batches: new=[E1], new=[E2], new=[E3] old=[E1]; the suite pins the flattened OLD list length == 1 (E1). Go shape: GroupWindow(Func1 day-of-week over int64 timestamp, LengthWindow(2)) + WithOldStream; key values never surface in select * rows. Runtime java-runtime-563f2c37fb66e3d067ca, static java-383fcd83c5bd59dead03.
+Frozen contract (from the 4.349 re-audit scouts agent_9dcc7ff0/agent_c0734ec4):
+- ord 3 UpdateIStream java-runtime-5c48441abdc543566dd1 static java-6221f5f24bafea3b2dde: module 1 update istream SupportBean_S0 set p00=p01 (backtick alias); module 2 selects all from SupportBean_S0; send S0(1,a,x) -> new p00=x. Go: RecordStream.UpdateStream; two-module deploy.
+- ord 5 Subselect java-runtime-7ca72ccdfaf2f99f4ca6 static java-351607a2b5d02174024a: select (select order.p00 from SupportBean_S0#lastevent as order) as c0 from SupportBean_S1; sends S0(1,A), S1(2) -> new c0=A. Go: SubqueryValue over S0#lastevent, Alias c0.
+- ord 1 FromClause java-runtime-a9b9ecfe0dc6693d0e31 static java-59c7bc096b154685a83b: select * from SupportBean_S0#lastevent as order, SupportBean_S1#lastevent as select; sends S0(1,S0_1), S1(10,S1_1) -> pinned new props order/select/order.p00=S0_1/select.p10=S1_1. Go: JoinMany + SelectSourceEvent(0,order)/SelectSourceEvent(1,select).
+4.335 blockers STALE: the multi-module oracle harness (established in 4.346-4.348) resolves the compile-error issue.
 
-as-keyword-backtick re-audit verdict (7/7 representable, 4.335 blockers STALE): B1 = ords 3/5/1 behavioral; B2 = ords 0/2/4 FAF/on-trigger; ord 6 compile-only split/contained needs two-level unnest adjudication. Deferred to follow-up units.
-
-- [x] Fresh parallel scouts dispatched (byte-exact contract; Go surface GREEN).
-- [x] Freeze contract (adaptation-only; zero engine change).
-- [x] Asset writer: 1 scenario case + oracle module + trace regen (agent_c3e7699d; 119 records = 116 prior byte-identical + 3 new, quadruple-run byte-identical; groupId omitted-key convention).
-- [x] Primary: runner case builder (Func1 day-of-week expression key + nullable-groupId fixture) + replay (119 records matching the Java oracle at record level).
-- [x] Manifest (+1 runtime ID/name — class 15/20 DV; ord 17's runtime already referenced by case.view-group-matrix so referenced stays 3266), summary recomputed-exact via validator: 892 DV runtime IDs / 3519 associations / referenced 3266 / unreferenced 870.
-- [x] Evidence (+1 runtime ID); Roadmap supplement + view 25→24→22 (5.2/6.1 ground-truth verified); CHANGELOG 4.349 entry.
-- [x] Gates + independent parity review (agent_729d889b): initial FAIL on five P2s (evidence javaRuntimeIds duplicated; roadmap '7/20'→wrong, wrong referenced/unreferenced pair; missing CHANGELOG entry; PLANS '7/20' echoed) and one P3 (Func1 Calendar comment). All fixed in the same work unit and re-confirmed by the same reviewer with oracle regeneration byte-identical and manifest arithmetic recomputed-exact (referenced 3266, unreferenced 870, view domain 22 ground-truth verified).
+- [x] Fresh parallel scouts dispatched (byte-exact contracts; Go surface adjudication with precedents for each shape).
+- [x] Freeze contract; implement runner + Go parity tests (DirectReplay + DiffWrites passing).
+- [x] Asset writer: 3 scenario cases + oracle + trace (agent_e4551389 + agent_e4551389 round 2 for scenario format conversion; 3 records, double-run byte-identical).
+- [x] Manifest (NEW case entry, 3 runtime IDs/names/DV), summary recomputed-exact.
+- [x] Evidence; Roadmap supplement + epl decrement; CHANGELOG 4.350 entry.
+- [x] Gates + independent parity review (agent_201a62b1): OVERALL PASS on all five dimensions with independent oracle re-run and manifest arithmetic verified. Capability mapping corrected from view.window-core to epl.other.distinct to match prose.
 - [ ] Commit and push (Git owns identity; no hash recorded here).
 
 ## Delegation checkpoint
+
+Draft 4.350 unit:
+- Delegation gate: the ords 3/5/1 contracts and Go surfaces were pinned by the 4.349 re-audit scouts (agent_9dcc7ff0 / agent_c0734ec4). Asset writer agent_e4551389 authored oracle/script/scenario/trace for 3 cases.
+- Primary owns the runner, tests, evidence, manifest, roadmap, CHANGELOG, PLANS.md, gates, review, commit, and push.
 
 Draft 4.349 unit:
 - Prefetch scouts (read-only, concurrent, dispatched): 'ViewGroupExpressionGroupwinJavaContract' pins ord 17 byte-exact (datetime-method key chain, send/assert sequence, exact rows) and re-audits epl-other-as-keyword-backtick (EPLOtherAsKeywordBacktick.java: the 4.335-era deferral cited 37 oracle compile errors — the multi-module oracle harness now deployed in 4.346-4.348 may resolve them); 'ViewGroupExpressionGroupwinGoSurface' adjudicates the Go expression-key groupwin surface (GroupWindow with a non-field Expr key) and the as-keyword/backtick surface with file:line evidence.

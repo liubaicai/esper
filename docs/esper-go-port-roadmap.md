@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.350（2026-09-09），`epl.other.distinct` 新增 `case-epl-as-keyword-backtick-behavioral` differential-verified 场景，对照固定 Java `EPLOtherAsKeywordBacktick.java` 的行为三重奏 ords 3/5/1（`EPLOtherUpdateIStream` `java-runtime-5c48441abdc543566dd1` static `java-6221f5f24bafea3b2dde`、`EPLOtherSubselect` `java-runtime-7ca72ccdfaf2f99f4ca6` static `java-351607a2b5d02174024a`、`EPLOtherFromClause` `java-runtime-a9b9ecfe0dc6693d0e31` static `java-59c7bc096b154685a83b`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 3 条 records、0 differences：update-istream 别名改写、lastevent 子查询别名、双流 lastevent join 的保留字别名。Go 零引擎改动。该 suite 累计 3/7 execution DV；剩余 ords 0/2/4 和 6 延后至后续单元。
+
 > 最新补充：Draft 4.349（2026-09-09），`view.window-core` 扩展 `case-viewgroup-merge-view` differential-verified 场景，对照固定 Java `ViewGroup.java` 追加 ord 17 表达式 groupwin（`ViewGroupExpressionGrouped` `java-runtime-563f2c37fb66e3d067ca` static `java-383fcd83c5bd59dead03`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 119 条 records（既有 116 条字节不变 + 3 条新记录）、0 differences：`select irstream * from SupportBeanTimestamp#groupwin(timestamp.getDayOfWeek())#length(2)`——groupwin 键为任意表达式（对 epoch-milli 时间戳求 Calendar 星期几），键按表达式值分组（三个周二事件共享一个 length(2) 组），E3 驱逐 E1（套件钉定扁平 old 列表长度为 1）。Go 零引擎改动：GroupWindow 接受任意 Expr 键（Func1 从时间戳计算星期几——键值从不 surface 于 select * 行）。场景对 null-groupId 发送省略 payload 键（Java 两参构造器状态；runner 映射 absent → nil 指针）。该类累计 15/20 execution DV；剩余 7（编译消息）、8（性能门）、19（SERDEREQUIRED）；manifest 更新为 628 cases、241 个 differential-verified case、892 个 differential runtime IDs、3519 条 associations（referenced 3266、unreferenced 870）；capability 120 个（37 DV）。
 
 > 最新补充：Draft 4.348（2026-09-09），`view.window-core` 引擎单元扩展 `case-viewgroup-merge-view` differential-verified 场景，对照固定 Java `ViewGroup.java` 追加视图级 reclaim ords 2/3/9（`ViewGroupReclaimTimeWindow` `java-runtime-88d7b731431c59d99f3a` static `java-62dfe7eb67b16a22d54f`、`ViewGroupReclaimAgedHint` `java-runtime-afc05b1a18402bb17f56` static `java-dd075b3c1e961a8ae056`、`ViewGroupReclaimWithFlipTime` `java-runtime-33b5cb01913d5d23292b` static `java-582906d19fd45149cfeb`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 116 条 records（既有 108 条字节不变 + 8 条 count 记录）、0 differences：`@Hint('reclaim_group_aged=30,reclaim_group_freq=5')` 的 `#groupwin(theString)#time(3000000)` 钉定调度计数 10→1→0（10 组各一个计时回调；回收+新组后余 1；undeploy-all 后 overall 归 0）；`reclaim_group_aged=5,freq=1` 的 keepall 10 槽×100 发送钉定迭代器计数 600→601（E0..E3 逐步回收，E4..E9 存活）；flipTime 语义（aged=1,freq=5）钉定 1→2→2 跨 aged 边界（4999 不扫、5000 扫、age 1 的 E2 存活）。Go 引擎：groupwin 链新增视图级回收清扫——@Hint aged/freq 触发的按组子状态清扫（不活跃严格大于 aged 即删；至多每频率窗口一次、挂靠于进入事件；AdvanceTime 单独不触发；被回收组静默 detach 无旧行——Go 时间窗惰性过期无需取消调度）。新增内省 API：Statement.ScheduleCount 与 Engine.ScheduleCountOverall 从窗口/模式/输出状态合成待决回调计数（每个仍有未来 deadline 工作的时间驱动窗口状态记 1——镜像 Java TimeWindowView 非空持把柄生命周期）。协议扩展：TraceRecord/Step 增 Count 字段与 schedule-count/iterator-count/schedule-count-overall 操作。该类累计 14/20 execution DV；剩余 7（编译消息）、8（性能门）、15/18（case.view-group-matrix 已 implemented）、17（表达式 groupwin）、19（SERDEREQUIRED）；manifest 更新为 628 cases、241 个 differential-verified case、891 个 differential runtime IDs、3518 条 associations（referenced 3266、unreferenced 870）；capability 120 个（37 DV）。
@@ -1475,7 +1477,7 @@
 
 重点领域：
 
-- epl 剩余 270 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 267 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1500,7 +1502,7 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 270 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 267 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1522,7 +1524,7 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 270 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 267 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
@@ -1552,7 +1554,7 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 270 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 267 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |

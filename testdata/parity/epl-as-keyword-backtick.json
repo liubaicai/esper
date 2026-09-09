@@ -1,0 +1,99 @@
+{
+  "id": "epl-as-keyword-backtick",
+  "description": "EPLOtherAsKeywordBacktick backtick-quoted as-alias behavioral trio: update istream alias rewrite (EPLOtherUpdateIStream, ord 3), lastevent subselect alias (EPLOtherSubselect, ord 5), and two-stream lastevent join with the reserved-word aliases `order` and `select` (EPLOtherFromClause, ord 1).",
+  "javaRuntimes": [
+    "java-runtime-5c48441abdc543566dd1",
+    "java-runtime-7ca72ccdfaf2f99f4ca6",
+    "java-runtime-a9b9ecfe0dc6693d0e31"
+  ],
+  "cases": [
+    {
+      "case": "update-istream",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-5c48441abdc543566dd1",
+      "executionName": "EPLOtherUpdateIStream"
+    },
+    {
+      "case": "subselect-groups",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-7ca72ccdfaf2f99f4ca6",
+      "executionName": "EPLOtherSubselect"
+    },
+    {
+      "case": "from-clause-join",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-a9b9ecfe0dc6693d0e31",
+      "executionName": "EPLOtherFromClause"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "update-istream"
+    },
+    {
+      "op": "send",
+      "case": "update-istream",
+      "eventType": "SupportBean_S0",
+      "id": 1,
+      "p00": "a",
+      "p01": "x",
+      "payload": {
+        "id": 1,
+        "p00": "a",
+        "p01": "x"
+      }
+    },
+    {
+      "op": "case",
+      "case": "subselect-groups"
+    },
+    {
+      "op": "send",
+      "case": "subselect-groups",
+      "eventType": "SupportBean_S0",
+      "id": 1,
+      "p00": "A",
+      "payload": {
+        "id": 1,
+        "p00": "A"
+      }
+    },
+    {
+      "op": "send",
+      "case": "subselect-groups",
+      "eventType": "SupportBean_S1",
+      "id": 2,
+      "payload": {
+        "id": 2
+      }
+    },
+    {
+      "op": "case",
+      "case": "from-clause-join"
+    },
+    {
+      "op": "send",
+      "case": "from-clause-join",
+      "eventType": "SupportBean_S0",
+      "id": 1,
+      "p00": "S0_1",
+      "payload": {
+        "id": 1,
+        "p00": "S0_1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "from-clause-join",
+      "eventType": "SupportBean_S1",
+      "id": 10,
+      "p10": "S1_1",
+      "payload": {
+        "id": 10,
+        "p10": "S1_1"
+      }
+    }
+  ],
+  "version": "esper-parity/v1"
+}
