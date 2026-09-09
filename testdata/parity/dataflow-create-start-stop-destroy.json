@@ -1,0 +1,31 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-create-start-stop-destroy",
+ "description": "dataflow-create-start-stop-destroy differential chain over EPLDataflowAPICreateStartStopDestroy as the dataflow DEFINITION REGISTRY lifecycle (create/register/instantiate/undeploy/remove/error-probe/re-instantiate) with no dataflow instance ever started or run on either side and zero rows observed: create-start-stop (ordinal 0) replays EPLDataflowCreateStartStop with byte-exact @Name('flow') create dataflow MyGraph Emitter -> outstream<?> {} deployed under pinned deploymentId DEP1, recording after deploy the registry-listing record lifecycle flow:MyGraph registered=MyGraph (with the EPDataFlowDescriptor dataFlowName=MyGraph and statementName=flow asserted internally), after the discarded instantiate the state record flow state=instantiated, then after undeployModuleContaining('flow') the two instantiate-failure probes DEP1/MyGraph and DEP1/DUMMY as lifecycle flow instantiate-error=not-defined records — the oracle asserts the byte-exact Java messages \"Data flow by name 'MyGraph' for deployment id 'DEP1' has not been defined\" and \"Data flow by name 'DUMMY' for deployment id 'DEP1' has not been defined\" internally with message equality while the records carry only the error class token because the Go side performs no message-text match — then the destroy observables lifecycle flow:MyGraph registered=null (descriptor lookup) and the count-form record lifecycle flow saved-configurations count=0, plus a third post-destroy instantiate probe asserted internally with its byte-exact message but not recorded because it duplicates the first probe record in every recorded field, and finally a re-deploy of the same EPL under the runtime-assigned random UUID deployment id (not pinned, dropped from the trace) whose discarded instantiate emits the trailing state record flow state=instantiated; deployment-admin (ordinal 1) replays EPLDataflowDeploymentAdmin with the four-node graph @name('flow') create dataflow TheGraph / create schema ABC as com.espertech.esper.common.internal.support.SupportBean, DefaultSupportSourceOp -> outstream<SupportBean> {} / Select(outstream) -> selectedData {select: (select theString, intPrimitive from outstream)} / DefaultSupportCaptureOp(selectedData) {}; where the parseModule single-module-item result is asserted internally (module item count has no Go surface and is not recorded), the graph is compiled and deployed, and the discarded instantiate of TheGraph emits exactly one state record flow state=instantiated before undeployAll. The frozen record protocol maps the Java dataflow-service observables into {name,value} records (one count-form record for the empty registry) that the Go side reproduces through its saved-configuration registry as the definition create/remove analog. Dropped non-replayable artifacts: the random re-deploy UUID of the first execution, the module item count of the second, and the suite's HA-mode early return of deployment-admin (this replay is non-HA).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPICreateStartStopDestroy.java",
+ "javaRuntimes": [
+  "java-runtime-1a8426a71e3b5252a181",
+  "java-runtime-2c3c90d3cdb64596c225"
+ ],
+ "cases": [
+  {
+   "case": "create-start-stop",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-1a8426a71e3b5252a181",
+   "executionName": "EPLDataflowCreateStartStop"
+  },
+  {
+   "case": "deployment-admin",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-2c3c90d3cdb64596c225",
+   "executionName": "EPLDataflowDeploymentAdmin"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "create-start-stop"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "deployment-admin"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

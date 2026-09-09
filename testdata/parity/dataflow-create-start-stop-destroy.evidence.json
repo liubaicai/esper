@@ -1,0 +1,193 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-1a8426a71e3b5252a181",
+    "java-runtime-2c3c90d3cdb64596c225"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPICreateStartStopDestroy.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowCreateStartStop",
+    "EPLDataflowDeploymentAdmin"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-create-start-stop-destroy",
+    "steps": [
+      {
+        "op": "case",
+        "case": "create-start-stop"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "deployment-admin"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-create-start-stop-destroy",
+    "records": [
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow:MyGraph",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "registered",
+        "value": "MyGraph"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "state",
+        "value": "instantiated"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instantiate-error",
+        "value": "not-defined"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instantiate-error",
+        "value": "not-defined"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow:MyGraph",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "registered"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "saved-configurations",
+        "count": 0
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "state",
+        "value": "instantiated"
+      },
+      {
+        "case": "deployment-admin",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "state",
+        "value": "instantiated"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-create-start-stop-destroy",
+    "records": [
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow:MyGraph",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "registered",
+        "value": "MyGraph"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "state",
+        "value": "instantiated"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instantiate-error",
+        "value": "not-defined"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instantiate-error",
+        "value": "not-defined"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow:MyGraph",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "registered"
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "saved-configurations",
+        "count": 0
+      },
+      {
+        "case": "create-start-stop",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "state",
+        "value": "instantiated"
+      },
+      {
+        "case": "deployment-admin",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "state",
+        "value": "instantiated"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

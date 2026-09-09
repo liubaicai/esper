@@ -1547,7 +1547,9 @@
     "java-runtime-8006afc99e90b53a008c",
     "java-runtime-ff077635ccc5082a06a1",
     "java-runtime-12a29443119ff32fd057",
-    "java-runtime-4bf013f93c9464b8e890"
+    "java-runtime-4bf013f93c9464b8e890",
+    "java-runtime-1a8426a71e3b5252a181",
+    "java-runtime-2c3c90d3cdb64596c225"
    ],
    "representativeScenarioIds": [
     "dataflow-connector-output"
@@ -17452,6 +17454,56 @@
    ],
    "notes": [
     "Draft 4.357 covers EPLDataflowAPIOpLifecycle's three executions: the declared output port type of a compile-only dataflow (EventBean<MySchema> pinned as the schema name), the full operator lifecycle of a configured custom source (instantiated/property abc/operator context with instance id1 and user object/open/next(0..2)/close ending in the complete state), and a provider-injected line-feed source delivering two payloads to a lifecycle operator. Replay-shape adaptations frozen with the scouts: the Java compile-time forge stage and deploy-time factory-initialize observables have no Go surface (the fluent builder constructs graphs directly) and are dropped on both sides; the source-only graph gains a capture sink so submissions have a connected edge; the post-deploy empty-drain assertion is a static-list artifact. Go surface: CustomSource/Custom + SourceProvider keyed injection + DataflowOptions InstanceID/UserObject + Open/Process/Close hooks, zero engine change."
+   ]
+  },
+  {
+   "id": "case.dataflow-create-start-stop-destroy",
+   "javaRuntimeIds": [
+    "java-runtime-1a8426a71e3b5252a181",
+    "java-runtime-2c3c90d3cdb64596c225"
+   ],
+   "javaStaticIds": [
+    "java-d21cf72eab5cb8f58a0c",
+    "java-32675e64a2d679c673e4"
+   ],
+   "javaNames": [
+    "EPLDataflowCreateStartStop",
+    "EPLDataflowDeploymentAdmin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPICreateStartStopDestroy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunDataflowCreateStartStopDestroyDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunDataflowCreateStartStopDestroyDirectReplay",
+    "internal/app/parity/run_test.go:TestRunDataflowCreateStartStopDestroyDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "dataflow",
+    "registry-lifecycle",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dataflow-create-start-stop-destroy.json",
+    "testdata/parity/dataflow-create-start-stop-destroy.trace.json",
+    "testdata/parity/dataflow-create-start-stop-destroy.go.trace.json",
+    "testdata/parity/dataflow-create-start-stop-destroy.evidence.json",
+    "tools/java-oracle/DataflowCreateStartStopDestroyScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-create-start-stop-destroy.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1a8426a71e3b5252a181",
+    "java-runtime-2c3c90d3cdb64596c225"
+   ],
+   "notes": [
+    "Draft 4.358 covers EPLDataflowAPICreateStartStopDestroy's two executions: neither starts a dataflow instance — the pinned observables are the definition-registry lifecycle (registered catalog, instantiate state, the not-defined error class after removal for both the removed and an unknown name, the absent lookup, the empty registry count, and the re-instantiation) plus the topology-only four-operator deployment-admin instantiation. Record protocol carries the error CLASS, not message text (Java's byte-exact messages are asserted oracle-internally; no Go text match). Replay-shape drops frozen with the scouts: the Java deployment-id dimension and statementName have no Go analog; the re-deploy's random UUID, the module item count, and the HA skip are not represented. Go surface: DefineDataflow/Emitter/CustomSource/Select/Custom + the saved-configuration registry (Save/Delete/Load/SavedDataflowConfigurations/InstantiateSavedDataflow), zero engine change. The differ gained count-field comparison in this unit (count records were previously not discriminated)."
    ]
   },
   {
@@ -42981,13 +43033,17 @@
   {
    "caseId": "case.dataflow-op-lifecycle",
    "capabilityId": "dataflow.graph"
+  },
+  {
+   "caseId": "case.dataflow-create-start-stop-destroy",
+   "capabilityId": "dataflow.graph"
   }
  ],
  "summary": {
-  "inventoriedCases": 632,
-  "implementedCases": 630,
-  "differentialVerifiedCases": 245,
-  "differentialVerifiedRuntimeIds": 909,
+  "inventoriedCases": 633,
+  "implementedCases": 631,
+  "differentialVerifiedCases": 246,
+  "differentialVerifiedRuntimeIds": 911,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42997,14 +43053,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3539,
-  "referencedJavaRuntimeIds": 3281,
+  "runtimeAssociationCount": 3541,
+  "referencedJavaRuntimeIds": 3283,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 855,
+  "unreferencedJavaRuntimeIds": 853,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 632,
+  "totalCases": 633,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 909
+  "differentialVerifiedRuntimeIDs": 911
  }
 }

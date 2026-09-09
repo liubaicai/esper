@@ -54,6 +54,9 @@ func DiffTraces(expected, actual Trace) []TraceDifference {
 		comparePartitions(&differences, prefix+".partitions", want.Partitions, got.Partitions)
 		compareValue(prefix+".name", want.Name, got.Name)
 		compareValue(prefix+".value", want.Value, got.Value)
+		// Count pins introspection-style observables (schedule counts,
+		// iterator sizes, registry sizes); nil on both sides is equal.
+		compareValue(prefix+".count", want.Count, got.Count)
 	}
 	return differences
 }
