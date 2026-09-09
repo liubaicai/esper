@@ -2871,6 +2871,7 @@ type querySpec struct {
 	discardPartialsOnMatch     bool
 	suppressOverlappingMatches bool
 	iterableUnbound            bool
+	selfSubselectPosteval      bool
 	orderBy                    []SortKey
 	limit                      int
 	offset                     int
@@ -2924,6 +2925,19 @@ func WithStatementHints(hints ...StatementHint) QueryOption {
 			spec.statementMetadata.hints = append(spec.statementMetadata.hints, cloneStatementHint(hint))
 		}
 	}
+}
+
+// WithSelfSubselectPreeval controls whether the triggering event enters the
+// statement's own subselect windows before the statement's filter and where
+// clauses evaluate. The default (true) mirrors Java Esper's
+// selfSubselectPreeval runtime configuration: subselect windows accept the
+// event first, so a self-subselect sees the current event. Passing false
+// defers the subselect window acceptance until after the statement's own
+// evaluation, so the clauses observe the pre-arrival window state; the event
+// is accepted before the statement finishes processing. Statements without
+// subselects ignore the option.
+func WithSelfSubselectPreeval(enabled bool) QueryOption {
+	return func(spec *querySpec) { spec.selfSubselectPosteval = !enabled }
 }
 
 // WithIterableUnbound mirrors Esper's @IterableUnbound annotation: a pattern
@@ -3127,7 +3141,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, limitExpr: spec.limitExpr, offsetExpr: spec.offsetExpr, limitExprSet: spec.limitExprSet, offsetExprSet: spec.offsetExprSet, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, selfSubselectPosteval: spec.selfSubselectPosteval, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, limitExpr: spec.limitExpr, offsetExpr: spec.offsetExpr, limitExprSet: spec.limitExprSet, offsetExprSet: spec.offsetExprSet, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -3179,6 +3193,7 @@ type Query struct {
 	discardPartialsOnMatch     bool
 	suppressOverlappingMatches bool
 	iterableUnbound            bool
+	selfSubselectPosteval      bool
 	orderBy                    []SortKey
 	limit                      int
 	offset                     int
@@ -3262,6 +3277,9 @@ func (q Query) description() string {
 		parts = append(parts, "select("+strings.Join(selections, ",")+")")
 		if q.iterableUnbound {
 			parts = append(parts, "iterable-unbound")
+		}
+		if q.selfSubselectPosteval {
+			parts = append(parts, "self-subselect-posteval")
 		}
 		if q.contextName != "" {
 			parts = append(parts, "context("+q.contextName+")")

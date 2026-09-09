@@ -1263,6 +1263,7 @@ func (p PatternQuery) Query(options ...QueryOption) Query {
 		discardPartialsOnMatch:     spec.discardPartialsOnMatch,
 		suppressOverlappingMatches: spec.suppressOverlappingMatches,
 		iterableUnbound:            spec.iterableUnbound,
+		selfSubselectPosteval:      spec.selfSubselectPosteval,
 		orderBy:                    append([]SortKey(nil), spec.orderBy...),
 		limit:                      spec.limit,
 		offset:                     spec.offset,

@@ -38990,23 +38990,27 @@
     "java-runtime-3dbb926e23a4521d64d5",
     "java-runtime-9a68943733f98a1ea1dd",
     "java-runtime-f220d864166a5650e6f7",
-    "java-runtime-0fbd10b1080bb8e7afa3"
+    "java-runtime-0fbd10b1080bb8e7afa3",
+    "java-runtime-ac2d59129befe9a3b088"
    ],
    "javaStaticIds": [
     "java-2ddf3ed58c64fe3674f7",
     "java-eaa8e4f13676cc852f92",
     "java-29ec8e7d3c6e96c8d5aa",
-    "java-77258a6e645d2449b31c"
+    "java-77258a6e645d2449b31c",
+    "java-04d47cea26b120f5f805"
    ],
    "javaNames": [
     "EPLSubselectCorrelatedSubqueryOrder",
     "EPLSubselectOrderOfEvaluationSubselectFirst",
     "EPLSubselectIndexChoicesOverdefinedWhere",
-    "EPLSubselectUniqueIndexCorrelated"
+    "EPLSubselectUniqueIndexCorrelated",
+    "EPLSubselectOrderOfEvalNoPreeval"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEval.java",
-    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectIndex.java"
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectIndex.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEvalNoPreeval.java"
    ],
    "goTests": [
     "internal/app/parity/run_test.go:TestRunEplSubselectOrderOfEvalIndexDirectReplay",
@@ -39046,10 +39050,11 @@
     "java-runtime-3dbb926e23a4521d64d5",
     "java-runtime-9a68943733f98a1ea1dd",
     "java-runtime-f220d864166a5650e6f7",
-    "java-runtime-0fbd10b1080bb8e7afa3"
+    "java-runtime-0fbd10b1080bb8e7afa3",
+    "java-runtime-ac2d59129befe9a3b088"
    ],
    "notes": [
-    "EPLSubselectOrderOfEval and EPLSubselectIndex close subselect evaluation-order and index-choice edges: window(tl.*)/window(ts.*) over a correlated #time(20 minutes) subselect deliver grouped window-aggregate rows as row arrays (wall-clock bean times pinned to 1000/1010, provably outcome-invariant), the preeval-on default (selfSubselectPreeval=true) makes both not-in filter statements silent (zero records by design), the 19-cycle #unique(<fields>) data-window matrix drives per-cycle retained-row sets with multi-row scalar subqueries returning null, and unique/firstunique/#time(1)#unique/#groupwin#unique correlated scalar subqueries match Java exactly. The regression hook annotation (plan-only) is dropped; the DISABLE_UNIQUE_IMPLICIT_IDX hint window shape is preserved."
+    "EPLSubselectOrderOfEval, EPLSubselectIndex, and EPLSubselectOrderOfEvalNoPreeval close subselect evaluation-order, index-choice, and preeval-configuration edges: window(tl.*)/window(ts.*) over a correlated #time(20 minutes) subselect deliver grouped window-aggregate rows as row arrays (wall-clock bean times pinned to 1000/1010, provably outcome-invariant), the preeval-on default (selfSubselectPreeval=true) makes both not-in filter statements silent (zero records by design), the no-preeval case replays the byte-identical statements under selfSubselectPreeval=false where the not-in filter observes the pre-arrival subselect window and each first E1/5 emits (the event is still accepted before processing finishes), the 19-cycle #unique(<fields>) data-window matrix drives per-cycle retained-row sets with multi-row scalar subqueries returning null, and unique/firstunique/#time(1)#unique/#groupwin#unique correlated scalar subqueries match Java exactly. The regression hook annotation (plan-only) is dropped; the DISABLE_UNIQUE_IMPLICIT_IDX hint window shape is preserved. Go engine: WithSelfSubselectPreeval(false) statement option defers self-subselect window acceptance until after the statement's own filter/where evaluation."
    ]
   },
   {
@@ -42785,7 +42790,7 @@
   "inventoriedCases": 629,
   "implementedCases": 627,
   "differentialVerifiedCases": 242,
-  "differentialVerifiedRuntimeIds": 898,
+  "differentialVerifiedRuntimeIds": 899,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42795,14 +42800,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3528,
-  "referencedJavaRuntimeIds": 3275,
+  "runtimeAssociationCount": 3529,
+  "referencedJavaRuntimeIds": 3276,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 861,
+  "unreferencedJavaRuntimeIds": 860,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 629,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 898
+  "differentialVerifiedRuntimeIDs": 899
  }
 }

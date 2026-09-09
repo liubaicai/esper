@@ -6864,7 +6864,7 @@ type eventDelta struct {
 	hadInput        bool
 }
 
-func (s *Statement) process(ctx context.Context, now time.Time, event Event, variables map[string]Value) (ResultBatch, bool, error) {
+func (s *Statement) process(ctx context.Context, now time.Time, event Event, variables map[string]Value) (batch ResultBatch, changed bool, err error) {
 	if err := contextErr(ctx); err != nil {
 		return ResultBatch{}, false, err
 	}
@@ -6876,15 +6876,33 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		return ResultBatch{}, false, nil
 	}
 	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+	deferSelfSubselectAccept := false
 	if s.plan.query.contextName == "" && s.runtime.subqueryRegistry != nil {
-		if err := s.runtime.subqueryRegistry.accept(event, now, variables); err != nil {
-			return ResultBatch{}, false, err
+		if s.plan.query.selfSubselectPosteval {
+			// Posteval form (WithSelfSubselectPreeval(false)): the statement's
+			// own filter and where clauses observe the pre-arrival subselect
+			// window state; the triggering event is accepted before this
+			// processing round finishes. The registry pointer is attached
+			// either way because subquery expressions resolve it lazily.
+			deferSelfSubselectAccept = true
+			variables = s.runtime.subqueryRegistry.attachVariables(variables)
+		} else {
+			if err := s.runtime.subqueryRegistry.accept(event, now, variables); err != nil {
+				return ResultBatch{}, false, err
+			}
+			variables = s.runtime.subqueryRegistry.attachVariables(variables)
 		}
-		variables = s.runtime.subqueryRegistry.attachVariables(variables)
 	} else if s.plan.query.contextName != "" {
 		if err := s.acceptContextSubqueryEventLocked(event, now, variables); err != nil {
 			return ResultBatch{}, false, err
 		}
+	}
+	if deferSelfSubselectAccept {
+		defer func() {
+			if err == nil {
+				err = s.runtime.subqueryRegistry.accept(event, now, variables)
+			}
+		}()
 	}
 	s.runtime.ctx = ctx
 	if s.plan.query.contextName != "" {
@@ -6912,7 +6930,7 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			return ResultBatch{}, false, nil
 		}
 		if s.plan.query.trigger != nil {
-			batch, err := s.processTriggerRuntime(ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
+			batch, err = s.processTriggerRuntime(ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
 			if err != nil {
 				return ResultBatch{}, false, err
 			}
@@ -6955,13 +6973,13 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		if !statementAcceptsEvent(s.plan.query, event) {
 			return ResultBatch{}, false, nil
 		}
-		batch, err := s.processTriggerRuntime(ctx, &s.runtime, now, event, variables)
+		batch, err = s.processTriggerRuntime(ctx, &s.runtime, now, event, variables)
 		if err != nil {
 			return ResultBatch{}, false, err
 		}
 		return batch, !batch.empty() || batch.forced, nil
 	}
-	batch, changed, err := s.runtime.process(s.plan, event, now, variables)
+	batch, changed, err = s.runtime.process(s.plan, event, now, variables)
 	if err != nil {
 		return ResultBatch{}, false, err
 	}

@@ -91,24 +91,24 @@ if ! jq -e '
     .id == "epl-subselect-order-of-eval-index" and
     .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
     .javaSource == "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEval.java" and
-    (.javaRuntimes | type == "array" and length == 4) and
+    (.javaRuntimes | type == "array" and length == 5) and
     ([.javaRuntimes[] | startswith("java-runtime-")] | all) and
-    (.javaNames | type == "array" and length == 4) and
-    (.javaStaticIds | type == "array" and length == 4) and
+    (.javaNames | type == "array" and length == 5) and
+    (.javaStaticIds | type == "array" and length == 5) and
     (.javaFlags | type == "array" and length == 0) and
-    (.cases | type == "array" and length == 4) and
-    ([.cases[] | select(.observation == "listener" and .iteratorSnapshots == 0)] | length == 4) and
-    ([.cases[].case] == ["correlated-subquery-order", "order-of-eval-subselect-first", "index-choices-overdefined-where", "unique-index-correlated"]) and
-    ([.cases[].ordinal] == [0, 1, 0, 1]) and
-    ([.steps[] | select(.op == "case")] | length == 4) and
+    (.cases | type == "array" and length == 5) and
+    ([.cases[] | select(.observation == "listener" and .iteratorSnapshots == 0)] | length == 5) and
+    ([.cases[].case] == ["correlated-subquery-order", "order-of-eval-subselect-first", "index-choices-overdefined-where", "unique-index-correlated", "order-of-eval-no-preeval"]) and
+    ([.cases[].ordinal] == [0, 1, 0, 1, 0]) and
+    ([.steps[] | select(.op == "case")] | length == 5) and
     ([.steps[] | select(.op == "send" and .eventType == "SupportTradeEventTwo")] | length == 2) and
     ([.steps[] | select(.op == "send" and .eventType == "SupportBean_S0")] | length == 7) and
     ([.steps[] | select(.op == "send" and .eventType == "SupportSimpleBeanOne")] | length == 36) and
     ([.steps[] | select(.op == "send" and .eventType == "SupportSimpleBeanTwo")] | length == 52) and
-    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length == 17) and
-    ([.steps[] | select(.op == "deploy" and .statement == "s0")] | length == 26) and
-    ([.steps[] | select(.op == "undeploy-all")] | length == 26) and
-    (.steps | type == "array" and length == 170)
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length == 19) and
+    ([.steps[] | select(.op == "deploy" and .statement == "s0")] | length == 28) and
+    ([.steps[] | select(.op == "undeploy-all")] | length == 28) and
+    (.steps | type == "array" and length == 177)
 ' "$scenario" >/dev/null 2>&1; then
     echo "scenario is not a valid epl-subselect-order-of-eval-index replay: $scenario" >&2
     exit 1
@@ -172,7 +172,7 @@ if ! jq -e '
     .version == "esper-parity/v1" and
     .id == "epl-subselect-order-of-eval-index" and
     .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
-    (.records | type == "array" and length == 45) and
+    (.records | type == "array" and length == 47) and
     ([.records[].operation] | all(. == "listener")) and
     ([.records[].statement] | all(. == "s0")) and
     ([.records[].time] | all(. == "1970-01-01T00:00:00Z")) and
@@ -190,6 +190,7 @@ if ! jq -e '
     ([.records[0:2][].new[0].fields.longItems[].fields.volume] | all(. == 1)) and
     (.records[0].new[0].fields.shortItems[0] == .records[0].new[0].fields.longItems[0]) and
     # order-of-eval-subselect-first emits no records: preeval-on not-in stays silent.
+    # The preeval-off counterpart order-of-eval-no-preeval fires on its own runtime.
     # index-choices-overdefined-where: 36 records, sequences 1..36; null renders as the tagged state object.
     ([.records[2:38][].case] | all(. == "index-choices-overdefined-where")) and
     ([.records[2:38][].sequence] == [range(1; 37)]) and
@@ -211,7 +212,17 @@ if ! jq -e '
     ([.records[38:45][].sequence] == [1, 2, 3, 4, 5, 6, 7]) and
     ([.records[38:45][].new[0].fields | keys] | all(. == ["c0", "c1"])) and
     ([.records[38:45][].new[0].fields.c0] == [10, 11, 10, 11, 10, 11, 1]) and
-    ([.records[38:45][].new[0].fields.c1] == [4, 3, 2, 1, 4, 3, 102])
+    ([.records[38:45][].new[0].fields.c1] == [4, 3, 2, 1, 4, 3, 102]) and
+    # order-of-eval-no-preeval: 2 records on the selfSubselectPreeval=false runtime; the not-in filters fire.
+    ([.records[45:47][].case] | all(. == "order-of-eval-no-preeval")) and
+    ([.records[45:47][].sequence] == [1, 2]) and
+    ([.records[45:47][].new[0].fields | keys] | all(. == ["bigDecimal", "bigInteger", "boolBoxed", "boolPrimitive", "byteBoxed", "bytePrimitive", "charBoxed", "charPrimitive", "doubleBoxed", "doublePrimitive", "enumValue", "floatBoxed", "floatPrimitive", "intBoxed", "intPrimitive", "longBoxed", "longPrimitive", "shortBoxed", "shortPrimitive", "theString"])) and
+    ([.records[45:47][].new[0].fields.theString] | all(. == "E1")) and
+    ([.records[45:47][].new[0].fields.intPrimitive] | all(. == 5)) and
+    ([.records[45:47][].new[0].fields.boolPrimitive] | all(. == false)) and
+    ([.records[45:47][].new[0].fields.charPrimitive] | all(. == "\u0000")) and
+    ([.records[45:47][].new[0].fields.bytePrimitive, .records[45:47][].new[0].fields.shortPrimitive, .records[45:47][].new[0].fields.longPrimitive, .records[45:47][].new[0].fields.floatPrimitive, .records[45:47][].new[0].fields.doublePrimitive] | all(. == 0)) and
+    ([.records[45:47][].new[0].fields.boolBoxed, .records[45:47][].new[0].fields.byteBoxed, .records[45:47][].new[0].fields.charBoxed, .records[45:47][].new[0].fields.doubleBoxed, .records[45:47][].new[0].fields.floatBoxed, .records[45:47][].new[0].fields.intBoxed, .records[45:47][].new[0].fields.longBoxed, .records[45:47][].new[0].fields.shortBoxed, .records[45:47][].new[0].fields.bigDecimal, .records[45:47][].new[0].fields.bigInteger, .records[45:47][].new[0].fields.enumValue] | all(. == {"state": "null"}))
 ' "$output" >/dev/null 2>&1; then
     echo "Java oracle produced an invalid epl-subselect-order-of-eval-index trace: $output" >&2
     exit 1

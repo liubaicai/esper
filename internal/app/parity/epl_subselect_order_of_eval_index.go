@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"time"
 
 	esper "github.com/liubaicai/esper"
@@ -13,7 +14,7 @@ import (
 
 const (
 	eplSubselectOrderOfEvalIndexID          = "epl-subselect-order-of-eval-index"
-	eplSubselectOrderOfEvalIndexDescription = "EPLSubselectOrderOfEval correlated subquery window ordering plus subquery-first order-of-evaluation silence, with EPLSubselectIndex subquery index choices over an overdefined where clause and unique/firstunique/time/groupwin correlated subquery indexes (second oracle source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectIndex.java)."
+	eplSubselectOrderOfEvalIndexDescription = "EPLSubselectOrderOfEval correlated subquery window ordering plus subquery-first order-of-evaluation silence, with EPLSubselectIndex subquery index choices over an overdefined where clause and unique/firstunique/time/groupwin correlated subquery indexes (second oracle source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectIndex.java; third oracle source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEvalNoPreeval.java)."
 	eplSubselectOrderOfEvalIndexJavaCommit  = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 	eplSubselectOrderOfEvalIndexSource      = "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEval.java"
 )
@@ -27,26 +28,30 @@ var (
 		"java-runtime-9a68943733f98a1ea1dd",
 		"java-runtime-f220d864166a5650e6f7",
 		"java-runtime-0fbd10b1080bb8e7afa3",
+		"java-runtime-ac2d59129befe9a3b088",
 	}
 	eplSubselectOrderOfEvalIndexJavaExecutions = []string{
 		"EPLSubselectCorrelatedSubqueryOrder",
 		"EPLSubselectOrderOfEvaluationSubselectFirst",
 		"EPLSubselectIndexChoicesOverdefinedWhere",
 		"EPLSubselectUniqueIndexCorrelated",
+		"EPLSubselectOrderOfEvalNoPreeval",
 	}
 	eplSubselectOrderOfEvalIndexJavaStaticIDs = []string{
 		"java-2ddf3ed58c64fe3674f7",
 		"java-eaa8e4f13676cc852f92",
 		"java-29ec8e7d3c6e96c8d5aa",
 		"java-77258a6e645d2449b31c",
+		"java-04d47cea26b120f5f805",
 	}
 	eplSubselectOrderOfEvalIndexCases = []string{
 		"correlated-subquery-order",
 		"order-of-eval-subselect-first",
 		"index-choices-overdefined-where",
 		"unique-index-correlated",
+		"order-of-eval-no-preeval",
 	}
-	eplSubselectOrderOfEvalIndexOrdinals = []int{0, 1, 0, 1}
+	eplSubselectOrderOfEvalIndexOrdinals = []int{0, 1, 0, 1, 0}
 )
 
 type eplSubselectOrderOfEvalIndexTrade struct {
@@ -74,6 +79,34 @@ type eplSubselectOrderOfEvalIndexBean struct {
 	TheString     string `esper:"theString"`
 	IntPrimitive  int    `esper:"intPrimitive"`
 	LongPrimitive *int64 `esper:"longPrimitive"`
+}
+
+// eplSubselectOrderOfEvalIndexFullBean mirrors the real SupportBean surface
+// for the no-preeval case: the Java execution projects select * over the
+// bean class, so the Go trace renders the full 20-property row. Boxed,
+// decimal, and enum columns are pointers so a plain send decodes to Java's
+// nulls, and charPrimitive mirrors the Java char default via the decode.
+type eplSubselectOrderOfEvalIndexFullBean struct {
+	TheString       string   `esper:"theString"`
+	BoolPrimitive   bool     `esper:"boolPrimitive"`
+	IntPrimitive    int      `esper:"intPrimitive"`
+	LongPrimitive   int64    `esper:"longPrimitive"`
+	CharPrimitive   string   `esper:"charPrimitive"`
+	ShortPrimitive  int16    `esper:"shortPrimitive"`
+	BytePrimitive   int8     `esper:"bytePrimitive"`
+	FloatPrimitive  float32  `esper:"floatPrimitive"`
+	DoublePrimitive float64  `esper:"doublePrimitive"`
+	BoolBoxed       *bool    `esper:"boolBoxed"`
+	IntBoxed        *int     `esper:"intBoxed"`
+	LongBoxed       *int64   `esper:"longBoxed"`
+	CharBoxed       *string  `esper:"charBoxed"`
+	ShortBoxed      *int16   `esper:"shortBoxed"`
+	ByteBoxed       *int8    `esper:"byteBoxed"`
+	FloatBoxed      *float32 `esper:"floatBoxed"`
+	DoubleBoxed     *float64 `esper:"doubleBoxed"`
+	BigDecimal      *big.Rat `esper:"bigDecimal"`
+	BigInteger      *big.Int `esper:"bigInteger"`
+	EnumValue       *string  `esper:"enumValue"`
 }
 
 type eplSubselectOrderOfEvalIndexS0 struct {
@@ -132,7 +165,7 @@ func loadEplSubselectOrderOfEvalIndexScenario(reader io.Reader) (compat.Scenario
 
 	var rawCases []json.RawMessage
 	if err := json.Unmarshal(root["cases"], &rawCases); err != nil || len(rawCases) != len(eplSubselectOrderOfEvalIndexCases) {
-		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly four cases", eplSubselectOrderOfEvalIndexID)
+		return compat.Scenario{}, fmt.Errorf("%s scenario must contain exactly five cases", eplSubselectOrderOfEvalIndexID)
 	}
 	for index, rawCase := range rawCases {
 		var object map[string]json.RawMessage
@@ -233,6 +266,7 @@ func validateEplSubselectOrderOfEvalIndexScenario(scenario compat.Scenario) erro
 		{caseName: eplSubselectOrderOfEvalIndexCases[1], cycles: 2, sends: []int{1, 1}},
 		{caseName: eplSubselectOrderOfEvalIndexCases[2], cycles: 19, sends: eplSubselectOrderOfEvalIndexCycleSendCounts()},
 		{caseName: eplSubselectOrderOfEvalIndexCases[3], cycles: 4, sends: []int{6, 6, 6, 4}},
+		{caseName: eplSubselectOrderOfEvalIndexCases[4], cycles: 2, sends: []int{1, 1}},
 	}
 	for _, expectation := range expectations {
 		steps := scenario.Steps[offset:]
@@ -308,6 +342,7 @@ func runEplSubselectOrderOfEvalIndexScenario(ctx context.Context, scenario compa
 		{caseName: eplSubselectOrderOfEvalIndexCases[1], cycles: 2, sends: []int{1, 1}},
 		{caseName: eplSubselectOrderOfEvalIndexCases[2], cycles: 19, sends: eplSubselectOrderOfEvalIndexCycleSendCounts()},
 		{caseName: eplSubselectOrderOfEvalIndexCases[3], cycles: 4, sends: []int{6, 6, 6, 4}},
+		{caseName: eplSubselectOrderOfEvalIndexCases[4], cycles: 2, sends: []int{1, 1}},
 	}
 	for caseIndex, expectation := range expectations {
 		total := 1 + expectation.cycles*2 + sumEplSubselectOrderOfEvalIndex(expectation.sends)
@@ -328,7 +363,13 @@ func runEplSubselectOrderOfEvalIndexCase(ctx context.Context, steps []compat.Ste
 	sends    []int
 }, caseIndex int) (compat.Trace, error) {
 	env := esper.NewEnvironment()
-	if _, err := esper.RegisterStruct[eplSubselectOrderOfEvalIndexBean](env, "SupportBean"); err != nil {
+	if caseIndex == 4 {
+		// The no-preeval statements project select * over the bean class;
+		// register the full SupportBean surface so the row shape matches.
+		if _, err := esper.RegisterStruct[eplSubselectOrderOfEvalIndexFullBean](env, "SupportBean"); err != nil {
+			return compat.Trace{}, err
+		}
+	} else if _, err := esper.RegisterStruct[eplSubselectOrderOfEvalIndexBean](env, "SupportBean"); err != nil {
 		return compat.Trace{}, err
 	}
 	if _, err := esper.RegisterStruct[eplSubselectOrderOfEvalIndexS0](env, "SupportBean_S0"); err != nil {
@@ -414,7 +455,12 @@ func runEplSubselectOrderOfEvalIndexCase(ctx context.Context, steps []compat.Ste
 		for send := 0; send < expectation.sends[cycle]; send++ {
 			step := steps[cursor]
 			cursor++
-			payload, err := decodeEplSubselectOrderOfEvalIndexPayload(step)
+			var payload any
+			if caseIndex == 4 {
+				payload, err = decodeEplSubselectOrderOfEvalIndexNoPreevalPayload(step)
+			} else {
+				payload, err = decodeEplSubselectOrderOfEvalIndexPayload(step)
+			}
 			if err != nil {
 				return compat.Trace{}, err
 			}
@@ -478,6 +524,27 @@ func eplSubselectOrderOfEvalIndexQuery(env *esper.Environment, caseName string, 
 		return esper.From[eplSubselectOrderOfEvalIndexBean](env, "SupportBean").
 			Filter(esper.Not(esper.SubqueryIn[int](intPrimitive, inner, intPrimitive))).
 			Query(esper.StatementName("s0")), nil
+	case eplSubselectOrderOfEvalIndexCases[4]:
+		// EPLSubselectOrderOfEvalNoPreeval: the same two statements as the
+		// preeval-on case, built over the full SupportBean surface with
+		// WithSelfSubselectPreeval(false) so the not-in filter observes the
+		// pre-arrival subselect window and the first E1/5 emits (the deferred
+		// acceptance ingests it afterwards).
+		intPrimitive := esper.Field[eplSubselectOrderOfEvalIndexFullBean, int]("intPrimitive")
+		if cycle == 0 {
+			inner := esper.From[eplSubselectOrderOfEvalIndexFullBean](env, "SupportBean").
+				Window(esper.Unique(intPrimitive)).AsRecord()
+			return esper.From[eplSubselectOrderOfEvalIndexFullBean](env, "SupportBean").
+				Filter(esper.Less[int](intPrimitive, esper.Literal(10))).
+				Filter(esper.Not(esper.SubqueryIn[int](intPrimitive, inner, intPrimitive))).
+				Query(esper.StatementName("s0"), esper.WithSelfSubselectPreeval(false)), nil
+		}
+		inner := esper.From[eplSubselectOrderOfEvalIndexFullBean](env, "SupportBean").
+			Filter(esper.Less[int](intPrimitive, esper.Literal(10))).
+			Window(esper.Unique(intPrimitive)).AsRecord()
+		return esper.From[eplSubselectOrderOfEvalIndexFullBean](env, "SupportBean").
+			Filter(esper.Not(esper.SubqueryIn[int](intPrimitive, inner, intPrimitive))).
+			Query(esper.StatementName("s0"), esper.WithSelfSubselectPreeval(false)), nil
 	case eplSubselectOrderOfEvalIndexCases[2]:
 		if cycle < 0 || cycle >= 19 {
 			return esper.Query{}, fmt.Errorf("index-choice cycle %d out of range", cycle)
@@ -718,4 +785,23 @@ func validateEplSubselectOrderOfEvalIndexStringArray(raw json.RawMessage, expect
 		}
 	}
 	return nil
+}
+
+// decodeEplSubselectOrderOfEvalIndexNoPreevalPayload decodes sends for the
+// no-preeval case. charPrimitive mirrors Java's char default: an absent
+// payload field decodes to the NUL character the Java bean carries.
+func decodeEplSubselectOrderOfEvalIndexNoPreevalPayload(step compat.Step) (any, error) {
+	switch step.EventType {
+	case "SupportBean":
+		var value eplSubselectOrderOfEvalIndexFullBean
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean: %w", err)
+		}
+		if value.CharPrimitive == "" {
+			value.CharPrimitive = "\x00"
+		}
+		return value, nil
+	default:
+		return decodeEplSubselectOrderOfEvalIndexPayload(step)
+	}
 }

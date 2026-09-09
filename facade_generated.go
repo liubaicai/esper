@@ -8106,6 +8106,19 @@ func WithScriptDialect(dialect string) ScriptOption {
 	return internalengine.WithScriptDialect(dialect)
 }
 
+// WithSelfSubselectPreeval controls whether the triggering event enters the
+// statement's own subselect windows before the statement's filter and where
+// clauses evaluate. The default (true) mirrors Java Esper's
+// selfSubselectPreeval runtime configuration: subselect windows accept the
+// event first, so a self-subselect sees the current event. Passing false
+// defers the subselect window acceptance until after the statement's own
+// evaluation, so the clauses observe the pre-arrival window state; the event
+// is accepted before the statement finishes processing. Statements without
+// subselects ignore the option.
+func WithSelfSubselectPreeval(enabled bool) QueryOption {
+	return internalengine.WithSelfSubselectPreeval(enabled)
+}
+
 func WithSink(sink Sink) QueryOption {
 	return internalengine.WithSink(sink)
 }

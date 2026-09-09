@@ -34003,6 +34003,21 @@ func TestRunEplSubselectOrderOfEvalIndexDiffRejectsTraceMutations(t *testing.T) 
 				trace.Records = trace.Records[:44]
 			},
 		},
+		{
+			name: "no-preeval-first-row-drift",
+			mutate: func(trace *compat.Trace) {
+				// The preeval-off first send must see the pre-arrival empty
+				// window and pass the not-in filter.
+				trace.Records[45].New[0].Fields["intPrimitive"] = 4
+			},
+		},
+		{
+			name: "no-preeval-char-default-drift",
+			mutate: func(trace *compat.Trace) {
+				// charPrimitive mirrors Java's char default NUL.
+				trace.Records[46].New[0].Fields["charPrimitive"] = "E1"
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -34233,8 +34248,8 @@ func assertEplSubselectOrderOfEvalIndexTrace(t *testing.T, trace compat.Trace) {
 	if trace.Version != compat.ScenarioVersion || trace.ID != eplSubselectOrderOfEvalIndexID {
 		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
 	}
-	if len(trace.Records) != 45 {
-		t.Fatalf("trace records = %d, want 45", len(trace.Records))
+	if len(trace.Records) != 47 {
+		t.Fatalf("trace records = %d, want 47", len(trace.Records))
 	}
 	rowFields := func(record compat.TraceRecord) map[string]any {
 		if record.Operation != "listener" || record.Statement != "s0" ||

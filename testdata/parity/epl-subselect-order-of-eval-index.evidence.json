@@ -5,7 +5,8 @@
     "java-runtime-3dbb926e23a4521d64d5",
     "java-runtime-9a68943733f98a1ea1dd",
     "java-runtime-f220d864166a5650e6f7",
-    "java-runtime-0fbd10b1080bb8e7afa3"
+    "java-runtime-0fbd10b1080bb8e7afa3",
+    "java-runtime-ac2d59129befe9a3b088"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEval.java"
@@ -14,7 +15,8 @@
     "EPLSubselectCorrelatedSubqueryOrder",
     "EPLSubselectOrderOfEvaluationSubselectFirst",
     "EPLSubselectIndexChoicesOverdefinedWhere",
-    "EPLSubselectUniqueIndexCorrelated"
+    "EPLSubselectUniqueIndexCorrelated",
+    "EPLSubselectOrderOfEvalNoPreeval"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -1448,6 +1450,48 @@
       {
         "op": "undeploy-all",
         "case": "unique-index-correlated"
+      },
+      {
+        "op": "case",
+        "case": "order-of-eval-no-preeval"
+      },
+      {
+        "op": "deploy",
+        "case": "order-of-eval-no-preeval",
+        "statement": "s0",
+        "epl": "@name('s0') @name('s0')select * from SupportBean(intPrimitive\u003c10) where intPrimitive not in (select intPrimitive from SupportBean#unique(intPrimitive))"
+      },
+      {
+        "op": "send",
+        "case": "order-of-eval-no-preeval",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "order-of-eval-no-preeval"
+      },
+      {
+        "op": "deploy",
+        "case": "order-of-eval-no-preeval",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean where intPrimitive not in (select intPrimitive from SupportBean(intPrimitive\u003c10)#unique(intPrimitive))"
+      },
+      {
+        "op": "send",
+        "case": "order-of-eval-no-preeval",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "order-of-eval-no-preeval"
       }
     ]
   },
@@ -2262,6 +2306,118 @@
             }
           }
         ]
+      },
+      {
+        "case": "order-of-eval-no-preeval",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 5,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "order-of-eval-no-preeval",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 5,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
       }
     ]
   },
@@ -3073,6 +3229,118 @@
             "fields": {
               "c0": 1,
               "c1": 102
+            }
+          }
+        ]
+      },
+      {
+        "case": "order-of-eval-no-preeval",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 5,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "order-of-eval-no-preeval",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 5,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
             }
           }
         ]

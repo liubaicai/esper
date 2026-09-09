@@ -1,26 +1,29 @@
 {
   "version": "esper-parity/v1",
   "id": "epl-subselect-order-of-eval-index",
-  "description": "EPLSubselectOrderOfEval correlated subquery window ordering plus subquery-first order-of-evaluation silence, with EPLSubselectIndex subquery index choices over an overdefined where clause and unique/firstunique/time/groupwin correlated subquery indexes (second oracle source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectIndex.java).",
+  "description": "EPLSubselectOrderOfEval correlated subquery window ordering plus subquery-first order-of-evaluation silence, with EPLSubselectIndex subquery index choices over an overdefined where clause and unique/firstunique/time/groupwin correlated subquery indexes (second oracle source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectIndex.java; third oracle source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEvalNoPreeval.java).",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectOrderOfEval.java",
   "javaRuntimes": [
     "java-runtime-3dbb926e23a4521d64d5",
     "java-runtime-9a68943733f98a1ea1dd",
     "java-runtime-f220d864166a5650e6f7",
-    "java-runtime-0fbd10b1080bb8e7afa3"
+    "java-runtime-0fbd10b1080bb8e7afa3",
+    "java-runtime-ac2d59129befe9a3b088"
   ],
   "javaNames": [
     "EPLSubselectCorrelatedSubqueryOrder",
     "EPLSubselectOrderOfEvaluationSubselectFirst",
     "EPLSubselectIndexChoicesOverdefinedWhere",
-    "EPLSubselectUniqueIndexCorrelated"
+    "EPLSubselectUniqueIndexCorrelated",
+    "EPLSubselectOrderOfEvalNoPreeval"
   ],
   "javaStaticIds": [
     "java-2ddf3ed58c64fe3674f7",
     "java-eaa8e4f13676cc852f92",
     "java-29ec8e7d3c6e96c8d5aa",
-    "java-77258a6e645d2449b31c"
+    "java-77258a6e645d2449b31c",
+    "java-04d47cea26b120f5f805"
   ],
   "javaFlags": [],
   "cases": [
@@ -59,6 +62,15 @@
       "observation": "listener",
       "iteratorSnapshots": 0,
       "epl": "@name('s0') select id as c0, (select intPrimitive from SupportBean#unique(theString) where theString = s0.p00) as c1 from SupportBean_S0 as s0"
+    },
+    {
+      "case": "order-of-eval-no-preeval",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-ac2d59129befe9a3b088",
+      "executionName": "EPLSubselectOrderOfEvalNoPreeval",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') @name('s0')select * from SupportBean(intPrimitive<10) where intPrimitive not in (select intPrimitive from SupportBean#unique(intPrimitive))"
     }
   ],
   "steps": [
@@ -255,6 +267,14 @@
     {"op": "send", "case": "unique-index-correlated", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 2, "longPrimitive": 101}},
     {"op": "send", "case": "unique-index-correlated", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1, "longPrimitive": 102}},
     {"op": "send", "case": "unique-index-correlated", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "E1"}},
-    {"op": "undeploy-all", "case": "unique-index-correlated"}
+    {"op": "undeploy-all", "case": "unique-index-correlated"},
+
+    {"op": "case", "case": "order-of-eval-no-preeval"},
+    {"op": "deploy", "case": "order-of-eval-no-preeval", "statement": "s0", "epl": "@name('s0') @name('s0')select * from SupportBean(intPrimitive<10) where intPrimitive not in (select intPrimitive from SupportBean#unique(intPrimitive))"},
+    {"op": "send", "case": "order-of-eval-no-preeval", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 5}},
+    {"op": "undeploy-all", "case": "order-of-eval-no-preeval"},
+    {"op": "deploy", "case": "order-of-eval-no-preeval", "statement": "s0", "epl": "@name('s0') select * from SupportBean where intPrimitive not in (select intPrimitive from SupportBean(intPrimitive<10)#unique(intPrimitive))"},
+    {"op": "send", "case": "order-of-eval-no-preeval", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 5}},
+    {"op": "undeploy-all", "case": "order-of-eval-no-preeval"}
   ]
 }

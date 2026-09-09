@@ -32,8 +32,8 @@ import java.util.List;
 /**
  * Direct Esper 9.0.0 oracle for the epl-subselect-order-of-eval-index parity
  * unit: EPLSubselectOrderOfEval (subselect evaluation order) and
- * EPLSubselectIndex (implicit subquery-side index choice) with four cases and
- * 45 listener records over 170 pinned steps. Case correlated-subquery-order
+ * EPLSubselectIndex (implicit subquery-side index choice) with five cases and
+ * 47 listener records over 177 pinned steps. Case correlated-subquery-order
  * deploys the two-statement module verbatim (the seed statement is unnamed and
  * unheard) with wall-clock bean times pinned to 1000/1010, which is provably
  * outcome-invariant because the correlation reads securityID only and the
@@ -44,7 +44,10 @@ import java.util.List;
  * (hook class is off the oracle classpath; plan-only, behavior-neutral,
  * keeping the DISABLE_UNIQUE_IMPLICIT_IDX hint on cycle 14). Case
  * unique-index-correlated replays unique/firstunique/time+unique/groupwin+
- * unique correlated scalar subqueries. Listeners are istream-only, sequence
+ * unique correlated scalar subqueries. Case order-of-eval-no-preeval replays
+ * the order-of-eval deploy cycles on a second runtime configured with
+ * selfSubselectPreeval=false before creation, so the not-in filters fire.
+ * Listeners are istream-only, sequence
  * numbering is continuous within a case across deploy cycles, and every
  * record time is epoch zero.
  */
@@ -58,33 +61,39 @@ public final class EPLSubselectOrderOfEvalIndexScenarioOracle {
     private static final String DESCRIPTION =
             "EPLSubselectOrderOfEval correlated subquery window ordering plus subquery-first order-of-evaluation silence, with EPLSubselectIndex subquery index choices over an overdefined where clause and unique/firstunique/time/groupwin correlated subquery indexes (second oracle source "
                     + "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/"
-                    + "EPLSubselectIndex.java).";
+                    + "EPLSubselectIndex.java; third oracle source "
+                    + "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/"
+                    + "EPLSubselectOrderOfEvalNoPreeval.java).";
 
     private static final String[] RUNTIME_IDS = {
             "java-runtime-3dbb926e23a4521d64d5",
             "java-runtime-9a68943733f98a1ea1dd",
             "java-runtime-f220d864166a5650e6f7",
             "java-runtime-0fbd10b1080bb8e7afa3",
+            "java-runtime-ac2d59129befe9a3b088",
     };
     private static final String[] EXECUTION_NAMES = {
             "EPLSubselectCorrelatedSubqueryOrder",
             "EPLSubselectOrderOfEvaluationSubselectFirst",
             "EPLSubselectIndexChoicesOverdefinedWhere",
             "EPLSubselectUniqueIndexCorrelated",
+            "EPLSubselectOrderOfEvalNoPreeval",
     };
     private static final String[] STATIC_IDS = {
             "java-2ddf3ed58c64fe3674f7",
             "java-eaa8e4f13676cc852f92",
             "java-29ec8e7d3c6e96c8d5aa",
             "java-77258a6e645d2449b31c",
+            "java-04d47cea26b120f5f805",
     };
     private static final String CASE_ORDER = "correlated-subquery-order";
     private static final String CASE_PREEVAL = "order-of-eval-subselect-first";
     private static final String CASE_INDEX_CHOICES = "index-choices-overdefined-where";
     private static final String CASE_UNIQUE_CORRELATED = "unique-index-correlated";
+    private static final String CASE_NO_PREEVAL = "order-of-eval-no-preeval";
 
-    private static final int EXPECTED_RECORDS = 45;
-    private static final int EXPECTED_STEPS = 170;
+    private static final int EXPECTED_RECORDS = 47;
+    private static final int EXPECTED_STEPS = 177;
     private static final String LISTENED_STATEMENT = "s0";
 
     // Case correlated-subquery-order: the verbatim two-statement module text.
@@ -147,6 +156,22 @@ public final class EPLSubselectOrderOfEvalIndexScenarioOracle {
     private EPLSubselectOrderOfEvalIndexScenarioOracle() {
     }
 
+    /** Fresh runtime configuration: event types, internal timer off, rethrow exception handling. */
+    private static Configuration newConfiguration() {
+        Configuration configuration = new Configuration();
+        configuration.getCommon().addEventType(SupportBean.class);
+        configuration.getCommon().addEventType(SupportBean_S0.class);
+        configuration.getCommon().addEventType("SupportTradeEventTwo", TradeEventTwoMirror.class);
+        configuration.getCommon().addEventType("SupportSimpleBeanOne", SimpleBeanOneMirror.class);
+        configuration.getCommon().addEventType("SupportSimpleBeanTwo", SimpleBeanTwoMirror.class);
+        configuration.getRuntime().getThreading().setInternalTimerEnabled(false);
+        configuration.getRuntime().getExceptionHandling().addClass(
+                HarnessRethrowExceptionHandlerFactory.class);
+        configuration.getRuntime().getExceptionHandling().setUndeployRethrowPolicy(
+                UndeployRethrowPolicy.RETHROW_FIRST);
+        return configuration;
+    }
+
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             throw new IllegalArgumentException(
@@ -161,19 +186,17 @@ public final class EPLSubselectOrderOfEvalIndexScenarioOracle {
         validateScenario(scenario);
         JsonArray allSteps = array(scenario.get("steps"), "steps");
 
-        Configuration configuration = new Configuration();
-        configuration.getCommon().addEventType(SupportBean.class);
-        configuration.getCommon().addEventType(SupportBean_S0.class);
-        configuration.getCommon().addEventType("SupportTradeEventTwo", TradeEventTwoMirror.class);
-        configuration.getCommon().addEventType("SupportSimpleBeanOne", SimpleBeanOneMirror.class);
-        configuration.getCommon().addEventType("SupportSimpleBeanTwo", SimpleBeanTwoMirror.class);
-        configuration.getRuntime().getThreading().setInternalTimerEnabled(false);
-        configuration.getRuntime().getExceptionHandling().addClass(
-                HarnessRethrowExceptionHandlerFactory.class);
-        configuration.getRuntime().getExceptionHandling().setUndeployRethrowPolicy(
-                UndeployRethrowPolicy.RETHROW_FIRST);
-        EPRuntime runtime = EPRuntimeProvider.getRuntime(ID + "-oracle", configuration);
+        EPRuntime runtime = EPRuntimeProvider.getRuntime(ID + "-oracle", newConfiguration());
         runtime.getEventService().advanceTime(0);
+
+        // Case order-of-eval-no-preeval replays the order-of-eval EPLs with
+        // subquery preeval disabled; the flag must be set on the runtime
+        // configuration before the runtime is created, under a distinct URI.
+        Configuration noPreevalConfiguration = newConfiguration();
+        noPreevalConfiguration.getRuntime().getExpression().setSelfSubselectPreeval(false);
+        EPRuntime runtime2 = EPRuntimeProvider.getRuntime(ID + "-oracle-no-preeval",
+                noPreevalConfiguration);
+        runtime2.getEventService().advanceTime(0);
 
         JsonArray records = new JsonArray();
         try {
@@ -181,11 +204,20 @@ public final class EPLSubselectOrderOfEvalIndexScenarioOracle {
             runCase(CASE_PREEVAL, runtime, allSteps, records);
             runCase(CASE_INDEX_CHOICES, runtime, allSteps, records);
             runCase(CASE_UNIQUE_CORRELATED, runtime, allSteps, records);
+            runCase(CASE_NO_PREEVAL, runtime2, allSteps, records);
         } finally {
             try {
                 runtime.getDeploymentService().undeployAll();
             } finally {
-                runtime.destroy();
+                try {
+                    runtime.destroy();
+                } finally {
+                    try {
+                        runtime2.getDeploymentService().undeployAll();
+                    } finally {
+                        runtime2.destroy();
+                    }
+                }
             }
         }
         if (records.size() != EXPECTED_RECORDS) {
@@ -444,13 +476,15 @@ public final class EPLSubselectOrderOfEvalIndexScenarioOracle {
             throw new IllegalArgumentException("scenario must contain exactly "
                     + RUNTIME_IDS.length + " cases");
         }
-        String[] expectedCases = {CASE_ORDER, CASE_PREEVAL, CASE_INDEX_CHOICES, CASE_UNIQUE_CORRELATED};
-        int[] expectedOrdinals = {0, 1, 0, 1};
+        String[] expectedCases = {CASE_ORDER, CASE_PREEVAL, CASE_INDEX_CHOICES, CASE_UNIQUE_CORRELATED,
+                CASE_NO_PREEVAL};
+        int[] expectedOrdinals = {0, 1, 0, 1, 0};
         String[] expectedEpls = {
                 EPL_MODULE_ORDER.substring(EPL_MODULE_ORDER.indexOf(';') + 2),
                 EPL_PREEVAL_ONE,
                 EPL_INDEX_CHOICES[0],
                 EPL_UNIQUE,
+                EPL_PREEVAL_ONE,
         };
         for (int index = 0; index < cases.size(); index++) {
             JsonObject definition = object(cases.get(index), "case definition");
@@ -477,6 +511,7 @@ public final class EPLSubselectOrderOfEvalIndexScenarioOracle {
         offset = validatePreevalCase(steps, offset);
         offset = validateIndexChoicesCase(steps, offset);
         offset = validateUniqueCorrelatedCase(steps, offset);
+        offset = validateNoPreevalCase(steps, offset);
         if (offset != steps.size()) {
             throw new IllegalArgumentException("scenario steps contain an unexpected suffix");
         }
@@ -494,6 +529,18 @@ public final class EPLSubselectOrderOfEvalIndexScenarioOracle {
 
     private static int validatePreevalCase(JsonArray steps, int offset) {
         String caseName = CASE_PREEVAL;
+        validateCaseMarker(steps.get(offset++), caseName);
+        validateDeploy(steps.get(offset++), caseName, "s0", EPL_PREEVAL_ONE);
+        validateBeanSend(steps.get(offset++), caseName, "E1", 5, false);
+        validateUndeployAll(steps.get(offset++), caseName);
+        validateDeploy(steps.get(offset++), caseName, "s0", EPL_PREEVAL_TWO);
+        validateBeanSend(steps.get(offset++), caseName, "E1", 5, false);
+        validateUndeployAll(steps.get(offset++), caseName);
+        return offset;
+    }
+
+    private static int validateNoPreevalCase(JsonArray steps, int offset) {
+        String caseName = CASE_NO_PREEVAL;
         validateCaseMarker(steps.get(offset++), caseName);
         validateDeploy(steps.get(offset++), caseName, "s0", EPL_PREEVAL_ONE);
         validateBeanSend(steps.get(offset++), caseName, "E1", 5, false);
