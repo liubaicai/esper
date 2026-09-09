@@ -39579,7 +39579,92 @@ func TestRunEplAsKeywordBacktickDirectReplay(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &trace); err != nil {
 		t.Fatal(err)
 	}
-	if len(trace.Records) != 3 {
-		t.Fatalf("records = %d, want 3", len(trace.Records))
+	if len(trace.Records) != 11 {
+		t.Fatalf("records = %d, want 11", len(trace.Records))
+	}
+}
+
+func TestRunEplAsKeywordBacktickDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "faf-update-p1-copy-drift",
+			mutate: func(trace *compat.Trace) {
+				// The alias-qualified FAF update must copy p1 into p0.
+				trace.Records[4].New[0].Fields["p0"] = "a"
+			},
+		},
+		{
+			name: "faf-delete-still-present",
+			mutate: func(trace *compat.Trace) {
+				// The FAF delete must leave zero rows for the final select.
+				trace.Records[5].New = []compat.ResultRecord{{
+					Kind:   "row",
+					Fields: map[string]any{"p0": "b", "p1": "b"},
+				}}
+			},
+		},
+		{
+			name: "on-trigger-table-join-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[0].Fields["v1"] = "y"
+			},
+		},
+		{
+			name: "merge-p1-copy-drift",
+			mutate: func(trace *compat.Trace) {
+				// The on-merge must copy p0 into p1 for matched rows.
+				trace.Records[8].New[0].Fields["p1"] = "b"
+			},
+		},
+		{
+			name: "on-update-literal-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[0].Fields["p0"] = "a"
+			},
+		},
+		{
+			name: "on-select-projection-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].New[0].Fields["c0"] = "a"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:10]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-as-keyword-backtick.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-as-keyword-backtick.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-as-keyword-backtick.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-as-keyword-backtick-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
 	}
 }

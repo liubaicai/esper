@@ -20,12 +20,18 @@ var eplAsKeywordBacktickJavaRuntimeIDs = []string{
 	"java-runtime-5c48441abdc543566dd1", // EPLOtherUpdateIStream (ord 3)
 	"java-runtime-7ca72ccdfaf2f99f4ca6", // EPLOtherSubselect (ord 5)
 	"java-runtime-a9b9ecfe0dc6693d0e31", // EPLOtherFromClause (ord 1)
+	"java-runtime-472d2c12a99c291f275c", // EPLOtherFAFUpdateDelete (ord 0)
+	"java-runtime-c0ea9e858846b717b2e4", // EPLOtherOnTrigger (ord 2)
+	"java-runtime-4da78c382449b37e5599", // EPLOthernMergeAndUpdateAndSelect (ord 4)
 }
 
 var eplAsKeywordBacktickJavaExecutions = []string{
 	"EPLOtherUpdateIStream",
 	"EPLOtherSubselect",
 	"EPLOtherFromClause",
+	"EPLOtherFAFUpdateDelete",
+	"EPLOtherOnTrigger",
+	"EPLOthernMergeAndUpdateAndSelect",
 }
 
 type akbS0 struct {
@@ -56,6 +62,9 @@ func runEplAsKeywordBacktickScenario(ctx context.Context, _ compat.Scenario) (co
 	if _, err := esper.RegisterStruct[akbS1](env, "SupportBean_S1"); err != nil {
 		return trace, err
 	}
+	if err := registerAKBFAFObjects(env); err != nil {
+		return trace, err
+	}
 
 	// Case 1: update-istream (ord 3)
 	caseTrace, err := runAKBUpdateIStream(ctx, env)
@@ -75,6 +84,27 @@ func runEplAsKeywordBacktickScenario(ctx context.Context, _ compat.Scenario) (co
 	caseTrace, err = runAKBFromClauseJoin(ctx, env)
 	if err != nil {
 		return trace, fmt.Errorf("case from-clause-join: %w", err)
+	}
+	trace.Records = append(trace.Records, caseTrace...)
+
+	// Case 4: faf-update-delete (ord 0)
+	caseTrace, err = runAKBFAFUpdateDelete(ctx, env)
+	if err != nil {
+		return trace, fmt.Errorf("case faf-update-delete: %w", err)
+	}
+	trace.Records = append(trace.Records, caseTrace...)
+
+	// Case 5: on-trigger-table-select (ord 2)
+	caseTrace, err = runAKBOnTriggerTableSelect(ctx, env)
+	if err != nil {
+		return trace, fmt.Errorf("case on-trigger-table-select: %w", err)
+	}
+	trace.Records = append(trace.Records, caseTrace...)
+
+	// Case 6: merge-update-select (ord 4)
+	caseTrace, err = runAKBMergeUpdateSelect(ctx, env)
+	if err != nil {
+		return trace, fmt.Errorf("case merge-update-select: %w", err)
 	}
 	trace.Records = append(trace.Records, caseTrace...)
 

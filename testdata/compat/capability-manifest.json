@@ -24399,24 +24399,35 @@
    "javaRuntimeIds": [
     "java-runtime-5c48441abdc543566dd1",
     "java-runtime-7ca72ccdfaf2f99f4ca6",
-    "java-runtime-a9b9ecfe0dc6693d0e31"
+    "java-runtime-a9b9ecfe0dc6693d0e31",
+    "java-runtime-472d2c12a99c291f275c",
+    "java-runtime-c0ea9e858846b717b2e4",
+    "java-runtime-4da78c382449b37e5599"
    ],
    "javaStaticIds": [
     "java-6221f5f24bafea3b2dde",
     "java-351607a2b5d02174024a",
-    "java-59c7bc096b154685a83b"
+    "java-59c7bc096b154685a83b",
+    "java-038bfd4f4e8affcc6db9",
+    "java-a77b21b8c405a856cc18",
+    "java-6709ceb5d59d1cb4fcda"
    ],
    "javaNames": [
     "EPLOtherUpdateIStream",
     "EPLOtherSubselect",
-    "EPLOtherFromClause"
+    "EPLOtherFromClause",
+    "EPLOtherFAFUpdateDelete",
+    "EPLOtherOnTrigger",
+    "EPLOthernMergeAndUpdateAndSelect"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherAsKeywordBacktick.java"
    ],
    "goTests": [
     "internal/app/parity/run_test.go:TestRunEplAsKeywordBacktickDiffWritesPassingEvidence",
-    "internal/app/parity/run_test.go:TestRunEplAsKeywordBacktickDirectReplay"
+    "internal/app/parity/run_test.go:TestRunEplAsKeywordBacktickDirectReplay",
+    "internal/app/parity/run.go:epl-as-keyword-backtick-diff",
+    "internal/app/parity/run_test.go:TestRunEplAsKeywordBacktickDiffRejectsTraceMutations"
    ],
    "tags": [
     "epl",
@@ -24442,10 +24453,14 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-5c48441abdc543566dd1",
     "java-runtime-7ca72ccdfaf2f99f4ca6",
-    "java-runtime-a9b9ecfe0dc6693d0e31"
+    "java-runtime-a9b9ecfe0dc6693d0e31",
+    "java-runtime-472d2c12a99c291f275c",
+    "java-runtime-c0ea9e858846b717b2e4",
+    "java-runtime-4da78c382449b37e5599"
    ],
    "notes": [
-    "Draft 4.350 covers EPLOtherAsKeywordBacktick ords 3/5/1 (behavioral trio): update-istream alias rewrite (RecordStream.UpdateStream + SetColumn), lastevent subselect alias (SubqueryValue over S0#lastevent), and two-stream lastevent join with reserved-word backtick aliases (JoinMany + SelectSourceEvent/SelectLeft/SelectRight). Remaining ords 0/2/4 (FAF/on-trigger/merge) and 6 (split-stream contained) are deferred with rationale in the manifest."
+    "Draft 4.350 covers EPLOtherAsKeywordBacktick ords 3/5/1 (behavioral trio): update-istream alias rewrite (RecordStream.UpdateStream + SetColumn), lastevent subselect alias (SubqueryValue over S0#lastevent), and two-stream lastevent join with reserved-word backtick aliases (JoinMany + SelectSourceEvent/SelectLeft/SelectRight).",
+    "Draft 4.351 covers the remaining behavioral ords 0/2/4: FAF update/delete over a keepall named window with the backtick alias `order` (OnDemand UpdateWhere/DeleteWhere + NamedWindowField candidate access), on-select trigger/table join on a primary-key table (OnEvent SelectFromTableWhere with Field/TableField), and the on-merge/on-update/on-select chain over a keepall named window (MergeIntoNamedWindowWhen + WhenMatchedAny, UpdateNamedWindow, SelectFromNamedWindow). Ord 6 (split-stream contained) remains deferred: compile-only with two-level unnest adjudication outstanding."
    ]
   },
   {
@@ -42764,7 +42779,7 @@
   "inventoriedCases": 629,
   "implementedCases": 627,
   "differentialVerifiedCases": 242,
-  "differentialVerifiedRuntimeIds": 895,
+  "differentialVerifiedRuntimeIds": 898,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42774,14 +42789,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3522,
-  "referencedJavaRuntimeIds": 3269,
+  "runtimeAssociationCount": 3525,
+  "referencedJavaRuntimeIds": 3272,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 867,
+  "unreferencedJavaRuntimeIds": 864,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 629,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 895
+  "differentialVerifiedRuntimeIDs": 898
  }
 }

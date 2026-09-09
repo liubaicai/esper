@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.351（2026-09-09），`epl.other.distinct` 的 `case-epl-as-keyword-backtick-behavioral` 扩展至 6/7 execution DV，新增 EPLOtherAsKeywordBacktick 的 FAF/on-trigger/merge 三重奏 ords 0/2/4（`EPLOtherFAFUpdateDelete` `java-runtime-472d2c12a99c291f275c` static `java-038bfd4f4e8affcc6db9`、`EPLOtherOnTrigger` `java-runtime-c0ea9e858846b717b2e4` static `java-a77b21b8c405a856cc18`、`EPLOthernMergeAndUpdateAndSelect` `java-runtime-4da78c382449b37e5599` static `java-6709ceb5d59d1cb4fcda`）。Java/Go trace 11 条 records、0 differences：FAF update/delete 的 `order` 反引号别名（OnDemand UpdateWhere/DeleteWhere + NamedWindowField 候选行访问）、on-select 触发流×主键表 join（OnEvent SelectFromTableWhere + TableField）、on-merge/on-update/on-select 链（MergeIntoNamedWindowWhen + WhenMatchedAny、UpdateNamedWindow、SelectFromNamedWindow）。Go 侧 on-demand/trigger update 需要显式谓词，故 Java 的无 where 全行形态以 Literal(true) 表达（行为等价）。Go 零引擎改动。该 suite 仅剩 ord 6（split-stream contained，编译-only，两级 unnest 待裁决）延后。
+>
 > 最新补充：Draft 4.350（2026-09-09），`epl.other.distinct` 新增 `case-epl-as-keyword-backtick-behavioral` differential-verified 场景，对照固定 Java `EPLOtherAsKeywordBacktick.java` 的行为三重奏 ords 3/5/1（`EPLOtherUpdateIStream` `java-runtime-5c48441abdc543566dd1` static `java-6221f5f24bafea3b2dde`、`EPLOtherSubselect` `java-runtime-7ca72ccdfaf2f99f4ca6` static `java-351607a2b5d02174024a`、`EPLOtherFromClause` `java-runtime-a9b9ecfe0dc6693d0e31` static `java-59c7bc096b154685a83b`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 3 条 records、0 differences：update-istream 别名改写、lastevent 子查询别名、双流 lastevent join 的保留字别名。Go 零引擎改动。该 suite 累计 3/7 execution DV；剩余 ords 0/2/4 和 6 延后至后续单元。
 
 > 最新补充：Draft 4.349（2026-09-09），`view.window-core` 扩展 `case-viewgroup-merge-view` differential-verified 场景，对照固定 Java `ViewGroup.java` 追加 ord 17 表达式 groupwin（`ViewGroupExpressionGrouped` `java-runtime-563f2c37fb66e3d067ca` static `java-383fcd83c5bd59dead03`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 119 条 records（既有 116 条字节不变 + 3 条新记录）、0 differences：`select irstream * from SupportBeanTimestamp#groupwin(timestamp.getDayOfWeek())#length(2)`——groupwin 键为任意表达式（对 epoch-milli 时间戳求 Calendar 星期几），键按表达式值分组（三个周二事件共享一个 length(2) 组），E3 驱逐 E1（套件钉定扁平 old 列表长度为 1）。Go 零引擎改动：GroupWindow 接受任意 Expr 键（Func1 从时间戳计算星期几——键值从不 surface 于 select * 行）。场景对 null-groupId 发送省略 payload 键（Java 两参构造器状态；runner 映射 absent → nil 指针）。该类累计 15/20 execution DV；剩余 7（编译消息）、8（性能门）、19（SERDEREQUIRED）；manifest 更新为 628 cases、241 个 differential-verified case、892 个 differential runtime IDs、3519 条 associations（referenced 3266、unreferenced 870）；capability 120 个（37 DV）。
@@ -1477,7 +1479,7 @@
 
 重点领域：
 
-- epl 剩余 267 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 264 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1502,7 +1504,7 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 267 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 264 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1524,7 +1526,7 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 267 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 264 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
@@ -1554,7 +1556,7 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 267 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 264 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |

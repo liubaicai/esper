@@ -4,7 +4,10 @@
   "javaRuntimeIds": [
     "java-runtime-5c48441abdc543566dd1",
     "java-runtime-7ca72ccdfaf2f99f4ca6",
-    "java-runtime-a9b9ecfe0dc6693d0e31"
+    "java-runtime-a9b9ecfe0dc6693d0e31",
+    "java-runtime-472d2c12a99c291f275c",
+    "java-runtime-c0ea9e858846b717b2e4",
+    "java-runtime-4da78c382449b37e5599"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherAsKeywordBacktick.java"
@@ -12,7 +15,10 @@
   "javaExecutions": [
     "EPLOtherUpdateIStream",
     "EPLOtherSubselect",
-    "EPLOtherFromClause"
+    "EPLOtherFromClause",
+    "EPLOtherFAFUpdateDelete",
+    "EPLOtherOnTrigger",
+    "EPLOthernMergeAndUpdateAndSelect"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -73,6 +79,53 @@
         "payload": {
           "id": 10,
           "p10": "S1_1"
+        }
+      },
+      {
+        "op": "case",
+        "case": "faf-update-delete"
+      },
+      {
+        "op": "case",
+        "case": "on-trigger-table-select"
+      },
+      {
+        "op": "send",
+        "case": "on-trigger-table-select",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "a"
+        }
+      },
+      {
+        "op": "case",
+        "case": "merge-update-select"
+      },
+      {
+        "op": "send",
+        "case": "merge-update-select",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "merge-update-select",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1,
+          "p10": "x"
+        }
+      },
+      {
+        "op": "send",
+        "case": "merge-update-select",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
         }
       }
     ]
@@ -157,6 +210,123 @@
                 }
               },
               "select.p10": "S1_1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update-delete",
+        "operation": "faf",
+        "statement": "faf-select-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update-delete",
+        "operation": "faf",
+        "statement": "faf-select-2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "b",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update-delete",
+        "operation": "faf",
+        "statement": "faf-select-3",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "on-trigger-table-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "v1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "merge-update-select",
+        "operation": "faf",
+        "statement": "faf-select-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "merge-update-select",
+        "operation": "faf",
+        "statement": "faf-select-2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "merge-update-select",
+        "operation": "faf",
+        "statement": "faf-select-3",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "x",
+              "p1": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "merge-update-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "x"
             }
           }
         ]
@@ -246,12 +416,126 @@
             }
           }
         ]
+      },
+      {
+        "case": "faf-update-delete",
+        "operation": "faf",
+        "statement": "faf-select-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update-delete",
+        "operation": "faf",
+        "statement": "faf-select-2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "b",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update-delete",
+        "operation": "faf",
+        "statement": "faf-select-3",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "on-trigger-table-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "v1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "merge-update-select",
+        "operation": "faf",
+        "statement": "faf-select-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "merge-update-select",
+        "operation": "faf",
+        "statement": "faf-select-2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "merge-update-select",
+        "operation": "faf",
+        "statement": "faf-select-3",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "x",
+              "p1": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "merge-update-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "x"
+            }
+          }
+        ]
       }
     ]
   },
   "status": "passing",
-  "differences": [],
-  "notes": [
-    "Draft 4.350 covers EPLOtherAsKeywordBacktick ords 3/5/1 (behavioral trio): update-istream alias rewrite (RecordStream.UpdateStream + SetColumn), lastevent subselect alias (SubqueryValue over S0#lastevent), and two-stream lastevent join with reserved-word backtick aliases (JoinMany + SelectSourceEvent/SelectLeft/SelectRight). Remaining ords 0/2/4 (FAF/on-trigger/merge) and 6 (split-stream contained) are deferred with rationale in the manifest."
-  ]
+  "differences": []
 }

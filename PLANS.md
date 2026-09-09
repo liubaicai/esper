@@ -52,28 +52,34 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.347 ('viewgroup-time-windows') committed as 51e284b7e; Git owns identity. ViewGroup.java now 11/20 executions DV.
 - Shipped: Draft 4.348 ('viewgroup-reclaim') committed as 9605dbf76; Git owns identity. ViewGroup.java now 14/20 executions DV.
 - Shipped: Draft 4.349 ('viewgroup-expression-groupwin') committed as 5c2bede02; Git owns identity. ViewGroup.java now 15/20 executions DV.
-- Current target: Draft 4.350 'as-keyword-backtick-behavioral' — EPLOtherAsKeywordBacktick ords 3/5/1 (behavioral trio); contracts pinned by the 4.349 re-audit scouts.
+- Shipped: Draft 4.350 ('as-keyword-backtick-behavioral') committed as 1ec269d70; Git owns identity. EPLOtherAsKeywordBacktick.java now 3/7 executions DV.
+- Current target: Draft 4.351 'as-keyword-backtick-faf-ontrigger' — EPLOtherAsKeywordBacktick ords 0/2/4 (FAF/on-trigger/merge); contracts pinned by the 4.350 re-audit scouts (agent_9dcc7ff0 / agent_c0734ec4).
 
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: Draft 4.350 ('as-keyword-backtick-behavioral') — NEW differential chain for EPLOtherAsKeywordBacktick ords 3/5/1 (the behavioral trio: update-istream, subquery-projection, two-stream join with reserved-word aliases).
+Active: Draft 4.351 ('as-keyword-backtick-faf-ontrigger') — extends case-epl-as-keyword-backtick-behavioral with EPLOtherAsKeywordBacktick ords 0/2/4 (the FAF/on-trigger/merge trio).
 
-Frozen contract (from the 4.349 re-audit scouts agent_9dcc7ff0/agent_c0734ec4):
-- ord 3 UpdateIStream java-runtime-5c48441abdc543566dd1 static java-6221f5f24bafea3b2dde: module 1 update istream SupportBean_S0 set p00=p01 (backtick alias); module 2 selects all from SupportBean_S0; send S0(1,a,x) -> new p00=x. Go: RecordStream.UpdateStream; two-module deploy.
-- ord 5 Subselect java-runtime-7ca72ccdfaf2f99f4ca6 static java-351607a2b5d02174024a: select (select order.p00 from SupportBean_S0#lastevent as order) as c0 from SupportBean_S1; sends S0(1,A), S1(2) -> new c0=A. Go: SubqueryValue over S0#lastevent, Alias c0.
-- ord 1 FromClause java-runtime-a9b9ecfe0dc6693d0e31 static java-59c7bc096b154685a83b: select * from SupportBean_S0#lastevent as order, SupportBean_S1#lastevent as select; sends S0(1,S0_1), S1(10,S1_1) -> pinned new props order/select/order.p00=S0_1/select.p10=S1_1. Go: JoinMany + SelectSourceEvent(0,order)/SelectSourceEvent(1,select).
-4.335 blockers STALE: the multi-module oracle harness (established in 4.346-4.348) resolves the compile-error issue.
+Frozen contract (from the 4.350 re-audit scouts agent_9dcc7ff0/agent_c0734ec4):
+- ord 0 FAFUpdateDelete java-runtime-472d2c12a99c291f275c static java-038bfd4f4e8affcc6db9: `@public create window MyWindowFAF#keepall as (p0 string, p1 string)` via path; FAF insert 'a'/'b'; FAF select asserts (a,b); FAF `update MyWindowFAF as \`order\` set \`order\`.p0 = \`order\`.p1` → (b,b); FAF `delete from MyWindowFAF where \`order\`.p0 = 'b'`; FAF select count 0. Go: OnDemand InsertRows/UpdateWhere/DeleteWhere + FromNamedWindow query.
+- ord 2 OnTrigger java-runtime-c0ea9e858846b717b2e4 static java-a77b21b8c405a856cc18: `@public create table MyTable(k1 string primary key, v1 string)`; FAF inserts 'x'/'y' and 'a'/'b'; `on SupportBean_S0 as \`order\` select v1 from MyTable where \`order\`.p00 = k1`; send S0(1,"a") → new v1="b". Go: CreateTable + OnEvent SelectFromTableWhere.
+- ord 4 nMergeAndUpdateAndSelect java-runtime-4da78c382449b37e5599 static java-6709ceb5d59d1cb4fcda: create window MyWindowMerge#keepall as (p0 string, p1 string); FAF insert; `on SupportBean_S0 merge MyWindowMerge as \`order\` when matched then update set \`order\`.p1 = \`order\`.p0`; `on SupportBean_S1 update MyWindowMerge as \`order\` set p0 = 'x'`; FAF asserts a,b → a,a (after S0) → x,a (after S1); then `on SupportBean select \`order\`.p0 as c0 from MyWindowMerge as \`order\`` → send SupportBean() → new c0="x". Go: MergeIntoNamedWindow/WhenMatched + UpdateNamedWindow + SelectFromNamedWindow.
+- ord 6 OnSelectProperty (split-stream/contained) deferred — compile-only, needs two-level unnest adjudication.
 
 - [x] Fresh parallel scouts dispatched (byte-exact contracts; Go surface adjudication with precedents for each shape).
-- [x] Freeze contract; implement runner + Go parity tests (DirectReplay + DiffWrites passing).
-- [x] Asset writer: 3 scenario cases + oracle + trace (agent_e4551389 + agent_e4551389 round 2 for scenario format conversion; 3 records, double-run byte-identical).
-- [x] Manifest (NEW case entry, 3 runtime IDs/names/DV), summary recomputed-exact.
-- [x] Evidence; Roadmap supplement + epl decrement; CHANGELOG 4.350 entry.
-- [x] Gates + independent parity review (agent_201a62b1): OVERALL PASS on all five dimensions with independent oracle re-run and manifest arithmetic verified. Capability mapping corrected from view.window-core to epl.other.distinct to match prose.
+- [x] Freeze contract; implement runner + Go parity tests. (Primary: runner file epl_other_as_keyword_backtick_faf.go; three case builders; eplAsKeywordBacktickJavaRuntimeIDs/JavaExecutions in epl_other_as_keyword_backtick.go extended to 6 entries — run.go diff empty, its mode wiring pre-existed; DirectReplay asserts 11 records; new 7-case mutation family.)
+- [x] Asset writer: 3 scenario cases + oracle + trace (parallel, disjoint). (Writer agent_cc809794-d2f5-44c8-9e2c-ee98b7e20f5e delivered scenario/oracle/Java trace; 11 records, existing 3 byte-identical, contract exact. Run script jq gate 3→11 updated by primary.)
+- [x] Manifest (+3 runtime IDs/names/DV — suite 6/7 DV), summary recomputed-exact. (898 DV runtime IDs / 3525 associations / referenced 3272 / unreferenced 864.)
+- [x] Evidence; Roadmap supplement + epl decrement; CHANGELOG 4.351 entry. (Evidence passing 0 differences, 6 runtimes/6 executions; epl 267→264; 4.351 supplement newest-first.)
+- [ ] Gates + independent parity review.
 - [ ] Commit and push (Git owns identity; no hash recorded here).
 
+Frozen trace contract (writer + primary implemented against it): per-case sequence; FAF selects emit {operation:"faf", statement:"faf-select-N", new:[rows]} only (mutations unrecorded — the suite never observes them); final 0-row select emits no "new" (Go omitempty; structural diff treats [] ≡ absent); on-trigger emits one listener {v1:"b"}; merge case emits faf-selects (a,b)/(a,a)/(x,a) then listener {c0:"x"}. Go adaptations recorded: on-demand/trigger update requires an explicit predicate — Java's no-where all-rows form is Literal(true); FAF candidate-row access uses NamedWindowField (on-demand expressions resolve from EvalContext.Group).
+
 ## Delegation checkpoint
+
+Draft 4.351 unit:
+- Delegation gate: the ords 0/2/4 contracts and Go surfaces were pinned by the 4.350 re-audit scouts. Asset writer dispatched for the Java-side assets; primary owns the Go runner and tests.
 
 Draft 4.350 unit:
 - Delegation gate: the ords 3/5/1 contracts and Go surfaces were pinned by the 4.349 re-audit scouts (agent_9dcc7ff0 / agent_c0734ec4). Asset writer agent_e4551389 authored oracle/script/scenario/trace for 3 cases.

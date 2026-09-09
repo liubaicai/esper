@@ -1,10 +1,13 @@
 {
   "id": "epl-as-keyword-backtick",
-  "description": "EPLOtherAsKeywordBacktick backtick-quoted as-alias behavioral trio: update istream alias rewrite (EPLOtherUpdateIStream, ord 3), lastevent subselect alias (EPLOtherSubselect, ord 5), and two-stream lastevent join with the reserved-word aliases `order` and `select` (EPLOtherFromClause, ord 1).",
+  "description": "EPLOtherAsKeywordBacktick backtick-quoted as-alias behavioral trio extended with the FAF/on-trigger/merge trio: update istream alias rewrite (EPLOtherUpdateIStream, ord 3), lastevent subselect alias (EPLOtherSubselect, ord 5), two-stream lastevent join with the reserved-word aliases `order` and `select` (EPLOtherFromClause, ord 1), fire-and-forget insert/update/delete against a named window through the `order` alias (EPLOtherFAFUpdateDelete, ord 0), on-trigger table select through the `order` alias (EPLOtherOnTrigger, ord 2), and merge plus update on-trigger statements with a final on-trigger select through the `order` alias (EPLOthernMergeAndUpdateAndSelect, ord 4).",
   "javaRuntimes": [
     "java-runtime-5c48441abdc543566dd1",
     "java-runtime-7ca72ccdfaf2f99f4ca6",
-    "java-runtime-a9b9ecfe0dc6693d0e31"
+    "java-runtime-a9b9ecfe0dc6693d0e31",
+    "java-runtime-472d2c12a99c291f275c",
+    "java-runtime-c0ea9e858846b717b2e4",
+    "java-runtime-4da78c382449b37e5599"
   ],
   "cases": [
     {
@@ -24,6 +27,24 @@
       "ordinal": 1,
       "runtimeId": "java-runtime-a9b9ecfe0dc6693d0e31",
       "executionName": "EPLOtherFromClause"
+    },
+    {
+      "case": "faf-update-delete",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-472d2c12a99c291f275c",
+      "executionName": "EPLOtherFAFUpdateDelete"
+    },
+    {
+      "case": "on-trigger-table-select",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-c0ea9e858846b717b2e4",
+      "executionName": "EPLOtherOnTrigger"
+    },
+    {
+      "case": "merge-update-select",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-4da78c382449b37e5599",
+      "executionName": "EPLOthernMergeAndUpdateAndSelect"
     }
   ],
   "steps": [
@@ -92,6 +113,60 @@
       "payload": {
         "id": 10,
         "p10": "S1_1"
+      }
+    },
+    {
+      "op": "case",
+      "case": "faf-update-delete"
+    },
+    {
+      "op": "case",
+      "case": "on-trigger-table-select"
+    },
+    {
+      "op": "send",
+      "case": "on-trigger-table-select",
+      "eventType": "SupportBean_S0",
+      "id": 1,
+      "p00": "a",
+      "payload": {
+        "id": 1,
+        "p00": "a"
+      }
+    },
+    {
+      "op": "case",
+      "case": "merge-update-select"
+    },
+    {
+      "op": "send",
+      "case": "merge-update-select",
+      "eventType": "SupportBean_S0",
+      "id": 1,
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "send",
+      "case": "merge-update-select",
+      "eventType": "SupportBean_S1",
+      "id": 1,
+      "p10": "x",
+      "payload": {
+        "id": 1,
+        "p10": "x"
+      }
+    },
+    {
+      "op": "send",
+      "case": "merge-update-select",
+      "eventType": "SupportBean",
+      "theString": null,
+      "intPrimitive": 0,
+      "payload": {
+        "theString": null,
+        "intPrimitive": 0
       }
     }
   ],

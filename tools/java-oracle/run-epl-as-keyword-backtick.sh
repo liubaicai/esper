@@ -118,7 +118,7 @@ mkdir -p "$parent"
     -Duser.country=US -Duser.variant= -cp "$classpath" \
     EPLAsKeywordBacktickScenarioOracle "$scenario" > "$output"
 
-if ! jq -e '.version == "esper-parity/v1" and (.id | length > 0) and (.records | type == "array") and (.records | length == 3)' "$output" >/dev/null 2>&1; then
+if ! jq -e '.version == "esper-parity/v1" and (.id | length > 0) and (.records | type == "array") and (.records | length == 11)' "$output" >/dev/null 2>&1; then
     echo "Java oracle produced an invalid trace: $output" >&2
     exit 1
 fi
