@@ -52,8 +52,8 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.347 ('viewgroup-time-windows') committed as 51e284b7e; Git owns identity. ViewGroup.java now 11/20 executions DV.
 - Shipped: Draft 4.348 ('viewgroup-reclaim') committed as 9605dbf76; Git owns identity. ViewGroup.java now 14/20 executions DV.
 - Shipped: Draft 4.349 ('viewgroup-expression-groupwin') committed as 5c2bede02; Git owns identity. ViewGroup.java now 15/20 executions DV.
-- Shipped: Draft 4.350 ('as-keyword-backtick-behavioral') committed as 1ec269d70; Git owns identity. EPLOtherAsKeywordBacktick.java now 3/7 executions DV.
-- Current target: Draft 4.351 'as-keyword-backtick-faf-ontrigger' — EPLOtherAsKeywordBacktick ords 0/2/4 (FAF/on-trigger/merge); contracts pinned by the 4.350 re-audit scouts (agent_9dcc7ff0 / agent_c0734ec4).
+- Shipped: Draft 4.351 ('as-keyword-backtick-faf-ontrigger') committed and pushed; Git owns identity. EPLOtherAsKeywordBacktick.java now 6/7 executions DV (only ord 6 split-stream contained deferred: compile-only, two-level unnest adjudication outstanding).
+- Current target: next work unit selection. Candidates: a new domain slice (subselect, database, dataflow, method source) from the roadmap's 264 remaining unassociated epl runtimes; ViewGroup ords 7/8/19 dispositions remain policy-gated. Run the start-and-resume reconciliation before choosing.
 
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
@@ -71,8 +71,8 @@ Frozen contract (from the 4.350 re-audit scouts agent_9dcc7ff0/agent_c0734ec4):
 - [x] Asset writer: 3 scenario cases + oracle + trace (parallel, disjoint). (Writer agent_cc809794-d2f5-44c8-9e2c-ee98b7e20f5e delivered scenario/oracle/Java trace; 11 records, existing 3 byte-identical, contract exact. Run script jq gate 3→11 updated by primary.)
 - [x] Manifest (+3 runtime IDs/names/DV — suite 6/7 DV), summary recomputed-exact. (898 DV runtime IDs / 3525 associations / referenced 3272 / unreferenced 864.)
 - [x] Evidence; Roadmap supplement + epl decrement; CHANGELOG 4.351 entry. (Evidence passing 0 differences, 6 runtimes/6 executions; epl 267→264; 4.351 supplement newest-first.)
-- [ ] Gates + independent parity review.
-- [ ] Commit and push (Git owns identity; no hash recorded here).
+- [x] Gates + independent parity review. (Affected packages, make check, git diff --check all green. Reviewer agent_369d46a8-2bd6-4a96-b67e-2f6af3f2ac26 OVERALL PASS with independent manifest recomputation and four derivational probes; P2 manifest ASCII-escaping churn fixed by re-emitting ensure_ascii=False — diff reduced to intended changes only; P3 PLANS wording fixed; P3 unobservable SupportBean payload difference and P3 "updated to" phrasing noted, no action.)
+- [x] Commit and push (Git owns identity; no hash recorded here).
 
 Frozen trace contract (writer + primary implemented against it): per-case sequence; FAF selects emit {operation:"faf", statement:"faf-select-N", new:[rows]} only (mutations unrecorded — the suite never observes them); final 0-row select emits no "new" (Go omitempty; structural diff treats [] ≡ absent); on-trigger emits one listener {v1:"b"}; merge case emits faf-selects (a,b)/(a,a)/(x,a) then listener {c0:"x"}. Go adaptations recorded: on-demand/trigger update requires an explicit predicate — Java's no-where all-rows form is Literal(true); FAF candidate-row access uses NamedWindowField (on-demand expressions resolve from EvalContext.Group).
 
