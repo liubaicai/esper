@@ -8656,7 +8656,9 @@
     "java-runtime-58bc2a73c88692723791",
     "java-runtime-494ca71cfcaf96e0696b",
     "java-runtime-b49d7c217bee63a5aab4",
-    "java-runtime-fc5e32b56ceb8866146f"
+    "java-runtime-fc5e32b56ceb8866146f",
+    "java-runtime-73e90c44540e5ba6b1fd",
+    "java-runtime-7d4d91983868b27f14b1"
    ],
    "javaNames": [
     "EPLSubselectUngroupedUncorrelatedNoDataWindow",
@@ -8671,7 +8673,9 @@
     "EPLSubselectGroupedCorrelationInsideHaving",
     "EPLSubselectUngroupedCorrelationInsideHaving",
     "EPLSubselectUngroupedTableWHaving",
-    "EPLSubselectGroupedTableWHaving"
+    "EPLSubselectGroupedTableWHaving",
+    "EPLSubselectUngroupedJoin3StreamKeyRangeCoercion",
+    "EPLSubselectUngroupedJoin2StreamRangeCoercion"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedSingleValue.java"
@@ -42789,10 +42793,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3525,
-  "referencedJavaRuntimeIds": 3272,
+  "runtimeAssociationCount": 3527,
+  "referencedJavaRuntimeIds": 3274,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 864,
+  "unreferencedJavaRuntimeIds": 862,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 629,

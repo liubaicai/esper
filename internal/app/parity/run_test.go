@@ -10332,6 +10332,50 @@ func TestRunSubselectAggregatedSingleValueDiffRejectsTraceMutations(t *testing.T
 				trace.Records[40].Sequence = 99
 			},
 		},
+		{
+			name: "join3-between-reversal-sum",
+			mutate: func(trace *compat.Trace) {
+				// The reversed range 10-to-(-1) must revert to [-1,10] and
+				// sum -1+9 = 8 over the keepall window.
+				trace.Records[66].New[0].Fields["sumi"] = int64(0)
+			},
+		},
+		{
+			name: "join3-no-reversal-must-stay-null",
+			mutate: func(trace *compat.Trace) {
+				// The >=/<= form must not revert the range; the reversed
+				// answer 8 would be a reversal regression.
+				trace.Records[76].New[0].Fields["sumi"] = int64(8)
+			},
+		},
+		{
+			name: "join3-gt-sum",
+			mutate: func(trace *compat.Trace) {
+				// p11Long > intPrimitive over {13,21} with bound 20 matches 13.
+				trace.Records[77].New[0].Fields["sumi"] = int64(21)
+			},
+		},
+		{
+			name: "join3-lt-sum",
+			mutate: func(trace *compat.Trace) {
+				// p11Long < intPrimitive with bound 20 matches 21.
+				trace.Records[78].New[0].Fields["sumi"] = int64(13)
+			},
+		},
+		{
+			name: "join2-between-reversal-sum",
+			mutate: func(trace *compat.Trace) {
+				// The reversed 20-to-13 range must revert and sum 14+13 = 27.
+				trace.Records[89].New[0].Fields["sumi"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			name: "join2-no-reversal-must-stay-null",
+			mutate: func(trace *compat.Trace) {
+				// The >=/<= form must not revert 20-to-13.
+				trace.Records[111].New[0].Fields["sumi"] = int64(27)
+			},
+		},
 	}
 
 	for _, test := range tests {

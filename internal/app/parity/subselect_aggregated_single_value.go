@@ -25,6 +25,22 @@ type subselectSingleBean struct {
 	IntPrimitive int    `esper:"intPrimitive"`
 }
 
+type subselectSingleST0 struct {
+	ID      string `esper:"id"`
+	P01Long *int64 `esper:"p01Long"`
+}
+
+type subselectSingleST1 struct {
+	ID      string `esper:"id"`
+	P11Long *int64 `esper:"p11Long"`
+}
+
+type subselectSingleST2 struct {
+	ID   string  `esper:"id"`
+	Key2 *string `esper:"key2"`
+	P20  int     `esper:"p20"`
+}
+
 const subselectSingleJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 
 var subselectSingleJavaSources = []string{
@@ -46,6 +62,8 @@ var (
 		"java-runtime-494ca71cfcaf96e0696b",
 		"java-runtime-b49d7c217bee63a5aab4",
 		"java-runtime-fc5e32b56ceb8866146f",
+		"java-runtime-73e90c44540e5ba6b1fd",
+		"java-runtime-7d4d91983868b27f14b1",
 	}
 	subselectSingleJavaExecutions = []string{
 		"EPLSubselectUngroupedUncorrelatedNoDataWindow",
@@ -61,6 +79,8 @@ var (
 		"EPLSubselectUngroupedCorrelationInsideHaving",
 		"EPLSubselectUngroupedTableWHaving",
 		"EPLSubselectGroupedTableWHaving",
+		"EPLSubselectUngroupedJoin3StreamKeyRangeCoercion",
+		"EPLSubselectUngroupedJoin2StreamRangeCoercion",
 	}
 )
 
@@ -75,7 +95,7 @@ func derefOuterString(expression esper.Expression[*string]) esper.Expression[str
 	}, expression)
 }
 
-// runSubselectAggregatedSingleValueScenario replays 13 executions of
+// runSubselectAggregatedSingleValueScenario replays 15 executions of
 // EPLSubselectAggregatedSingleValue: single-value aggregate subselects over
 // SupportBean (unbound, keepall or length(3), uncorrelated or correlated
 // through s0.p00/s0.id, grouped or ungrouped having, including correlated
@@ -89,7 +109,11 @@ func runSubselectAggregatedSingleValueScenario(ctx context.Context, scenario com
 		"correlated-scene-two", "correlated-in-where-a", "correlated-in-where-b",
 		"correlated-having", "grouped-uncorrelated-having", "grouped-correlated-having",
 		"grouped-correlation-inside-having", "ungrouped-correlation-inside-having",
-		"ungrouped-table-having", "grouped-table-having"}
+		"ungrouped-table-having", "grouped-table-having",
+		"join-3stream-key-range-between", "join-3stream-key-range-no-reversal",
+		"join-3stream-key-range-greater-than", "join-3stream-key-range-less-than",
+		"join-2stream-range-between-s0-s1", "join-2stream-range-between-s1-s0",
+		"join-2stream-range-no-reversal"}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-aggregated-single-value scenario %q has no supported cases", scenario.ID)
 	}
@@ -121,6 +145,15 @@ func runSubselectSingleCase(ctx context.Context, scenario compat.Scenario, caseN
 		return compat.Trace{}, err
 	}
 	if _, err := esper.RegisterStruct[subselectSingleBean](env, "SupportBean"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[subselectSingleST0](env, "SupportBean_ST0"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[subselectSingleST1](env, "SupportBean_ST1"); err != nil {
+		return compat.Trace{}, err
+	}
+	if _, err := esper.RegisterStruct[subselectSingleST2](env, "SupportBean_ST2"); err != nil {
 		return compat.Trace{}, err
 	}
 
@@ -203,6 +236,69 @@ func runSubselectSingleCase(ctx context.Context, scenario compat.Scenario, caseN
 		query = esper.Select(esper.From[subselectSingleS0](env, "SupportBean_S0"),
 			esper.Alias("c0", esper.SubqueryValueWithOptions[string](inner, esper.Last[string](theString),
 				esper.SubqueryHaving(esper.Equal[int](sum, esper.OuterField[int]("id"))))),
+		).Query(esper.StatementName("s0"))
+	case "join-3stream-key-range-between", "join-3stream-key-range-no-reversal",
+		"join-3stream-key-range-greater-than", "join-3stream-key-range-less-than",
+		"join-2stream-range-between-s0-s1", "join-2stream-range-between-s1-s0",
+		"join-2stream-range-no-reversal":
+		// The Java executions correlate an aggregated subselect against
+		// properties of every outer joined stream: st2.key2 key equality,
+		// s0.p01Long/s1.p11Long as range bounds. JoinField addresses each
+		// stream by its FROM-clause position; source order differs between
+		// the two between orientations.
+		key2Join := esper.JoinField[*string](0, "key2")
+		p01Join := esper.JoinField[*int64](1, "p01Long")
+		p11Join := esper.JoinField[*int64](2, "p11Long")
+		st2Join := esper.JoinSource(esper.From[subselectSingleST2](env, "SupportBean_ST2").Window(esper.LastEvent()))
+		st0Join := esper.JoinSource(esper.From[subselectSingleST0](env, "SupportBean_ST0").Window(esper.LastEvent()))
+		st1Join := esper.JoinSource(esper.From[subselectSingleST1](env, "SupportBean_ST1").Window(esper.LastEvent()))
+		var filter esper.Expression[bool]
+		var joinQuery esper.MultiJoinStream
+		switch caseName {
+		case "join-3stream-key-range-between":
+			filter = esper.And(
+				esper.Equal[string](theString, derefOuterString(key2Join)),
+				esper.BetweenOf(intPrimitive, p01Join, p11Join))
+			joinQuery = esper.JoinMany(st2Join, st0Join, st1Join)
+		case "join-3stream-key-range-no-reversal":
+			filter = esper.And(
+				esper.Equal[string](theString, derefOuterString(key2Join)),
+				esper.And(
+					esper.GreaterOrEqualOf(p11Join, intPrimitive),
+					esper.LessOrEqualOf(p01Join, intPrimitive)))
+			joinQuery = esper.JoinMany(st2Join, st0Join, st1Join)
+		case "join-3stream-key-range-greater-than":
+			filter = esper.And(
+				esper.Equal[string](theString, derefOuterString(key2Join)),
+				esper.GreaterOf(p11Join, intPrimitive))
+			joinQuery = esper.JoinMany(st2Join, st0Join, st1Join)
+		case "join-3stream-key-range-less-than":
+			filter = esper.And(
+				esper.Equal[string](theString, derefOuterString(key2Join)),
+				esper.LessOf(p11Join, intPrimitive))
+			joinQuery = esper.JoinMany(st2Join, st0Join, st1Join)
+		case "join-2stream-range-between-s0-s1":
+			// FROM ST0, ST1: source 0 is s0, source 1 is s1.
+			filter = esper.BetweenOf(intPrimitive,
+				esper.JoinField[*int64](0, "p01Long"),
+				esper.JoinField[*int64](1, "p11Long"))
+			joinQuery = esper.JoinMany(st0Join, st1Join)
+		case "join-2stream-range-between-s1-s0":
+			// FROM ST1, ST0: source 0 is s1, source 1 is s0; the between
+			// operands swap with the FROM order.
+			filter = esper.BetweenOf(intPrimitive,
+				esper.JoinField[*int64](0, "p11Long"),
+				esper.JoinField[*int64](1, "p01Long"))
+			joinQuery = esper.JoinMany(st1Join, st0Join)
+		case "join-2stream-range-no-reversal":
+			// FROM ST0, ST1 with explicit >=/<= bounds; no range reversal.
+			filter = esper.And(
+				esper.GreaterOrEqualOf(intPrimitive, esper.JoinField[*int64](0, "p01Long")),
+				esper.LessOrEqualOf(intPrimitive, esper.JoinField[*int64](1, "p11Long")))
+			joinQuery = esper.JoinMany(st0Join, st1Join)
+		}
+		query = joinQuery.Select(
+			esper.SelectLeft("sumi", esper.SubquerySum[int](inner, intPrimitive, filter)),
 		).Query(esper.StatementName("s0"))
 	case "ungrouped-table-having", "grouped-table-having":
 		var intoPlan esper.Plan
@@ -325,6 +421,24 @@ func decodeSubselectSinglePayload(step compat.Step) (any, error) {
 		var value subselectSingleBean
 		if err := json.Unmarshal(step.Payload, &value); err != nil {
 			return nil, fmt.Errorf("decode SupportBean: %w", err)
+		}
+		return value, nil
+	case "SupportBean_ST0":
+		var value subselectSingleST0
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean_ST0: %w", err)
+		}
+		return value, nil
+	case "SupportBean_ST1":
+		var value subselectSingleST1
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean_ST1: %w", err)
+		}
+		return value, nil
+	case "SupportBean_ST2":
+		var value subselectSingleST2
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean_ST2: %w", err)
 		}
 		return value, nil
 	default:

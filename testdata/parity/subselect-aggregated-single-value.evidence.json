@@ -14,7 +14,9 @@
     "java-runtime-58bc2a73c88692723791",
     "java-runtime-494ca71cfcaf96e0696b",
     "java-runtime-b49d7c217bee63a5aab4",
-    "java-runtime-fc5e32b56ceb8866146f"
+    "java-runtime-fc5e32b56ceb8866146f",
+    "java-runtime-73e90c44540e5ba6b1fd",
+    "java-runtime-7d4d91983868b27f14b1"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedSingleValue.java"
@@ -32,7 +34,9 @@
     "EPLSubselectGroupedCorrelationInsideHaving",
     "EPLSubselectUngroupedCorrelationInsideHaving",
     "EPLSubselectUngroupedTableWHaving",
-    "EPLSubselectGroupedTableWHaving"
+    "EPLSubselectGroupedTableWHaving",
+    "EPLSubselectUngroupedJoin3StreamKeyRangeCoercion",
+    "EPLSubselectUngroupedJoin2StreamRangeCoercion"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -1045,6 +1049,832 @@
           "id": 0,
           "p00": null
         }
+      },
+      {
+        "op": "case",
+        "case": "join-3stream-key-range-between"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 17
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST21",
+          "key2": "X",
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST22",
+          "key2": "G",
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST21",
+          "key2": null,
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST21",
+          "key2": "G",
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-3stream-key-range-no-reversal"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 17
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST21",
+          "key2": "X",
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST22",
+          "key2": "G",
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST21",
+          "key2": null,
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST21",
+          "key2": "G",
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-3stream-key-range-greater-than"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST2",
+          "key2": "G",
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0",
+          "p01Long": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-3stream-key-range-less-than"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST2",
+        "payload": {
+          "id": "ST2",
+          "key2": "G",
+          "p20": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0",
+          "p01Long": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-2stream-range-between-s0-s1"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_1",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_1",
+          "p11Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_2",
+          "p01Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 14
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_3",
+          "p11Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_4",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_3",
+          "p01Long": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_4",
+          "p01Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_5",
+          "p11Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_5",
+          "p01Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_6",
+          "p11Long": 13
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-2stream-range-between-s1-s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_1",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_1",
+          "p11Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_2",
+          "p01Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 14
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_3",
+          "p11Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_4",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_3",
+          "p01Long": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_4",
+          "p01Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_5",
+          "p11Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_5",
+          "p01Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_6",
+          "p11Long": 13
+        }
+      },
+      {
+        "op": "case",
+        "case": "join-2stream-range-no-reversal"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST01",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST11",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_1",
+          "p01Long": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_1",
+          "p11Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_2",
+          "p01Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 14
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_3",
+          "p11Long": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_4",
+          "p11Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_3",
+          "p01Long": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_4",
+          "p01Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_5",
+          "p11Long": null
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST0",
+        "payload": {
+          "id": "ST0_5",
+          "p01Long": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_ST1",
+        "payload": {
+          "id": "ST1_6",
+          "p11Long": 13
+        }
       }
     ]
   },
@@ -1985,6 +2815,879 @@
             }
           }
         ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-greater-than",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-less-than",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
       }
     ]
   },
@@ -2922,6 +4625,879 @@
             "kind": "row",
             "fields": {
               "c0": 101
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-between",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-greater-than",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-3stream-key-range-less-than",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s0-s1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-between-s1-s0",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 27
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": 39
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "join-2stream-range-no-reversal",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumi": {
+                "state": "null"
+              }
             }
           }
         ]
