@@ -39609,6 +39609,137 @@ func TestRunViewGroupMergeViewDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunDataflowSelectFlowsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-flows.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-select-flows.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-flows.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-select-flows-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowSelectFlowsDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-flows.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-select-flows",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 12 {
+		t.Fatalf("records = %d, want 12", len(trace.Records))
+	}
+}
+
+func TestRunDataflowSelectFlowsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "iterate-pre-marker-nonempty",
+			mutate: func(trace *compat.Trace) {
+				// Rows must appear only after the final marker.
+				five := int64(5)
+				trace.Records[0].Count = &five
+			},
+		},
+		{
+			name: "iterate-group-order-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["theString"] = "E2"
+			},
+		},
+		{
+			name: "iterate-group-sum-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["sumInt"] = 7
+			},
+		},
+		{
+			name: "join-wait-not-empty",
+			mutate: func(trace *compat.Trace) {
+				// The inner join waits for all three streams.
+				row := compat.ResultRecord{Kind: "row", Fields: map[string]any{"s0id": 1, "s1id": 10, "s2id": 100}}
+				trace.Records[2].New = []compat.ResultRecord{row}
+			},
+		},
+		{
+			name: "join-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["s2id"] = 101
+			},
+		},
+		{
+			name: "outer-join-null-side-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[11].New[0].Fields["p10"] = "S1_1"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:11]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-flows.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-select-flows.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-flows.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-select-flows-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunDataflowCreateStartStopDestroyDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-create-start-stop-destroy.evidence.json"),

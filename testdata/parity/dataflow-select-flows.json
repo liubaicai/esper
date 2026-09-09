@@ -1,0 +1,39 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-select-flows",
+ "description": "dataflow-select-flows differential chain over EPLDataflowOpSelect iterate/join flows observed through startCaptive emitters and DefaultSupportCaptureOp reads: select-iterate-final-marker (ordinal 3) replays EPLDataflowIterateFinalMarker byte-exact where five SupportBean submissions (E3:4, E2:3, E1:1, E2:2, E1:5) into the iterate:true Select grouped by theString and ordered by theString asc stay invisible while the capture reads empty — the pre-marker emptiness is the observable iterate-on-final-marker semantics — until the EPDataFlowSignalFinalMarker releases one grouped snapshot ordered by theString asc (E1 sumInt=6, E2 sumInt=5, E3 sumInt=4), recorded with the distinct operation 'iterate'; select-join-order (ordinal 6) replays EPLDataflowFromClauseJoinOrder as three sub-runs in one case, one per from-clause ordering of the same three-input lastevent inner join (S2,S1,S0 then S0,S1,S2 then S1,S2,S0), each with its own graph/deploy/instantiate/startCaptive/cancel/undeploy cycle over one continuous capture sequence: after S0(1) and S1(10) the inner join waits for all inputs with an empty capture read, S2(100) completes the join into the single row s0id=1,s1id=10,s2id=100, and after instance.cancel() a post-cancel S2(101) submission produces another empty read, pinning from-clause order independence together with inner-join wait-for-all-inputs and post-cancel emptiness; select-outer-join-multirow (ordinal 8) replays EPLDataflowOuterJoinMultirow byte-exact where the single unmatched S0(1,S0_1) row over S0#keepall full outer join S1#keepall projects immediately as p00=S0_1 with a null p10, the full-outer unmatched-row null projection (the suite's 'p00,p11' assertion label is a positional-assertion quirk; the projected columns are p00,p10 and the trace pins those names); every capture read is one record over statement flow:DefaultSupportCaptureOp with empty reads recorded explicitly as new:[], and the chain upgrades the two executions' existing implemented manifest cases (case.dataflow-select-iterate, case.dataflow-select-join) to differential-verified.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-59ce9d5f4b9ca475c272",
+  "java-runtime-323dd1ec14f5ed5c0586",
+  "java-runtime-21dcd981de8124bf387c"
+ ],
+ "cases": [
+  {
+   "case": "select-iterate-final-marker",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-59ce9d5f4b9ca475c272",
+   "executionName": "EPLDataflowIterateFinalMarker"
+  },
+  {
+   "case": "select-join-order",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-323dd1ec14f5ed5c0586",
+   "executionName": "EPLDataflowFromClauseJoinOrder"
+  },
+  {
+   "case": "select-outer-join-multirow",
+   "ordinal": 8,
+   "runtimeId": "java-runtime-21dcd981de8124bf387c",
+   "executionName": "EPLDataflowOuterJoinMultirow"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "select-iterate-final-marker"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "select-join-order"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "select-outer-join-multirow"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

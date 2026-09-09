@@ -574,6 +574,24 @@ func NormalizeEvents(events []esper.Event) []ResultRecord {
 	return normalized
 }
 
+// NormalizeRows renders engine rows as parity row records for runners that
+// capture raw operator payloads (dataflow select/join emissions) instead of
+// statement batches.
+func NormalizeRows(rows []esper.Row) []ResultRecord {
+	if len(rows) == 0 {
+		return nil
+	}
+	normalized := make([]ResultRecord, 0, len(rows))
+	for _, row := range rows {
+		record := ResultRecord{Kind: "row", Fields: make(map[string]any)}
+		for _, field := range row.Schema().Fields() {
+			record.Fields[field.Name] = normalizeValue(row.Get(field.Name))
+		}
+		normalized = append(normalized, record)
+	}
+	return normalized
+}
+
 // normalizePartitionKey converts internal Go keyed-context partition keys to
 // the language-neutral "key:<value>" form used by the Java oracle.
 func normalizePartitions(descriptors []esper.ContextPartitionDescriptor) []PartitionRecord {

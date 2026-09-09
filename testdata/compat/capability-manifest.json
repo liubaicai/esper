@@ -1549,7 +1549,10 @@
     "java-runtime-12a29443119ff32fd057",
     "java-runtime-4bf013f93c9464b8e890",
     "java-runtime-1a8426a71e3b5252a181",
-    "java-runtime-2c3c90d3cdb64596c225"
+    "java-runtime-2c3c90d3cdb64596c225",
+    "java-runtime-59ce9d5f4b9ca475c272",
+    "java-runtime-323dd1ec14f5ed5c0586",
+    "java-runtime-21dcd981de8124bf387c"
    ],
    "representativeScenarioIds": [
     "dataflow-connector-output"
@@ -17504,6 +17507,62 @@
    ],
    "notes": [
     "Draft 4.358 covers EPLDataflowAPICreateStartStopDestroy's two executions: neither starts a dataflow instance — the pinned observables are the definition-registry lifecycle (registered catalog, instantiate state, the not-defined error class after removal for both the removed and an unknown name, the absent lookup, the empty registry count, and the re-instantiation) plus the topology-only four-operator deployment-admin instantiation. Record protocol carries the error CLASS, not message text (Java's byte-exact messages are asserted oracle-internally; no Go text match). Replay-shape drops frozen with the scouts: the Java deployment-id dimension and statementName have no Go analog; the re-deploy's random UUID, the module item count, and the HA skip are not represented. Go surface: DefineDataflow/Emitter/CustomSource/Select/Custom + the saved-configuration registry (Save/Delete/Load/SavedDataflowConfigurations/InstantiateSavedDataflow), zero engine change. The differ gained count-field comparison in this unit (count records were previously not discriminated)."
+   ]
+  },
+  {
+   "id": "case.dataflow-select-flows",
+   "javaRuntimeIds": [
+    "java-runtime-59ce9d5f4b9ca475c272",
+    "java-runtime-323dd1ec14f5ed5c0586",
+    "java-runtime-21dcd981de8124bf387c"
+   ],
+   "javaStaticIds": [
+    "java-5298a38986b5e9d42a96",
+    "java-4974af12c5afd9b1b603",
+    "java-9340f1232489a332f600"
+   ],
+   "javaNames": [
+    "EPLDataflowIterateFinalMarker",
+    "EPLDataflowFromClauseJoinOrder",
+    "EPLDataflowOuterJoinMultirow"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpSelect.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunDataflowSelectFlowsDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunDataflowSelectFlowsDirectReplay",
+    "internal/app/parity/run_test.go:TestRunDataflowSelectFlowsDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "dataflow",
+    "select",
+    "iterate",
+    "join",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dataflow-select-flows.json",
+    "testdata/parity/dataflow-select-flows.trace.json",
+    "testdata/parity/dataflow-select-flows.go.trace.json",
+    "testdata/parity/dataflow-select-flows.evidence.json",
+    "tools/java-oracle/DataflowSelectFlowsScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-select-flows.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-59ce9d5f4b9ca475c272",
+    "java-runtime-323dd1ec14f5ed5c0586",
+    "java-runtime-21dcd981de8124bf387c"
+   ],
+   "notes": [
+    "Draft 4.359 covers EPLDataflowOpSelect's iterate and join flows: an iterate Select accumulates grouped rows (sum intPrimitive by theString) and emits them only on the final marker (the pre-marker capture read is empty and pinned), the inner join over lastevent windows waits for all three input streams with the join row {s0id:1,s1id:10,s2id:100} identical across the three from-clause permutations (order independence) and empty after instance cancel, and the full-outer keep-all join projects the unmatched row {p00:S0_1, p10:null}. Upgrades case.dataflow-select-iterate and case.dataflow-select-join coverage to differential-verified. Go surface: SelectIterate grouped form, SelectJoin with ConnectInput port permutations and FullOuter/KeepAll options, captive emitters, zero engine change."
    ]
   },
   {
@@ -43037,13 +43096,17 @@
   {
    "caseId": "case.dataflow-create-start-stop-destroy",
    "capabilityId": "dataflow.graph"
+  },
+  {
+   "caseId": "case.dataflow-select-flows",
+   "capabilityId": "dataflow.graph"
   }
  ],
  "summary": {
-  "inventoriedCases": 633,
-  "implementedCases": 631,
-  "differentialVerifiedCases": 246,
-  "differentialVerifiedRuntimeIds": 911,
+  "inventoriedCases": 634,
+  "implementedCases": 632,
+  "differentialVerifiedCases": 247,
+  "differentialVerifiedRuntimeIds": 914,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43053,14 +43116,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3541,
+  "runtimeAssociationCount": 3544,
   "referencedJavaRuntimeIds": 3283,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 853,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 633,
+  "totalCases": 634,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 911
+  "differentialVerifiedRuntimeIDs": 914
  }
 }
