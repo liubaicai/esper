@@ -39609,6 +39609,153 @@ func TestRunViewGroupMergeViewDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestDataflowSelectStateDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-state.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-select-state.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-state.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-select-state-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestDataflowSelectStateDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-state.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-select-state",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 8 {
+		t.Fatalf("records = %d, want 8", len(trace.Records))
+	}
+}
+
+func TestDataflowSelectStateDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "snapshot-only-submissions-drift",
+			mutate: func(trace *compat.Trace) {
+				// Submissions alone must not emit before the snapshot tick.
+				row := compat.ResultRecord{Kind: "row", Fields: map[string]any{"sumInt": 14}}
+				trace.Records[0].New = []compat.ResultRecord{row}
+			},
+		},
+		{
+			name: "first-snapshot-sum-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["sumInt"] = 15
+			},
+		},
+		{
+			name: "cumulative-sum-drift",
+			mutate: func(trace *compat.Trace) {
+				// The unwindowed cumulative sum is 14+3+6=23.
+				trace.Records[3].New[0].Fields["sumInt"] = 9
+			},
+		},
+		{
+			name: "cancel-suppression-drift",
+			mutate: func(trace *compat.Trace) {
+				// Cancel suppresses later snapshot ticks.
+				row := compat.ResultRecord{Kind: "row", Fields: map[string]any{"sumInt": 29}}
+				trace.Records[4].New = []compat.ResultRecord{row}
+			},
+		},
+		{
+			name: "window-insert-time-output-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["sumInt"] = 0
+			},
+		},
+		{
+			name: "window-cumulative-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[0].Fields["sumInt"] = 2
+			},
+		},
+		{
+			name: "boundary-expiry-drift",
+			mutate: func(trace *compat.Trace) {
+				// E1 expires exactly at 5000+60000=65000 leaving sum 5.
+				trace.Records[7].New[0].Fields["sumInt"] = 7
+			},
+		},
+		{
+			name: "live-clock-time-drift",
+			mutate: func(trace *compat.Trace) {
+				// Record time pins the live virtual clock at each read; a
+				// static-epoch regression would read 00:00:00 here.
+				trace.Records[1].Time = "1970-01-01T00:01:00Z"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:7]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-state.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-select-state.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-state.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-select-state-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunDataflowSelectFlowsDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-flows.evidence.json"),

@@ -1,0 +1,37 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-select-state",
+ "description": "dataflow-select-state differential chain over EPLDataflowOpSelect stateful Select executions observed through startCaptive emitters and DefaultSupportCaptureOp reads under an external virtual clock, where every record's time pins the LIVE virtual clock read from the runtime at each capture read (Instant.ofEpochMilli(getCurrentTime()) at the read, precedent TimeWindowScenarioOracle) instead of a static epoch, so each record carries the phase boundary it observed: select-output-rate-limit (ordinal 4) replays EPLDataflowOutputRateLimit byte-exact over the Select 'output snapshot every 1 minute', where captive submissions emit nothing by themselves (snapshot-only output: empty reads after E1:5,E2:3,E3:6 at t=5s and after E4:3,E5:6 at t=65s), the snapshot releases on virtual-time ticks crossing the t=60s and t=120s boundaries (sumInt=14 observed at t=65s, sumInt=23 observed at t=125s as the cumulative unbounded sum 14+3+6=23 because snapshot-every output carries prior-window rows with no window reset), and after instance.cancel() a suppressed post-cancel submission plus the advance to t=245s reads empty; select-time-window-triggered (ordinal 5) replays EPLDataflowTimeWindowTriggered byte-exact over the Select 'from instream_s0#time(1 minute)', where rows project at insert time (sumInt=2 for E1 at t=5s, cumulative sumInt=7 when E2 arrives at t=10s with E1@5s still inside the 60s window) and boundary-inclusive expiry drops E1 exactly at 5000+60000=65000 leaving the cumulative sumInt=5; per case the graph is the byte-exact suite text with @name('flow') deployment id flow and dataflow MySelect, the capture op is bound through DefaultSupportGraphOpProviderByOpName by op name, and epoch start is the harness realization of the suite's advanceTime(0) before compileDeploy; steps pin only the per-case case marker and the advance-time phase boundaries (case 1: 00:00:00 epoch start, 00:00:05, 00:01:05, 00:02:05, 00:04:05; case 2: 00:00:00 epoch start, 00:00:05, 00:00:10, 00:01:05) because submissions go through captive emitters rather than scenario sends; every capture read is one record over statement flow:DefaultSupportCaptureOp with operation capture, empty reads recorded explicitly as new:[], and the chain upgrades the manifest case case.dataflow-select-state to differential-verified.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-64f78048eb114d0e9cf9",
+  "java-runtime-553841d9498fc8d6d1c7"
+ ],
+ "cases": [
+  {
+   "case": "select-output-rate-limit",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-64f78048eb114d0e9cf9",
+   "executionName": "EPLDataflowOutputRateLimit"
+  },
+  {
+   "case": "select-time-window-triggered",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-553841d9498fc8d6d1c7",
+   "executionName": "EPLDataflowTimeWindowTriggered"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "select-output-rate-limit"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:05Z"},
+  {"op": "advance-time", "at": "1970-01-01T00:01:05Z"},
+  {"op": "advance-time", "at": "1970-01-01T00:02:05Z"},
+  {"op": "advance-time", "at": "1970-01-01T00:04:05Z"},
+  {"op": "case", "case": "select-time-window-triggered"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:05Z"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:10Z"},
+  {"op": "advance-time", "at": "1970-01-01T00:01:05Z"}
+ ]
+}

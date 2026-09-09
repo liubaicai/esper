@@ -109,6 +109,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-select-flows" || *mode == "dataflow-select-flows-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "dataflow-select-state" || *mode == "dataflow-select-state-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
 		scenario, err = loadInfraNamedWindowOnUpdateScenario(file)
 	} else if *mode == "infra-named-window-on-update-misc" || *mode == "infra-named-window-on-update-misc-diff" {
@@ -313,6 +315,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplOtherStreamExprJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplOtherStreamExprJavaSources),
 				splitMetadata(*javaExecutions, eplOtherStreamExprJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "dataflow-select-state" || *mode == "dataflow-select-state-diff" {
+		trace, err := runDataflowSelectStateScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "dataflow-select-state-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, dataflowSelectStateJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, dataflowSelectStateJavaSources),
+				splitMetadata(*javaExecutions, dataflowSelectStateJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

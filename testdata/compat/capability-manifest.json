@@ -1552,7 +1552,9 @@
     "java-runtime-2c3c90d3cdb64596c225",
     "java-runtime-59ce9d5f4b9ca475c272",
     "java-runtime-323dd1ec14f5ed5c0586",
-    "java-runtime-21dcd981de8124bf387c"
+    "java-runtime-21dcd981de8124bf387c",
+    "java-runtime-64f78048eb114d0e9cf9",
+    "java-runtime-553841d9498fc8d6d1c7"
    ],
    "representativeScenarioIds": [
     "dataflow-connector-output"
@@ -10345,15 +10347,27 @@
     "time-window",
     "output-rate"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-runtime-inventory",
-    "go-unit"
+    "testdata/parity/dataflow-select-state.json",
+    "testdata/parity/dataflow-select-state.trace.json",
+    "testdata/parity/dataflow-select-state.go.trace.json",
+    "testdata/parity/dataflow-select-state.evidence.json",
+    "tools/java-oracle/DataflowSelectStateScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-select-state.sh"
    ],
    "difference": "The Go fluent SelectWithOptions/SelectTimeWindow/SelectSnapshotEvery APIs maintain per-instance aggregate Event state, remove time-window rows at exact virtual-clock boundaries, and emit snapshot rows through the graph on Engine.AdvanceTime. Java also covers output-rate expressions beyond snapshots, richer view combinations and invalid diagnostics; iterate/final-marker, multi-input join and representation coverage are tracked separately in case.dataflow-select-iterate, case.dataflow-select-join and case.dataflow-select-representation.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-64f78048eb114d0e9cf9",
+    "java-runtime-553841d9498fc8d6d1c7"
+   ],
+   "notes": [
+    "Draft 4.360 upgrades case.dataflow-select-state to differential-verified via a NEW replayed chain: EPLDataflowOutputRateLimit (java-runtime-64f78048eb114d0e9cf9, `output snapshot every 1 minute` — submissions alone emit nothing, each virtual-time tick emits the current cumulative projection {14} then {23}, cancel suppresses later ticks) and EPLDataflowTimeWindowTriggered (java-runtime-553841d9498fc8d6d1c7, `#time(1 minute)` — insert-time output {2}/{7} cumulative, boundary-inclusive expiry at exactly 65000 leaving {5}). Record `time` pins the live virtual clock at each read so phase boundaries are observable. Go surface: SelectSnapshotEvery and SelectTimeWindow driven by Engine.AdvanceTime, zero engine change."
    ]
   },
   {
@@ -43105,8 +43119,8 @@
  "summary": {
   "inventoriedCases": 634,
   "implementedCases": 632,
-  "differentialVerifiedCases": 247,
-  "differentialVerifiedRuntimeIds": 914,
+  "differentialVerifiedCases": 248,
+  "differentialVerifiedRuntimeIds": 916,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43124,6 +43138,6 @@
   "representativeScenarioPassing": 107,
   "totalCases": 634,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 914
+  "differentialVerifiedRuntimeIDs": 916
  }
 }
