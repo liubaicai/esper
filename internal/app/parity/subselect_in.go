@@ -27,6 +27,16 @@ type subselectInBean struct {
 	LongBoxed *int64 `esper:"longBoxed"`
 }
 
+type subselectInWildcardS2 struct {
+	ID  int     `esper:"id"`
+	P20 *string `esper:"p20"`
+	P21 *string `esper:"p21"`
+}
+
+type subselectInWildcardMap struct {
+	AnyObject any `esper:"anyObject"`
+}
+
 const subselectInJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 
 var subselectInJavaSources = []string{
@@ -41,6 +51,7 @@ var (
 		"java-runtime-f7e01f372cd72fdf1be5",
 		"java-runtime-e291b5da908b66ede9c3",
 		"java-runtime-c187889237cc3556dc2c",
+		"java-runtime-d52b12c5372d3922a9b2",
 		"java-runtime-ca0cf0245938a62a8afc",
 		"java-runtime-4ae92db4360046f4c27c",
 		"java-runtime-57815ee2825665c40f31",
@@ -57,6 +68,7 @@ var (
 		"EPLSubselectInSelectWhere",
 		"EPLSubselectInSelectWhereExpressions",
 		"EPLSubselectInFilterCriteria",
+		"EPLSubselectInWildcard",
 		"EPLSubselectInNullable",
 		"EPLSubselectInNullableCoercion",
 		"EPLSubselectInNullRow",
@@ -68,11 +80,12 @@ var (
 	}
 )
 
-// runSubselectInScenario replays 14 executions of EPLSubselectIn: IN/NOT IN
+// runSubselectInScenario replays 15 executions of EPLSubselectIn: IN/NOT IN
 // subselects in the select clause, filter criteria and where clause over
 // SupportBean_S1 length windows with eviction, expression forms on both
-// sides, nullable string and boxed numeric coercions, null rows, and the
-// correlated keepall index shapes of EPLSubselectInSingleIndex/MultiIndex.
+// sides, nullable string and boxed numeric coercions, null rows, the
+// correlated keepall index shapes of EPLSubselectInSingleIndex/MultiIndex,
+// and the whole-event wildcard subselect of EPLSubselectInWildcard.
 func runSubselectInScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
@@ -80,7 +93,7 @@ func runSubselectInScenario(ctx context.Context, scenario compat.Scenario) (comp
 	caseOrder := []string{"in-select", "in-select-om", "in-select-compile", "in-filter-criteria",
 		"in-select-where", "in-select-where-expressions", "in-nullable", "in-nullable-coercion",
 		"in-null-row", "in-single-index", "in-multi-index", "not-in-null-row", "not-in-select",
-		"not-in-nullable-coercion"}
+		"not-in-nullable-coercion", "in-wildcard"}
 	if !scenarioHasCase(scenario, caseOrder[0]) {
 		return compat.Trace{}, fmt.Errorf("subselect-in scenario %q has no supported cases", scenario.ID)
 	}
@@ -191,6 +204,25 @@ func runSubselectInCase(ctx context.Context, scenario compat.Scenario, caseName 
 		query = esper.Select(s0,
 			esper.Alias("value", esper.Not(esper.SubqueryIn[int](id, s1Window, s1ID))),
 		).Query(esper.StatementName("s0"))
+	case "in-wildcard":
+		// EPLSubselectInWildcard: anyObject in (select * from S1#length(1000)).
+		// SubqueryIn compares the anyObject payload against each whole-event
+		// window row; the S1 window rows and the anyObject field decode to
+		// the same struct type, while S2 is a distinct struct, reproducing
+		// Java's class-checked equals for the pinned sends. The two event
+		// types below exist only for this case, mirroring the oracle's
+		// case-scoped registration branch.
+		if _, err := esper.RegisterStruct[subselectInWildcardS2](env, "SupportBean_S2"); err != nil {
+			return compat.Trace{}, err
+		}
+		if _, err := esper.RegisterStruct[subselectInWildcardMap](env, "SupportBeanArrayCollMap"); err != nil {
+			return compat.Trace{}, err
+		}
+		wildcardMap := esper.From[subselectInWildcardMap](env, "SupportBeanArrayCollMap")
+		anyObject := esper.Field[subselectInWildcardMap, any]("anyObject")
+		query = esper.Select(wildcardMap,
+			esper.Alias("value", esper.SubqueryIn[any](anyObject, s1Window, esper.EventValue[any]())),
+		).Query(esper.StatementName("s0"))
 	case "not-in-nullable-coercion":
 		query = esper.Select(bean.Filter(esper.Equal[string](theString, esper.Literal("A"))).
 			Filter(esper.Not(esper.SubqueryIn[*int64](longBoxed, innerB, esper.Field[any, *int64]("intBoxed")))),
@@ -236,6 +268,40 @@ func decodeSubselectInPayload(step compat.Step) (any, error) {
 			return nil, fmt.Errorf("decode SupportBean: %w", err)
 		}
 		return value, nil
+	case "SupportBean_S2":
+		var value subselectInWildcardS2
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportBean_S2: %w", err)
+		}
+		return value, nil
+	case "SupportBeanArrayCollMap":
+		// The nested anyObject reference is encoded as
+		// {"type":"SupportBean_S1"|"SupportBean_S2","id":N,"pXX":...}; the
+		// type field selects the concrete struct so the decoded value
+		// compares structurally equal to the window rows of that type.
+		var payload struct {
+			AnyObject struct {
+				Type string  `json:"type"`
+				ID   int     `json:"id"`
+				P10  *string `json:"p10"`
+				P11  *string `json:"p11"`
+				P20  *string `json:"p20"`
+				P21  *string `json:"p21"`
+			} `json:"anyObject"`
+		}
+		if err := json.Unmarshal(step.Payload, &payload); err != nil {
+			return nil, fmt.Errorf("decode SupportBeanArrayCollMap: %w", err)
+		}
+		var resolved any
+		switch payload.AnyObject.Type {
+		case "SupportBean_S1":
+			resolved = subselectInS1{ID: payload.AnyObject.ID, P10: payload.AnyObject.P10, P11: payload.AnyObject.P11}
+		case "SupportBean_S2":
+			resolved = subselectInWildcardS2{ID: payload.AnyObject.ID, P20: payload.AnyObject.P20, P21: payload.AnyObject.P21}
+		default:
+			return nil, fmt.Errorf("unsupported anyObject reference type %q", payload.AnyObject.Type)
+		}
+		return subselectInWildcardMap{AnyObject: resolved}, nil
 	default:
 		return nil, fmt.Errorf("unsupported subselect-in event type %q", step.EventType)
 	}

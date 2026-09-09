@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.353（2026-09-10），`epl.subselect.*` 扩展 `case.subselect-in` differential-verified 场景至 15 runtime IDs，新增 `EPLSubselectInWildcard`（`java-runtime-d52b12c5372d3922a9b2`，ord 6；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 54 条 records（既有 52 条字节不变）、0 differences：`s0.anyObject in (select * from SupportBean_S1#length(1000))` 的全事件通配子查询——anyObject 持有同实例 S1 时 `value=true`，换成类外 S2(同 id) 时 `value=false`（S2 从不进入 S1 窗口，类检查 equals 恒假）。Go 侧 `SubqueryIn[any]` + `EventValue[any]()` 全事件行，anyObject 为 `any` 接口字段，S1/S2 为不同结构体使结构化 DeepEqual 复现 Java 类检查 equals（等值异实例场景本执行未触及，已记录差异边界）；scenario 的嵌套 anyObject 以 `{"type","id"}` 编码、解码按类型还原具体结构体。Go 零引擎改动。`EPLSubselectOrderOfEvalNoPreeval` 经侦察裁定为引擎缺口单元延后（Java 为 `selfSubselectPreeval=false` 运行时配置测试，Go 引擎硬编码子查询先行接受；待专设 preeval-off 开关单元）；该 suite 累计 15/16 execution DV（剩 `EPLSubselectInvalid` 编译-invalid）；manifest 更新为 629 cases、242 个 differential-verified case、898 个 differential runtime IDs（不变）、3528 条 associations（referenced 3275、unreferenced 861）。
+
 > 最新补充：Draft 4.352（2026-09-09），`epl.subselect.*` 扩展 `case.subselect-aggregated-single-value` differential-verified 场景至 15 runtime IDs，新增 EPLSubselectAggregatedSingleValue 的多外stream范围强制转换对（`EPLSubselectUngroupedJoin3StreamKeyRangeCoercion` `java-runtime-73e90c44540e5ba6b1fd`、`EPLSubselectUngroupedJoin2StreamRangeCoercion` `java-runtime-7d4d91983868b27f14b1`，ords 12/13；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 112 条 records（既有 57 条不变）、0 differences，7 个新 case（4+3，按语句生命周期拆分）：3-stream 的 `between` 反转（10..-1 反转为 [-1,10] 得 8）、`>=/<=` 不反转（终值 null）、单边 `>` 得 13 / `<` 得 21、2-stream 的两个 between 方向（20..13 反转得 27）与 `>=/<=` 不反转（null）、null 端点全部输出 null 行。Go 侧 `JoinField` 按 FROM 位置读取每个外stream（JoinEvents 经子查询求值传播）、`BetweenOf` 混合类型比较内建范围反转与 null-不匹配、`Of` 形式比较不做反转、`SubquerySum` 空集输出 null。Go 零引擎改动。该 suite 累计 20/21 execution DV（剩 `EPLSubselectAggregatedInvalid` 编译-invalid 待 invalidity 政策处置）；manifest 更新为 629 cases、242 个 differential-verified case、898 个 differential runtime IDs（不变）、3527 条 associations（referenced 3274、unreferenced 862）。
 
 > 最新补充：Draft 4.351（2026-09-09），`epl.other.distinct` 的 `case-epl-as-keyword-backtick-behavioral` 扩展至 6/7 execution DV，新增 EPLOtherAsKeywordBacktick 的 FAF/on-trigger/merge 三重奏 ords 0/2/4（`EPLOtherFAFUpdateDelete` `java-runtime-472d2c12a99c291f275c` static `java-038bfd4f4e8affcc6db9`、`EPLOtherOnTrigger` `java-runtime-c0ea9e858846b717b2e4` static `java-a77b21b8c405a856cc18`、`EPLOthernMergeAndUpdateAndSelect` `java-runtime-4da78c382449b37e5599` static `java-6709ceb5d59d1cb4fcda`）。Java/Go trace 11 条 records、0 differences：FAF update/delete 的 `order` 反引号别名（OnDemand UpdateWhere/DeleteWhere + NamedWindowField 候选行访问）、on-select 触发流×主键表 join（OnEvent SelectFromTableWhere + TableField）、on-merge/on-update/on-select 链（MergeIntoNamedWindowWhen + WhenMatchedAny、UpdateNamedWindow、SelectFromNamedWindow）。Go 侧 on-demand/trigger update 需要显式谓词，故 Java 的无 where 全行形态以 Literal(true) 表达（行为等价）。Go 零引擎改动。该 suite 仅剩 ord 6（split-stream contained，编译-only，两级 unnest 待裁决）延后。
@@ -1481,7 +1483,7 @@
 
 重点领域：
 
-- epl 剩余 262 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 261 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1506,7 +1508,7 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 262 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 261 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1528,7 +1530,7 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 262 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 261 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
@@ -1558,7 +1560,7 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 262 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 261 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |

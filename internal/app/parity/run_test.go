@@ -10504,6 +10504,20 @@ func TestRunSubselectInDiffRejectsTraceMutations(t *testing.T) {
 				trace.Records[51].Case = "in-select"
 			},
 		},
+		{
+			name: "wildcard-same-instance-match",
+			mutate: func(trace *compat.Trace) {
+				// The S1 anyObject must match its own window row.
+				trace.Records[52].New[0].Fields["value"] = false
+			},
+		},
+		{
+			name: "wildcard-class-mismatch",
+			mutate: func(trace *compat.Trace) {
+				// The S2 anyObject must never match an S1 window row.
+				trace.Records[53].New[0].Fields["value"] = true
+			},
+		},
 	}
 
 	for _, test := range tests {

@@ -1,6 +1,8 @@
 import com.espertech.esper.common.client.EPCompiled;
 import com.espertech.esper.common.client.EventBean;
 import com.espertech.esper.common.client.configuration.Configuration;
+import com.espertech.esper.common.internal.support.SupportBean_S1;
+import com.espertech.esper.common.internal.support.SupportBean_S2;
 import com.espertech.esper.common.client.json.minimaljson.Json;
 import com.espertech.esper.common.client.json.minimaljson.JsonArray;
 import com.espertech.esper.common.client.json.minimaljson.JsonObject;
@@ -27,7 +29,8 @@ import java.util.Map;
  * select clause, filter criteria and where clause, over SupportBean_S1
  * length windows with eviction, expression forms on both sides, nullable
  * string and boxed numeric coercions, null rows, and the correlated
- * keepall index shapes exercised by EPLSubselectInSingleIndex/MultiIndex.
+ * keepall index shapes exercised by EPLSubselectInSingleIndex/MultiIndex,
+ * and the wildcard subselect equality exercised by EPLSubselectInWildcard.
  */
 public final class EPLSubselectInScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -60,7 +63,7 @@ public final class EPLSubselectInScenarioOracle {
         String[] cases = {"in-select", "in-select-om", "in-select-compile", "in-filter-criteria",
                 "in-select-where", "in-select-where-expressions", "in-nullable", "in-nullable-coercion",
                 "in-null-row", "in-single-index", "in-multi-index", "not-in-null-row", "not-in-select",
-                "not-in-nullable-coercion"};
+                "not-in-nullable-coercion", "in-wildcard"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -88,11 +91,18 @@ public final class EPLSubselectInScenarioOracle {
         s0Type.put("p00", String.class);
         s0Type.put("p01", String.class);
         configuration.getCommon().addEventType("SupportBean_S0", s0Type);
-        Map<String, Object> s1Type = new HashMap<>();
-        s1Type.put("id", Integer.class);
-        s1Type.put("p10", String.class);
-        s1Type.put("p11", String.class);
-        configuration.getCommon().addEventType("SupportBean_S1", s1Type);
+        Map<String, Object> instances = new HashMap<>();
+        if ("in-wildcard".equals(caseName)) {
+            configuration.getCommon().addEventType(SupportBean_S1.class);
+            configuration.getCommon().addEventType(SupportBean_S2.class);
+            configuration.getCommon().addEventType("SupportBeanArrayCollMap", SupportBeanArrayCollMapMirror.class);
+        } else {
+            Map<String, Object> s1Type = new HashMap<>();
+            s1Type.put("id", Integer.class);
+            s1Type.put("p10", String.class);
+            s1Type.put("p11", String.class);
+            configuration.getCommon().addEventType("SupportBean_S1", s1Type);
+        }
         Map<String, Object> beanType = new HashMap<>();
         beanType.put("theString", String.class);
         beanType.put("intBoxed", Integer.class);
@@ -128,6 +138,8 @@ public final class EPLSubselectInScenarioOracle {
         } else if ("not-in-nullable-coercion".equals(caseName)) {
             epl = "@name('s0') select longBoxed from SupportBean(theString='A') as s0 " +
                     "where longBoxed not in (select intBoxed from SupportBean(theString='B')#length(1000))";
+        } else if ("in-wildcard".equals(caseName)) {
+            epl = "@name('s0') select s0.anyObject in (select * from SupportBean_S1#length(1000)) as value from SupportBeanArrayCollMap s0";
         } else {
             throw new IllegalArgumentException("unsupported case " + caseName);
         }
@@ -150,14 +162,15 @@ public final class EPLSubselectInScenarioOracle {
             }
             TraceWriter writer = new TraceWriter(records, caseName, statement, runtime);
             statement.addListener(writer);
-            replayCase(allSteps, caseName, runtime, writer);
+            replayCase(allSteps, caseName, runtime, writer, instances);
             runtime.getDeploymentService().undeployAll();
         } finally {
             runtime.destroy();
         }
     }
 
-    private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime, TraceWriter writer) {
+    private static void replayCase(JsonArray allSteps, String caseName, EPRuntime runtime, TraceWriter writer,
+            Map<String, Object> instances) {
         boolean active = false;
         for (int i = 0; i < allSteps.size(); i++) {
             JsonObject step = allSteps.get(i).asObject();
@@ -170,7 +183,7 @@ public final class EPLSubselectInScenarioOracle {
                 continue;
             }
             if ("send".equals(op)) {
-                send(runtime, step);
+                send(runtime, caseName, instances, step);
             } else if ("advance-time".equals(op)) {
                 runtime.getEventService().advanceTime(Instant.parse(step.getString("at", "")).toEpochMilli());
             } else {
@@ -179,9 +192,36 @@ public final class EPLSubselectInScenarioOracle {
         }
     }
 
-    private static void send(EPRuntime runtime, JsonObject step) {
+    private static void send(EPRuntime runtime, String caseName, Map<String, Object> instances, JsonObject step) {
         String eventType = step.getString("eventType", "");
         JsonObject payload = step.get("payload").asObject();
+        if ("in-wildcard".equals(caseName)) {
+            if ("SupportBean_S1".equals(eventType)) {
+                SupportBean_S1 bean = new SupportBean_S1(payload.get("id").asInt());
+                instances.put("SupportBean_S1:" + bean.getId(), bean);
+                runtime.getEventService().sendEventBean(bean, "SupportBean_S1");
+                return;
+            }
+            if ("SupportBean_S2".equals(eventType)) {
+                SupportBean_S2 bean = new SupportBean_S2(payload.get("id").asInt());
+                instances.put("SupportBean_S2:" + bean.getId(), bean);
+                runtime.getEventService().sendEventBean(bean, "SupportBean_S2");
+                return;
+            }
+            if ("SupportBeanArrayCollMap".equals(eventType)) {
+                JsonObject anyObject = payload.get("anyObject").asObject();
+                String type = anyObject.getString("type", "");
+                int id = anyObject.getInt("id", Integer.MIN_VALUE);
+                Object instance = instances.get(type + ":" + id);
+                if (instance == null) {
+                    throw new IllegalStateException("no registered instance " + type + ":" + id);
+                }
+                runtime.getEventService().sendEventBean(new SupportBeanArrayCollMapMirror(instance),
+                        "SupportBeanArrayCollMap");
+                return;
+            }
+            throw new IllegalArgumentException("unsupported event type " + eventType);
+        }
         Map<String, Object> event = new HashMap<>();
         if ("SupportBean_S0".equals(eventType)) {
             event.put("id", payload.get("id").asInt());
@@ -270,6 +310,19 @@ public final class EPLSubselectInScenarioOracle {
                 return Json.value((Boolean) value);
             }
             return Json.value(String.valueOf(value));
+        }
+    }
+
+    /** Local mirror of the regression-lib SupportBeanArrayCollMap bean. */
+    public static class SupportBeanArrayCollMapMirror {
+        private final Object anyObject;
+
+        public SupportBeanArrayCollMapMirror(Object anyObject) {
+            this.anyObject = anyObject;
+        }
+
+        public Object getAnyObject() {
+            return anyObject;
         }
     }
 }

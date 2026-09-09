@@ -1229,6 +1229,52 @@
     "intBoxed": null,
     "longBoxed": 97
    }
+  },
+  {
+   "op": "case",
+   "case": "in-wildcard"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 100,
+    "p10": null,
+    "p11": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanArrayCollMap",
+   "payload": {
+    "anyObject": {
+     "type": "SupportBean_S1",
+     "id": 100
+    }
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S2",
+   "payload": {
+    "id": 100,
+    "p20": null,
+    "p21": null
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanArrayCollMap",
+   "payload": {
+    "anyObject": {
+     "type": "SupportBean_S2",
+     "id": 100
+    }
+   }
   }
  ]
 }
