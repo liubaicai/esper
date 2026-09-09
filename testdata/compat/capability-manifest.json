@@ -24314,7 +24314,12 @@
    "id": "case-viewgroup-merge-view",
    "javaRuntimeIds": [
     "java-runtime-a3b6bef89e22a122cc7a",
-    "java-runtime-639bc9b69621f3b6a417"
+    "java-runtime-639bc9b69621f3b6a417",
+    "java-runtime-7bd36b6fe5567b066794",
+    "java-runtime-842bde62118b9b8cae2d",
+    "java-runtime-806120fdd2130ab1f275",
+    "java-runtime-737a5f1ffd4c6a6c8924",
+    "java-runtime-68ef8076bc96595cbfd0"
    ],
    "javaStaticIds": [
     "java-4c1562348946dab6dc09",
@@ -24322,7 +24327,12 @@
    ],
    "javaNames": [
     "ViewGroupObjectArrayEvent",
-    "ViewGroupLengthWin"
+    "ViewGroupLengthWin",
+    "ViewGroupTimeBatch",
+    "ViewGroupTimeAccum",
+    "ViewGroupTimeOrder",
+    "ViewGroupTimeLengthBatch",
+    "ViewGroupTimeWin"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
@@ -24354,10 +24364,16 @@
    ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-a3b6bef89e22a122cc7a",
-    "java-runtime-639bc9b69621f3b6a417"
+    "java-runtime-639bc9b69621f3b6a417",
+    "java-runtime-7bd36b6fe5567b066794",
+    "java-runtime-842bde62118b9b8cae2d",
+    "java-runtime-806120fdd2130ab1f275",
+    "java-runtime-737a5f1ffd4c6a6c8924",
+    "java-runtime-68ef8076bc96595cbfd0"
    ],
    "notes": [
-    "Draft 4.345 ENGINE unit closes the groupwin union-aggregate divergence: the implicit aggregate group-by injection no longer fires for ordinary select-clause aggregates over a groupwin (scalar projections like p1 no longer force per-key sums), so `select p1,sum(p2) from ...#groupwin(p1)#length(2)` keeps one ungrouped union aggregate over the merged cross-group deltas exactly like Java's groupwin merge-view (sp2 evolution 10/21/33/36 with in-group eviction subtracted). The univariate-statistics injection trigger now also matches #correl and #linest expressions, mirroring Java's per-group derived-value child views. ViewGroupLengthWin pins grouped length-window retention with irstream eviction pairs. Derived-value stat-view executions (ords 1/4/5/6 — Java #uni/#correl/#linest post irstream old rows on every insert, which the select-aggregate adaptation cannot express over a keepall group window) are deferred to a derived-value-view unit; reclaim ords 2/3/9 need view-level reclaim plus a schedule-count introspection surface; time-window ords 10-13/16/18 need virtual-time batch machinery; ord 7 is compile-messages; ord 8 is performance-gated; ord 19 is SERDEREQUIRED."
+    "Draft 4.345 ENGINE unit closes the groupwin union-aggregate divergence: the implicit aggregate group-by injection no longer fires for ordinary select-clause aggregates over a groupwin (scalar projections like p1 no longer force per-key sums), so `select p1,sum(p2) from ...#groupwin(p1)#length(2)` keeps one ungrouped union aggregate over the merged cross-group deltas exactly like Java's groupwin merge-view (sp2 evolution 10/21/33/36 with in-group eviction subtracted). The univariate-statistics injection trigger now also matches #correl and #linest expressions, mirroring Java's per-group derived-value child views. ViewGroupLengthWin pins grouped length-window retention with irstream eviction pairs. Derived-value stat-view executions (ords 1/4/5/6 — Java #uni/#correl/#linest post irstream old rows on every insert, which the select-aggregate adaptation cannot express over a keepall group window) are deferred to a derived-value-view unit; reclaim ords 2/3/9 need view-level reclaim plus a schedule-count introspection surface; time-window ords 10-13/16/18 need virtual-time batch machinery; ord 7 is compile-messages; ord 8 is performance-gated; ord 19 is SERDEREQUIRED.",
+    "Draft 4.347 extension covers ords 10-13/16 (grouped time windows, all `select irstream *`, virtual-time driven via env.advanceTime): #groupwin(symbol)#time_batch(10 sec) with per-group anchored schedules and the empty re-arm flush at 21000 posting one update with new=null/old=[10,20]; #time_accum(10 sec) immediate inserts and whole-window expiry old pairs; #groupwin(groupId)#time_order(timestamp, 10 sec) release in timestamp order (E2@12000, E4@12500); #time_length_batch(10 sec, 100) time-driven-only; #time(10 sec) per-event expiry. Go shape: GroupWindow/GroupWindowKeys with TimeBatch/TimeAccum/TimeOrder/TimeLengthBatch/TimeWindow inners, WithOldStream, Engine.AdvanceTime; runner formats whole seconds without fraction and non-zero millisecond remainders with three digits, mirroring the Java oracle's optional-section time pattern. Remaining ords: 2/3/9 (view-level reclaim + schedule-count introspection), 7 (compile messages), 8 (performance-gated), 15/18 (implemented by case.view-group-matrix), 17 (expression groupwin), 19 (SERDEREQUIRED)."
    ]
   },
   {
@@ -42672,7 +42688,7 @@
   "inventoriedCases": 628,
   "implementedCases": 626,
   "differentialVerifiedCases": 241,
-  "differentialVerifiedRuntimeIds": 883,
+  "differentialVerifiedRuntimeIds": 888,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42682,7 +42698,7 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3510,
+  "runtimeAssociationCount": 3515,
   "referencedJavaRuntimeIds": 3263,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 873,
@@ -42690,6 +42706,6 @@
   "representativeScenarioPassing": 107,
   "totalCases": 628,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 883
+  "differentialVerifiedRuntimeIDs": 888
  }
 }

@@ -7,7 +7,12 @@
     "java-runtime-03ed11fd1e5c3a3d11c2",
     "java-runtime-74e476ad16bf62d4a9e0",
     "java-runtime-942d359f7bb1302684bb",
-    "java-runtime-47877af7a1d114850723"
+    "java-runtime-47877af7a1d114850723",
+    "java-runtime-7bd36b6fe5567b066794",
+    "java-runtime-842bde62118b9b8cae2d",
+    "java-runtime-806120fdd2130ab1f275",
+    "java-runtime-737a5f1ffd4c6a6c8924",
+    "java-runtime-68ef8076bc96595cbfd0"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewGroup.java"
@@ -18,7 +23,12 @@
     "ViewGroupStats",
     "ViewGroupCorrel",
     "ViewGroupLinest",
-    "ViewGroupMultiProperty"
+    "ViewGroupMultiProperty",
+    "ViewGroupTimeBatch",
+    "ViewGroupTimeAccum",
+    "ViewGroupTimeOrder",
+    "ViewGroupTimeLengthBatch",
+    "ViewGroupTimeWin"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -429,6 +439,338 @@
       {
         "op": "snapshot",
         "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-groups"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 10,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 20,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "price": 30,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:21.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-accum-groups"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 10,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 20,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "price": 30,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:15.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-order-groups"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanTimestamp",
+        "payload": {
+          "id": "E1",
+          "groupId": "G1",
+          "timestamp": 3000
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanTimestamp",
+        "payload": {
+          "id": "E2",
+          "groupId": "G2",
+          "timestamp": 2000
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanTimestamp",
+        "payload": {
+          "id": "E3",
+          "groupId": "G2",
+          "timestamp": 3000
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanTimestamp",
+        "payload": {
+          "id": "E4",
+          "groupId": "G1",
+          "timestamp": 2500
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:12.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:12.499Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:12.500Z"
+      },
+      {
+        "op": "case",
+        "case": "time-length-batch-groups"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 10,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 20,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "price": 30,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:20.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:21.000Z"
+      },
+      {
+        "op": "case",
+        "case": "time-win-groups"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 10,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S1",
+          "price": 20,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10.000Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "S2",
+          "price": 30,
+          "volume": -1,
+          "feed": ""
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:11.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:15.000Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:20.000Z"
       }
     ]
   },
@@ -2411,6 +2753,459 @@
             }
           }
         ]
+      },
+      {
+        "case": "time-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:21Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:15Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:20Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G1",
+              "id": "E1",
+              "timestamp": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G2",
+              "id": "E2",
+              "timestamp": 2000
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G2",
+              "id": "E3",
+              "timestamp": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G1",
+              "id": "E4",
+              "timestamp": 2500
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:12Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G2",
+              "id": "E2",
+              "timestamp": 2000
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:12.500Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G1",
+              "id": "E4",
+              "timestamp": 2500
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:21Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:11Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:15Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:20Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
       }
     ]
   },
@@ -4390,6 +5185,459 @@
               "size": 1,
               "symbol": "MSFT",
               "volume": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:21Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:15Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-accum-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:20Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G1",
+              "id": "E1",
+              "timestamp": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G2",
+              "id": "E2",
+              "timestamp": 2000
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:03Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G2",
+              "id": "E3",
+              "timestamp": 3000
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G1",
+              "id": "E4",
+              "timestamp": 2500
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:12Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G2",
+              "id": "E2",
+              "timestamp": 2000
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-order-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:12.500Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "groupId": "G1",
+              "id": "E4",
+              "timestamp": 2500
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:21Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:11Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 10,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:15Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 20,
+              "symbol": "S1",
+              "volume": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-win-groups",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:20Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": "",
+              "price": 30,
+              "symbol": "S2",
+              "volume": -1
             }
           }
         ]

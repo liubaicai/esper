@@ -98,6 +98,50 @@ import java.util.TreeSet;
  * datapoints, old prior datapoints). The suite's final ordered
  * assertPropsPerRowIterator is pinned with a snapshot step.
  *
+ * Five further cases are virtual-time driven and replay the engine clock
+ * through advance-time steps: each suite env.advanceTime(millis) call maps
+ * to one {"op":"advance-time","at":"<RFC3339 UTC>"} step (millisecond
+ * precision, always three fractional digits) and the oracle advances the
+ * runtime clock to the parsed epoch millis. The suite's pre-deploy
+ * advanceTime(1000) replays as the case's leading advance-time step
+ * executed after deployment, observably equivalent because grouped time
+ * windows arm on the first event, so no timer is scheduled before it.
+ *
+ * time-batch-groups replays ViewGroupTimeBatch (ordinal 10, runtime
+ * java-runtime-7bd36b6fe5567b066794): select irstream * from
+ * SupportMarketDataBean#groupwin(symbol)#time_batch(10 sec) (the suite
+ * keeps its double space after from). Sends (S1,10) at 1000, (S1,20) at
+ * 5000 and (S2,30) at 10000 are listener-silenced; 10999 stays silent;
+ * 11000 flushes the S1 group as IRPair new [{10},{20}], 20000 flushes S2
+ * as new [{30}], and the re-armed empty S1 batch still posts one update
+ * call at 21000 as old [{10},{20}].
+ *
+ * time-accum-groups replays ViewGroupTimeAccum (ordinal 11, runtime
+ * java-runtime-842bde62118b9b8cae2d): the same double-spaced module over
+ * #time_accum(10 sec). The three sends deliver istream rows immediately
+ * (new 10, 20, 30 as the suite's assertPrice pins), then the delayed
+ * exchange releases old [{10},{20}] at 15000 and old [{30}] at 20000.
+ *
+ * time-order-groups replays ViewGroupTimeOrder (ordinal 12, runtime
+ * java-runtime-806120fdd2130ab1f275): select irstream * from
+ * SupportBeanTimestamp#groupwin(groupId)#time_order(timestamp, 10 sec)
+ * (single space after from in the suite). The four sends (E1,G1,3000),
+ * (E2,G2,2000), (E3,G2,3000), (E4,G1,2500) at 1000/2000/3000/4000 each
+ * deliver one istream row pinned by assertId; 11999 stays silent, 12000
+ * releases old [{E2}], 12499 stays silent, 12500 releases old [{E4}]
+ * (E1 and E3 expire at 13000 unobserved).
+ *
+ * time-length-batch-groups replays ViewGroupTimeLengthBatch (ordinal 13,
+ * runtime java-runtime-737a5f1ffd4c6a6c8924): the double-spaced module
+ * over #time_length_batch(10 sec, 100) with the identical timeline and
+ * deliveries as time-batch-groups.
+ *
+ * time-win-groups replays ViewGroupTimeWin (ordinal 16, runtime
+ * java-runtime-68ef8076bc96595cbfd0): the double-spaced module over
+ * #time(10 sec). The three sends deliver istream rows immediately, 10999
+ * stays silent, and each group expires exactly: old [{10}] at 11000, old
+ * [{20}] at 15000, old [{30}] at 20000.
+ *
  * Suite milestones are harness ordering markers with no observable engine
  * output and record nothing. The OAEventStringInt event type mirrors the
  * pinned regression-run registration as an object-array type with property
@@ -107,7 +151,10 @@ import java.util.TreeSet;
  * fixed run script classpath excludes regression-lib; the mirror keeps the
  * pinned four-arg constructor (symbol, price, volume, feed), field types
  * (String, double, Long, String) and getters byte-equivalent, and the
- * unused id property does not participate in these scenarios. SupportBean
+ * unused id property does not participate in these scenarios. The ord-12
+ * SupportBeanTimestamp is regression-lib as well and is mirrored locally
+ * with the pinned three-arg constructor (id, groupId, timestamp), field
+ * types (String, long, String) and getters. SupportBean
  * is the common-module class already on the classpath and is constructed
  * with the suite's two-arg (theString, intPrimitive) constructor.
  *
@@ -177,6 +224,8 @@ public class ViewGroupMergeViewScenarioOracle {
         // Local mirror class: regression-lib is outside the oracle classpath.
         config.getCommon().addEventType("SupportMarketDataBean", LocalSupportMarketDataBean.class);
         config.getCommon().addEventType("SupportBean", SupportBean.class);
+        // Regression-lib mirror for the ord-12 time-order case.
+        config.getCommon().addEventType("SupportBeanTimestamp", LocalSupportBeanTimestamp.class);
         config.getRuntime().getThreading().setInternalTimerEnabled(false);
         EPRuntime runtime = EPRuntimeProvider.getRuntime("ViewGroupMergeViewScenarioOracle-" + caseName, config);
         runtime.getEventService().advanceTime(0);
@@ -250,6 +299,17 @@ public class ViewGroupMergeViewScenarioOracle {
                     flushPending(statementsByName, pending, records);
                     continue;
                 }
+                if ("advance-time".equals(op)) {
+                    // Mirrors env.advanceTime(millis): the pinned at value is
+                    // the engine clock in RFC3339 UTC with millisecond
+                    // precision. Time-driven deliveries flush at this
+                    // boundary in the same canonical deployment order as
+                    // send-driven ones.
+                    runtime.getEventService().advanceTime(
+                        java.time.Instant.parse(step.getString("at", "")).toEpochMilli());
+                    flushPending(statementsByName, pending, records);
+                    continue;
+                }
                 if ("snapshot".equals(op)) {
                     String statementName = step.getString("statement", "s0");
                     EPStatement snapshotStatement = statementsByName.get(statementName);
@@ -309,6 +369,19 @@ public class ViewGroupMergeViewScenarioOracle {
             case "multi-property-uni" ->
                 modules.add("@name('s0') select irstream datapoints as size, symbol, feed, volume " +
                     "from SupportMarketDataBean#groupwin(symbol, feed, volume)#uni(price) order by symbol, feed, volume");
+            // Virtual-time grouped windows: the suite transcriptions keep
+            // the source's double space after "from" for ords 10/11/13/16
+            // and the single space for ord 12.
+            case "time-batch-groups" ->
+                modules.add("@name('s0') select irstream * from  SupportMarketDataBean#groupwin(symbol)#time_batch(10 sec)");
+            case "time-accum-groups" ->
+                modules.add("@name('s0') select irstream * from  SupportMarketDataBean#groupwin(symbol)#time_accum(10 sec)");
+            case "time-order-groups" ->
+                modules.add("@name('s0') select irstream * from SupportBeanTimestamp#groupwin(groupId)#time_order(timestamp, 10 sec)");
+            case "time-length-batch-groups" ->
+                modules.add("@name('s0') select irstream * from  SupportMarketDataBean#groupwin(symbol)#time_length_batch(10 sec, 100)");
+            case "time-win-groups" ->
+                modules.add("@name('s0') select irstream * from  SupportMarketDataBean#groupwin(symbol)#time(10 sec)");
             default -> throw new IllegalStateException("unknown case: " + caseName);
         }
         return modules;
@@ -342,6 +415,15 @@ public class ViewGroupMergeViewScenarioOracle {
             // Mirrors the suite helper sendSupportBean(env, theString, intPrimitive).
             runtime.getEventService().sendEventBean(
                 new SupportBean(payload.getString("theString", null), payload.getInt("intPrimitive", 0)),
+                eventType);
+            return;
+        }
+        if ("SupportBeanTimestamp".equals(eventType)) {
+            // Mirrors sendEventTS(env, id, groupId, timestamp): the suite's
+            // three-arg SupportBeanTimestamp constructor.
+            runtime.getEventService().sendEventBean(
+                new LocalSupportBeanTimestamp(payload.getString("id", null),
+                    payload.getString("groupId", null), payload.getLong("timestamp", 0)),
                 eventType);
             return;
         }
@@ -435,6 +517,36 @@ public class ViewGroupMergeViewScenarioOracle {
 
         public String getFeed() {
             return feed;
+        }
+    }
+
+    /**
+     * Local mirror of the pinned SupportBeanTimestamp regression bean
+     * (com.espertech.esper.regressionlib.support.bean.SupportBeanTimestamp),
+     * used by the ord-12 time-order case. Constructor parameter order,
+     * field types, and getters match the pinned bean.
+     */
+    public static class LocalSupportBeanTimestamp {
+        private final String id;
+        private final long timestamp;
+        private final String groupId;
+
+        public LocalSupportBeanTimestamp(String id, String groupId, long timestamp) {
+            this.id = id;
+            this.groupId = groupId;
+            this.timestamp = timestamp;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public long getTimestamp() {
+            return timestamp;
+        }
+
+        public String getGroupId() {
+            return groupId;
         }
     }
 }

@@ -33,6 +33,12 @@ type viewGroupMergeMarket struct {
 	Price  float64 `esper:"price"`
 }
 
+type viewGroupMergeTimestamp struct {
+	ID        string `esper:"id"`
+	GroupID   string `esper:"groupId"`
+	Timestamp int64  `esper:"timestamp"`
+}
+
 type viewGroupMergeCorrelMarket struct {
 	Symbol string  `esper:"symbol"`
 	Feed   string  `esper:"feed"`
@@ -48,6 +54,11 @@ var (
 		"java-runtime-74e476ad16bf62d4a9e0", // ViewGroupCorrel
 		"java-runtime-942d359f7bb1302684bb", // ViewGroupLinest
 		"java-runtime-47877af7a1d114850723", // ViewGroupMultiProperty
+		"java-runtime-7bd36b6fe5567b066794", // ViewGroupTimeBatch
+		"java-runtime-842bde62118b9b8cae2d", // ViewGroupTimeAccum
+		"java-runtime-806120fdd2130ab1f275", // ViewGroupTimeOrder
+		"java-runtime-737a5f1ffd4c6a6c8924", // ViewGroupTimeLengthBatch
+		"java-runtime-68ef8076bc96595cbfd0", // ViewGroupTimeWin
 	}
 	viewGroupMergeViewJavaExecutions = []string{
 		"ViewGroupObjectArrayEvent",
@@ -56,6 +67,11 @@ var (
 		"ViewGroupCorrel",
 		"ViewGroupLinest",
 		"ViewGroupMultiProperty",
+		"ViewGroupTimeBatch",
+		"ViewGroupTimeAccum",
+		"ViewGroupTimeOrder",
+		"ViewGroupTimeLengthBatch",
+		"ViewGroupTimeWin",
 	}
 	viewGroupMergeViewCases = []string{
 		"merge-view-union-aggregate",
@@ -64,25 +80,33 @@ var (
 		"correl-groups",
 		"linest-groups",
 		"multi-property-uni",
+		"time-batch-groups",
+		"time-accum-groups",
+		"time-order-groups",
+		"time-length-batch-groups",
+		"time-win-groups",
 	}
 )
+
+// viewGroupMergeFormatTime renders whole seconds without a fraction and
+// non-zero millisecond remainders with exactly three fractional digits,
+// mirroring the Java oracle's optional-section time pattern.
+func viewGroupMergeFormatTime(t time.Time) string {
+	t = t.UTC()
+	if t.Nanosecond() == 0 {
+		return t.Format("2006-01-02T15:04:05Z07:00")
+	}
+	return t.Format("2006-01-02T15:04:05.000Z07:00")
+}
 
 func runViewGroupMergeViewScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
 	if err := scenario.Validate(); err != nil {
 		return compat.Trace{}, err
 	}
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
-	offset := 0
-	spans := map[string]int{
-		"merge-view-union-aggregate": 5,
-		"length-win-groups":          9,
-		"stats-four-views":           -1, // filled from the scenario's case blocks
-		"correl-groups":              -1,
-		"linest-groups":              -1,
-		"multi-property-uni":         -1,
-	}
-	// New cases use variable-length step blocks: derive each span by scanning
+	// All cases use variable-length step blocks: derive each span by scanning
 	// until the next case marker (the scenario protocol has no deploy ops).
+	spans := make(map[string]int, len(viewGroupMergeViewCases))
 	current := ""
 	stepStart := 0
 	for index, step := range scenario.Steps {
@@ -97,6 +121,7 @@ func runViewGroupMergeViewScenario(ctx context.Context, scenario compat.Scenario
 	if current != "" {
 		spans[current] = len(scenario.Steps) - stepStart
 	}
+	offset := 0
 	for _, caseName := range viewGroupMergeViewCases {
 		if spans[caseName] <= 0 {
 			return compat.Trace{}, fmt.Errorf("viewgroup-merge-view case %q has no steps", caseName)
@@ -306,6 +331,40 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 		if err != nil {
 			return compat.Trace{}, err
 		}
+	case "time-batch-groups", "time-accum-groups", "time-length-batch-groups", "time-win-groups":
+		if _, err := esper.RegisterStruct[viewGroupMergeMarket](env, "SupportMarketDataBean"); err != nil {
+			return compat.Trace{}, err
+		}
+		symbol := esper.Field[viewGroupMergeMarket, string]("symbol")
+		var inner esper.WindowSpec
+		switch caseName {
+		case "time-batch-groups":
+			inner = esper.TimeBatch(10 * time.Second)
+		case "time-accum-groups":
+			inner = esper.TimeAccum(10 * time.Second)
+		case "time-length-batch-groups":
+			inner = esper.TimeLengthBatch(10*time.Second, 100)
+		default:
+			inner = esper.TimeWindow(10 * time.Second)
+		}
+		err := build("s0", true, esper.From[viewGroupMergeMarket](env, "SupportMarketDataBean").
+			Window(esper.GroupWindow(symbol, inner)).
+			Query(esper.StatementName("s0"), esper.WithOldStream()))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case "time-order-groups":
+		if _, err := esper.RegisterStruct[viewGroupMergeTimestamp](env, "SupportBeanTimestamp"); err != nil {
+			return compat.Trace{}, err
+		}
+		groupID := esper.Field[viewGroupMergeTimestamp, string]("groupId")
+		ts := esper.Field[viewGroupMergeTimestamp, int64]("timestamp")
+		err := build("s0", true, esper.From[viewGroupMergeTimestamp](env, "SupportBeanTimestamp").
+			Window(esper.GroupWindow(groupID, esper.TimeOrder(ts, 10*time.Second))).
+			Query(esper.StatementName("s0"), esper.WithOldStream()))
+		if err != nil {
+			return compat.Trace{}, err
+		}
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported viewgroup-merge-view case %q", caseName)
 	}
@@ -341,7 +400,7 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 				Case:      caseName,
 				Operation: "listener",
 				Statement: st.Name(),
-				Time:      batch.Time.UTC().Format(time.RFC3339),
+				Time:      viewGroupMergeFormatTime(batch.Time),
 				Sequence:  seqByStmt[st.Name()],
 			}
 			record.New = compat.NormalizeResults(batch.New)
@@ -363,14 +422,29 @@ func runViewGroupMergeViewCase(ctx context.Context, scenario compat.Scenario, ca
 				return trace, fmt.Errorf("viewgroup-merge-view decode %s: %w", step.EventType, err)
 			}
 			var underlying any = payload
-			if step.EventType == "OAEventStringInt" {
+			switch step.EventType {
+			case "OAEventStringInt":
 				// Object-array events send positional underlyings.
 				underlying = []any{
 					payload["p1"],
 					int(payload["p2"].(float64)),
 				}
+			case "SupportBeanTimestamp":
+				underlying = viewGroupMergeTimestamp{
+					ID:        payload["id"].(string),
+					GroupID:   payload["groupId"].(string),
+					Timestamp: int64(payload["timestamp"].(float64)),
+				}
 			}
 			if err := engine.Send(ctx, step.EventType, underlying); err != nil {
+				return trace, err
+			}
+		case "advance-time":
+			at, err := time.Parse(time.RFC3339Nano, step.At)
+			if err != nil {
+				return trace, fmt.Errorf("viewgroup-merge-view decode advance-time: %w", err)
+			}
+			if err := engine.AdvanceTime(ctx, at.UTC()); err != nil {
 				return trace, err
 			}
 		case "snapshot":

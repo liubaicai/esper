@@ -48,33 +48,33 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.343 ('event-precedence-subquery-engine') committed as 7b26930a1; Git owns identity. EPLInsertIntoEventPrecedence.java now 10/11 executions DV.
 - Shipped: Draft 4.344 ('event-precedence-validation') committed as f68ec45b4; Git owns identity. EPLInsertIntoEventPrecedence.java fully dispositioned (10/11 DV + 1 implemented-not-DV).
 - Shipped: Draft 4.345 ('viewgroup-merge-view') committed as 41a3d402d; Git owns identity. ViewGroup.java now 2/20 executions DV.
-- Current target: Draft 4.346 'viewgroup-derived-value-views' — ENGINE unit for ViewGroup ords 1/4/5/6 (the #uni/#correl/#linest derived-value views' irstream old-on-insert rows); fresh parallel scouts dispatched for the full contracts and the implementation design.
+- Shipped: Draft 4.346 ('viewgroup-derived-value-views') committed as 1225a63e5; Git owns identity. ViewGroup.java now 6/20 executions DV.
+- Current target: Draft 4.347 'viewgroup-time-windows' — ViewGroup ords 10-13 + 16 (time_batch/time_accum/time_order/time_length_batch/time_win, all virtual-time, zero expected engine change); parallel scouts dispatched.
 
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: Draft 4.346 ('viewgroup-derived-value-views') — ENGINE unit + differential chain for ViewGroup ords 1/4/5/6 (the derived-value stat views #uni/#correl/#linest over groupwin).
+Active: Draft 4.347 ('viewgroup-time-windows') — extends case-viewgroup-merge-view (same scenario file + oracle + runner) with the five virtual-time window executions:
+- ord 10 ViewGroupTimeBatch `java-runtime-7bd36b6fe5567b066794`
+- ord 11 ViewGroupTimeAccum `java-runtime-842bde62118b9b8cae2d`
+- ord 12 ViewGroupTimeOrder `java-runtime-806120fdd2130ab1f275`
+- ord 13 ViewGroupTimeLengthBatch `java-runtime-737a5f1ffd4c6a6c8924`
+- ord 16 ViewGroupTimeWin `java-runtime-68ef8076bc96595cbfd0`
+All are `select irstream *` over `#groupwin(<key>)#time*()` chains, advanced via env.advanceTime before/during the send sequence; Go surface = GroupWindowKeys(key, TimeBatch/TimeAccum/TimeOrder(?)/TimeLengthBatch/TimeWindow) + WithOldStream + Engine.AdvanceTime (already differential-proven in ord-16-adjacent prior units? verify via scouts).
 
-ENGINE VERDICT (spike-validated): the listener path needed no behavior change — the grouped aggregate path already emits old-from-previous on every insert for grouped derived-statistics statements; the engine-surface changes are the additive accessors plus relocating the grouping injection to deploy time (required for grouped-aggregate Snapshot/output-limit paths) — the injection-gated groupBy keys the per-group state, aggregateGroupedRowPerEvent is FALSE when the projections match the injected keys (no non-key scalar reads), and group.previous carries the previous aggregate row. Spike `[[1 0] [2 1] [1 0] [3 2] [1 0] [1 0]]` matches Java ord 6 exactly (first pair {1|0}, flattened last two {1|0}/{1|0}). The 4.345-era deferral rationale predates this path analysis.
-
-Contracts (pinned by the fresh scouts):
-- ord 1 ViewGroupStats `java-runtime-03ed11fd1e5c3a3d11c2` static `java-e4b54babfa2a09c22a65`: FOUR statements (priceLast3Stats/volumeLast3Stats with length(3)+uni, priceAllStats/volumeAllStats with keepall+uni; order by symbol asc); 14 sends; assertLastNewRow pins per statement with exact double arithmetic (CSCO-all 26.5, IBM-last3 33.5/3, GE-all 519.25/6, GE-last3 260/3 etc. — doubleToLongBits equality); 2 ordered iterator snapshots (CSCO,GE,IBM).
-- ord 4 ViewGroupCorrel `java-runtime-74e476ad16bf62d4a9e0` static `java-de5c0d5eec6a2fd1f36f`: `#groupwin(symbol)#length(1000000)#correl(price, volume, feed)`; 4 sends; new rows {ABC,NaN,f1},{DEF,NaN,f2},{DEF,1.0,f3},{ABC,1.0,f4}.
-- ord 5 ViewGroupLinest `java-runtime-942d359f7bb1302684bb` static `java-a523ae3aedcca205e7c5`: `#groupwin(symbol)#length(1000000)#linest(price, volume, feed)`; 4 sends; slope/YIntercept progression {ABC,NaN,NaN},{DEF,NaN,NaN},{DEF,1.0,0.0},{ABC,100.0,49000.0}; the DEF-1 send additionally pins all 17 in-body statistics (covered by the 21-column projection).
-- ord 6 ViewGroupMultiProperty `java-runtime-47877af7a1d114850723` static `java-608b22a211fb780bb332`: irstream datapoints; IR pairs as spike-pinned; ordered iterator snapshot.
-- Approved adaptations: Go pins the assertion-surface columns via Alias (Java select * carries the full derived-field set — column-set reduction); ord 5's 17 in-body property asserts (XAverage/dataPoints/n/sumX/...) are unpinned (Go LinearRegressionValue exposes only Slope/Intercept); ord 4/5 metadata type asserts are engine-metadata surface.
-
-- [x] Fresh parallel scouts dispatched (full byte-exact contracts incl. stats math; implementation design).
-- [x] Validation-first spike: ord-6 shape REPLAYS GREEN with zero engine change (adaptation-only unit).
-- [x] Freeze contract; runner snapshot op support + 6 case builders + Go parity tests live in the run_test diff family.
-- [ ] Asset writer: 4 scenario cases + oracle + trace regen (same writer, continuity).
-- [ ] Asset writer: 4 scenario cases + oracle + trace (parallel, disjoint).
-- [x] Manifest (+4 runtime IDs/names/goTests — class 6/20 DV), summary arithmetic recomputed-exact.
-- [x] Evidence; Roadmap supplement + view-domain decrement (26→25); CHANGELOG 4.346 entry.
-- [x] Gates + independent parity review (agent_21bfba34-124b-47aa-bf38-838eeac168bc): OVERALL PASS after two fix rounds — the bivariate pop/sample formulas were reshaped to Java BaseStatisticsBean's exact one-pass operations, and the prose overclaims (zero-engine-change; bit-matching) were corrected to the phase-accurate framing across roadmap/CHANGELOG/manifest. Reviewer independently verified the formula fix, the injection relocation, oracle byte-identity, and manifest arithmetic across both rounds.
+- [x] Fresh parallel scouts dispatched (byte-exact contracts incl. advance-time sequences; Go virtual-time + time-window spec adjudication).
+- [x] Freeze contract; asset writer extended scenario/oracle/trace (agent_ff78649b, 5 cases with advance-time ops at RFC3339Nano, 108 records double-run byte-identical); primary extended the runner (5 builders incl. SupportBeanTimestamp fixture, advance-time op, per-case dynamic spans).
+- [x] Manifest (+5 runtime IDs/names — class 11/20 DV; all 5 were already referenced by case.view-group-matrix so referenced/unreferenced are unchanged at 3263/873; goTests deduped to the two prefixed forms), summary recomputed-exact: 888 DV runtime IDs / 3515 associations.
+- [x] Evidence regenerated (passing/0); Roadmap supplement (view rows stay 25 — ground truth verified; remaining-ords list corrected to 2/3/7/8/9/15/17/18/19); CHANGELOG 4.347 entry.
+- [x] Gates + independent parity review (agent_820dc940-1114-45d4-a0e1-463db1468b46): initial FAIL on two P2s — the roadmap view-domain decrement was wrong (all 5 new runtime IDs were already referenced by case.view-group-matrix; view rows reverted to the ground-truth 25) and two bare-name duplicate goTests entries in the case's manifest list; plus a P3 remaining-ords inconsistency. All fixed in the same work unit and re-confirmed by the same reviewer with per-domain ground truth independently recomputed (view 25 exact, total 873).
 - [ ] Commit and push (Git owns identity; no hash recorded here).
 
 ## Delegation checkpoint
+
+Draft 4.347 unit:
+- Prefetch scouts (read-only, concurrent, dispatched): 'ViewGroupTimeWindowsJavaContract' pins ords 10-13/16 byte-exact contracts (advance-time timelines, IR pairs, group-key split) and 'ViewGroupTimeWindowsGoSurface' adjudicates the Go time-window/virtual-time surface (TimeBatch/TimeAccum/TimeOrder/TimeLengthBatch/TimeWindow specs, AdvanceTime) with file:line evidence.
+- Asset writer (isolated, parallel): owns viewgroup-merge-view scenario/oracle/trace extension for the 5 cases.
+- Primary owns runner time-window builders, run_test family extension, evidence, manifest, roadmap, CHANGELOG, PLANS.md, gates, review, commit, and push.
 
 Draft 4.346 unit:
 - Prefetch scouts (read-only, concurrent, complete): 'ViewGroupDerivedValueJavaContract' (agent_05f00b11-bb25-450c-8910-145715962a68) pinned the full byte-exact contracts of ords 1/4/5/6 (all 16 ord-1 assertLastNewRow pins with exact double arithmetic, ord-4/5 progressions, ord-6 IR pairs + iterator, per-statement listenerReset semantics, bean shapes); 'ViewGroupDerivedValueGoDesign' (agent_74507338-028e-4831-87d3-7515a757d3b3) adjudicated the ord-6 shape as already-covered by the injected grouped path and designed the validation-first plan.

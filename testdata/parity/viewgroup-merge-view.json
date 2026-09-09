@@ -1,14 +1,19 @@
 {
  "version": "esper-parity/v1",
  "id": "viewgroup-merge-view",
- "description": "Six pinned ViewGroup executions replayed per pinned module: ViewGroupObjectArrayEvent (ord 0) object-array events over groupwin(p1)#length(2) pinning the per-group sum(p2) Long evolution 10/21/33/36 through istream-only listener records, ViewGroupLengthWin (ord 14) groupwin(theString)#length(3) pinning istream-only delivery until each group window fills then irstream pairs evicting E2/20 and E1/1, ViewGroupStats (ord 1) four separate @name'd select-* deployments over groupwin(symbol) with #length(3)#uni and #uni price/volume variants pinning per-send single-row averages per statement plus the ordered priceAllStats/priceLast3Stats iterator snapshots, ViewGroupCorrel (ord 4) and ViewGroupLinest (ord 5) select-* per-group derived-value rows over length(1000000) with NaN rendered as the {state:nan} marker, and ViewGroupMultiProperty (ord 6) groupwin(symbol, feed, volume)#uni(price) irstream datapoint pairs plus the ordered iterator snapshot; suite milestones record nothing, every ord-1 listener invocation carries exactly the asserted last-new row because each send updates one group, and AnyOrder iterator assertions stay unpinned",
+ "description": "Eleven pinned ViewGroup executions replayed per pinned module: ViewGroupObjectArrayEvent (ord 0) object-array events over groupwin(p1)#length(2) pinning the per-group sum(p2) Long evolution 10/21/33/36 through istream-only listener records, ViewGroupLengthWin (ord 14) groupwin(theString)#length(3) pinning istream-only delivery until each group window fills then irstream pairs evicting E2/20 and E1/1, ViewGroupStats (ord 1) four separate @name'd select-* deployments over groupwin(symbol) with #length(3)#uni and #uni price/volume variants pinning per-send single-row averages per statement plus the ordered priceAllStats/priceLast3Stats iterator snapshots, ViewGroupCorrel (ord 4) and ViewGroupLinest (ord 5) select-* per-group derived-value rows over length(1000000) with NaN rendered as the {state:nan} marker, ViewGroupMultiProperty (ord 6) groupwin(symbol, feed, volume)#uni(price) irstream datapoint pairs plus the ordered iterator snapshot, and five virtual-time grouped-window executions driven entirely by advance-time steps: ViewGroupTimeBatch (ord 10) and ViewGroupTimeLengthBatch (ord 13) with identical timelines pinning silenced sends then group flushes new 10/20 at 11000 and new 30 at 20000 plus the 21000 empty re-arm that still posts old 10/20, ViewGroupTimeAccum (ord 11) pinning istream inserts then delayed flushes old 10/20 at 15000 and old 30 at 20000, ViewGroupTimeOrder (ord 12) over SupportBeanTimestamp#groupwin(groupId)#time_order(timestamp, 10 sec) releasing E2 at 12000 and E4 at 12500 while E1 and E3 expire unobserved, and ViewGroupTimeWin (ord 16) pinning per-group expiries old 10, old 20, old 30 at 11000/15000/20000; suite milestones record nothing, every ord-1 listener invocation carries exactly the asserted last-new row because each send updates one group, AnyOrder iterator assertions stay unpinned, and the suite's pre-deploy advanceTime(1000) replays as each case's leading advance-time step because grouped time windows anchor on the first event",
  "javaRuntimes": [
   "java-runtime-a3b6bef89e22a122cc7a",
   "java-runtime-639bc9b69621f3b6a417",
   "java-runtime-03ed11fd1e5c3a3d11c2",
   "java-runtime-74e476ad16bf62d4a9e0",
   "java-runtime-942d359f7bb1302684bb",
-  "java-runtime-47877af7a1d114850723"
+  "java-runtime-47877af7a1d114850723",
+  "java-runtime-7bd36b6fe5567b066794",
+  "java-runtime-842bde62118b9b8cae2d",
+  "java-runtime-806120fdd2130ab1f275",
+  "java-runtime-737a5f1ffd4c6a6c8924",
+  "java-runtime-68ef8076bc96595cbfd0"
  ],
  "cases": [
   {
@@ -34,6 +39,26 @@
   {
    "case": "multi-property-uni",
    "runtimeId": "java-runtime-47877af7a1d114850723"
+  },
+  {
+   "case": "time-batch-groups",
+   "runtimeId": "java-runtime-7bd36b6fe5567b066794"
+  },
+  {
+   "case": "time-accum-groups",
+   "runtimeId": "java-runtime-842bde62118b9b8cae2d"
+  },
+  {
+   "case": "time-order-groups",
+   "runtimeId": "java-runtime-806120fdd2130ab1f275"
+  },
+  {
+   "case": "time-length-batch-groups",
+   "runtimeId": "java-runtime-737a5f1ffd4c6a6c8924"
+  },
+  {
+   "case": "time-win-groups",
+   "runtimeId": "java-runtime-68ef8076bc96595cbfd0"
   }
  ],
  "steps": [
@@ -442,6 +467,338 @@
   {
    "op": "snapshot",
    "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "time-batch-groups"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": 10,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": 20,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S2",
+    "price": 30,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:20.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:21.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-accum-groups"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": 10,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": 20,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S2",
+    "price": 30,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:15.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:20.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-order-groups"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanTimestamp",
+   "payload": {
+    "id": "E1",
+    "groupId": "G1",
+    "timestamp": 3000
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanTimestamp",
+   "payload": {
+    "id": "E2",
+    "groupId": "G2",
+    "timestamp": 2000
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanTimestamp",
+   "payload": {
+    "id": "E3",
+    "groupId": "G2",
+    "timestamp": 3000
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanTimestamp",
+   "payload": {
+    "id": "E4",
+    "groupId": "G1",
+    "timestamp": 2500
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:12.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:12.499Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:12.500Z"
+  },
+  {
+   "op": "case",
+   "case": "time-length-batch-groups"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": 10,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": 20,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S2",
+    "price": 30,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:20.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:21.000Z"
+  },
+  {
+   "op": "case",
+   "case": "time-win-groups"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": 10,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "price": 20,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.000Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S2",
+    "price": 30,
+    "volume": -1,
+    "feed": ""
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:15.000Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:20.000Z"
   }
  ]
 }
