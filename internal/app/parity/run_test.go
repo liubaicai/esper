@@ -39609,6 +39609,123 @@ func TestRunViewGroupMergeViewDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunDataflowTypesDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-types.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-types.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-types.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-types-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowTypesDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-types.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-types",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 4 {
+		t.Fatalf("records = %d, want 4", len(trace.Records))
+	}
+}
+
+func TestRunDataflowTypesDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "bean-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["intPrimitive"] = 2
+			},
+		},
+		{
+			name: "wport-operation-drift",
+			mutate: func(trace *compat.Trace) {
+				// The generic WPort sink pins its numeric port delivery.
+				trace.Records[1].Operation = "capture"
+			},
+		},
+		{
+			name: "fan-out-second-sink-lost",
+			mutate: func(trace *compat.Trace) {
+				// The single source event fans out to BOTH sinks.
+				trace.Records[1].New = nil
+			},
+		},
+		{
+			name: "map-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["p1"] = 2
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:3]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-types.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-types.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-types.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-types-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunEplFromClauseMethodVariableDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "epl-from-clause-method-variable.evidence.json"),

@@ -1542,7 +1542,9 @@
     "representative-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-1ecb769e10b4a818772c"
+    "java-runtime-1ecb769e10b4a818772c",
+    "java-runtime-a277455fea9aac5b640b",
+    "java-runtime-8006afc99e90b53a008c"
    ],
    "representativeScenarioIds": [
     "dataflow-connector-output"
@@ -17343,6 +17345,56 @@
    ],
    "notes": [
     "Draft 4.355 covers EPLFromClauseMethodVariable's five behavioral executions: a constant-shaped method service (`_10_`/`_20_`), a non-constant service whose postfix variable is re-sampled per trigger row with mid-stream on-set writes (`_10_postfix`/`_20_newpostfix`/`_30_postfix`, both soda compile variants replaying one Go builder), per-partition context variables under an overlapping initiated context with in-context on-set mutation (`_1_context_postfix`/`_2_context_postfix`/`_1_a`/`_2_b`), and triggerless Map/ObjectArray handler sources observed through iterator snapshots (`field1:a,field2:b` twice). Go surface: FromMethod/FromMethodOn + MethodProviderFunc polling per trigger row with a fresh visible-variable snapshot; the provider closes over the variable name, so the constant/non-constant contrast is provider-side. The sixth execution EPLFromClauseMethodVariableInvalid and the context execution's two trailing invalid compiles are compile-only under the invalidity policy: no trace rows; Go Build-rejection coverage lives in internal/esper/fromclausemethod_variable_parity_test.go (context-variable scoping errors) and the reflective-resolution invalids (method footprint mismatch; null variable with instance-method metadata) have no Go equivalent — Java validates reflection footprints Go does not model."
+   ]
+  },
+  {
+   "id": "case.dataflow-types",
+   "javaRuntimeIds": [
+    "java-runtime-a277455fea9aac5b640b",
+    "java-runtime-8006afc99e90b53a008c"
+   ],
+   "javaStaticIds": [
+    "java-66adf2795b74a041e84e",
+    "java-7da6a895a5d5336ecb27"
+   ],
+   "javaNames": [
+    "EPLDataflowBeanType",
+    "EPLDataflowMapType"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowTypes.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunDataflowTypesDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunDataflowTypesDirectReplay",
+    "internal/app/parity/run_test.go:TestRunDataflowTypesDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "dataflow",
+    "types",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dataflow-types.json",
+    "testdata/parity/dataflow-types.trace.json",
+    "testdata/parity/dataflow-types.go.trace.json",
+    "testdata/parity/dataflow-types.evidence.json",
+    "tools/java-oracle/DataflowTypesScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-types.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a277455fea9aac5b640b",
+    "java-runtime-8006afc99e90b53a008c"
+   ],
+   "notes": [
+    "Draft 4.356 covers EPLDataflowTypes' two executions: dataflow type declarations over a bean class (outstream<SupportBean>) and a public map schema (outstream<MyMap>), a single canned source event fanned out to two capture sinks, drained by the blocking run. The generic WPort sink's port-0 delivery is pinned as the capture-port-0 operation. Go: DefineDataflow + literal BeaconSource + Custom capture operators, synchronous deterministic drain, zero engine change."
    ]
   },
   {
@@ -42864,13 +42916,17 @@
   {
    "caseId": "case.epl-fromclausemethod-variable",
    "capabilityId": "epl.fromclausemethod"
+  },
+  {
+   "caseId": "case.dataflow-types",
+   "capabilityId": "dataflow.graph"
   }
  ],
  "summary": {
-  "inventoriedCases": 630,
-  "implementedCases": 628,
-  "differentialVerifiedCases": 243,
-  "differentialVerifiedRuntimeIds": 904,
+  "inventoriedCases": 631,
+  "implementedCases": 629,
+  "differentialVerifiedCases": 244,
+  "differentialVerifiedRuntimeIds": 906,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -42880,14 +42936,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3534,
-  "referencedJavaRuntimeIds": 3276,
+  "runtimeAssociationCount": 3536,
+  "referencedJavaRuntimeIds": 3278,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 860,
+  "unreferencedJavaRuntimeIds": 858,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 630,
+  "totalCases": 631,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 904
+  "differentialVerifiedRuntimeIDs": 906
  }
 }

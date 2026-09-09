@@ -1,0 +1,179 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-a277455fea9aac5b640b",
+    "java-runtime-8006afc99e90b53a008c"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowTypes.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowBeanType",
+    "EPLDataflowMapType"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-types",
+    "steps": [
+      {
+        "op": "case",
+        "case": "bean-type"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "map-type"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-types",
+    "records": [
+      {
+        "case": "bean-type",
+        "operation": "capture",
+        "statement": "flow:MySupportBeanOutputOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-type",
+        "operation": "capture-port-0",
+        "statement": "flow:SupportGenericOutputOpWPort",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-type",
+        "operation": "capture",
+        "statement": "flow:MyMapOutputOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-type",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-types",
+    "records": [
+      {
+        "case": "bean-type",
+        "operation": "capture",
+        "statement": "flow:MySupportBeanOutputOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-type",
+        "operation": "capture-port-0",
+        "statement": "flow:SupportGenericOutputOpWPort",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-type",
+        "operation": "capture",
+        "statement": "flow:MyMapOutputOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "map-type",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

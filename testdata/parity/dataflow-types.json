@@ -1,0 +1,30 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-types",
+ "description": "EPLDataflowTypes differential chain over dataflow type declarations: bean-type (ordinal 0) replays EPLDataflowBeanType where a DefaultSupportSourceOp instruction carrying one SupportBean{theString=E1, intPrimitive=1} fans a single source out over outstream<SupportBean> to two capture sinks, the bean-collecting MySupportBeanOutputOp and the generic SupportGenericOutputOpWPort whose recorded port list pins delivery on port 0; map-type (ordinal 1) replays EPLDataflowMapType where the @public create map schema MyMap (p0 String, p1 int) is deployed to a path first and the flow is compiled against that path, fanning one HashMap{p0=E1, p1=1} source instruction over outstream<MyMap> to MyMapOutputOp and a signal-delimited DefaultSupportCaptureOp whose batch 0 is observed; both executions drain a blocking EPDataFlowInstance.run() and their captures are read after COMPLETE, so each case contributes two post-run capture records with the custom op sink first and the second sink second, and no send steps exist because the inputs are baked source instructions.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-a277455fea9aac5b640b",
+  "java-runtime-8006afc99e90b53a008c"
+ ],
+ "cases": [
+  {
+   "case": "bean-type",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-a277455fea9aac5b640b",
+   "executionName": "EPLDataflowBeanType"
+  },
+  {
+   "case": "map-type",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-8006afc99e90b53a008c",
+   "executionName": "EPLDataflowMapType"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "bean-type"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "map-type"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

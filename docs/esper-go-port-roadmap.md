@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.356（2026-09-10），dataflow 域第二个 differential-verified 链 `case.dataflow-types`（capability `dataflow.graph` 的 differential runtime IDs 扩展至 3（connector 链已有 DV 条目）），对照固定 Java `EPLDataflowTypes.java` 的两个 execution（`EPLDataflowBeanType` `java-runtime-a277455fea9aac5b640b` static `java-66adf2795b74a041e84e`、`EPLDataflowMapType` `java-runtime-8006afc99e90b53a008c` static `java-7da6a895a5d5336ecb27`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 各 4 条 records、0 differences：EPL 文本 create-dataflow 图（DefaultSupportSourceOp 单个罐装事件扇出到两个捕获 sink，阻塞 run() 同步排空）——bean 类 型（outstream<SupportBean>）与 @public map schema 型（outstream<MyMap>，path 多部署）；通用 WPort sink 的 port-0 投递以 capture-port-0 操作钉定。Go 侧零引擎改动：DefineDataflow + 字面量 BeaconSource + Custom 捕获算子（记录事件与输入端口）+ Connect 扇出 + 同步 Run；Java oracle 直接安装 regression-lib 使用真实算子类。manifest 更新为 631 cases、244 个 differential-verified case、906 个 differential runtime IDs、3536 条 associations（referenced 3278、unreferenced 858）。
+
 > 最新补充：Draft 4.355（2026-09-10），`epl.fromclausemethod` 能力首个 differential-verified 链 `case.epl-fromclausemethod-variable`，对照固定 Java `EPLFromClauseMethodVariable.java` 的五个行为 execution（`EPLFromClauseMethodConstantVariable` `java-runtime-b6134319ddad78ee7888`、`EPLFromClauseMethodNonConstantVariable{soda=true}` `java-runtime-7fa38fe9688391d3f9da`、`{soda=false}` `java-runtime-1c125ff69ef065d76608`、`EPLFromClauseMethodContextVariable` `java-runtime-26c863d3cc9d5aca7cc7`、`EPLFromClauseMethodVariableMapAndOA` `java-runtime-2989d0cd737e30ae5633`）。Java/Go trace 各 14 条 records、0 differences：常量形方法源（`_10_`/`_20_`）、非常量服务的 postfix 变量按触发行重采样且中流 on-set 立即可见（两个 soda 编译变体回放同一 Go builder）、重叠 initiated 上下文的每分区变量与分区内 on-set 隔离（`_1_context_postfix`/`_2_b`）、无触发 Map/OA handler 的迭代器快照行。Go 侧零引擎改动：FromMethod/FromMethodOn + MethodProviderFunc 每触发行携带可见变量快照轮询，常量/非常量对比由 provider 闭包表达。第 6 个 execution `EPLFromClauseMethodVariableInvalid` 及 context execution 的两个尾部 invalid 编译按 invalidity 政策处置（无 trace 行；可移植的上下文变量作用域 Build 拒绝已由引擎测试钉定，反射解析类 invalid 无 Go 等价，登记于 umbrella 案例注释）。manifest 更新为 630 cases、243 个 differential-verified case、904 个 differential runtime IDs、3534 条 associations（referenced 3276、unreferenced 860）；capability `epl.fromclausemethod` 获得差分验证（38 个 DV capability）。
 
 > 最新补充：Draft 4.354（2026-09-10），`epl.subselect.*` 引擎单元扩展 `case.epl-subselect-order-of-eval-index` differential-verified 场景至 5 runtime IDs，新增 `EPLSubselectOrderOfEvalNoPreeval`（`java-runtime-ac2d59129befe9a3b088` static `java-04d47cea26b120f5f805`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 47 条 records（既有 45 条字节不变）、0 differences：与 preeval-on 案例字节相同的两条 not-in 自子查询语句在 `selfSubselectPreeval=false` 下重放——not-in 过滤器观测事件到达前的子查询窗口（空集 → SQL 空集规则为真），首个 E1/5 输出完整 20 属性 SupportBean select-* 行（charPrimitive `\u0000`、原始数值零列），事件在处理结束前仍被子查询窗口接受（第二次发送静默）。Go 引擎新增语句级选项 `WithSelfSubselectPreeval(false)`（querySpec/Query 字段 selfSubselectPosteval；Statement.process 延迟自子查询窗口接受至语句自身 filter/where 求值之后，非 context 语句；默认路径字节不变，preeval-on 钉定测试全绿）；runner 的 no-preeval 案例注册全 20 列 SupportBean 面（含 char NUL 默认的解码镜像）。Java oracle 以第二 Configuration/独立 URI 构建 preeval-off 运行时。该 suite 双 suite（OrderOfEval+Index）+ NoPreeval 三源全闭环；manifest 更新为 629 cases、242 个 differential-verified case、899 个 differential runtime IDs、3529 条 associations（referenced 3276、unreferenced 860）。
@@ -1487,7 +1489,7 @@
 
 重点领域：
 
-- epl 剩余 260 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 258 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1512,7 +1514,7 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 260 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 258 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1534,7 +1536,7 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 260 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 258 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
@@ -1564,7 +1566,7 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 260 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 258 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
