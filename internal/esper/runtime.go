@@ -342,6 +342,7 @@ type Engine struct {
 	// from the statement catalog. It is invalidated whenever the catalog
 	// changes, so per-event dispatch does not re-sort the catalog.
 	dispatchOrder                      []*Statement
+	updateDispatchOrder                []*Statement
 	deployments                        map[string]*Deployment
 	resourceDependents                 map[deploymentResourceRef]map[string]struct{}
 	activeProtectedModules             map[string]string
@@ -3936,7 +3937,6 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 			return NewError(ErrorState, fmt.Sprintf("route event limit %d exceeded", maxRoutedEventsPerSend))
 		}
 		processedRoutes++
-		statements := e.dispatchStatementsLocked()
 		matched := false
 		// Java dispatches named-window consumer waves (aggregated remove/new
 		// deltas from on-delete, on-insert and on-merge trigger mutations)
@@ -3945,7 +3945,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		// the mutation statements' own dispatches so the flushed wave precedes
 		// them, then append the deferred dispatches.
 		deferredTriggerDispatches := make([]statementDispatch, 0, 2)
-		for _, statement := range orderUpdateStatementsFirst(statements) {
+		for _, statement := range e.updateStatementsFirstLocked() {
 			accepted := statement.matchesEventFilter(current, now, variables)
 			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted, true)
 			if processErr != nil {
@@ -4616,6 +4616,14 @@ func orderUpdateStatementsFirst(statements []*Statement) []*Statement {
 	return ordered
 }
 
+func (e *Engine) updateStatementsFirstLocked() []*Statement {
+	if e.updateDispatchOrder != nil {
+		return e.updateDispatchOrder
+	}
+	e.updateDispatchOrder = orderUpdateStatementsFirst(e.dispatchStatementsLocked())
+	return e.updateDispatchOrder
+}
+
 func (e *Engine) sortedStatementsLocked() []*Statement {
 	statements := make([]*Statement, 0, len(e.statements))
 	for _, statement := range e.statements {
@@ -4639,6 +4647,7 @@ func (e *Engine) sortedStatementsLocked() []*Statement {
 func (e *Engine) invalidateDispatchOrderLocked() {
 	if e != nil {
 		e.dispatchOrder = nil
+		e.updateDispatchOrder = nil
 	}
 }
 
@@ -5121,7 +5130,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		}
 		e.recordRuntimeInputLocked()
 		matched := false
-		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
+		for _, statement := range e.updateStatementsFirstLocked() {
 			needsAccepted := unmatchedEvents != nil || e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
 			accepted := needsAccepted && statement.matchesEventFilter(current.event, now, variables)
 			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted, needsAccepted)

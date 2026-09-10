@@ -179,6 +179,8 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
 
 ### 4.6 派发顺序缓存的收尾
 
+状态：已实施。更新流优先的派发顺序现在与普通派发顺序一起按目录变更缓存，目录失效时同步清除。
+
 - `orderUpdateStatementsFirst` 在存在 update-istream 语句时每事件重新分配并按 update 优先级排序；
   可并入已缓存的派发顺序（updates 优先、其余保持原序），但必须保持 drop 屏障与 update 优先级语义。
 
