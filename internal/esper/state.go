@@ -1543,13 +1543,15 @@ func (s *tableState) addIndexesLocked(rowKey string, row TableRow) {
 		}
 		entries := s.indexEntries[definition.Name]
 		entries = append(entries, tableIndexEntry{rowKey: rowKey, values: tableIndexValues(row, definition.Columns)})
-		sort.SliceStable(entries, func(left, right int) bool {
-			comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
-			if !comparable || comparison == 0 {
-				return false
-			}
-			return comparison < 0
-		})
+		if definition.Kind == IndexBTree {
+			sort.SliceStable(entries, func(left, right int) bool {
+				comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
+				if !comparable || comparison == 0 {
+					return false
+				}
+				return comparison < 0
+			})
+		}
 		s.indexEntries[definition.Name] = entries
 	}
 }
@@ -2070,13 +2072,15 @@ func rebuildNamedWindowIndexesLocked(state *namedWindowRuntime) {
 			index[key] = append(index[key], position)
 			entries = append(entries, namedWindowIndexEntry{position: position, values: namedWindowIndexValues(entry.event, definition.Columns)})
 		}
-		sort.SliceStable(entries, func(left, right int) bool {
-			comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
-			if !comparable || comparison == 0 {
-				return false
-			}
-			return comparison < 0
-		})
+		if definition.Kind == IndexBTree {
+			sort.SliceStable(entries, func(left, right int) bool {
+				comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
+				if !comparable || comparison == 0 {
+					return false
+				}
+				return comparison < 0
+			})
+		}
 		indexes[definition.Name] = index
 		indexEntries[definition.Name] = entries
 	}
