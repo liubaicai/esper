@@ -10194,6 +10194,11 @@
     "java-runtime-aac755fc7592bf62718d",
     "java-runtime-f1fc7e290467bab36366"
    ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5438f7be9b56ca119b0c",
+    "java-runtime-f54de0ae037b90b24551",
+    "java-runtime-f1fc7e290467bab36366"
+   ],
    "javaNames": [
     "EPLDataflowBeaconWithBeans",
     "EPLDataflowBeaconVariable",
@@ -10221,7 +10226,10 @@
     "TestDataflowBeaconFieldParametersOverridePerInstanceAndRouteEventBusMatchesEsper",
     "TestDataflowBeaconFieldParametersHaveStablePlanIdentity",
     "TestDataflowBeaconEventFieldsRejectInvalidDefinitions",
-    "TestAvroRecordNativeSendAndSchemaIdentityMatchesEsper"
+    "TestAvroRecordNativeSendAndSchemaIdentityMatchesEsper",
+    "TestRunDataflowBeaconSourceDiffWritesPassingEvidence",
+    "TestRunDataflowBeaconSourceDirectReplay",
+    "TestRunDataflowBeaconSourceDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10239,16 +10247,23 @@
     "setter",
     "avro-record"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-baseline",
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/dataflow-beacon-source.json",
+    "testdata/parity/dataflow-beacon-source.trace.json",
+    "testdata/parity/dataflow-beacon-source.go.trace.json",
+    "testdata/parity/dataflow-beacon-source.evidence.json",
+    "tools/java-oracle/DataflowBeaconSourceScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-beacon-source.sh"
    ],
-   "difference": "Go provides structured BeaconSourceWithOptions plus typed BeaconEventSource/BeaconEventSourceWithUnderlying. Iterations, initialDelay and interval can be fixed or evaluated once from one registered-variable snapshot at instantiation; durations use Go-native time.Duration. The shared DataflowParameterProvider receives all three built-in timing names in stable order and overrides an expression before that expression is evaluated, matching Java DataFlowParameterResolution precedence. Timing expressions participate in Plan canonical identity and reject event-field/query-parameter dependencies, wrong types and negative runtime values. Typed source-less fields support literals, variables and Go expressions, optional per-iteration factory base values, Event envelopes or native Struct/Map/ObjectArray/JSON/XML/Avro representations, and direct EventBusSink routing. Avro underlying output is now a schema-bound *AvroRecord corresponding to Java GenericData.Record. FieldParameters integrates the same provider for deterministic, type-checked, instance-scoped field overrides while preserving expression defaults, mapping Java's BeaconSource/property URI writer without string URI parsing; timing names are reserved from event fields. JavaBean-style getter-only Go structs can now be populated through discovered pointer-receiver SetX methods; Go uses zero-value allocation instead of Java constructor selection. Finite sources submit FinalMarker and unlimited sources honor cancellation. Java numeric seconds are intentionally represented as typed time.Duration rather than EPL numeric coercion; reflective property-holder/context injection and the remaining exact invalid/diagnostic matrix stay open.",
+   "difference": "Go provides structured BeaconSourceWithOptions plus typed BeaconEventSource/BeaconEventSourceWithUnderlying. Iterations, initialDelay and interval can be fixed or evaluated once from one registered-variable snapshot at instantiation; durations use Go-native time.Duration. The shared DataflowParameterProvider receives all three built-in timing names in stable order and overrides an expression before that expression is evaluated, matching Java DataFlowParameterResolution precedence. Timing expressions participate in Plan canonical identity and reject event-field/query-parameter dependencies, wrong types and negative runtime values. Typed source-less fields support literals, variables and Go expressions, optional per-iteration factory base values, Event envelopes or native Struct/Map/ObjectArray/JSON/XML/Avro representations, and direct EventBusSink routing. Avro underlying output is now a schema-bound *AvroRecord corresponding to Java GenericData.Record. FieldParameters integrates the same provider for deterministic, type-checked, instance-scoped field overrides while preserving expression defaults, mapping Java's BeaconSource/property URI writer without string URI parsing; timing names are reserved from event fields. JavaBean-style getter-only Go structs can now be populated through discovered pointer-receiver SetX methods; Go uses zero-value allocation instead of Java constructor selection. Finite sources submit FinalMarker and unlimited sources honor cancellation. Java numeric seconds are intentionally represented as typed time.Duration rather than EPL numeric coercion; reflective property-holder/context injection and the remaining exact invalid/diagnostic matrix stay open. Draft 4.365 differentially verifies three of the four executions through the latched DefaultSupportCaptureOp chain: EPLDataflowBeaconWithBeans (two standalone sub-runs, one per legacy bean type, each releasing one {'myfield':'abc'} row), EPLDataflowBeaconVariable (@public create Schema SomeEvent plus variable var_iterations=3 resolved at instantiation yielding three empty Map rows), and EPLDataflowBeaconNoType sub-run 2 (undeclared-type graph forging a transient object-array type, five empty Object[0] rows; sub-run 5 instantiates the interval-0.5 p1-'abc' flow without options and never starts it, so instantiation succeeding is the observable and it contributes zero records). The remaining EPLDataflowBeaconNoType sub-runs assert wall-clock deltas or unbounded cancel and EPLDataflowBeaconFields asserts random values and EventBusSink polling, so they stay out of the deterministic chain; Fields remains covered by the implemented go-unit tests below. Both the empty Map underlying and the empty Object[0] underlying serialize to {'kind':'row','fields':{}}; every capture read is one record over statement flow:DefaultSupportCaptureOp with case-local sequences restarting at 1 (4 records: 2+1+0+1).",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -43276,8 +43291,8 @@
  "summary": {
   "inventoriedCases": 636,
   "implementedCases": 634,
-  "differentialVerifiedCases": 251,
-  "differentialVerifiedRuntimeIds": 923,
+  "differentialVerifiedCases": 252,
+  "differentialVerifiedRuntimeIds": 926,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43294,7 +43309,6 @@
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 636,
-  "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 923
+  "totalCapabilities": 120
  }
 }

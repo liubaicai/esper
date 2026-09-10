@@ -115,6 +115,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-epstatement-source" || *mode == "dataflow-epstatement-source-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "dataflow-beacon-source" || *mode == "dataflow-beacon-source-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-doc-samples" || *mode == "dataflow-doc-samples-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
@@ -337,6 +339,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, dataflowDocSamplesJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, dataflowDocSamplesJavaSources),
 				splitMetadata(*javaExecutions, dataflowDocSamplesJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "dataflow-beacon-source" || *mode == "dataflow-beacon-source-diff" {
+		trace, err := runDataflowBeaconSourceScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "dataflow-beacon-source-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, dataflowBeaconSourceJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, dataflowBeaconSourceJavaSources),
+				splitMetadata(*javaExecutions, dataflowBeaconSourceJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

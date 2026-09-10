@@ -1,0 +1,48 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-beacon-source",
+ "description": "dataflow-beacon-source differential chain over EPLDataflowOpBeaconSource BeaconSource operator configurations observed through latched DefaultSupportCaptureOp reads: beacon-with-beans (ordinal 0) replays EPLDataflowBeaconWithBeans as two standalone deploy/instantiate/start/undeploy sub-runs in one case, one per legacy bean type, where the graph 'BeaconSource -> BeaconStream<MyLegacyEvent>{myfield:'abc', iterations:1} DefaultSupportCaptureOp' and its MyEventNoDefaultCtor sibling each release a latch-1 capture on the single emitted row whose underlying is the configured bean instance populated with myfield 'abc' (the no-default-ctor type goes through Java constructor selection plus the setMyfield setter), pinning {'myfield':'abc'} for both types with the case-local sequence running 1 then 2; beacon-variable (ordinal 1) replays EPLDataflowBeaconVariable byte-exact where '@public create Schema SomeEvent()' and '@public create variable int var_iterations=3' are path-deployed before the flow and the BeaconSource resolves iterations from var_iterations at instantiation so the latch-3 capture yields three rows whose underlyings are empty Map instances for the empty declared Map schema; beacon-no-type-iterations (ordinal 3) replays EPLDataflowBeaconNoType sub-run 2 where the undeclared-type graph 'BeaconSource -> BeaconStream{iterations:5}' forges a transient object-array type and BeaconSourceOp submits an empty Object[0] per iteration, so the latch-5 capture yields five empty rows; beacon-no-type-instantiate-only (ordinal 3, same execution) replays EPLDataflowBeaconNoType sub-run 5 where '@public create objectarray schema MyTestOAType(p1 string)' is path-deployed and the interval-0.5 p1-'abc' flow is instantiated with no options and never started, so instantiation succeeding is the observable and the case contributes zero records; the remaining executions stay out of the deterministic chain on purpose because they assert wall-clock deltas or unbounded cancel (EPLDataflowBeaconNoType sub-runs 1, 3 and 4) or random values and EventBusSink polling (EPLDataflowBeaconFields); both the empty Map underlying and the empty Object[0] underlying serialize to {'kind':'row','fields':{}}, every capture read is one record over statement flow:DefaultSupportCaptureOp with case-local sequences restarting at 1, and the 4 records (2+1+0+1) upgrade the implemented manifest case case.dataflow-beacon toward differential-verified.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-5438f7be9b56ca119b0c",
+  "java-runtime-f54de0ae037b90b24551",
+  "java-runtime-f1fc7e290467bab36366",
+  "java-runtime-f1fc7e290467bab36366"
+ ],
+ "cases": [
+  {
+   "case": "beacon-with-beans",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-5438f7be9b56ca119b0c",
+   "executionName": "EPLDataflowBeaconWithBeans"
+  },
+  {
+   "case": "beacon-variable",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-f54de0ae037b90b24551",
+   "executionName": "EPLDataflowBeaconVariable"
+  },
+  {
+   "case": "beacon-no-type-iterations",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-f1fc7e290467bab36366",
+   "executionName": "EPLDataflowBeaconNoType"
+  },
+  {
+   "case": "beacon-no-type-instantiate-only",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-f1fc7e290467bab36366",
+   "executionName": "EPLDataflowBeaconNoType"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "beacon-with-beans"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "beacon-variable"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "beacon-no-type-iterations"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "beacon-no-type-instantiate-only"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}
