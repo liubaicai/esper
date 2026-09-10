@@ -244,6 +244,9 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
 
 #### 4.9.3 变量上下文与 ResultBatch 的分配削减
 
+状态：部分实施。事件派发路径在无变量状态下不再为变量快照分配空 map；非空变量仍复制，保持
+语句评估期间的隔离语义。ResultBatch 借用和复用仍待单独验证监听器持有语义后处理。
+
 - 变量上下文：发送路径每轮执行 `cloneValues(e.variables)`（`runtime.go:3898`）→
   `statementVariables(...)` → `variablesWithEngineLockState(...)`（`runtime.go:6907` 起、
   `subquery.go:2700`）。profile 中 `variablesWithEngineLockState` 的累计分配约占总分配的 22%。

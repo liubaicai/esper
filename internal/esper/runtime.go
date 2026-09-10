@@ -1550,7 +1550,7 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	}
 	now := e.clock.Now()
 	e.refreshVariablesLocked()
-	variables := cloneValues(e.variables)
+	variables := snapshotVariables(e.variables)
 	e.pendingStatementDispatches = nil
 	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
@@ -1616,6 +1616,16 @@ func cloneValues(values map[string]Value) map[string]Value {
 		result[name] = value
 	}
 	return result
+}
+
+// snapshotVariables avoids allocating an empty map on the event hot path.
+// Non-empty variable state is still copied so statement evaluation cannot
+// observe later engine mutations through a shared map.
+func snapshotVariables(values map[string]Value) map[string]Value {
+	if len(values) == 0 {
+		return nil
+	}
+	return cloneValues(values)
 }
 
 type StatementState uint8
