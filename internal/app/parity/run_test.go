@@ -41631,3 +41631,145 @@ func TestRunDataflowPortsFeedbackDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunDataflowExceptionsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-exceptions.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-exceptions.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-exceptions.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-exceptions-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowExceptionsDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-exceptions.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-exceptions",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 12 {
+		t.Fatalf("records = %d, want 12", len(trace.Records))
+	}
+	// Both flows end COMPLETE (never CANCELLED) with exactly one handler
+	// context each, and the operator attribution differs by flow.
+	for _, index := range []int{5, 11} {
+		if trace.Records[index].Value != "COMPLETE" {
+			t.Fatalf("record %d value = %#v, want COMPLETE", index, trace.Records[index].Value)
+		}
+	}
+	if trace.Records[1].Value != "source-error" || trace.Records[7].Value != "operator-throw" {
+		t.Fatalf("error classes = %#v, %#v", trace.Records[1].Value, trace.Records[7].Value)
+	}
+	if fmt.Sprint(trace.Records[3].Value) != "0" || fmt.Sprint(trace.Records[9].Value) != "1" {
+		t.Fatalf("operator numbers = %#v, %#v", trace.Records[3].Value, trace.Records[9].Value)
+	}
+	// Pretty-prints are recorded in the normalized bare-port form.
+	if trace.Records[4].Value != "DefaultSupportSourceOp#0() -> outstream" {
+		t.Fatalf("flow A pretty-print = %#v", trace.Records[4].Value)
+	}
+	if trace.Records[10].Value != "MyExceptionOp#1(outstream)" {
+		t.Fatalf("flow B pretty-print = %#v", trace.Records[10].Value)
+	}
+}
+
+func TestRunDataflowExceptionsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "error-class-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Value = "operator-throw"
+			},
+		},
+		{
+			name: "operator-number-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].Value = 0
+			},
+		},
+		{
+			name: "pretty-print-unnormalized",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].Value = "DefaultSupportSourceOp#0() -> outstream<parity.dataflowExceptionsBean>"
+			},
+		},
+		{
+			name: "state-cancelled-flip",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].Value = "CANCELLED"
+			},
+		},
+		{
+			name: "handler-count-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(2)
+				trace.Records[6].Count = &count
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:11]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-exceptions.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-exceptions.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-exceptions.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-exceptions-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

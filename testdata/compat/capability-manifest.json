@@ -10114,6 +10114,9 @@
    "javaRuntimeIds": [
     "java-runtime-c1d106a7e1cc70655006"
    ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c1d106a7e1cc70655006"
+   ],
    "javaNames": [
     "EPLDataflowAPIExceptions"
    ],
@@ -10125,7 +10128,10 @@
     "TestDataflowOperatorExceptionCompletesWithEsperContext",
     "TestDataflowEventBusOperatorExceptionCompletesInstance",
     "TestDataflowSourceExceptionContextMatchesEsper",
-    "TestDataflowCustomSourceErrorPropagatesThroughRun"
+    "TestDataflowCustomSourceErrorPropagatesThroughRun",
+    "TestRunDataflowExceptionsDiffWritesPassingEvidence",
+    "TestRunDataflowExceptionsDirectReplay",
+    "TestRunDataflowExceptionsDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10134,16 +10140,22 @@
     "error-context",
     "lifecycle"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-baseline",
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/dataflow-exceptions.json",
+    "testdata/parity/dataflow-exceptions.trace.json",
+    "testdata/parity/dataflow-exceptions.go.trace.json",
+    "testdata/parity/dataflow-exceptions.evidence.json",
+    "tools/java-oracle/DataflowExceptionsScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-exceptions.sh"
    ],
-   "difference": "Go DataflowError now carries dataflow/instance/operator name, operator number, operator pretty-print and the original error for errors.Is/Unwrap. Fail-policy operator errors invoke the handler once, preserve LastError and terminate the instance as Complete; Continue-policy errors drop only the failed work item and allow finite graphs to complete. Java's exact wrapper exception text, asynchronous handler scheduling and the broader source/operator backpressure and recovery matrix remain open.",
+   "difference": "Go DataflowError now carries dataflow/instance/operator name, operator number, operator pretty-print and the original error for errors.Is/Unwrap. Fail-policy operator errors invoke the handler once, preserve LastError and terminate the instance as Complete; Continue-policy errors drop only the failed work item and allow finite graphs to complete. Java's exact wrapper exception text, asynchronous handler scheduling and the broader source/operator backpressure and recovery matrix remain open. Draft 4.373 differentially verifies the EPLDataflowAPIExceptions execution (java-runtime-c1d106a7e1cc70655006) through the exception-propagation chain: the source-throw flow (the handler sees exactly one context attributed to DefaultSupportSourceOp#0 and the instance completes) and the operator-throw flow (the handler receives the raw unwrapped throwable attributed to MyExceptionOp#1 and swallows it, so exactly one context exists and the flow completes). Records use the count/state/value protocol with the operator pretty-print recorded in a normalized bare-port form (Java asserts its full '<SupportBean>' string in-process; Go strips the package-qualified type label and its implicit default-output suffix); exception message text is never recorded (invalidity policy). Go's Fail policy surfaces the error from Run/Join while Java's start-and-swallow completes silently — the COMPLETE state and the single handler invocation are the shared observables. 12 records per side (6+6), no data rows.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -43358,8 +43370,8 @@
  "summary": {
   "inventoriedCases": 636,
   "implementedCases": 634,
-  "differentialVerifiedCases": 256,
-  "differentialVerifiedRuntimeIds": 936,
+  "differentialVerifiedCases": 257,
+  "differentialVerifiedRuntimeIds": 937,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,

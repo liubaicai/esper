@@ -1,0 +1,257 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-c1d106a7e1cc70655006"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIExceptions.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowAPIExceptions"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-exceptions",
+    "steps": [
+      {
+        "op": "case",
+        "case": "exceptions"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-exceptions",
+    "records": [
+      {
+        "case": "exceptions",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler-contexts",
+        "count": 1
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.error-class",
+        "value": "source-error"
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-name",
+        "value": "DefaultSupportSourceOp"
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-number",
+        "value": 0
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-pretty-print",
+        "value": "DefaultSupportSourceOp#0() -\u003e outstream"
+      },
+      {
+        "case": "exceptions",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      },
+      {
+        "case": "exceptions",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler-contexts",
+        "count": 1
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.error-class",
+        "value": "operator-throw"
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-name",
+        "value": "MyExceptionOp"
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-number",
+        "value": 1
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-pretty-print",
+        "value": "MyExceptionOp#1(outstream)"
+      },
+      {
+        "case": "exceptions",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-exceptions",
+    "records": [
+      {
+        "case": "exceptions",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler-contexts",
+        "count": 1
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.error-class",
+        "value": "source-error"
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-name",
+        "value": "DefaultSupportSourceOp"
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-number",
+        "value": 0
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-pretty-print",
+        "value": "DefaultSupportSourceOp#0() -\u003e outstream"
+      },
+      {
+        "case": "exceptions",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      },
+      {
+        "case": "exceptions",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler-contexts",
+        "count": 1
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.error-class",
+        "value": "operator-throw"
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-name",
+        "value": "MyExceptionOp"
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-number",
+        "value": 1
+      },
+      {
+        "case": "exceptions",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "handler.operator-pretty-print",
+        "value": "MyExceptionOp#1(outstream)"
+      },
+      {
+        "case": "exceptions",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
