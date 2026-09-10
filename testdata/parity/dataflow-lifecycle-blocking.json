@@ -1,0 +1,40 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-lifecycle-blocking",
+ "description": "dataflow-lifecycle-blocking differential chain (work unit 4.376) over the three blocking executions of regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIRunStartCancelJoin.java (ordinals 4, 10 and 11; the seven non-blocking executions ordinals 0, 1, 2, 5, 7, 9, 12 are covered by the dataflow-lifecycle-cancel-join oracle and ordinals 3 and 6 by the dataflow-lifecycle-core oracle), driven through DefaultSupportSourceOp positional instructions (CountDownLatch=await, Object[]=submit as one row, final marker on exhaustion) and latched DefaultSupportCaptureOp reads whose latch counts are wait devices — a read records the full current batch state. Graphs are byte-exact from the Java: blocking-cancel (ordinal 4) deploys the byte-exact preamble '@public create schema SomeType ()' over the RegressionPath plus the one-line graph '@name('flow') create dataflow MyDataFlowOne DefaultSupportSourceOp -> outstream<SomeType> {}DefaultSupportCaptureOp(outstream) {}' whose capture clause is concatenated with NO separator after the source clause's trailing '{}'; fast-complete-blocking (ordinal 10) deploys '@name('flow') create dataflow MyDataFlowOne BeaconSource -> BeaconStream {iterations : 1}DefaultSupportCaptureOp(BeaconStream) {}' with NO separator and no schema preamble; run-blocking (ordinal 11) deploys the same preamble plus the same one-clause graph shape with the stream named 's': '@name('flow') create dataflow MyDataFlowOne DefaultSupportSourceOp -> s<SomeType> {}DefaultSupportCaptureOp(s) {}' (NO separator). blocking-cancel (ordinal 4, DefaultSupportGraphOpProviderByOpName, source instructions [latch, Object[]{1}], plain unlatched capture): Java's blocking run() cannot serve as the replay driver (it parks the driver thread), so the deterministic replay drives the started instance — instance.start(); a bounded in-process poll for the RUNNING state (10 s deadline, 10 ms steps — the replay of the suite's 300 ms cancelling-thread sleep, a wait device; start() sets RUNNING synchronously so the poll returns immediately); then instance.cancel(), which synchronously shuts down and interrupts the latched await and moves the instance to CANCELLED (asserted in-process; the suite never releases the latch — the cancel interrupt is the only unblock). The suite's assertion run() throws EPDataFlowCancellationException with message 'Data flow 'MyDataFlowOne' execution was cancelled' is anchored in-process against the Java model with a second instance instantiated from the same deployment and driven through the byte-exact blocking path: a side thread bounded-polls its RUNNING state (10 s deadline, 10 ms steps) and cancels, the main thread's run() throws EPDataFlowCancellationException, the exact message is asserted with equals (NEVER recorded) and the second instance is asserted CANCELLED with an empty capture (the cancel interrupt wins before the row instruction is reached) — only the error-class token is recorded. Records: state instance.state=RUNNING, lifecycle run.error-class=cancellation-exception, state instance.state=CANCELLED, count capture-empty=0. fast-complete-blocking (ordinal 10, DefaultSupportGraphOpProvider(future), capture latched at 1): the dataflow name 'MyDataFlowOne' and the INSTANTIATED entry state are asserted in-process (not recorded); the suite's sleep(1000) proving the negative not-done property is replayed as an instant in-process assertion (no sleep — nothing has started the flow, so the capture cannot be done) recorded as the lifecycle token not-done-before-run=true; the blocking run() completes and the state record instance.state=COMPLETE is taken; count capture-rows=1 (future.get() holds exactly 1 row); then tryAssertionAfterExec replays in-process: join() no-op, run()/start() IllegalStateException with the byte-exact message 'Data flow 'MyDataFlowOne' instance has already completed, please use instantiate to run the data flow again' (asserted in-process), and a trailing cancel() plus join() as silent no-ops. run-blocking (ordinal 11, DefaultSupportGraphOpProvider(future, source) in the suite's order, source instructions [latch, Object[]{1}], capture latched at 1): the dataflow name and the INSTANTIATED entry state are asserted in-process (not recorded); the suite's unlatching thread (spin on the RUNNING state with sleep(0) plus a 100 ms sleep) is replayed as a bounded poll for RUNNING (10 s deadline, 10 ms steps) that then releases the latch — the release is unconditional so the blocking run() always returns and a missed observation fails the oracle loudly; the main thread parks inside run(), so the state record instance.state=RUNNING is sourced from that deterministic pre-release observation (volatile flag); after run() returns, state record instance.state=COMPLETE; count capture-rows=1 (the first capture batch holds exactly 1 row); source.getCurrentCount()==2 is asserted in-process (the source consumed the latch await, the row submit and the final marker). Record protocol: state records are {operation:'state', statement:'flow', name:'instance.state', value:UPPERCASE EPDataFlowState name}, count records are {operation:'count', statement:'flow', name, count} and lifecycle records are {operation:'lifecycle', statement:'flow', name, value}; every record carries statement 'flow' and capture reads are recorded through the count operation only (capture-empty for the cancelled case, capture-rows for the completing cases), since the observable is the row count being zero/one rather than the capture contents. Error observables are recorded as error-class TOKENS only: no Java message text and no Go error text is ever recorded — the cancellation message and the already-completed IllegalStateException text are asserted in-process with equals against the Java engine on their respective sides. Sequence is case-local restarting at 1, the time is the fixed epoch 1970-01-01T00:00:00Z, each case runs on its own fresh runtime (internal timer off, epoch initialization 0, undeployAll after the case body, destroy in finally), the dataflow deployments are pinned to deployment id 'flow' (never recorded) while the SomeType-schema deployments use engine-generated ids, and session configuration mirrors TestSuiteEPLDataflow.configure restricted to these executions: only the com.espertech.esper.common.internal.epl.dataflow.util.* package import that resolves DefaultSupportSourceOp/DefaultSupportCaptureOp in EPL text, needed by all three graphs since each names the capture operator (BeaconSource resolves through the built-in ConfigurationCommon.DATAFLOWOPERATOR_IMPORT and SomeType is declared by the deployed EPL preamble). The 10 records (4 blocking-cancel + 3 fast-complete-blocking + 3 run-blocking) carry the blocking lifecycle differential chain for the three Go case builders.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIRunStartCancelJoin.java",
+ "javaRuntimes": [
+  "java-runtime-91a5f5421ce63806e2c4",
+  "java-runtime-42082e1062bebbe49a0a",
+  "java-runtime-bcc34451f5417d84e6fa"
+ ],
+ "cases": [
+  {
+   "case": "blocking-cancel",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-91a5f5421ce63806e2c4",
+   "executionName": "EPLDataflowBlockingCancel"
+  },
+  {
+   "case": "fast-complete-blocking",
+   "ordinal": 10,
+   "runtimeId": "java-runtime-42082e1062bebbe49a0a",
+   "executionName": "EPLDataflowFastCompleteBlocking"
+  },
+  {
+   "case": "run-blocking",
+   "ordinal": 11,
+   "runtimeId": "java-runtime-bcc34451f5417d84e6fa",
+   "executionName": "EPLDataflowRunBlocking"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "blocking-cancel"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "fast-complete-blocking"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "run-blocking"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

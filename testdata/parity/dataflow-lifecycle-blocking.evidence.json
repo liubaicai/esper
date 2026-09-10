@@ -1,0 +1,241 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-91a5f5421ce63806e2c4",
+    "java-runtime-42082e1062bebbe49a0a",
+    "java-runtime-bcc34451f5417d84e6fa"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIRunStartCancelJoin.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowBlockingCancel",
+    "EPLDataflowFastCompleteBlocking",
+    "EPLDataflowRunBlocking"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-lifecycle-blocking",
+    "steps": [
+      {
+        "op": "case",
+        "case": "blocking-cancel"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "fast-complete-blocking"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "run-blocking"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-lifecycle-blocking",
+    "records": [
+      {
+        "case": "blocking-cancel",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "RUNNING"
+      },
+      {
+        "case": "blocking-cancel",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "run.error-class",
+        "value": "cancellation-exception"
+      },
+      {
+        "case": "blocking-cancel",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "CANCELLED"
+      },
+      {
+        "case": "blocking-cancel",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "capture-empty",
+        "count": 0
+      },
+      {
+        "case": "fast-complete-blocking",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "not-done-before-run",
+        "value": true
+      },
+      {
+        "case": "fast-complete-blocking",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      },
+      {
+        "case": "fast-complete-blocking",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "capture-rows",
+        "count": 1
+      },
+      {
+        "case": "run-blocking",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "RUNNING"
+      },
+      {
+        "case": "run-blocking",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      },
+      {
+        "case": "run-blocking",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "capture-rows",
+        "count": 1
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-lifecycle-blocking",
+    "records": [
+      {
+        "case": "blocking-cancel",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "RUNNING"
+      },
+      {
+        "case": "blocking-cancel",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "run.error-class",
+        "value": "cancellation-exception"
+      },
+      {
+        "case": "blocking-cancel",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "CANCELLED"
+      },
+      {
+        "case": "blocking-cancel",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "capture-empty",
+        "count": 0
+      },
+      {
+        "case": "fast-complete-blocking",
+        "operation": "lifecycle",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "not-done-before-run",
+        "value": true
+      },
+      {
+        "case": "fast-complete-blocking",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      },
+      {
+        "case": "fast-complete-blocking",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "capture-rows",
+        "count": 1
+      },
+      {
+        "case": "run-blocking",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "RUNNING"
+      },
+      {
+        "case": "run-blocking",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      },
+      {
+        "case": "run-blocking",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "capture-rows",
+        "count": 1
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

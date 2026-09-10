@@ -131,6 +131,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-lifecycle-cancel-join" || *mode == "dataflow-lifecycle-cancel-join-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "dataflow-lifecycle-blocking" || *mode == "dataflow-lifecycle-blocking-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-doc-samples" || *mode == "dataflow-doc-samples-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
@@ -353,6 +355,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, dataflowDocSamplesJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, dataflowDocSamplesJavaSources),
 				splitMetadata(*javaExecutions, dataflowDocSamplesJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "dataflow-lifecycle-blocking" || *mode == "dataflow-lifecycle-blocking-diff" {
+		trace, err := runDataflowLifecycleBlockingScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "dataflow-lifecycle-blocking-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, dataflowLifecycleBlockingJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, dataflowLifecycleBlockingJavaSources),
+				splitMetadata(*javaExecutions, dataflowLifecycleBlockingJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
