@@ -573,15 +573,19 @@ func rebuildTableIndexesLocked(state *tableState) {
 			}
 			entries := indexEntries[definition.Name]
 			entries = append(entries, tableIndexEntry{rowKey: rowKey, values: tableIndexValues(row, definition.Columns)})
-			sort.SliceStable(entries, func(left, right int) bool {
-				comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
-				if !comparable || comparison == 0 {
-					return false
-				}
-				return comparison < 0
-			})
 			indexEntries[definition.Name] = entries
 		}
+	}
+	for _, definition := range state.def.indexes {
+		entries := indexEntries[definition.Name]
+		sort.SliceStable(entries, func(left, right int) bool {
+			comparison, comparable := compareIndexValueSlices(entries[left].values, entries[right].values)
+			if !comparable || comparison == 0 {
+				return false
+			}
+			return comparison < 0
+		})
+		indexEntries[definition.Name] = entries
 	}
 	state.indexes = indexes
 	state.indexEntries = indexEntries
