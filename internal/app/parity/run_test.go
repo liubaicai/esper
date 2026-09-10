@@ -41932,3 +41932,141 @@ func TestRunDataflowLifecycleCoreDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunDataflowLifecycleCancelJoinDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-cancel-join.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-lifecycle-cancel-join.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-cancel-join.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-lifecycle-cancel-join-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowLifecycleCancelJoinDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-cancel-join.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-lifecycle-cancel-join",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 18 {
+		t.Fatalf("records = %d, want 18", len(trace.Records))
+	}
+	// Case 0: RUNNING then an empty capture after the cancel-terminated join.
+	if trace.Records[0].Value != "RUNNING" {
+		t.Fatalf("record 0 = %#v, want RUNNING", trace.Records[0].Value)
+	}
+	if trace.Records[1].Count == nil || *trace.Records[1].Count != 0 {
+		t.Fatalf("cancel-terminated capture = %#v, want 0 rows", trace.Records[1].Count)
+	}
+	// Case 4: RUNNING held while one of two sources stays gated, then
+	// COMPLETE with two rows.
+	if trace.Records[9].Value != "RUNNING" || trace.Records[10].Value != "RUNNING" || trace.Records[11].Value != "COMPLETE" {
+		t.Fatalf("multi-source states = %#v, %#v, %#v", trace.Records[9].Value, trace.Records[10].Value, trace.Records[11].Value)
+	}
+	if trace.Records[12].Count == nil || *trace.Records[12].Count != 2 {
+		t.Fatalf("multi-source capture = %#v, want 2 rows", trace.Records[12].Count)
+	}
+}
+
+func TestRunDataflowLifecycleCancelJoinDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "cancel-join-state-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Value = "COMPLETE"
+			},
+		},
+		{
+			name: "cancel-join-capture-filled",
+			mutate: func(trace *compat.Trace) {
+				count := int64(1)
+				trace.Records[1].Count = &count
+			},
+		},
+		{
+			name: "swallow-state-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].Value = "CANCELLED"
+			},
+		},
+		{
+			name: "multi-source-hold-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].Value = "COMPLETE"
+			},
+		},
+		{
+			name: "multi-source-capture-count-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(3)
+				trace.Records[12].Count = &count
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:17]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-cancel-join.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-lifecycle-cancel-join.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-cancel-join.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-lifecycle-cancel-join-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

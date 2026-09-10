@@ -1,0 +1,76 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-lifecycle-cancel-join",
+ "description": "dataflow-lifecycle-cancel-join differential chain (work unit 4.375) over the seven non-blocking executions of regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIRunStartCancelJoin.java (ordinals 0, 1, 2, 5, 7, 9, 12; the blocking run() executions ordinals 3 and 6 are covered by the dataflow-lifecycle-core oracle), driven through DefaultSupportSourceOp positional instructions (CountDownLatch=await, RuntimeException=wrapped throw 'Support-graph-source generated exception: TestException', Object[]=submit as one row, final marker on exhaustion) and latched DefaultSupportCaptureOp reads whose latch counts are wait devices — a read records the full current batch state. Graphs are byte-exact from the Java: the five single-source cases (ordinals 0, 1, 2, 5, 9) deploy the byte-exact preamble '@public create schema SomeType ()' over the RegressionPath plus the one-line graph '@name('flow') create dataflow MyDataFlowOne DefaultSupportSourceOp -> outstream<SomeType> {}DefaultSupportCaptureOp(outstream) {}' whose capture clause is concatenated with NO separator after the source clause's trailing '{}'; nonblocking-join-multiple-runnable deploys the same preamble plus '@name('flow') create dataflow MyDataFlowOne DefaultSupportSourceOp -> outstream<SomeType> { name: 'SourceOne' }DefaultSupportSourceOp -> outstream<SomeType> { name: 'SourceTwo' }DefaultSupportCaptureOp(outstream) {}' (exact interior spaces in the parameter braces, clauses concatenated with NO separators); fast-complete-nonblocking deploys '@name('flow') create dataflow MyDataFlowOne BeaconSource -> BeaconStream {iterations : 1}DefaultSupportCaptureOp(BeaconStream) {}' with NO separator and no schema preamble. nonblocking-join-cancel (ordinal 0, DefaultSupportGraphOpProvider, source instructions [latch] — the suite never releases this latch — and a plain capture): start() with the strengthened state record instance.state=RUNNING (the suite asserts no state here); the suite's 300 ms cancel sleep is a wait device replayed as a bounded cancel — a side thread polls for the RUNNING state (10 s deadline, 10 ms steps) and then cancel()s, interrupting the latched await so join() returns; the CANCELLED state is asserted in-process only (not recorded in this case) and the capture read is empty (count capture-empty=0). nonblocking-join-exception (ordinal 1, DefaultSupportGraphOpProvider, instructions [latch, MyRuntimeException('TestException')]): start(); the suite's 300 ms unlatch sleep is replayed as the same bounded release; after the await the source throws the wrapped 'Support-graph-source generated exception: TestException'. Java's start-mode source runnable logs and swallows the throwable when no exception handler is registered, so join() returns normally with state record instance.state=COMPLETE and count capture-empty=0; the Go engine surfaces the source error from Join and asserts the wrapped message in-process — this start-mode-swallow versus Join-surface semantic difference is documented here and never recorded (no message text is recorded on either side). nonblocking-exception (ordinal 2, instructions [MyRuntimeException('TestException')]): start(); the suite's sleep(200) is replayed as a bounded sleep-poll for the COMPLETE state (10 s deadline); state record instance.state=COMPLETE and count capture-empty=0. nonblocking-cancel (ordinal 5, DefaultSupportGraphOpProviderByOpName, instructions [latch, Object[]{1}]): start() with state record instance.state=RUNNING; cancel() is synchronous, so state record instance.state=CANCELLED is asserted and recorded before the latch countDown (the suite's trailing sleep(100) is dropped — cancel already interrupted the latched await); count capture-empty=0. nonblocking-join-multiple-runnable (ordinal 7, DefaultSupportGraphOpProviderByOpName, SourceOne and SourceTwo each instructed [latch, Object[]{1}], one capture latched at 2 fed by both): start() with state record instance.state=RUNNING (the suite's sleep(50) is dropped — start() sets RUNNING synchronously); SourceOne released with state record instance.state=RUNNING again (the suite's sleep(200) is dropped — the still-running property is deterministic because SourceTwo stays latched); SourceTwo released; join() with state record instance.state=COMPLETE; count capture-rows=2 (the capture holds 2 batches, 2 rows total). nonblocking-join-single-runnable (ordinal 9, DefaultSupportGraphOpProvider, instructions [latch, Object[]{1}], capture latched at 1): the dataflow name 'MyDataFlowOne' and the INSTANTIATED entry state are asserted in-process (not recorded); start() with state record instance.state=RUNNING (the suite's sleep(100) is dropped — start() sets RUNNING synchronously); release; join() with state record instance.state=COMPLETE; count capture-rows=1 (the first capture batch holds exactly 1 row; source.getCurrentCount()==2 asserted in-process); the suite's trailing cancel() after COMPLETE is a silent Java no-op (EPDataFlowInstanceImpl.cancel returns for COMPLETE) while the Go Cancel errors there — frozen disposition, no record, the state is re-asserted COMPLETE in-process. fast-complete-nonblocking (ordinal 12, DefaultSupportGraphOpProvider, capture latched at 1): the INSTANTIATED entry state, the dataflow name and the not-done capture are asserted in-process; start(); the suite's 1 s busy-wait for the COMPLETE state is replayed byte-exact; state record instance.state=COMPLETE; count capture-rows=1 (future.get() holds exactly 1 row — the pre-marker batch is still the current batch because the final marker is not bound to this capture channel); then tryAssertionAfterExec replays in-process: join() no-op, run()/start() IllegalStateException with the byte-exact message 'Data flow 'MyDataFlowOne' instance has already completed, please use instantiate to run the data flow again' (asserted in-process), and a trailing cancel() plus join() as silent no-ops — the Go side asserts the same transitions with its Cancel-on-Complete erroring (frozen, no record). Record protocol: state records are {operation:'state', statement:'flow', name:'instance.state', value:UPPERCASE EPDataFlowState name} and count records are {operation:'count', statement:'flow', name, count}; every record carries statement 'flow' and capture reads are recorded through the count operation only (capture-empty for the cancelled/exception cases, capture-rows for the completing cases), since the observable is the row count being zero/one/two rather than the capture contents. Error observables are state-only recorded: no Java message text and no Go error text is ever recorded — the wrapped source-throw message and the already-completed IllegalStateException text are asserted in-process on their respective sides. Sequence is case-local restarting at 1, the time is the fixed epoch 1970-01-01T00:00:00Z, each case runs on its own fresh runtime (internal timer off, epoch initialization 0, undeployAll after the case body, destroy in finally), the dataflow deployments are pinned to deployment id 'flow' (never recorded) while the SomeType-schema deployments use engine-generated ids, and session configuration mirrors TestSuiteEPLDataflow.configure restricted to these executions: only the com.espertech.esper.common.internal.epl.dataflow.util.* package import that resolves DefaultSupportSourceOp/DefaultSupportCaptureOp in EPL text (BeaconSource resolves through the built-in ConfigurationCommon.DATAFLOWOPERATOR_IMPORT and SomeType is declared by the deployed EPL preamble). The 18 records (2 nonblocking-join-cancel + 2 nonblocking-join-exception + 2 nonblocking-exception + 3 nonblocking-cancel + 4 nonblocking-join-multiple-runnable + 3 nonblocking-join-single-runnable + 2 fast-complete-nonblocking) carry the non-blocking cancel/join differential chain for the seven Go case builders.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIRunStartCancelJoin.java",
+ "javaRuntimes": [
+  "java-runtime-893c8283ee90019f37fa",
+  "java-runtime-e1bdb19779e28fa49bc2",
+  "java-runtime-69dbb4e0d879421b52f7",
+  "java-runtime-f053fbdc01fad03ba5a6",
+  "java-runtime-827b0af4ea14c59da2bc",
+  "java-runtime-a9a21d69ccb78f9fd152",
+  "java-runtime-de4fc2179a2cb72a97e6"
+ ],
+ "cases": [
+  {
+   "case": "nonblocking-join-cancel",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-893c8283ee90019f37fa",
+   "executionName": "EPLDataflowNonBlockingJoinCancel"
+  },
+  {
+   "case": "nonblocking-join-exception",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-e1bdb19779e28fa49bc2",
+   "executionName": "EPLDataflowNonBlockingJoinException"
+  },
+  {
+   "case": "nonblocking-exception",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-69dbb4e0d879421b52f7",
+   "executionName": "EPLDataflowNonBlockingException"
+  },
+  {
+   "case": "nonblocking-cancel",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-f053fbdc01fad03ba5a6",
+   "executionName": "EPLDataflowNonBlockingCancel"
+  },
+  {
+   "case": "nonblocking-join-multiple-runnable",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-827b0af4ea14c59da2bc",
+   "executionName": "EPLDataflowNonBlockingJoinMultipleRunnable"
+  },
+  {
+   "case": "nonblocking-join-single-runnable",
+   "ordinal": 9,
+   "runtimeId": "java-runtime-a9a21d69ccb78f9fd152",
+   "executionName": "EPLDataflowNonBlockingJoinSingleRunnable"
+  },
+  {
+   "case": "fast-complete-nonblocking",
+   "ordinal": 12,
+   "runtimeId": "java-runtime-de4fc2179a2cb72a97e6",
+   "executionName": "EPLDataflowFastCompleteNonBlocking"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "nonblocking-join-cancel"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "nonblocking-join-exception"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "nonblocking-exception"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "nonblocking-cancel"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "nonblocking-join-multiple-runnable"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "nonblocking-join-single-runnable"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "fast-complete-nonblocking"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}
