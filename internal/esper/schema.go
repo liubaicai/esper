@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // AccessorStyle controls how Go struct properties are exposed. PUBLIC derives
@@ -370,9 +371,13 @@ type Schema struct {
 	kind           SchemaKind
 	fields         []FieldSpec
 	fieldIndex     map[string]int
+	fieldFold      map[string][]int
 	getters        map[string]schemaGetterSpec
 	setters        map[string]schemaSetterSpec
 	nested         map[string]Schema
+	getterFold     map[string][]string
+	setterFold     map[string][]string
+	nestedFold     map[string][]string
 	goType         reflect.Type
 	resolution     PropertyResolutionStyle
 	accessor       AccessorStyle
@@ -1020,6 +1025,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 	}
 
 	index := make(map[string]int, len(copyFields))
+	foldIndex := make(map[string][]int, len(copyFields))
 	for i, field := range copyFields {
 		if strings.TrimSpace(field.Name) == "" {
 			return Schema{}, fmt.Errorf("esper: schema %q contains an empty field name", name)
@@ -1032,6 +1038,8 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 			return Schema{}, fmt.Errorf("esper: schema %q duplicates field %q", name, field.Name)
 		}
 		index[field.Name] = i
+		key := foldKey(field.Name)
+		foldIndex[key] = append(foldIndex[key], i)
 	}
 	jsonAdapters := make(map[string]JSONFieldAdapter)
 	for adapterIndex, configured := range cfg.jsonAdapters {
@@ -1064,15 +1072,34 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 	if err := validateSchemaAnnotations(cfg.annotations); err != nil {
 		return Schema{}, fmt.Errorf("esper: schema %q: %w", name, err)
 	}
+	getterFold := make(map[string][]string, len(getters))
+	for name := range getters {
+		key := foldKey(name)
+		getterFold[key] = append(getterFold[key], name)
+	}
+	setterFold := make(map[string][]string, len(setters))
+	for name := range setters {
+		key := foldKey(name)
+		setterFold[key] = append(setterFold[key], name)
+	}
+	nestedFold := make(map[string][]string, len(nestedSchemas))
+	for name := range nestedSchemas {
+		key := foldKey(name)
+		nestedFold[key] = append(nestedFold[key], name)
+	}
 	return Schema{
 		identity:     &schemaIdentityToken{},
 		name:         name,
 		kind:         kind,
 		fields:       copyFields,
 		fieldIndex:   index,
+		fieldFold:    foldIndex,
 		getters:      getters,
 		setters:      setters,
 		nested:       nestedSchemas,
+		getterFold:   getterFold,
+		setterFold:   setterFold,
+		nestedFold:   nestedFold,
 		goType:       goType,
 		resolution:   cfg.resolution,
 		accessor:     cfg.accessor,
@@ -1654,6 +1681,20 @@ func (s Schema) Field(name string) (FieldSpec, bool) {
 	return field, err == nil
 }
 
+func foldKey(name string) string {
+	runes := []rune(name)
+	for i, r := range runes {
+		min := r
+		for next := unicode.SimpleFold(r); next != r; next = unicode.SimpleFold(next) {
+			if next < min {
+				min = next
+			}
+		}
+		runes[i] = min
+	}
+	return string(runes)
+}
+
 func (s Schema) lookupField(name string) (FieldSpec, string, error) {
 	if index, ok := s.fieldIndex[name]; ok {
 		return s.fields[index], name, nil
@@ -1666,7 +1707,9 @@ func (s Schema) lookupField(name string) (FieldSpec, string, error) {
 	}
 	var match *FieldSpec
 	var matchedName string
-	for _, field := range s.fields {
+	indices := s.fieldFold[foldKey(name)]
+	for _, i := range indices {
+		field := s.fields[i]
 		if strings.EqualFold(field.Name, name) {
 			copyField := field
 			if match != nil && s.resolution == PropertyDistinctCaseInsensitive {
@@ -1694,7 +1737,8 @@ func (s Schema) lookupGetter(name string) (schemaGetterSpec, string, bool) {
 	}
 	var match *schemaGetterSpec
 	matchedName := ""
-	for propertyName, getter := range s.getters {
+	for _, propertyName := range s.getterFold[foldKey(name)] {
+		getter := s.getters[propertyName]
 		if !strings.EqualFold(propertyName, name) {
 			continue
 		}
@@ -1720,7 +1764,8 @@ func (s Schema) lookupSetter(name string) (schemaSetterSpec, string, bool) {
 	}
 	var match *schemaSetterSpec
 	matchedName := ""
-	for propertyName, setter := range s.setters {
+	for _, propertyName := range s.setterFold[foldKey(name)] {
+		setter := s.setters[propertyName]
 		if !strings.EqualFold(propertyName, name) {
 			continue
 		}
@@ -1746,7 +1791,8 @@ func (s Schema) lookupNestedSchema(name string) (Schema, bool) {
 	}
 	var match Schema
 	found := false
-	for nestedName, nested := range s.nested {
+	for _, nestedName := range s.nestedFold[foldKey(name)] {
+		nested := s.nested[nestedName]
 		if !strings.EqualFold(nestedName, name) {
 			continue
 		}

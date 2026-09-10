@@ -31,6 +31,7 @@ type Environment struct {
 	buildMu               sync.Mutex
 	schemas               map[string]Schema
 	typeToName            map[reflect.Type][]string
+	typeNamesCache        map[reflect.Type][]string
 	variables             map[string]VariableDefinition
 	aggregatePlugins      map[string]aggregatePluginDefinition
 	aggregateMultiPlugins map[string]aggregateMultiPluginDefinition
@@ -91,6 +92,7 @@ func NewEnvironment(options ...EnvironmentOption) *Environment {
 	return &Environment{
 		schemas:                make(map[string]Schema),
 		typeToName:             make(map[reflect.Type][]string),
+		typeNamesCache:         make(map[reflect.Type][]string),
 		variables:              make(map[string]VariableDefinition),
 		aggregatePlugins:       make(map[string]aggregatePluginDefinition),
 		aggregateMultiPlugins:  make(map[string]aggregateMultiPluginDefinition),
@@ -159,6 +161,7 @@ func (e *Environment) RegisterSchema(schema Schema) error {
 			}
 		}
 		e.typeToName[typ] = append(names, schema.Name())
+		e.typeNamesCache[typ] = append([]string(nil), e.typeToName[typ]...)
 	}
 	return nil
 }
@@ -174,7 +177,7 @@ func (e *Environment) typeNames(typ reflect.Type) []string {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return append([]string(nil), e.typeToName[typ]...)
+	return append([]string(nil), e.typeNamesCache[typ]...)
 }
 
 func (e *Environment) Schema(name string) (Schema, bool) {
