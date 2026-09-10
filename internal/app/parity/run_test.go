@@ -41494,3 +41494,140 @@ func TestRunDataflowCaptiveLifecycleDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunDataflowPortsFeedbackDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-ports-feedback.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-ports-feedback.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-ports-feedback.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-ports-feedback-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowPortsFeedbackDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-ports-feedback.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-ports-feedback",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 6 {
+		t.Fatalf("records = %d, want 6", len(trace.Records))
+	}
+	// The crossover routing: OutOne captures hold the S1-int strings, OutTwo
+	// captures the S0-strings, rows sorted canonically per record.
+	for _, index := range []int{0, 1} {
+		row0 := trace.Records[index].New[0].Fields["p0"]
+		row1 := trace.Records[index].New[1].Fields["p0"]
+		if fmt.Sprint(row0) != "S1-10" || fmt.Sprint(row1) != "S1-20" {
+			t.Fatalf("record %d rows = %#v, %#v", index, row0, row1)
+		}
+	}
+	for _, index := range []int{2, 3} {
+		row0 := trace.Records[index].New[0].Fields["p0"]
+		row1 := trace.Records[index].New[1].Fields["p0"]
+		if fmt.Sprint(row0) != "S0-A1" || fmt.Sprint(row1) != "S0-A2" {
+			t.Fatalf("record %d rows = %#v, %#v", index, row0, row1)
+		}
+	}
+	if fmt.Sprint(trace.Records[4].New[0].Fields["p0"]) != "120" {
+		t.Fatalf("factorial row = %#v", trace.Records[4].New[0].Fields)
+	}
+	if fmt.Sprint(trace.Records[5].New[0].Fields["p0"]) != "A1" {
+		t.Fatalf("large-num-ops row = %#v", trace.Records[5].New[0].Fields)
+	}
+}
+
+func TestRunDataflowPortsFeedbackDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "fan-routing-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[1].Fields["p0"] = "S1-21"
+			},
+		},
+		{
+			name: "fan-capture-identity-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Statement = "flow:SupportOpCountFutureTwoA"
+			},
+		},
+		{
+			name: "factorial-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["p0"] = 119
+			},
+		},
+		{
+			name: "large-num-ops-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["p0"] = "A2"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:5]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-ports-feedback.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-ports-feedback.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-ports-feedback.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-ports-feedback-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

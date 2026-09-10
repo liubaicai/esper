@@ -10272,6 +10272,10 @@
     "java-runtime-bddc8c72bd9d2a2c8869",
     "java-runtime-98c5bdc6afa84705b9db"
    ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-bddc8c72bd9d2a2c8869",
+    "java-runtime-98c5bdc6afa84705b9db"
+   ],
    "javaNames": [
     "EPLDataflowLargeNumOpsDataFlow",
     "EPLDataflowFactorial"
@@ -10282,7 +10286,10 @@
    "goTests": [
     "TestDataflowDeepLinearGraphMatchesEsper",
     "TestDataflowFeedbackEdgeFactorialMatchesEsper",
-    "TestDataflowUnmarkedCycleStillRejected"
+    "TestDataflowUnmarkedCycleStillRejected",
+    "TestRunDataflowPortsFeedbackDiffWritesPassingEvidence",
+    "TestRunDataflowPortsFeedbackDirectReplay",
+    "TestRunDataflowPortsFeedbackDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -10291,16 +10298,22 @@
     "feedback",
     "ports"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-baseline",
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/dataflow-ports-feedback.json",
+    "testdata/parity/dataflow-ports-feedback.trace.json",
+    "testdata/parity/dataflow-ports-feedback.go.trace.json",
+    "testdata/parity/dataflow-ports-feedback.evidence.json",
+    "tools/java-oracle/DataflowPortsFeedbackScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-ports-feedback.sh"
    ],
-   "difference": "The Go fluent graph supports explicit ConnectFeedback/ConnectFeedbackPorts edges for terminating stateful custom-operator loops while continuing to reject accidental unmarked cycles. The mapped factorial uses named typed ports and a feedback self-loop to produce 120, and a 17-stage linear graph covers the Java deep-operator shape. Java's scheduler/backpressure, arbitrary feedback termination diagnostics and broader custom operator method-binding matrix remain open.",
+   "difference": "The Go fluent graph supports explicit ConnectFeedback/ConnectFeedbackPorts edges for terminating stateful custom-operator loops while continuing to reject accidental unmarked cycles. The mapped factorial uses named typed ports and a feedback self-loop to produce 120, and a 17-stage linear graph covers the Java deep-operator shape. Java's scheduler/backpressure, arbitrary feedback termination diagnostics and broader custom operator method-binding matrix remain open. Draft 4.372 differentially verifies both executions: EPLDataflowFactorial (java-runtime-98c5bdc6afa84705b9db) replays the feedback self-edge (TempResult output back into the TempResult input) recursing 5*4*3*2 until current reaches 1, then submitting 120 on FinalResult; the instance completes on its own and the capture reads the single raw passthrough row {p0:120}. EPLDataflowLargeNumOpsDataFlow (java-runtime-bddc8c72bd9d2a2c8869) replays the 17-stage identity chain with one {p0:A1} row — Java builds the stages via the select: subquery parameter, which has no typed-API analogue, so Go models the stages as identity customs (the deep-linear shape is already engine-pinned). Capture rows are canonically sorted per record on both sides to freeze Java's assertEqualsAnyOrder; BeaconSource final markers die at the custom operators (no onSignal), so capture reads are current-batch semantics. Records: 6 per side (4+1+1).",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -16131,7 +16144,8 @@
     "java-runtime-407e42478546e709d774"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-407e42478546e709d774"
+    "java-runtime-407e42478546e709d774",
+    "java-runtime-6309a6b7e0f0ba981a97"
    ],
    "javaStaticIds": [
     "java-98ad6f7cdc7876aaf6b3"
@@ -16175,7 +16189,7 @@
     "tools/java-oracle/DataflowCaptiveLifecycleScenarioOracle.java",
     "tools/java-oracle/run-dataflow-captive-lifecycle.sh"
    ],
-   "difference": "Go adds fluent EmitterPorts and uses stable named SubmitPort routing instead of Java's numeric port index. Captive handles expose their stable definition name, ambiguous Submit is rejected for multiple outputs, a single named output remains usable through Submit, and SubmitSignal fans out once over every connected output for both captive Emitter and custom-source handles. Declared port names and Go types participate in Plan canonical/hash identity; Java's exact numeric-index exception text and reflection-based stream schemas are intentionally replaced by named fluent descriptors. Draft 4.371 differentially verifies the EPLDataflowAPIStartCaptive execution (java-runtime-407e42478546e709d774) through the captive lifecycle chain: the captive start contract (zero runnables, one emitter keyed by the Emitter NAME parameter 'src1'), two accumulating submits, a FinalMarker signal that flushes current into the received batch without producing a row and without completing the instance (still RUNNING after the signal — a captive instance has no completion path), a fresh submit after the flush, and cancellation as the only exit (CANCELLED), plus the instantiate-only HelloWorld doc-sample flow (INSTANTIATED). Record protocol: count/state records per the create-start-stop-destroy conventions plus capture reads over flow:DefaultSupportCaptureOp (11 records). Java passes the raw Object[] through uncoerced while Go materializes via a registered struct — rows normalize identically. The FanInOut execution (java-runtime-6309a6b7e0f0ba981a97) remains implemented-not-differential (submitPort multi-port addressing is numeric-index Java-side; Go pins the named-port surface by engine unit tests) and stays out of the DV list, as does the client-interface name EPDataFlowEmitterOperator.",
+   "difference": "Go adds fluent EmitterPorts and uses stable named SubmitPort routing instead of Java's numeric port index. Captive handles expose their stable definition name, ambiguous Submit is rejected for multiple outputs, a single named output remains usable through Submit, and SubmitSignal fans out once over every connected output for both captive Emitter and custom-source handles. Declared port names and Go types participate in Plan canonical/hash identity; Java's exact numeric-index exception text and reflection-based stream schemas are intentionally replaced by named fluent descriptors. Draft 4.371 differentially verifies the EPLDataflowAPIStartCaptive execution (java-runtime-407e42478546e709d774) through the captive lifecycle chain: the captive start contract (zero runnables, one emitter keyed by the Emitter NAME parameter 'src1'), two accumulating submits, a FinalMarker signal that flushes current into the received batch without producing a row and without completing the instance (still RUNNING after the signal — a captive instance has no completion path), a fresh submit after the flush, and cancellation as the only exit (CANCELLED), plus the instantiate-only HelloWorld doc-sample flow (INSTANTIATED). Record protocol: count/state records per the create-start-stop-destroy conventions plus capture reads over flow:DefaultSupportCaptureOp (11 records). Java passes the raw Object[] through uncoerced while Go materializes via a registered struct — rows normalize identically. The FanInOut execution (java-runtime-6309a6b7e0f0ba981a97) remains implemented-not-differential (submitPort multi-port addressing is numeric-index Java-side; Go pins the named-port surface by engine unit tests) and stays out of the DV list, as does the client-interface name EPDataFlowEmitterOperator. Draft 4.372 completes the case: EPLDataflowFanInOut (java-runtime-6309a6b7e0f0ba981a97) replays the 2-in/2-out custom routing where Java's numeric submitPort crosses the declared port types (S0 strings to the SchemaTwo-typed OutTwo, S1 ints to OutOne) — Go mirrors with untyped CustomPorts mapping numeric indexes to declaration order (OutOne=0/OutTwo=1); the four captures read their full two-row current batches (BeaconSource markers die at the custom operator since it defines no onSignal), with rows canonically sorted per record to freeze Java's assertEqualsAnyOrder.",
    "verification": [
     "inventoried",
     "implemented",
@@ -43344,8 +43358,8 @@
  "summary": {
   "inventoriedCases": 636,
   "implementedCases": 634,
-  "differentialVerifiedCases": 255,
-  "differentialVerifiedRuntimeIds": 933,
+  "differentialVerifiedCases": 256,
+  "differentialVerifiedRuntimeIds": 936,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,

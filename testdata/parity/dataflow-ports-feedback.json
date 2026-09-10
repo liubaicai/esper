@@ -1,0 +1,40 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-ports-feedback",
+ "description": "dataflow-ports-feedback differential chain over all three executions of EPLDataflowInputOutputVariations as typed multi-port and feedback dataflow graphs: fan-in-out (ordinal 1) deploys the byte-exact multi-line graph '@name('flow') create dataflow MultiInMultiOutGraph <newline> create objectarray schema SchemaOne (p1 string),<newline>create objectarray schema SchemaTwo (p2 int),<newline><newline>BeaconSource -> InOne<SchemaOne> {p1:'A1', iterations:1}<newline>BeaconSource -> InTwo<SchemaOne> {p1:'A2', iterations:1}<newline><newline>BeaconSource -> InThree<SchemaTwo> {p2:10, iterations:1}<newline>BeaconSource -> InFour<SchemaTwo> {p2:20, iterations:1}<newline>MyCustomOp((InOne, InTwo) as S0, (InThree, InFour) as S1) -> OutOne<SchemaTwo>, OutTwo<SchemaOne>{}<newline><newline>DefaultSupportCaptureOp(OutOne) { name : 'SupportOpCountFutureOneA' }<newline>DefaultSupportCaptureOp(OutOne) { name : 'SupportOpCountFutureOneB' }<newline>DefaultSupportCaptureOp(OutTwo) { name : 'SupportOpCountFutureTwoA' }<newline>DefaultSupportCaptureOp(OutTwo) { name : 'SupportOpCountFutureTwoB' }<newline>' (the 'MultiInMultiOutGraph ' line keeps its trailing space, the empty second Java source literal contributes nothing, and there is no space between 'OutTwo<SchemaOne>' and '{}'), instantiates with four latched DefaultSupportCaptureOp<Object>(2) captures supplied through DefaultSupportGraphOpProviderByOpName keyed by the name parameters SupportOpCountFutureOneA/OneB/TwoA/TwoB, starts and performs the four get(3, TimeUnit.SECONDS) reads in suite order; MyCustomOp receives S0 events (p1 'A1'/'A2') on the (InOne, InTwo) port pair and emits 'S0-'+value through submitPort(1) and S1 events (10/20) on the (InThree, InFour) port pair and emits 'S1-'+value through submitPort(0), so the numeric submitPort calls map to the declared port order OutOne=0/OutTwo=1 with no type check against the declared stream types — the S1-int strings land in the SchemaTwo-typed OutOne and the S0-strings in the SchemaOne-typed OutTwo as raw Object[] passthrough payloads projected positionally as the single field {p0:<value>} (no envelope, no coercion); each read is recorded in suite order as new=[{'p0':'S1-10'},{'p0':'S1-20'}] for OneA/OneB and new=[{'p0':'S0-A1'},{'p0':'S0-A2'}] for TwoA/TwoB with rows SORTED at emission by the canonical-fields JSON comparator (each row's fields map serialized to JSON, rows stably ordered by that string), which freezes the suite's assertEqualsAnyOrder deterministically and the Go runner emits the identical canonical order; the statement labels are the deployment-prefixed distinct name parameters 'flow:SupportOpCountFutureOneA'/'flow:SupportOpCountFutureOneB'/'flow:SupportOpCountFutureTwoA'/'flow:SupportOpCountFutureTwoB' because the four captures are disambiguated by name; factorial (ordinal 2) deploys the byte-exact multi-line graph '@name('flow') create dataflow FactorialGraph <newline>create objectarray schema InputSchema (number int),<newline>create objectarray schema TempSchema (current int, temp long),<newline>create objectarray schema FinalSchema (result long),<newline><newline>BeaconSource -> InputData<InputSchema> {number:5, iterations:1}<newline><newline>MyFactorialOp(InputData as Input, TempResult as Temp) -> TempResult<TempSchema>, FinalResult<FinalSchema>{}<newline><newline>DefaultSupportCaptureOp(FinalResult) {}<newline>' with the same trailing-space and no-space-before-'{}' concatenation rules, instantiates with one latched DefaultSupportCaptureOp<Object>(1) through the type-based DefaultSupportGraphOpProvider, starts and reads get(3, TimeUnit.SECONDS); MyFactorialOp feeds the (current, temp) pair back through submitPort(0) to TempResult (declared port 0) until current reaches 1 and submits the final {temp} through submitPort(1) to FinalResult (declared port 1), producing 120L == 5*4*3*2; the record is new=[{'p0':120}] under 'flow:DefaultSupportCaptureOp' (single unnamed capture, type-based provider) and the instance reaches COMPLETE on its own — never cancelled — keeping the protocol capture-only; large-num-ops (ordinal 0) deploys the byte-exact 17-stage Select chain graph '@name('flow') create dataflow MyGraph <newline>create objectarray schema SchemaOne (p1 string),<newline><newline>BeaconSource -> InStream<SchemaOne> {p1:'A1', iterations:1}<newline>Select(InStream) -> out_1 { select: (select p1 from InStream) }<newline>Select(out_1) -> out_2 { select: (select p1 from out_1) }<newline>...<newline>Select(out_15) -> out_16 { select: (select p1 from out_15) }<newline>Select(out_16) -> out_17 { select: (select p1 from out_16) }<newline><newline>DefaultSupportCaptureOp(out_17) {}<newline>' with all 17 select:-subquery stages out_1..out_17 transcribed exactly as the Java source concatenates them, instantiates with one latched DefaultSupportCaptureOp<Object>(1) through DefaultSupportGraphOpProviderByOpName keyed by the operator simple name 'DefaultSupportCaptureOp' (no name parameter), starts and reads get(3, TimeUnit.SECONDS), recording new=[{'p0':'A1'}] under 'flow:DefaultSupportCaptureOp'; the Go runner adapts Java's select: subquery parameter with an identity custom operator forwarding p1 unchanged — a contract-pinned intentional equivalence. No case flushes: BeaconSource markers die at the source channel and the latch reads observe exactly the current-batch rows the capture ops collected. Session configuration per case mirrors TestSuiteEPLDataflow.configure restricted to these executions: internal timer off, epoch initialization 0, the com.espertech.esper.common.internal.epl.dataflow.util.* package import that resolves DefaultSupportCaptureOp in EPL text (BeaconSource and Select resolve through the built-in ConfigurationCommon.DATAFLOWOPERATOR_IMPORT) plus addImport of the regression-lib nested classes EPLDataflowInputOutputVariations.MyCustomOp and EPLDataflowInputOutputVariations.MyFactorialOp; one fresh runtime per case destroyed in finally, deployment id pinned 'flow' (env.deploymentId('flow') analog asserted), undeployAll at case end. Record protocol: every capture read is one record {case, operation:'capture', statement, sequence, time, new:[rows]} with rows shaped {'kind':'row','fields':{'p0':...}}, case-local sequences restarting at 1, the fixed epoch time 1970-01-01T00:00:00Z, and the 6 records (4+1+1) carry the ports-feedback differential chain.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowInputOutputVariations.java",
+ "javaRuntimes": [
+  "java-runtime-6309a6b7e0f0ba981a97",
+  "java-runtime-98c5bdc6afa84705b9db",
+  "java-runtime-bddc8c72bd9d2a2c8869"
+ ],
+ "cases": [
+  {
+   "case": "fan-in-out",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-6309a6b7e0f0ba981a97",
+   "executionName": "EPLDataflowFanInOut"
+  },
+  {
+   "case": "factorial",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-98c5bdc6afa84705b9db",
+   "executionName": "EPLDataflowFactorial"
+  },
+  {
+   "case": "large-num-ops",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-bddc8c72bd9d2a2c8869",
+   "executionName": "EPLDataflowLargeNumOpsDataFlow"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "fan-in-out"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "factorial"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "large-num-ops"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

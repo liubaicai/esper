@@ -1,0 +1,289 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-6309a6b7e0f0ba981a97",
+    "java-runtime-98c5bdc6afa84705b9db",
+    "java-runtime-bddc8c72bd9d2a2c8869"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowInputOutputVariations.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowFanInOut",
+    "EPLDataflowFactorial",
+    "EPLDataflowLargeNumOpsDataFlow"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-ports-feedback",
+    "steps": [
+      {
+        "op": "case",
+        "case": "fan-in-out"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "factorial"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "large-num-ops"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-ports-feedback",
+    "records": [
+      {
+        "case": "fan-in-out",
+        "operation": "capture",
+        "statement": "flow:SupportOpCountFutureOneA",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S1-10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S1-20"
+            }
+          }
+        ]
+      },
+      {
+        "case": "fan-in-out",
+        "operation": "capture",
+        "statement": "flow:SupportOpCountFutureOneB",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S1-10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S1-20"
+            }
+          }
+        ]
+      },
+      {
+        "case": "fan-in-out",
+        "operation": "capture",
+        "statement": "flow:SupportOpCountFutureTwoA",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S0-A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S0-A2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "fan-in-out",
+        "operation": "capture",
+        "statement": "flow:SupportOpCountFutureTwoB",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S0-A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S0-A2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "factorial",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": 120
+            }
+          }
+        ]
+      },
+      {
+        "case": "large-num-ops",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-ports-feedback",
+    "records": [
+      {
+        "case": "fan-in-out",
+        "operation": "capture",
+        "statement": "flow:SupportOpCountFutureOneA",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S1-10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S1-20"
+            }
+          }
+        ]
+      },
+      {
+        "case": "fan-in-out",
+        "operation": "capture",
+        "statement": "flow:SupportOpCountFutureOneB",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S1-10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S1-20"
+            }
+          }
+        ]
+      },
+      {
+        "case": "fan-in-out",
+        "operation": "capture",
+        "statement": "flow:SupportOpCountFutureTwoA",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S0-A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S0-A2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "fan-in-out",
+        "operation": "capture",
+        "statement": "flow:SupportOpCountFutureTwoB",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S0-A1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "S0-A2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "factorial",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": 120
+            }
+          }
+        ]
+      },
+      {
+        "case": "large-num-ops",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
