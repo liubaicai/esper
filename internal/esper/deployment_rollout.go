@@ -419,6 +419,7 @@ func (e *Engine) rollbackRolloutLocked(activations []deploymentActivation, nextI
 			delete(e.statements, statement.id)
 			statement.markClosedLocked()
 		}
+		e.invalidateDispatchOrderLocked()
 		if deployment.moduleName != "" {
 			if definition, ok := e.env.moduleDefinition(deployment.moduleName); ok && definition.visibility == ModuleProtected {
 				e.deactivateProtectedModuleLocked(deployment.moduleName)

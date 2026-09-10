@@ -338,6 +338,10 @@ type Engine struct {
 	tables                             map[string]*Table
 	namedWindows                       map[string]*NamedWindow
 	statements                         map[string]*Statement
+	// dispatchOrder caches the immutable continuous-statement order derived
+	// from the statement catalog. It is invalidated whenever the catalog
+	// changes, so per-event dispatch does not re-sort the catalog.
+	dispatchOrder                      []*Statement
 	deployments                        map[string]*Deployment
 	resourceDependents                 map[deploymentResourceRef]map[string]struct{}
 	activeProtectedModules             map[string]string
@@ -1648,6 +1652,10 @@ type Statement struct {
 	// matched the in-flight event, so the engine drops the rest of the
 	// current dispatch cycle for that event.
 	droppedEvent bool
+	// statelessPlan is the resolved internal fast path for plain stateless
+	// filters; statelessPlanResolved records that the plan was computed.
+	statelessPlan         *statelessExecutionPlan
+	statelessPlanResolved bool
 }
 
 func (s *Statement) ID() string {
@@ -2940,6 +2948,7 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 		e.statements[statement.id] = statement
 		e.registerStatementMetricsLocked(statement)
 	}
+	e.invalidateDispatchOrderLocked()
 	e.deployments[deploymentID] = deployment
 	e.recordDeploymentResourceDependentsLocked(deployment, requests)
 	for _, statement := range deployment.statements {
@@ -3585,6 +3594,7 @@ func (e *Engine) undeploy(ctx context.Context, deploymentID string, force bool) 
 		delete(e.statements, statement.id)
 		statement.markClosedLocked()
 	}
+	e.invalidateDispatchOrderLocked()
 	if deployment.moduleName != "" {
 		if definition, ok := e.env.moduleDefinition(deployment.moduleName); ok && definition.visibility == ModuleProtected {
 			e.deactivateProtectedModuleLocked(deployment.moduleName)
@@ -3927,7 +3937,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		deferredTriggerDispatches := make([]statementDispatch, 0, 2)
 		for _, statement := range orderUpdateStatementsFirst(statements) {
 			accepted := statement.matchesEventFilter(current, now, variables)
-			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted)
+			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted, true)
 			if processErr != nil {
 				e.mu.Unlock()
 				return processErr
@@ -4613,11 +4623,25 @@ func (e *Engine) sortedStatementsLocked() []*Statement {
 	return statements
 }
 
+// invalidateDispatchOrderLocked drops the cached continuous-statement order.
+// Every catalog mutation must call it: the cached slice is returned to
+// dispatch consumers, which only read it.
+func (e *Engine) invalidateDispatchOrderLocked() {
+	if e != nil {
+		e.dispatchOrder = nil
+	}
+}
+
 // dispatchStatementsLocked returns the continuous-statement order for one
 // runtime cycle without changing deployment-ordered management traversal.
 // Higher priorities run first. At equal priority a drop statement precedes
 // non-drop statements, and stable deployment order breaks all remaining ties.
+// The order is stable for a given catalog, so it is computed on the first
+// cycle after a catalog change and reused afterwards.
 func (e *Engine) dispatchStatementsLocked() []*Statement {
+	if e.dispatchOrder != nil {
+		return e.dispatchOrder
+	}
 	statements := e.sortedStatementsLocked()
 	sort.SliceStable(statements, func(i, j int) bool {
 		left := statements[i].plan.query
@@ -4630,6 +4654,7 @@ func (e *Engine) dispatchStatementsLocked() []*Statement {
 		}
 		return false
 	})
+	e.dispatchOrder = statements
 	return statements
 }
 
@@ -5089,7 +5114,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		for _, statement := range orderUpdateStatementsFirst(e.dispatchStatementsLocked()) {
 			needsAccepted := unmatchedEvents != nil || e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
 			accepted := needsAccepted && statement.matchesEventFilter(current.event, now, variables)
-			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted)
+			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted, needsAccepted)
 			if err != nil {
 				return err
 			}
@@ -6864,7 +6889,7 @@ type eventDelta struct {
 	hadInput        bool
 }
 
-func (s *Statement) process(ctx context.Context, now time.Time, event Event, variables map[string]Value) (batch ResultBatch, changed bool, err error) {
+func (s *Statement) process(ctx context.Context, now time.Time, event Event, variables map[string]Value, accepted bool, acceptedKnown bool) (batch ResultBatch, changed bool, err error) {
 	if err := contextErr(ctx); err != nil {
 		return ResultBatch{}, false, err
 	}
@@ -6874,6 +6899,10 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 	defer s.collectOutputAssignmentsLocked()
 	if s.closed || s.state != StatementStarted {
 		return ResultBatch{}, false, nil
+	}
+	if plan := s.statelessPlanLocked(); plan != nil && plan.appliesTo(event) {
+		batch, changed = s.processStatelessEvent(plan, event, now, variables, accepted, acceptedKnown)
+		return batch, changed, nil
 	}
 	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
 	deferSelfSubselectAccept := false

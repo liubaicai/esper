@@ -890,7 +890,7 @@ func genericStructFields(value reflect.Value) []FieldSpec {
 }
 
 func genericStructProperty(value reflect.Value, name string) Value {
-	field := structFieldValue(value, name, PropertyCaseSensitive, nil)
+	field := structFieldValue(value, name, PropertyCaseSensitive)
 	if field.IsValid() {
 		return reflectValueToValue(field)
 	}

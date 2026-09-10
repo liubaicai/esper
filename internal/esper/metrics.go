@@ -641,7 +641,7 @@ func statementHasMetricOutputConsumer(statement *Statement) bool {
 	return len(statement.listeners) > 0 || statement.subscriber != nil || statement.plan.query.sink != nil
 }
 
-func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statement *Statement, now time.Time, event Event, variables map[string]Value, accepted bool) (batch ResultBatch, changed bool, err error) {
+func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statement *Statement, now time.Time, event Event, variables map[string]Value, accepted bool, acceptedKnown bool) (batch ResultBatch, changed bool, err error) {
 	if statement == nil {
 		return ResultBatch{}, false, nil
 	}
@@ -652,11 +652,18 @@ func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statemen
 			changed = false
 		}
 	}()
+	if !acceptedKnown {
+		// The caller needed no filter result for unmatched-event, metric or
+		// audit accounting, so the statement's own execution path decides
+		// acceptance. Metric sampling and audit records cannot exist in that
+		// configuration, which keeps the accounting identical.
+		return statement.process(ctx, now, event, variables, false, false)
+	}
 	sample := statementMetricSample{}
 	if accepted {
 		sample = e.startStatementMetricSampleLocked(statement)
 	}
-	batch, changed, err = statement.process(ctx, now, event, variables)
+	batch, changed, err = statement.process(ctx, now, event, variables, accepted, true)
 	if err == nil {
 		e.auditStatementProcessLocked(statement, event, now, accepted, batch, changed)
 	}

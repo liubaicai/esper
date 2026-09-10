@@ -92,6 +92,11 @@ type exprNode struct {
 	expressionBody      *exprNode
 	children            []*exprNode
 	subquery            *subqueryDefinition
+	// pureBuiltin marks the engine-owned function nodes (Lower/Upper/Trim and
+	// the other deterministic helpers the expression package builds itself).
+	// User functions registered through Func* stay unmarked, so predicates
+	// that can run user code keep the generic execution path.
+	pureBuiltin bool
 	// multiMatch evaluates Java's per-slot filter delivery for membership
 	// predicates whose candidates include slice-valued expressions: every
 	// matching array element and every matching scalar candidate contributes
@@ -2372,19 +2377,19 @@ func RegexpMatch(value, pattern Expression[string]) Expression[bool] {
 }
 
 func Lower(value Expression[string]) Expression[string] {
-	return Func1[string, string]("lower", strings.ToLower, value)
+	return markPureBuiltin[string](Func1[string, string]("lower", strings.ToLower, value))
 }
 
 func Upper(value Expression[string]) Expression[string] {
-	return Func1[string, string]("upper", strings.ToUpper, value)
+	return markPureBuiltin[string](Func1[string, string]("upper", strings.ToUpper, value))
 }
 
 func Trim(value Expression[string]) Expression[string] {
-	return Func1[string, string]("trim", strings.TrimSpace, value)
+	return markPureBuiltin[string](Func1[string, string]("trim", strings.TrimSpace, value))
 }
 
 func StringLength(value Expression[string]) Expression[int64] {
-	return Func1[string, int64]("length", func(input string) int64 { return int64(len([]rune(input))) }, value)
+	return markPureBuiltin[int64](Func1[string, int64]("length", func(input string) int64 { return int64(len([]rune(input))) }, value))
 }
 
 // Split returns the ordered string elements produced by splitting value on
@@ -3157,6 +3162,19 @@ func Func4[A, B, C, D, E any](name string, function func(A, B, C, D) E, first Ex
 func makeUDFExpr[T any](description string, children []*exprNode, configurationError string, fn func(EvalContext) Value) Expression[T] {
 	expression := makeExpr[T]("udf", description, children, fn)
 	expression.node().configurationError = configurationError
+	return expression
+}
+
+// markPureBuiltin marks an engine-provided function expression as free of
+// runtime state and user code. It is only applied by the expression package's
+// own deterministic helpers (Lower/Upper/Trim/StringLength), and the public
+// Func* constructors never set it. The node keeps the public Func1
+// description and children, so Plan identity is unchanged; the marker is
+// private analysis metadata for the stateless execution plan.
+func markPureBuiltin[T any](expression Expression[T]) Expression[T] {
+	if typed, ok := expression.(typedExpr[T]); ok {
+		typed.n.pureBuiltin = true
+	}
 	return expression
 }
 

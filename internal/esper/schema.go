@@ -586,7 +586,7 @@ func isJSONScalarStructType(typ reflect.Type) bool {
 func validateTypedJSONFields(typ reflect.Type, fields []FieldSpec) error {
 	zero := reflect.New(typ).Elem()
 	for _, field := range fields {
-		value := structFieldValue(zero, field.Name, PropertyCaseSensitive, nil)
+		value := structFieldValue(zero, field.Name, PropertyCaseSensitive)
 		if !value.IsValid() {
 			return fmt.Errorf("field %q is not present on struct %s", field.Name, typ)
 		}
@@ -604,7 +604,7 @@ func validateTypedJSONFields(typ reflect.Type, fields []FieldSpec) error {
 func validateTypedJSONDefaults(typ reflect.Type, defaults map[string]any) error {
 	zero := reflect.New(typ).Elem()
 	for name, value := range defaults {
-		field := structFieldValue(zero, name, PropertyCaseSensitive, nil)
+		field := structFieldValue(zero, name, PropertyCaseSensitive)
 		if !field.IsValid() {
 			return fmt.Errorf("default field %q is not present on struct %s", name, typ)
 		}
@@ -1930,6 +1930,11 @@ func (s Schema) get(underlying any, name string) Value {
 			}
 		}
 	}
+	if isPlainPropertyName(name) {
+		// A name without path syntax parses as exactly one plain segment, so
+		// the single-property read can skip path parsing and the segment loop.
+		return s.getOneWithAccessors(underlying, name, nil)
+	}
 	segments, err := parsePropertyPath(name)
 	if err != nil {
 		return Missing()
@@ -2120,6 +2125,17 @@ func splitPropertyPath(path string) ([]string, error) {
 	}
 	parts = append(parts, part)
 	return parts, nil
+}
+
+// propertyPathSpecialCharacters are the characters that give an event
+// property path structure: segment separators, indexed/mapped access,
+// quoting, escaped names, and the optional-property suffix.
+const propertyPathSpecialCharacters = ".[]()'\"\\?"
+
+// isPlainPropertyName reports whether a property name parses as exactly one
+// plain segment without path syntax, so callers can skip path parsing.
+func isPlainPropertyName(name string) bool {
+	return name != "" && name == strings.TrimSpace(name) && !strings.ContainsAny(name, propertyPathSpecialCharacters)
 }
 
 func parsePropertySegment(part string) (propertyPathSegment, error) {
@@ -2479,7 +2495,7 @@ func rawPropertyValue(underlying any, name string, resolution PropertyResolution
 	if value.Kind() == reflect.Map {
 		return reflectMapValue(value, name)
 	}
-	fieldValue := structFieldValue(value, name, resolution, nil)
+	fieldValue := structFieldValue(value, name, resolution)
 	if !fieldValue.IsValid() || !fieldValue.CanInterface() {
 		return Missing()
 	}
@@ -2584,7 +2600,7 @@ func (s Schema) getOne(underlying any, name string) Value {
 		return Missing()
 	}
 	_ = fieldSpec
-	fieldValue := structFieldValue(value, canonicalName, s.resolution, nil)
+	fieldValue := structFieldValue(value, canonicalName, s.resolution)
 	if !fieldValue.IsValid() || !fieldValue.CanInterface() {
 		return Missing()
 	}
@@ -2643,7 +2659,7 @@ func presentPropertyValue(value any) Value {
 
 func dynamicStructField(underlying any, name string, resolution PropertyResolutionStyle) Value {
 	value := reflect.ValueOf(underlying)
-	fieldValue := structFieldValue(value, name, resolution, nil)
+	fieldValue := structFieldValue(value, name, resolution)
 	if fieldValue.IsValid() && fieldValue.CanInterface() {
 		if (fieldValue.Kind() == reflect.Pointer || fieldValue.Kind() == reflect.Interface) && fieldValue.IsNil() {
 			return Null()
@@ -2716,7 +2732,11 @@ func isNilReflectValue(value reflect.Value) bool {
 	}
 }
 
-func structFieldValue(value reflect.Value, target string, resolution PropertyResolutionStyle, stack map[reflect.Type]bool) reflect.Value {
+// structFieldValue resolves a property name against a Go value. The
+// resolution order, tag precedence, case handling and anonymous-struct
+// fallback semantics are unchanged; the ordered candidate walk is precomputed
+// once per struct type instead of once per lookup.
+func structFieldValue(value reflect.Value, target string, resolution PropertyResolutionStyle) reflect.Value {
 	for value.Kind() == reflect.Pointer {
 		if value.IsNil() {
 			return reflect.Value{}
@@ -2726,52 +2746,7 @@ func structFieldValue(value reflect.Value, target string, resolution PropertyRes
 	if value.Kind() != reflect.Struct {
 		return reflect.Value{}
 	}
-	if stack == nil {
-		stack = make(map[reflect.Type]bool)
-	}
-	if stack[value.Type()] {
-		return reflect.Value{}
-	}
-	stack[value.Type()] = true
-	defer delete(stack, value.Type())
-
-	typ := value.Type()
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		tag := field.Tag.Get("esper")
-		if tag == "-" {
-			continue
-		}
-		name, _ := parseFieldTag(tag)
-		if name == "" {
-			name, _ = parseFieldTag(field.Tag.Get("json"))
-		}
-		if name == "-" {
-			continue
-		}
-		fieldValue := value.Field(i)
-		baseType := field.Type
-		for baseType.Kind() == reflect.Pointer {
-			baseType = baseType.Elem()
-		}
-		if field.Anonymous && name == "" && baseType.Kind() == reflect.Struct {
-			if nested := structFieldValue(fieldValue, target, resolution, stack); nested.IsValid() {
-				return nested
-			}
-			continue
-		}
-		if name == "" {
-			name = field.Name
-		}
-		matches := name == target || field.Name == target
-		if resolution != PropertyCaseSensitive {
-			matches = strings.EqualFold(name, target) || strings.EqualFold(field.Name, target)
-		}
-		if matches {
-			return fieldValue
-		}
-	}
-	return reflect.Value{}
+	return structFieldTableFor(value.Type()).lookup(value, target, resolution)
 }
 
 type eventIdentityToken struct {
@@ -4368,7 +4343,7 @@ func coerceJSONReflect(value any, target reflect.Type) (reflect.Value, bool) {
 		}
 		result := reflect.New(target).Elem()
 		for name, raw := range items {
-			field := structFieldValue(result, name, PropertyCaseInsensitive, nil)
+			field := structFieldValue(result, name, PropertyCaseInsensitive)
 			if !field.IsValid() || !field.CanSet() {
 				continue
 			}
