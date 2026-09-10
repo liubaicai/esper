@@ -2052,6 +2052,11 @@ func rebuildNamedWindowIndexesLocked(state *namedWindowRuntime) {
 	if state == nil {
 		return
 	}
+	if len(state.def.indexes) == 0 {
+		state.indexes = nil
+		state.indexEntries = nil
+		return
+	}
 	indexes := make(map[string]map[string][]int, len(state.def.indexes))
 	indexEntries := make(map[string][]namedWindowIndexEntry, len(state.def.indexes))
 	for _, definition := range state.def.indexes {
