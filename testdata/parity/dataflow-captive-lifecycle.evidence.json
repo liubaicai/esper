@@ -1,0 +1,319 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-407e42478546e709d774"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIStartCaptive.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowAPIStartCaptive"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-captive-lifecycle",
+    "steps": [
+      {
+        "op": "case",
+        "case": "captive-emitter"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-captive-lifecycle",
+    "records": [
+      {
+        "case": "captive-emitter",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "runnables",
+        "count": 0
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "emitters",
+        "count": 1
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "RUNNING"
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E3",
+              "p1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "RUNNING"
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "CANCELLED"
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "INSTANTIATED"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-captive-lifecycle",
+    "records": [
+      {
+        "case": "captive-emitter",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "runnables",
+        "count": 0
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "emitters",
+        "count": 1
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "RUNNING"
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E3",
+              "p1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "RUNNING"
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "CANCELLED"
+      },
+      {
+        "case": "captive-emitter",
+        "operation": "state",
+        "statement": "flow",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "INSTANTIATED"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

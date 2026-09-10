@@ -16127,7 +16127,11 @@
   {
    "id": "case.dataflow-captive-emitter-ports",
    "javaRuntimeIds": [
-    "java-runtime-6309a6b7e0f0ba981a97"
+    "java-runtime-6309a6b7e0f0ba981a97",
+    "java-runtime-407e42478546e709d774"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-407e42478546e709d774"
    ],
    "javaStaticIds": [
     "java-98ad6f7cdc7876aaf6b3"
@@ -16146,7 +16150,10 @@
     "TestDataflowCaptiveEmitterNamedPortsMatchEsperSubmitPort",
     "TestDataflowSingleNamedEmitterPortSupportsSubmit",
     "TestDataflowCustomSourceSignalFansOutAllNamedPorts",
-    "TestDataflowEmitterPortDefinitionsEnterPlanIdentity"
+    "TestDataflowEmitterPortDefinitionsEnterPlanIdentity",
+    "TestRunDataflowCaptiveLifecycleDiffWritesPassingEvidence",
+    "TestRunDataflowCaptiveLifecycleDirectReplay",
+    "TestRunDataflowCaptiveLifecycleDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -16157,15 +16164,22 @@
     "signal",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/dataflow-captive-lifecycle.json",
+    "testdata/parity/dataflow-captive-lifecycle.trace.json",
+    "testdata/parity/dataflow-captive-lifecycle.go.trace.json",
+    "testdata/parity/dataflow-captive-lifecycle.evidence.json",
+    "tools/java-oracle/DataflowCaptiveLifecycleScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-captive-lifecycle.sh"
    ],
-   "difference": "Go adds fluent EmitterPorts and uses stable named SubmitPort routing instead of Java's numeric port index. Captive handles expose their stable definition name, ambiguous Submit is rejected for multiple outputs, a single named output remains usable through Submit, and SubmitSignal fans out once over every connected output for both captive Emitter and custom-source handles. Declared port names and Go types participate in Plan canonical/hash identity; Java's exact numeric-index exception text and reflection-based stream schemas are intentionally replaced by named fluent descriptors.",
+   "difference": "Go adds fluent EmitterPorts and uses stable named SubmitPort routing instead of Java's numeric port index. Captive handles expose their stable definition name, ambiguous Submit is rejected for multiple outputs, a single named output remains usable through Submit, and SubmitSignal fans out once over every connected output for both captive Emitter and custom-source handles. Declared port names and Go types participate in Plan canonical/hash identity; Java's exact numeric-index exception text and reflection-based stream schemas are intentionally replaced by named fluent descriptors. Draft 4.371 differentially verifies the EPLDataflowAPIStartCaptive execution (java-runtime-407e42478546e709d774) through the captive lifecycle chain: the captive start contract (zero runnables, one emitter keyed by the Emitter NAME parameter 'src1'), two accumulating submits, a FinalMarker signal that flushes current into the received batch without producing a row and without completing the instance (still RUNNING after the signal — a captive instance has no completion path), a fresh submit after the flush, and cancellation as the only exit (CANCELLED), plus the instantiate-only HelloWorld doc-sample flow (INSTANTIATED). Record protocol: count/state records per the create-start-stop-destroy conventions plus capture reads over flow:DefaultSupportCaptureOp (11 records). Java passes the raw Object[] through uncoerced while Go materializes via a registered struct — rows normalize identically. The FanInOut execution (java-runtime-6309a6b7e0f0ba981a97) remains implemented-not-differential (submitPort multi-port addressing is numeric-index Java-side; Go pins the named-port surface by engine unit tests) and stays out of the DV list, as does the client-interface name EPDataFlowEmitterOperator.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -43330,8 +43344,8 @@
  "summary": {
   "inventoriedCases": 636,
   "implementedCases": 634,
-  "differentialVerifiedCases": 254,
-  "differentialVerifiedRuntimeIds": 932,
+  "differentialVerifiedCases": 255,
+  "differentialVerifiedRuntimeIds": 933,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43341,10 +43355,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3557,
-  "referencedJavaRuntimeIds": 3292,
+  "runtimeAssociationCount": 3558,
+  "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 844,
+  "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 636,
