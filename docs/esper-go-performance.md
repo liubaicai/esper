@@ -312,6 +312,24 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
 
 ## 5. 复现命令
 
+## 6. 尚未实施项目记录
+
+以下项目保留在后续迁移工作中，当前没有直接修改共享语义路径：
+
+- **增量 Join / Join 条件索引（§4.9.1）**：现有实现需要维护重复键、过期、outer join、method/table
+  source、trigger lineage 和确定性输出顺序；在完成两流等值 inner join 的 Java/Go 差分场景前不改动。
+- **通用单次谓词求值（§4.9.2）**：stateless 纯表达式快路径已经复用派发结果；普通路径同时覆盖 multi-slot
+  IN、旧流、窗口、context、partition 和用户函数，继续保持二次求值直到具备逐形态证据。
+- **ResultBatch 借用/复用（§4.9.3）**：监听器、subscriber、sink、replay 和异步 threading 可能持有 batch
+  引用，需先验证所有持有语义后再减少 clone。
+- **Named Window/Table 位置索引增量维护（§4.9.5）**：hash 排序和空索引重建已优化；删除、压缩、unique
+  replacement、restore 仍走完整重建，避免位置调整改变查询顺序。
+- **WHERE 下推、结果集 HANDTHROUGH、表达式生成特化和 NFR 登记（§4.3、§4.4、§4.7、§4.8）**：这些项目
+  需要独立 capability 证据、old/new 流验证和可复现基准，不能仅凭微优化提交状态。
+
+保留这些项目是为了让后续 Esper capability 迁移继续使用原有 runtime、Plan identity 和差分证据；每个项目
+在进入实现前都必须建立可重放的 Java/Go 场景，并通过受影响包测试、差分回放和完整门禁。
+
 ```sh
 # 常驻基准（属性访问位置、无状态过滤发送）
 go test ./internal/esper -run '^$' -bench 'PropertyAccess|StatelessFilter' -benchmem
