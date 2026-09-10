@@ -1,0 +1,57 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-eventbus-sink",
+ "description": "dataflow-eventbus-sink differential chain over the EPLDataflowOpEventBusSink EventBusSink operator (regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEventBusSink.java) observed through statement listeners on plain s0/s1 select-stream statements: every listener callback is one record {case, operation:'listener', statement, sequence, time, new:[{kind:'row','fields':{...}}]} with case-local sequences restarting at 1, the fixed epoch time 1970-01-01T00:00:00Z (internal timer off, epoch initialization, no old-stream delivery in this chain), one row per delivery and typed EventBean projections with lossless decimal doubles; eventbus-sink-all-types (ordinal 0) replays EPLDataflowAllTypes runAssertionAllTypes as four representation sub-runs in the suite order MyXMLEvent (over the regression/threeProperties.xsd classloader schema), MyOAEvent, MyMapEvent and MyDefaultSupportGraphEvent, each sub-run deploying the byte-exact one-line graph '@name('flow') create dataflow MyGraph DefaultSupportSourceOp -> instream<T>{}EventBusSink(instream) {}' (no space between <T> and {}, none between } and EventBusSink) plus '@name('s0') select * from T' with a listener, supplying the DefaultSupportSourceOp events {1.1,1,'one'},{2.2,2,'two'} through DefaultSupportGraphOpProvider, and driving the flow with the synchronous instance.run() so both events reach s0 before run() returns, recording per sub-run the two listener rows {myDouble:1.1,myInt:1,myString:'one'} then {myDouble:2.2,myInt:2,myString:'two'} for 8 records, after which the compile-time invalid graph 'create dataflow DF1 EventBusSink -> s1 {}' is asserted in-process by the message prefix 'Failed to obtain operator 'EventBusSink': EventBusSink operator does not provide an output stream' with no records, and finally the doc sample path-deploys '@public create schema SampleSchema(tagId string, locX double, locY double)' plus the byte-exact multi-line '@name('s0') create dataflow MyDataFlow' graph (BeaconSource -> instream<SampleSchema> {} with the trailing ' // produces sample stream to' and '//demonstrate below' comment lines, the plain EventBusSink(instream) {} sink, and the second EventBusSink(instream) with the MyTransformToEventBus collector block spelled 'class : ' with spaces around the colon, unlike the dynamic-type case), whose deployment id is s0 because the flow statement itself is named s0; the flow is instantiated with no options, never started, and contributes zero records; eventbus-sink-beacon (ordinal 1) replays EPLDataflowBeacon by path-deploying '@public create objectarray schema MyEventBeacon(p0 string, p1 long)', '@name('s0') select * from MyEventBeacon' with a listener and the byte-exact single-line graph '@name('flow') create dataflow MyDataFlowOne BeaconSource -> BeaconStream<MyEventBeacon> {  iterations : 3,  p0 : 'abc',  p1 : 1,}EventBusSink(BeaconStream) {}' (two spaces inside the braces around each parameter line, trailing comma after 'p1 : 1'), then instantiate plus start runs the asynchronous source thread producing exactly three listener deliveries, and the Java oracle harness polls until the third delivery within the suite's 3000 ms bound, settles 200 ms and requires that no fourth delivery arrives (the iterations : 3 bound), while the Go runner rejects any fourth delivery via a non-blocking check after the third and pins every row to {p0:'abc',p1:1}: the graph pins the p1 constant 1, so the Java '0 < val < 10' assertion is trivially satisfied and the exact value is recorded, for 3 records; eventbus-sink-dynamic-type (ordinal 2) replays EPLDataflowSendEventDynamicType by path-deploying in one module '@buseventtype @public create objectarray schema MyEventOne(type string, p0 int, p1 string);\\n@buseventtype @public create objectarray schema MyEventTwo(type string, f0 string, f1 int);\\n' plus s0 'select * from MyEventOne' and s1 'select * from MyEventTwo' with listeners, and deploying the byte-exact single-line graph '@name('flow') create dataflow MyDataFlow MyObjectArrayGraphSource -> OutStream<?> {}EventBusSink(OutStream) {  collector : {    class: 'com.espertech.esper.regressionlib.suite.epl.dataflow.EPLDataflowOpEventBusSink$MyTransformToEventBus'  }}' with 'class:' carrying no space before the colon; the source submits {'type1',100,'abc'} then {'type2','GE',-1} through DefaultSupportGraphOpProvider, instantiate plus start runs the flow asynchronously, the reflectively loaded collector forwards the raw Object[] to MyEventOne or MyEventTwo by eventObj[0] and the final marker completes the source; the harness polls until both listeners fired within 3000 ms, settles, and records s0 {type:'type1',p0:100,p1:'abc'} then s1 {type:'type2',f0:'GE',f1:-1} - the full typed projection including the type property, stronger than and consistent with the Java p0/p1 and f0/f1 subset asserts - for 2 records; the statement-label decision is the plain statement names s0 and s1 for every record, never flow labels; session configuration per case mirrors TestSuiteEPLDataflow.configure restricted to these executions (the DefaultSupportGraphEventUtil representations including the XML type backed by regression/threeProperties.xsd, the dataflow-util package import resolving DefaultSupportSourceOp, the support.dataflow package import for the dynamic-type case where MyObjectArrayGraphSource resolves, and XML-XSD enabled as in the harness base configuration), and each case runs in a fresh runtime named parity-dataflow-eventbus-sink-<runtimeId> that is epoch-initialized and destroyed in finally; the 13 records (8+3+2) carry the EventBusSink differential chain.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-e6b4bb618f70b384cf03",
+  "java-runtime-1ecb769e10b4a818772c",
+  "java-runtime-11a7b321e6901dbad740"
+ ],
+ "cases": [
+  {
+   "case": "eventbus-sink-all-types",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-e6b4bb618f70b384cf03",
+   "executionName": "EPLDataflowAllTypes"
+  },
+  {
+   "case": "eventbus-sink-beacon",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-1ecb769e10b4a818772c",
+   "executionName": "EPLDataflowBeacon"
+  },
+  {
+   "case": "eventbus-sink-dynamic-type",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-11a7b321e6901dbad740",
+   "executionName": "EPLDataflowSendEventDynamicType"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "eventbus-sink-all-types"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "eventbus-sink-beacon"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "eventbus-sink-dynamic-type"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  }
+ ]
+}

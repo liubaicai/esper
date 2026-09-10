@@ -16243,6 +16243,13 @@
     "java-runtime-1ecb769e10b4a818772c",
     "java-runtime-11a7b321e6901dbad740"
    ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-dfb59d3bd4798d57cc0c",
+    "java-runtime-37aed9aedcbbb25c4826",
+    "java-runtime-e6b4bb618f70b384cf03",
+    "java-runtime-1ecb769e10b4a818772c",
+    "java-runtime-11a7b321e6901dbad740"
+   ],
    "javaNames": [
     "EPLDataflowAllTypes",
     "EPLDataflowSchemaObjectArray",
@@ -16259,7 +16266,11 @@
     "TestDataflowEventBusSinkCollectorSendsDynamicEventTypes",
     "TestDataflowEventBusSourceFilterRunsBeforeCollector",
     "TestDataflowEventBusSinkIsTerminalAndRejectsOutputEdges",
-    "TestDataflowEventBusSinkSendsAllRegisteredRepresentationsMatchesEsper"
+    "TestDataflowEventBusSinkSendsAllRegisteredRepresentationsMatchesEsper",
+    "TestRunDataflowEventbusSinkDiffWritesPassingEvidence",
+    "TestRunDataflowEventbusSinkDirectReplay",
+    "TestRunDataflowEventbusSinkDiffRejectsTraceMutations",
+    "TestDataflowEventbusSinkInvalidRejection"
    ],
    "tags": [
     "correctness",
@@ -16269,15 +16280,23 @@
     "dynamic-type",
     "representation"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
+    "java-baseline",
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/dataflow-eventbus-sink.json",
+    "testdata/parity/dataflow-eventbus-sink.trace.json",
+    "testdata/parity/dataflow-eventbus-sink.go.trace.json",
+    "testdata/parity/dataflow-eventbus-sink.evidence.json",
+    "tools/java-oracle/DataflowEventbusSinkScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-eventbus-sink.sh"
    ],
-   "difference": "Go adds fluent EventBusSourceWithCollector and EventBusSinkWithCollector callbacks. Source collectors may suppress, duplicate or transform incoming typed events and may return Event envelopes or registered Go values; sink collectors return zero or more explicit event-type/value emissions, including dynamic target types, while preserving variant envelopes. Static EventBusSink now also materializes native Struct, Map, ObjectArray and XML values, matching Java's Beacon/source-to-sink representation boundary. Java's EventBean/object-array collector context APIs, Beacon-driven collector setup and exact collector diagnostics remain open.",
+   "difference": "Go adds fluent EventBusSourceWithCollector and EventBusSinkWithCollector callbacks. Source collectors may suppress, duplicate or transform incoming typed events and may return Event envelopes or registered Go values; sink collectors return zero or more explicit event-type/value emissions, including dynamic target types, while preserving variant envelopes. Static EventBusSink now also materializes native Struct, Map, ObjectArray and XML values, matching Java's Beacon/source-to-sink representation boundary. Java's EventBean/object-array collector context APIs, Beacon-driven collector setup and exact collector diagnostics remain open. Draft 4.370 completes the case with the eventbus sink chain: the EventBusSink AllTypes execution (java-runtime-e6b4bb618f70b384cf03, four representation sub-runs XML/OA/Map/POJO feeding a deployed select, two synchronous listener deliveries each; the output-stream compile rejection and the never-started two-sink doc flow asserted internally), SendEventDynamicType (java-runtime-11a7b321e6901dbad740, sink collector routing raw object-arrays on their leading type field to two @buseventtype schemas with full-row projections including the routing type field — stronger than Java's subset assertion), and Beacon (java-runtime-1ecb769e10b4a818772c, iterations-3 constant beacon, three listener deliveries under the bounded-wait adaptation). The listener record protocol pins one record per callback with fixed epoch time and 13 records per side (8+3+2). The two EventBusSource execution IDs in this case are differentially verified by the case.dataflow-eventbus chain (draft 4.369) and the Beacon ID by the case.dataflow-connector- output chain, so the per-case DV list carries all five IDs with this cross-chain evidence split. Java's class-name collector configuration and emitter-context identity surface remain documented Go differences.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -43311,8 +43330,8 @@
  "summary": {
   "inventoriedCases": 636,
   "implementedCases": 634,
-  "differentialVerifiedCases": 253,
-  "differentialVerifiedRuntimeIds": 930,
+  "differentialVerifiedCases": 254,
+  "differentialVerifiedRuntimeIds": 932,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,

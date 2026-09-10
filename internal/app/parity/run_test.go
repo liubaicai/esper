@@ -41183,3 +41183,174 @@ func TestDataflowEventbusSourceFilterInvalidRejections(t *testing.T) {
 	// is a Go compile error, and prev() is not restricted in dataflow filter
 	// predicates (documented difference in the case's manifest entry).
 }
+
+func TestRunDataflowEventbusSinkDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-sink.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-eventbus-sink.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-sink.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-eventbus-sink-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowEventbusSinkDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-sink.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-eventbus-sink",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 13 {
+		t.Fatalf("records = %d, want 13", len(trace.Records))
+	}
+	wantShape := []struct {
+		caseName  string
+		statement string
+	}{
+		{"eventbus-sink-all-types", "s0"}, {"eventbus-sink-all-types", "s0"},
+		{"eventbus-sink-all-types", "s0"}, {"eventbus-sink-all-types", "s0"},
+		{"eventbus-sink-all-types", "s0"}, {"eventbus-sink-all-types", "s0"},
+		{"eventbus-sink-all-types", "s0"}, {"eventbus-sink-all-types", "s0"},
+		{"eventbus-sink-beacon", "s0"}, {"eventbus-sink-beacon", "s0"}, {"eventbus-sink-beacon", "s0"},
+		{"eventbus-sink-dynamic-type", "s0"}, {"eventbus-sink-dynamic-type", "s1"},
+	}
+	for index, want := range wantShape {
+		got := trace.Records[index]
+		if got.Case != want.caseName || got.Statement != want.statement || got.Operation != "listener" {
+			t.Fatalf("record %d = {%s %s %s}, want {%s %s listener}", index, got.Case, got.Statement, got.Operation, want.caseName, want.statement)
+		}
+		if len(got.New) != 1 {
+			t.Fatalf("record %d rows = %d, want 1", index, len(got.New))
+		}
+	}
+	// The dynamic-type rows carry the full projection including the routing
+	// type field (stronger than the Java subset assertion).
+	s0 := trace.Records[11].New[0].Fields
+	if fmt.Sprint(s0["type"]) != "type1" || fmt.Sprint(s0["p0"]) != "100" || s0["p1"] != "abc" {
+		t.Fatalf("dynamic s0 row = %#v", s0)
+	}
+	s1 := trace.Records[12].New[0].Fields
+	if fmt.Sprint(s1["type"]) != "type2" || s1["f0"] != "GE" || fmt.Sprint(s1["f1"]) != "-1" {
+		t.Fatalf("dynamic s1 row = %#v", s1)
+	}
+}
+
+func TestRunDataflowEventbusSinkDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "all-types-fill-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["myString"] = "twx"
+			},
+		},
+		{
+			name: "all-types-record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:7]
+			},
+		},
+		{
+			name: "beacon-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[0].Fields["p1"] = int64(2)
+			},
+		},
+		{
+			name: "beacon-count-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records[:9], trace.Records[10:]...)
+			},
+		},
+		{
+			name: "dynamic-route-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[11].New[0].Fields["p0"] = 101
+			},
+		},
+		{
+			name: "dynamic-statement-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].Statement = "s0"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-sink.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-eventbus-sink.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-sink.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-eventbus-sink-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestDataflowEventbusSinkInvalidRejection(t *testing.T) {
+	// Java: "Failed to obtain operator 'EventBusSink': EventBusSink operator
+	// does not provide an output stream" — the sink is terminal.
+	env := esper.NewEnvironment()
+	if _, err := esper.RegisterStruct[dataflowEventbusSinkGraphEvent](env, "MyGraphEvent"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := esper.DefineDataflow(env, "DF1").
+		BeaconSource("source", "e").
+		EventBusSink("sink", "MyGraphEvent").
+		Custom("capture", func(esper.DataflowOperatorContext) (esper.DataflowOperatorRuntime, error) {
+			return &dataflowEventbusSinkCapture{}, nil
+		}).
+		Connect("sink", "capture").
+		Build()
+	if err == nil {
+		t.Fatal("sink with outgoing edge accepted")
+	}
+}
