@@ -1,0 +1,67 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-lifecycle-core",
+ "description": "dataflow-lifecycle-core differential chain (work unit 4.374-a) over the dataflow service/instance lifecycle core: saved-configuration and saved-instance service CRUD (primary source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIConfigAndInstance.java), operator statistics (second source .../EPLDataflowAPIStatistics.java), instantiation-option injection callbacks (third source .../EPLDataflowAPIInstantiationOptions.java, ordinals 0/1) and the invalid join/run plus blocking-exception state machines (fourth source .../EPLDataflowAPIRunStartCancelJoin.java, ordinals 6 and 3; the last three source files are pinned here because the Go evidence model carries JavaSourceFiles). config-and-instance (ordinal 0, the 'direct' variant) replays the run() body in source order: the saved-config list starts empty (count record saved-configs=0), the named lookup misses (lifecycle record saved-config='absent' — the normalized token for the null probe: the getSavedConfiguration null assert is in-process and the Go value surface cannot emit a JSON null, mirroring the error-class token convention), removing a missing configuration reports false (lifecycle record removed=false), instantiating the missing 'MyFirstFlow' fails (error-class token 'instantiation-not-found'; the byte-exact Java message is asserted in-process and never recorded), saving against the missing dataflow 'MyDataflow' fails (token 'save-not-found'), the byte-exact two-statement graph '@public create objectarray schema MyEvent ();\\n@name('df') create dataflow MyDataflow BeaconSource -> outdata<MyEvent> {  iterations:1}EventBusSink(outdata) {};\\n' (schema line joined by \\n, '{' followed by two spaces before iterations:1, '}' directly followed by EventBusSink, ending ';\\n') deploys under the pinned deployment id 'flow' (deployment ids are pinned but never recorded), the save succeeds (count saved-configs=1 with lifecycle records saved-config.name=MyFirstFlow and saved-config.dataflow-name=MyDataflow), the duplicate save is rejected (token 'already-exists'), the remove reports true (lifecycle removed=true; the suite's second false remove, the emptied list and the null lookup replay as in-process asserts only), the re-save plus instantiateSavedConfiguration runs the flow with the s0 '@name('s0') select * from MyEvent' listener attached (lifecycle listener-invoked=true) and the blocking run completes the single-iteration flow (strengthened state record instance.state=COMPLETE), then the instance CRUD: saveInstance 'F1' (count saved-instances=1; the deployment-id equality and dataflow-name asserts stay in-process), the duplicate saveInstance rejection (token 'instance-already-exists') and the remove reporting true (lifecycle instance-removed=true; the suite's second false remove stays in-process). statistics (ordinal 0) deploys the byte-exact one-line graph '@name('flow') create dataflow MyGraph DefaultSupportSourceOp -> outstream<SupportBean> {} DefaultSupportCaptureOp(outstream) {}' (exact space before DefaultSupportCaptureOp), instantiates with a source submitting SupportBean E1/E2, a fresh capture, operatorStatistics(true) and cpuStatistics(true), runs, and records: count operator-stats-size=2; lifecycle operator-source.name=DefaultSupportSourceOp, operator-source.number=0 and operator-source.pretty-print='DefaultSupportSourceOp#0() -> outstream' in the NORMALIZED bare-port form (Java's full '...<SupportBean>' string is asserted in-process; Go renders package-free bare ports); count operator-source.submitted-overall=2 and count operator-source.submitted-per-port=2 (the port-0 entry of the single-element array); lifecycle operator-capture.name=DefaultSupportCaptureOp, operator-capture.number=1, operator-capture.pretty-print='DefaultSupportCaptureOp#1(outstream)' (already native bare form) and count operator-capture.submitted-overall=0. Dispositions pinned for this case: the statement-property asserts (STATEMENTTYPE=CREATE_DATAFLOW, CREATEOBJECTNAME=MyGraph) are oracle-internal in-process asserts — the Go engine exposes no statement-type/creator introspection surface, so no records are emitted; time magnitudes are excluded from records (timeOverall>0 and timeOverall==timePerPort[0] for the source, timeOverall==0 for the capture stay in-process); the capture per-port array length is NOT recorded because the Go engine structurally sizes SubmittedByPort by declared input ports (length 1 with value 0 for a terminal), so the two sides cannot record the same length honestly (the Java empty-array assert stays in-process). parameter-injection-callback (ordinal 0) deploys the byte-exact preamble '@public create schema SomeType ()' plus the graph '@name('flow') create dataflow MyDataFlowOne MyOp -> outstream<SomeType> {propOne:'abc', propThree:'xyz'}' over the RegressionPath and instantiates with a parameter provider supplying propTwo:'def'; the static MyOp INSTANCES registry is cleared before the case and harvested through getAndClearInstances() after instantiate (exactly one constructed instance, mirroring the suite), the provider's private context map is harvested through an oracle subclass that mirrors the Java puts, and the records are: count provider-contexts=3; three lifecycle parameter-name records in sorted order propOne, propThree, propTwo (String natural order, sorted in-process); the shared context observables recorded once each from the fully-asserted propTwo context (lifecycle context.operator-name=MyOp, context.operator-num=0, context.dataflow-name=MyDataFlowOne); the factory-identity observables lifecycle factory-identity.propTwo=true and factory-identity.propThree=true (assertSame replayed as identity equality); and the resolved-parameter lifecycle records resolved.propOne=abc, resolved.propTwo=def, resolved.propThree=xyz read back from the MyOp instance (propThree is a strengthened assert — declared 'xyz', provider returns null). operator-injection-callback (ordinal 1) deploys the same byte-exact graph shape and instantiates with an operator provider whose provide() constructs the substitute MyOp (the static INSTANCES registry entry is harvested and cleared in-process); records: count provider-contexts=1, lifecycle context.operator-name=MyOp, lifecycle context.dataflow-name=MyDataFlowOne. invalid-join-run (ordinal 6 of EPLDataflowAPIRunStartCancelJoin) deploys the byte-exact graph '@name('flow') create dataflow MyDataFlowOne BeaconSource -> BeaconStream {iterations : 1}' (note the spaces around the colon), instantiates with a DefaultSupportSourceOp instruction 5000 that is never consumed (the provider matches no declared operator name, so BeaconSource itself would run if started), and records the state machine: state instance.state=INSTANTIATED at entry (strengthened — the suite asserts no initial state here) before the first error; the join-before-execution failure as token 'join-not-executed' (byte-exact IllegalStateException message asserted in-process); cancel with state record instance.state=CANCELLED (strengthened assert); run-after-cancel as token 'run-after-cancel' and start-after-cancel as token 'start-after-cancel' (same message asserted in-process); and the idempotent second cancel as lifecycle cancel-idempotent=true with the state re-asserted CANCELLED in-process. blocking-exception (ordinal 3) deploys the byte-exact preamble '@public create schema SomeType ()' plus the two-clause graph '@name('flow') create dataflow MyDataFlowOne DefaultSupportSourceOp -> outstream<SomeType> {}DefaultSupportCaptureOp(outstream) {}' whose capture clause is concatenated with NO separator after the source clause's trailing '{}', instantiates with a source instructed to throw MyRuntimeException('TestException'), drives the blocking run() which throws EPDataFlowExecutionException (cause chain: wrapped cause message 'Support-graph-source generated exception: TestException' ending in MyRuntimeException — asserted in-process, never recorded), and records: lifecycle run.error-class=execution-exception, state instance.state=COMPLETE, count capture-empty=0 (the getAndReset read is empty). Error observables are recorded as error-class TOKENS only per the token policy: every byte-exact Java message text is asserted in-process with equals and never recorded; the same normalization applies to the null-probe observable, which records the token 'absent' instead of a JSON null. Record protocol (create-start-stop-destroy conventions): count records are {operation:'count', statement:'flow', name, count}; state records are {operation:'state', statement:'flow', name:'instance.state', value:UPPERCASE EPDataFlowState name}; value/lifecycle records are {operation:'lifecycle', statement:'flow', name, value}. Sequence is case-local restarting at 1, the time is the fixed epoch 1970-01-01T00:00:00Z, each case runs on its own fresh runtime (internal timer off, epoch initialization 0, undeployAll after the case body, destroy in finally — the per-case runtime/undeployAll boundary), the dataflow deployments are pinned to deployment id 'flow' (never recorded) while the SomeType-schema and s0 deployments use engine-generated ids, and session configuration mirrors TestSuiteEPLDataflow.configure restricted to these executions: SupportBean event type plus the com.espertech.esper.common.internal.epl.dataflow.util.* import for the DefaultSupportSourceOp/DefaultSupportCaptureOp cases, the EPLDataflowAPIInstantiationOptions.MyOpForge class import resolving MyOp by the Forge-suffix convention, and the built-in ConfigurationCommon.DATAFLOWOPERATOR_IMPORT for BeaconSource and EventBusSink, with SomeType and MyEvent declared by the deployed EPL preambles over the RegressionPath. The 49 records (15 config-and-instance + 10 statistics + 12 parameter-injection-callback + 3 operator-injection-callback + 6 invalid-join-run + 3 blocking-exception) carry the lifecycle-core differential chain for the six Go case builders.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowAPIConfigAndInstance.java",
+ "javaRuntimes": [
+  "java-runtime-67b54e408ca6f86b4ca5",
+  "java-runtime-c8cbd0bc1aeb3eba6006",
+  "java-runtime-1dd9223830c5409fc252",
+  "java-runtime-1092d7e9660b84bc6e6d",
+  "java-runtime-7e40b511fb6b6db584fd",
+  "java-runtime-3bdb22d6cdef39f0336c"
+ ],
+ "cases": [
+  {
+   "case": "config-and-instance",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-67b54e408ca6f86b4ca5",
+   "executionName": "EPLDataflowAPIConfigAndInstance"
+  },
+  {
+   "case": "statistics",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-c8cbd0bc1aeb3eba6006",
+   "executionName": "EPLDataflowAPIStatistics"
+  },
+  {
+   "case": "parameter-injection-callback",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-1dd9223830c5409fc252",
+   "executionName": "EPLDataflowParameterInjectionCallback"
+  },
+  {
+   "case": "operator-injection-callback",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-1092d7e9660b84bc6e6d",
+   "executionName": "EPLDataflowOperatorInjectionCallback"
+  },
+  {
+   "case": "invalid-join-run",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-7e40b511fb6b6db584fd",
+   "executionName": "EPLDataflowInvalidJoinRun"
+  },
+  {
+   "case": "blocking-exception",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-3bdb22d6cdef39f0336c",
+   "executionName": "EPLDataflowBlockingException"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "config-and-instance"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "statistics"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "parameter-injection-callback"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "operator-injection-callback"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "invalid-join-run"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "blocking-exception"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

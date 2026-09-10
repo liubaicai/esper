@@ -41773,3 +41773,162 @@ func TestRunDataflowExceptionsDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunDataflowLifecycleCoreDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-core.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-lifecycle-core.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-core.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-lifecycle-core-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowLifecycleCoreDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-core.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-lifecycle-core",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 49 {
+		t.Fatalf("records = %d, want 49", len(trace.Records))
+	}
+	wantShape := []struct {
+		caseName string
+		rows     int
+	}{
+		{"config-and-instance", 15},
+		{"statistics", 10},
+		{"parameter-injection-callback", 12},
+		{"operator-injection-callback", 3},
+		{"invalid-join-run", 6},
+		{"blocking-exception", 3},
+	}
+	offset := 0
+	for _, want := range wantShape {
+		for i := 0; i < want.rows; i++ {
+			got := trace.Records[offset+i]
+			if got.Case != want.caseName {
+				t.Fatalf("record %d case = %s, want %s", offset+i, got.Case, want.caseName)
+			}
+		}
+		offset += want.rows
+	}
+	// Statistics: the source submitted 2 through port 0, the capture zero.
+	if trace.Records[19].Count == nil || *trace.Records[19].Count != 2 {
+		t.Fatalf("source submitted = %#v, want 2", trace.Records[19].Count)
+	}
+	if trace.Records[24].Count == nil || *trace.Records[24].Count != 0 {
+		t.Fatalf("capture submitted = %#v, want 0", trace.Records[24].Count)
+	}
+	// The state machine: INSTANTIATED at entry, CANCELLED after cancel.
+	if trace.Records[40].Value != "INSTANTIATED" || trace.Records[42].Value != "CANCELLED" {
+		t.Fatalf("invalid-join-run states = %#v, %#v", trace.Records[40].Value, trace.Records[42].Value)
+	}
+	// Blocking exception: error class + COMPLETE + empty capture.
+	if trace.Records[46].Value != "execution-exception" || trace.Records[47].Value != "COMPLETE" {
+		t.Fatalf("blocking-exception records = %#v, %#v", trace.Records[46].Value, trace.Records[47].Value)
+	}
+}
+
+func TestRunDataflowLifecycleCoreDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "config-error-token-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].Value = "already-exists"
+			},
+		},
+		{
+			name: "stats-submitted-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(3)
+				trace.Records[19].Count = &count
+			},
+		},
+		{
+			name: "provider-context-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(2)
+				trace.Records[25].Count = &count
+			},
+		},
+		{
+			name: "join-error-token-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[41].Value = "already-cancelled"
+			},
+		},
+		{
+			name: "blocking-exception-class-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[46].Value = "operator-throw"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:48]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-core.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-lifecycle-core.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-lifecycle-core.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-lifecycle-core-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

@@ -127,6 +127,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-exceptions" || *mode == "dataflow-exceptions-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "dataflow-lifecycle-core" || *mode == "dataflow-lifecycle-core-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-doc-samples" || *mode == "dataflow-doc-samples-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
@@ -349,6 +351,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, dataflowDocSamplesJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, dataflowDocSamplesJavaSources),
 				splitMetadata(*javaExecutions, dataflowDocSamplesJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "dataflow-lifecycle-core" || *mode == "dataflow-lifecycle-core-diff" {
+		trace, err := runDataflowLifecycleCoreScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "dataflow-lifecycle-core-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, dataflowLifecycleCoreJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, dataflowLifecycleCoreJavaSources),
+				splitMetadata(*javaExecutions, dataflowLifecycleCoreJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
