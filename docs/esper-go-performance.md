@@ -147,6 +147,8 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
 
 - 现状：通用路径对同一事件求值两次——派发循环的 `matchesEventFilter` 与执行内的插入/过滤判定。
   已实测：含用户函数的谓词每次发送被调用 2 次（Java 为 1 次），拒绝事件同样如此。
+  §4.9 的追加审查按实际影响把本项提升为第 2 优先级（同时消耗 CPU、闭包调用与临时分配，
+  收益覆盖全部非快速路径语句）。
 - 快速路径仅在可证明纯谓词上消除第二次求值；非快速路径的语句仍是 2 次。
 - 目标：把"过滤结果"作为派发循环的唯一产物向下传递，由 unmatched/指标/审计消费者按需使用，
   使所有语句与 Java 一样只求值一次。
@@ -190,6 +192,109 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
 - 质量策略要求"可重放命令、阈值和结果"才能登记 `nfr-verified`；本单元只提供受控微基准与常驻基准。
   待共享运行时语义稳定后，应按 §3 的复现方式登记每事件 CPU/分配基线与趋势，并明确目标环境阈值。
 - 应用侧 10000 EPS 所需的原生判定执行模型属于应用仓库范围，不在本模块内实施。
+
+### 4.9 追加审查：新确认的瓶颈与建议优先级
+
+本节记录一次对照实现与 profile 的追加审查结果：Join 全量重算、变量上下文与批次分配、Schema
+元数据 fold 索引、Named Window/Table 索引重建与 `typeNames` 入口**此前未登记**；过滤重复求值
+虽已列入 §4.2，但本次审查按实测影响提升其优先级。所有条目机制与调用点均已按当前源码核对，
+与 §4 其余工作项同等对待——先补齐对应 Java/Go 语义证据，再做性能改动；任何一项都不得放宽差分、
+证据或 Plan 身份约束。审查给出的建议修复优先级：
+
+| 优先级 | 工作项 | 条目 |
+| ---: | --- | --- |
+| 1 | 增量 Join / Join 条件索引 | 4.9.1 |
+| 2 | 所有语句统一单次过滤求值 | 4.9.2（即 §4.2） |
+| 3 | 变量上下文与 ResultBatch 分配削减 | 4.9.3 |
+| 4 | Schema 元数据 fold 索引 | 4.9.4 |
+| 5 | Named Window/Table 增量索引维护 | 4.9.5 |
+| 6 | `typeNames` 入口缓存 | 4.9.6 |
+
+#### 4.9.1 增量 Join：每次事件重算全量 Join 结果（最高优先级）
+
+- 现状：`statementRuntime.insertJoin`（`runtime.go:12344`）转发到 `updateJoin`（`runtime.go:12349`）。
+  事件驱动的单次 update 在更新窗口侧状态**之前**先算 `before := joinKeyedTuples(...)`
+  （`runtime.go:12373`），更新后再算 `after := joinKeyedTuples(...)`（`runtime.go:12554`），
+  最后 `diffJoinKeyedTuples(before, after)`（`runtime.go:12555`）得出 delta。窗口过期重算路径
+  同样是 `before`（`runtime.go:13073`）/`after`（`runtime.go:13107`）全量两次。
+- `joinKeyedTuples`（`runtime.go:13301`）对两流 inner join 做左右嵌套全扫描并重跑
+  `joinConditionsMatch`；多流 inner join 用 `visit(0)` 递归枚举笛卡尔组合；显式 left-deep join 由
+  `joinChainedKeyedTuples` 按边重建全部 partial rows。复杂度约为
+  $O(\prod_i |side_i|)$ 次条件求值，且每个事件执行两次（before/after）。
+- 与 §4.1 的关系：这比过滤服务索引更严重——即使语句数量不多，只要窗口内事件增长就会迅速恶化；
+  §4.1 只降低"事件 → 候选语句"的匹配成本，不降低单条 join 语句内部的 tuple 重算成本。
+- 目标：改为增量 join——只用新事件与对侧索引匹配，维护已输出 tuple 集合，diff 只覆盖受影响 tuple；
+  join 条件中可等值/IN 的键建立索引（可复用 §4.1 的索引结构思路）。
+- 风险与前置证据：输出顺序、old/new 分类、lineage key（`joinStoredTupleLineageKey`）、outer join
+  未匹配行、method/table/unidirectional join、trigger lineage 与 evaluate-once 语义都必须逐项钉定；
+  需要 before/after delta 等价性证据，以及能显示候选 tuple 数下降的基准。
+
+#### 4.9.2 过滤结果仍被求值两次（§4.2 的优先级提升）
+
+- 现状：`Engine.send` 先计算 `accepted := statement.matchesEventFilter(...)`（`runtime.go:3939`；
+  routed 分发在 `runtime.go:5115-5117`，仅当存在 unmatched 监听器、指标或审计类别时才计算），
+  随后 `processStatementWithMetricsLocked` 进入 `Statement.process`，通用路径在 `runtime.go:6907`
+  起再次装配变量并执行插入/过滤判定。当前只有 stateless 快路径
+  （`stateless.go:221` `processStatelessEvent`）在 `acceptedKnown` 时复用派发循环的结果。
+- profile：`sourceNodeMatchesEventFilter` 与 `makeBinaryBool.func1` 占据显著 CPU。
+- 结论：按实际影响应为本轮第 2 优先级——它同时增加 CPU、闭包调用与临时对象分配，收益覆盖全部
+  非快速路径语句（普通语句、带 getter 的语句、Join、pattern、context 等）。
+- 目标与风险：见 §4.2（把过滤结果作为派发循环的唯一产物向下传递；语句指标采样窗口、审计
+  `accepted` 取值以及用户函数/脚本调用次数的可观测性必须保持）。
+
+#### 4.9.3 变量上下文与 ResultBatch 的分配削减
+
+- 变量上下文：发送路径每轮执行 `cloneValues(e.variables)`（`runtime.go:3898`）→
+  `statementVariables(...)` → `variablesWithEngineLockState(...)`（`runtime.go:6907` 起、
+  `subquery.go:2700`）。profile 中 `variablesWithEngineLockState` 的累计分配约占总分配的 22%。
+  对无变量、无子查询的普通语句，这些 map 复制与引擎引用注入没有实际价值。
+- ResultBatch：`processStatelessEvent`（`stateless.go:221`）已避免通用 delta/history 路径，
+  但接受事件仍创建 `ResultBatch` 与 `New` slice，并在派发给监听器/订阅者/sink 时再次
+  `batch.clone()`（`runtime.go:5515`、`5522`、`5527`），accepted 基准仍为 16 allocs/op。
+- 目标：按计划属性预先标记语句是否需要变量上下文——不需要者共享只读视图，或在一个 dispatch
+  轮次内构造一次上下文后复用。监听器同步且无 replay/异步隔离需求时，增加内部借用或只读批次路径，
+  减少批次与事件 slice 的重复复制。
+- 风险与前置证据：需要**单独验证**监听器对 batch 的持有/变更语义——replay 缓冲、threading/
+  outbound 池、output 策略的 pending 捕获与 subscriber/sink 是否保留引用；以及变量 map 的对外
+  可观测性（用户函数、变量服务、审计）。
+
+#### 4.9.4 Schema 元数据的大小写不敏感 fold 索引
+
+- 现状：`Schema.lookupField`（`schema.go:1657`）、`lookupGetter`（`schema.go:1688`）、
+  `lookupSetter`（`schema.go:1714`）在精确名未命中且 resolution 非 `PropertyCaseSensitive` 时，
+  分别对 `s.fields` / getter map / setter map 全量执行 `strings.EqualFold`（`lookupNestedSchema`
+  同）。§2.1 的缓存只覆盖 Go struct 字段解析，未覆盖 Schema 元数据本身。
+- 影响：字段数较多且谓词频繁动态查找的 map/JSON/object-array 事件，每次属性读取仍是
+  O(field-count) 成本。
+- 目标：在 Schema 构造阶段建立与 struct 缓存同源的 fold 索引（`unicode.SimpleFold` 轨道最小值键，
+  不能使用 `strings.ToLower`），同时保留 `PropertyDistinctCaseInsensitive` 的歧义检测与错误文本。
+- 前置证据：折叠等价性（如 U+212A KELVIN SIGN 与 U+1E9E 大小写对）与歧义判定点的等价性。
+
+#### 4.9.5 Named Window/Table 索引的全量重建路径
+
+- 现状：`rebuildNamedWindowIndexesLocked`（`state.go:2045`）重建时遍历全部 `state.entries`，
+  对每个索引重建 key map，最后对 entries 做一次 `sort.SliceStable`；
+  `rebuildTableIndexesLocked`（`state.go:553`）遍历全部 `state.order`，且在**每行**对 entries
+  重新排序（即 O(N² log N) 量级）。两者在多个 mutation/restore 路径被调用，包括单条 insert
+  （`state.go:3929`）、retain/delete（`state.go:3277`、`3923`）、restore（`state.go:3014`）
+  以及 CreateIndex/DropIndex。
+- 影响：对大窗口的批量 insert/delete/merge，本应增量的索引维护退化为 O(N log N)（table 路径更差）
+  的尖峰；不是每个普通事件都触发，但在 named-window mutation、rollback、批量删除与 context
+  partition 场景中会形成明显尖峰。
+- 目标：区分"单条增量维护"和"确实需要重建"的场景——批量 mutation 走增量索引变更，仅在
+  rollback/restore/索引定义变化时全量重建。
+- 风险与前置证据：B-tree entries 的排序顺序、unique index 首键语义、root/partition 索引共享与
+  `keyOrder` 一致性必须保持。
+
+#### 4.9.6 事件类型解析入口缓存
+
+- 现状：`Environment.typeNames`（`plan.go:171`）每次调用都取 `e.mu.RLock` 并
+  `append([]string(nil), e.typeToName[typ]...)` 复制名称切片；`Engine.SendEvent`
+  （`runtime.go:4130`）、dataflow 入口（`dataflow.go:3972`）与计划解析（`plan.go:3360`）都会调用。
+- 影响：发送频率高或同一 Go 类型绑定多个事件名时，形成稳定的小额分配与读锁竞争。
+- 目标：在事件入口缓存 `reflect.Type` → canonical 事件类型/名称，在 schema 注册/卸载时失效；
+  注意一个 Go 类型可注册多个事件名（`typeNames` 注释），必须保留 registration order 与歧义判定。
+- 前置证据：注册/卸载失效路径与高发送频率下的并发读基准。
 
 ## 5. 复现命令
 
