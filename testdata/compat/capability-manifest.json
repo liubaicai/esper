@@ -1560,7 +1560,8 @@
     "java-runtime-2d7b6229c7a3b2bee40b",
     "java-runtime-950696d7aa6356acb9d4",
     "java-runtime-8c8f6f03b11605a16d11",
-    "java-runtime-ef085a37ed45eb35a13f"
+    "java-runtime-ef085a37ed45eb35a13f",
+    "java-runtime-b41da4e41f347dcd49a8"
    ],
    "representativeScenarioIds": [
     "dataflow-connector-output"
@@ -10398,6 +10399,56 @@
    ],
    "notes": [
     "Draft 4.362 covers EPLDataflowOpEPStatementSource's four executions: the all-types case replays the four event representations (POJO, Map, ObjectArray, XML) with the paired statement's deployment id interpolated into the graph (2 rows each {myDouble,myInt,myString} = {1.1,1,one}/{2.2,2,two}); stmt-name-dynamic pins the registry lifecycle under fixed deployment id MyDeploymentId (start-before-deploy empty read, attach on deploy {id:E2}, detach on undeploy {empty}, redeploy {id:E4}, redefinition {id:XE6X}); statement-filter pins a filter selector attaching to pre-existing and dynamically deployed statements with detach-on-undeploy emptiness and cancel suppression. The invalid execution (three Java rejections) is covered by the invalidity policy: the representable no-binding rejection is a Go Build error class; the zero-output-stream and name-requires-deployment-id rejections have no Go surface and are case differences. Go engine change: filter-mode EPStatementSource subscriptions are keyed per statement (an undeploy detaches only that statement's listener while other matching statements keep delivering, matching Java per-statement listener semantics); named and direct modes keep single-slot replacement."
+   ]
+  },
+  {
+   "id": "case.dataflow-doc-samples",
+   "javaRuntimeIds": [
+    "java-runtime-b41da4e41f347dcd49a8",
+    "java-runtime-aaf36f532374aca5a232"
+   ],
+   "javaStaticIds": [
+    "java-613a9d944f2099f57eb4",
+    "java-9e9fa5d76678f9113923"
+   ],
+   "javaNames": [
+    "EPLDataflowDocSamplesRun",
+    "EPLDataflowDocSamples"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowDocSamples.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpSelect.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunDataflowDocSamplesDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunDataflowDocSamplesDirectReplay",
+    "internal/app/parity/run_test.go:TestRunDataflowDocSamplesDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "dataflow",
+    "doc-samples",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dataflow-doc-samples.json",
+    "testdata/parity/dataflow-doc-samples.trace.json",
+    "testdata/parity/dataflow-doc-samples.go.trace.json",
+    "testdata/parity/dataflow-doc-samples.evidence.json",
+    "tools/java-oracle/DataflowDocSamplesScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-doc-samples.sh"
+   ],
+   "difference": "EPLDataflowSODA (java-runtime-39594e45aab398ee8cc8) is a compile-path-only SODA round-trip execution: it parses dataflow EPL text into an EPStatementObjectModel and asserts formatted toEPL() equality — no runtime, no deployment, no observable rows. The Go fluent API has no EPL/SODA compile-path duality, so this execution is intentionally-different.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b41da4e41f347dcd49a8"
+   ],
+   "notes": [
+    "Draft 4.364 covers EPLDataflowDocSamplesRun (java-runtime-b41da4e41f347dcd49a8): the hello-world BeaconSource -> LogSink graph drained by the blocking run, pinning INSTANTIATED -> COMPLETE state transitions with deploy-phase statementCount/statementName records. The 14 parse-only EPL grammar fragments are asserted internally (no Go parser surface — documented). EPLDataflowSODA (java-runtime-39594e45aab398ee8cc8) is a SODA round-trip compile-path-only execution with zero runtime observables and no Go surface — covered by the case difference disposition. Go surface: DefineDataflow + BeaconSourceWithOptions + LogSink with nil handler + blocking Run, zero engine change. EPLDataflowDocSamples (aaf36f...) from EPLDataflowOpSelect.java is also covered: a five-Select instantiate-only graph pinned at INSTANTIATED with undeploy deploymentCount 0."
    ]
   },
   {
@@ -43216,13 +43267,17 @@
   {
    "caseId": "case.dataflow-epstatement-source",
    "capabilityId": "dataflow.graph"
+  },
+  {
+   "caseId": "case.dataflow-doc-samples",
+   "capabilityId": "dataflow.graph"
   }
  ],
  "summary": {
-  "inventoriedCases": 635,
-  "implementedCases": 633,
-  "differentialVerifiedCases": 250,
-  "differentialVerifiedRuntimeIds": 922,
+  "inventoriedCases": 636,
+  "implementedCases": 634,
+  "differentialVerifiedCases": 251,
+  "differentialVerifiedRuntimeIds": 923,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43232,14 +43287,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3554,
-  "referencedJavaRuntimeIds": 3289,
+  "runtimeAssociationCount": 3556,
+  "referencedJavaRuntimeIds": 3291,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 847,
+  "unreferencedJavaRuntimeIds": 845,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 635,
+  "totalCases": 636,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 922
+  "differentialVerifiedRuntimeIDs": 923
  }
 }

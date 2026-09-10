@@ -1,0 +1,196 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-b41da4e41f347dcd49a8",
+    "java-runtime-aaf36f532374aca5a232"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowDocSamples.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpSelect.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowDocSamplesRun",
+    "EPLDataflowDocSamples"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-doc-samples",
+    "steps": [
+      {
+        "op": "case",
+        "case": "doc-run"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "doc-flow"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-doc-samples",
+    "records": [
+      {
+        "case": "doc-run",
+        "operation": "deploy",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "statementCount",
+        "value": 1
+      },
+      {
+        "case": "doc-run",
+        "operation": "deploy",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "statementName",
+        "value": "flow"
+      },
+      {
+        "case": "doc-run",
+        "operation": "state",
+        "statement": "flow:HelloWorldDataFlow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "INSTANTIATED"
+      },
+      {
+        "case": "doc-run",
+        "operation": "state",
+        "statement": "flow:HelloWorldDataFlow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      },
+      {
+        "case": "doc-flow",
+        "operation": "deploy",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "statementCount",
+        "value": 1
+      },
+      {
+        "case": "doc-flow",
+        "operation": "deploy",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "statementName",
+        "value": "flow"
+      },
+      {
+        "case": "doc-flow",
+        "operation": "state",
+        "statement": "flow:MyDataFlow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "INSTANTIATED"
+      },
+      {
+        "case": "doc-flow",
+        "operation": "undeploy",
+        "statement": "flow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "deploymentCount",
+        "value": 0
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-doc-samples",
+    "records": [
+      {
+        "case": "doc-run",
+        "operation": "deploy",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "statementCount",
+        "value": 1
+      },
+      {
+        "case": "doc-run",
+        "operation": "deploy",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "statementName",
+        "value": "flow"
+      },
+      {
+        "case": "doc-run",
+        "operation": "state",
+        "statement": "flow:HelloWorldDataFlow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "INSTANTIATED"
+      },
+      {
+        "case": "doc-run",
+        "operation": "state",
+        "statement": "flow:HelloWorldDataFlow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "COMPLETE"
+      },
+      {
+        "case": "doc-flow",
+        "operation": "deploy",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "statementCount",
+        "value": 1
+      },
+      {
+        "case": "doc-flow",
+        "operation": "deploy",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "statementName",
+        "value": "flow"
+      },
+      {
+        "case": "doc-flow",
+        "operation": "state",
+        "statement": "flow:MyDataFlow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "instance.state",
+        "value": "INSTANTIATED"
+      },
+      {
+        "case": "doc-flow",
+        "operation": "undeploy",
+        "statement": "flow",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "deploymentCount",
+        "value": 0
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

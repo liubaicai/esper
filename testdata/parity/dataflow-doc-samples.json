@@ -1,0 +1,31 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-doc-samples",
+ "description": "dataflow-doc-samples differential chain over the documentation dataflow samples replayed as deployment/instantiation-state lifecycle records with zero event rows recorded: doc-run (ordinal 0) replays EPLDataflowDocSamplesRun where the byte-exact hello-world graph @name('flow') create dataflow HelloWorldDataFlow / BeaconSource -> helloworldStream { text: 'hello world', iterations : 1 } / LogSink(helloworldStream) {} is deployed under the pinned deployment id flow (the runtime-assigned random UUID must not leak), recording deploy flow statementCount=1 and deploy flow statementName=flow, then the instance is instantiated and drained by the blocking instance.run() so the instance API reports the INSTANTIATED -> COMPLETE transitions as state flow:HelloWorldDataFlow instance.state=INSTANTIATED (read after instantiate, before run) and state flow:HelloWorldDataFlow instance.state=COMPLETE (read after the blocking run); BeaconSource emits exactly one event plus the final marker for iterations=1 and LogSink prints it to stdout — a non-asserted side effect that is neither captured nor recorded — and the suite's 14 parse-only EPL fragments MyDataFlow..MyDataFlow14 (suite lines 46-97) are asserted internally through parseModule success mirroring the tryEpl helper but emit NO records because there is no Go parser surface for EPL text (documented adaptation); doc-flow (ordinal 1) replays the EPLDataflowDocSamples inner execution of EPLDataflowOpSelect (lines 57-105) where the byte-exact five-Select graph MyDataFlow — two BeaconSource inputs over the inline SampleSchema with embedded comments and tabs, a simple continuous count, an alias count, an iterate:true final-marker count, a shared-input-port count, and two lastevent joins with and without aliases — is compiled, deployed under the pinned deployment id flow (the same two deploy records), instantiated with no options and NEVER run because two source operators would make run() throw IllegalStateException, recording state flow:MyDataFlow instance.state=INSTANTIATED, then undeployAll empties the registry and undeploy flow deploymentCount=0 is recorded. The suite's HA-mode early return of the EPLDataflowOpSelect inner execution is a dropped non-replayable artifact (this replay is non-HA).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowDocSamples.java",
+ "javaRuntimes": [
+  "java-runtime-b41da4e41f347dcd49a8",
+  "java-runtime-aaf36f532374aca5a232"
+ ],
+ "cases": [
+  {
+   "case": "doc-run",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-b41da4e41f347dcd49a8",
+   "executionName": "EPLDataflowDocSamplesRun"
+  },
+  {
+   "case": "doc-flow",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-aaf36f532374aca5a232",
+   "executionName": "EPLDataflowDocSamples"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "doc-run"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "doc-flow"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}
