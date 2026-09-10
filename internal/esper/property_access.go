@@ -106,18 +106,33 @@ func (t *structFieldTable) collect(typ reflect.Type, prefix []int, inPath map[re
 // lookup returns the first resolving candidate selected by target under the
 // configured resolution style.
 func (t *structFieldTable) lookup(value reflect.Value, target string, resolution PropertyResolutionStyle) reflect.Value {
-	var indexes []int32
-	if resolution == PropertyCaseSensitive {
-		indexes = t.byName[target]
-	} else {
-		indexes = t.byFold[foldPropertyName(target)]
-	}
-	for _, index := range indexes {
+	for _, index := range t.candidates(target, resolution) {
 		if field, ok := resolveStructFieldPath(value, t.entries[index].path); ok {
 			return field
 		}
 	}
 	return reflect.Value{}
+}
+
+// lookupPaths returns the candidate index paths for target in resolution
+// order, sharing the selection with lookup so a precomputed walk visits
+// exactly the same candidates with the same fallback behavior.
+func (t *structFieldTable) lookupPaths(target string, resolution PropertyResolutionStyle) [][]int {
+	indexes := t.candidates(target, resolution)
+	paths := make([][]int, len(indexes))
+	for position, index := range indexes {
+		paths[position] = t.entries[index].path
+	}
+	return paths
+}
+
+// candidates resolves the entry indexes for target under the resolution
+// style: exact names for case-sensitive resolution, folded names otherwise.
+func (t *structFieldTable) candidates(target string, resolution PropertyResolutionStyle) []int32 {
+	if resolution == PropertyCaseSensitive {
+		return t.byName[target]
+	}
+	return t.byFold[foldPropertyName(target)]
 }
 
 // resolveStructFieldPath walks a precomputed index path. Intermediate steps

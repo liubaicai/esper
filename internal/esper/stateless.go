@@ -15,6 +15,11 @@ type statelessExecutionPlan struct {
 	// are only proven free of user code (registered getters, dynamic methods)
 	// for that exact schema, so the plan only applies to events carrying it.
 	schema Schema
+	// compiled holds the specialized evaluation of every predicate in the
+	// chain when each node is in the compiled set (stateless_compile.go);
+	// nil keeps the generic closure evaluation. Both forms evaluate the same
+	// operations over the same Values.
+	compiled []statelessValueFn
 }
 
 // appliesTo reports whether an event carries the schema this plan was proven
@@ -104,7 +109,11 @@ func newStatelessExecutionPlan(s *Statement) *statelessExecutionPlan {
 					return nil
 				}
 			}
-			return &statelessExecutionPlan{input: query.input, schema: schema}
+			return &statelessExecutionPlan{
+				input:    query.input,
+				schema:   schema,
+				compiled: compileStatelessChain(schema, predicates),
+			}
 		default:
 			// Windows, derived streams, contained sources, named windows,
 			// tables and method/historical sources all retain or poll state.
@@ -221,8 +230,14 @@ var statelessPureKinds = map[string]bool{
 func (s *Statement) processStatelessEvent(plan *statelessExecutionPlan, event Event, now time.Time, variables map[string]Value, accepted bool, acceptedKnown bool) (ResultBatch, bool) {
 	matched := accepted
 	if !acceptedKnown {
-		scope := variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
-		matched = sourceNodeMatchesEventFilter(s.engine.env, plan.input, event, now, scope, s.engine)
+		if plan.compiled != nil && plan.appliesTo(event) {
+			// The compiled chain mirrors the generic filter evaluation for
+			// events carrying the proven schema; it reads no variables.
+			matched = statelessCompiledMatch(plan.compiled, event)
+		} else {
+			scope := variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+			matched = sourceNodeMatchesEventFilter(s.engine.env, plan.input, event, now, scope, s.engine)
+		}
 	}
 	if !matched {
 		// The generic pipeline reports an empty counted batch for a rejected

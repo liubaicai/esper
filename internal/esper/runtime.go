@@ -341,7 +341,11 @@ type Engine struct {
 	// dispatchOrder caches the immutable continuous-statement order derived
 	// from the statement catalog. It is invalidated whenever the catalog
 	// changes, so per-event dispatch does not re-sort the catalog.
-	dispatchOrder                      []*Statement
+	dispatchOrder []*Statement
+	// acceptedNameCache memoizes per-event-type accepted-name sets for the
+	// dispatch pruning guard (accept_index.go); guarded by e.mu, keyed by
+	// event type name (routed events by stream type).
+	acceptedNameCache                  map[string]map[string]struct{}
 	updateDispatchOrder                []*Statement
 	deployments                        map[string]*Deployment
 	resourceDependents                 map[deploymentResourceRef]map[string]struct{}
@@ -1655,7 +1659,11 @@ type Statement struct {
 	// (nextSubID never resets, so ascending ID order equals subscription
 	// order). dispatchSync reads it under RLock instead of re-collecting and
 	// re-sorting the map on every batch; nil always means "no listeners".
-	listenerSnapshot         []Listener
+	listenerSnapshot []Listener
+	// acceptIndex is the deployment-time event-type acceptance view used by
+	// the dispatch loops to skip statements that provably cannot accept an
+	// event (see accept_index.go). Immutable after prepare.
+	acceptIndex              statementAcceptIndex
 	nextSubID                uint64
 	state                    StatementState
 	closed                   bool
@@ -3292,6 +3300,9 @@ func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deploym
 	}
 	statement.runtime.subqueryRegistry = newSubqueryRuntimeRegistry(e.env, e, plan.query)
 	statement.runtime.variables = statement.runtime.subqueryRegistry.attachVariables(statement.runtime.variables)
+	// Computed after the subquery registry exists: a registry means subquery
+	// windows observe every event and the statement must not be pruned.
+	statement.acceptIndex = newStatementAcceptIndex(e.env, plan.query, statement.runtime.subqueryRegistry == nil)
 	statement.runtime.resolveWindowDurations(plan)
 	statement.runtime.initializeAt(e.clock.Now())
 	if plan.query.tableTarget != "" {
@@ -3981,7 +3992,20 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		// them, then append the deferred dispatches.
 		var deferredTriggerDispatchesStorage [2]statementDispatch
 		deferredTriggerDispatches := deferredTriggerDispatchesStorage[:0]
-		for _, statement := range e.updateStatementsFirstLocked() {
+		// Pruning needs the per-event name set only when more than one
+		// statement is deployed; a lone statement gains nothing from skipping.
+		dispatchOrder := e.updateStatementsFirstLocked()
+		var acceptedNames map[string]struct{}
+		if len(dispatchOrder) > 1 {
+			acceptedNames = e.eventAcceptedTypeNamesCached(current)
+		}
+		for _, statement := range dispatchOrder {
+			if idx := statement.acceptIndex; idx.prunable && acceptedNames != nil && statement.runtime.outputState == nil && !idx.mayAccept(acceptedNames) {
+				// Provable type mismatch: this statement's filter decision
+				// would be "cannot accept" with no output, no metric or audit
+				// record, and no replace/drop contribution.
+				continue
+			}
 			accepted := statement.matchesEventFilter(current, now, variables)
 			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted, true)
 			if processErr != nil {
@@ -3993,6 +4017,9 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 			}
 			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
 				current = replaced
+				// The replaced event can carry a different schema; recompute
+				// the event-side name set so pruning stays exact.
+				acceptedNames = e.eventAcceptedTypeNamesCached(current)
 			}
 			if statement.takeDroppedEvent() {
 				break
@@ -5173,7 +5200,16 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		}
 		e.recordRuntimeInputLocked()
 		matched := false
-		for _, statement := range e.updateStatementsFirstLocked() {
+		routedOrder := e.updateStatementsFirstLocked()
+		var acceptedNames map[string]struct{}
+		if len(routedOrder) > 1 {
+			acceptedNames = e.eventAcceptedTypeNamesCached(current.event)
+		}
+		for _, statement := range routedOrder {
+			if idx := statement.acceptIndex; idx.prunable && acceptedNames != nil && statement.runtime.outputState == nil && !idx.mayAccept(acceptedNames) {
+				// Provable type mismatch (see the send-loop guard).
+				continue
+			}
 			needsAccepted := unmatchedEvents != nil || e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
 			accepted := needsAccepted && statement.matchesEventFilter(current.event, now, variables)
 			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted, needsAccepted)
@@ -5185,6 +5221,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 			}
 			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
 				current.event = replaced
+				acceptedNames = e.eventAcceptedTypeNamesCached(current.event)
 			}
 			if statement.takeDroppedEvent() {
 				break
@@ -7242,8 +7279,13 @@ func (s *Statement) matchesEventFilter(event Event, now time.Time, variables map
 	// per-statement variable assembly is skipped. The plan fields are written
 	// only under s.mu.Lock (Statement.process), making this RLock read
 	// synchronized; statements without a plan keep the generic assembly.
+	// When the plan also compiled the chain and the event carries the proven
+	// schema, the specialized evaluation replaces the generic closure walk;
+	// it evaluates the same operations over the same Values.
 	if s.statelessPlan == nil || !s.statelessPlanResolved {
 		variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+	} else if plan := s.statelessPlan; plan.compiled != nil && plan.appliesTo(event) {
+		return statelessCompiledMatch(plan.compiled, event)
 	}
 	query := s.plan.query
 	if query.join != nil {

@@ -178,6 +178,21 @@ ClientCompileLarge）与三条差分链（§3.1 同一命令）全部通过；`T
 `make check` 中的 `check-layout.sh` 在本机经 WSL 调用且 WSL 内无 gofmt，属环境限制；其等价项
 （vet、gofmt -l、全量 test）已分别通过。
 
+### 3.4 第三轮（§4.7 编译谓词 + §4.1 类型级裁剪）的同机 A/B 证据
+
+方法：§4.7 用源码树交替两轮（`git stash -u`）；§4.1 的多语句基准在 HEAD 独立 worktree
+运行同一基准源（公共 API 自包含副本）。`GOMAXPROCS=1`。
+
+| 基准 | HEAD（`e77d1880e`） | 本轮 | 备注 |
+| --- | ---: | ---: | --- |
+| StatelessFilterSend/rejected | 2008/2319 ns，4 allocs | 1402/1607 ns，4 allocs | §4.7 单独效果，-32% |
+| StatelessFilterSend/accepted | 3908/4663 ns，8 allocs | 2012/2139 ns，8 allocs | §4.7 单独效果，约 -50% |
+| AcceptIndexMultiStatement（64 语句/2 类型） | 84232/85535 ns，68 allocs | 19988/21825 ns，**4 allocs** | §4.7+§4.1 合并，约 4x / 17x |
+
+单语句引擎在裁剪下零回归（>1 语句才计算事件名集合，集合按类型名缓存）。门禁：全量
+`go test ./...`、定向 `-race`（含 accept-index/contained/unnest/variant/join/pattern/
+insert-into/named-window 族）、`go vet`、gofmt、三条差分链全部通过。
+
 > 说明：上表为受控微基准与本机数据，不是端到端 EPS 结论，也不构成 `nfr-verified` 登记。
 
 ## 4. 后续性能与执行模型工作项（尚未实施）
@@ -187,16 +202,25 @@ ClientCompileLarge）与三条差分链（§3.1 同一命令）全部通过；`T
 
 ### 4.1 过滤服务索引（Java `FilterService` 等价物）
 
-- 现状：`Engine.send` 对每个事件遍历全部 continuous 语句并逐条求值过滤谓词，复杂度 O(语句数)。
-  派发顺序已缓存，但候选选择仍是全量。
-- 目标：为可索引谓词（等值、IN、范围）建立事件类型/属性索引，把事件直接映射到可能匹配的语句集合。
-- Java 参考：`EventTypeIndex`（精确类型 + 深度父类型）、`FilterParamIndexEquals`（可查找量求值一次 +
-  哈希查找）、`FilterHandleSetNode`、`FilterParamIndexBooleanExpr`（残余布尔表达式仍逐个求值）、
-  `EPEventServiceImpl`（先过滤服务匹配再处理回调）。
-- 必须保持：未索引布尔谓词仍全量求值；命中语句全部执行；priority/drop 与部署序屏障；unmatched
-  监听器与指标/审计记账语义；多槽位 IN 投递；深层父类型匹配；变量/上下文对谓词求值的影响。
-- 前置证据：候选裁剪等价性（被索引判定为不匹配的语句必须确实不匹配）、unmatched 记录顺序、
-  优先级屏障、以及能显示候选数下降的基准。
+状态：第一阶段已实施（事件类型级候选裁剪，`accept_index.go`）。`EventTypeIndex` 等价物：
+语句在 prepare 期解析出**事件类型接受描述符**（全部源为具名普通 schema 时可裁剪；variant、
+contained/unnest、historical/method 源，context、update-istream、子查询注册表、输出策略语句
+一律不可裁剪），事件侧按类型名计算一次接受名集合（普通事件 = 自身类型名 + `parentNames`
+传递闭包，镜像 `acceptsEventType` 的遍历；routed 事件 = 仅 `StreamType` 精确名，镜像
+`sourceNodeAcceptsEvent` 的 routed 早退分支），集合按类型名缓存在引擎上（schema 父链不可变），
+派发环对可裁剪语句做一次集合探测即跳过——被跳过语句本会贡献 accepted=false/changed=false，
+指标采样、计数与审计记录全部以 accepted/changed 为门（metrics.go:655-675、audit.go:393-452），
+故跳过无可观测差异。替换事件（update-istream 的 copy-on-write）后重算集合。派发顺序、
+priority/drop 屏障、unmatched 记账不变（同序遍历、逐语句跳过）。
+第二阶段（`FilterParamIndexEquals` 等值/IN/范围属性索引）尚未实施：同类型多语句仍逐个求值谓词。
+
+- 证据：`accept_index_test.go` 四守护回归（仅非接受语句被跳过且 unmatched 记账不变、子查询
+  语句不被裁剪、父类型接受穿越裁剪、variant 语句不裁剪）；contained/unnest/variant 经
+  join/pattern 的三处失败驱动修复 `prunable` 单向置位 bug（`addName` 曾把已判不可裁剪的语句
+  翻回可裁剪）；`BenchmarkAcceptIndexMultiStatement`（64 语句/2 类型单引擎）对照 HEAD worktree
+  同基准：84.2/85.5 µs、68 allocs → 19.9/21.8 µs、**4 allocs**（约 4x 时延、17x 分配，
+  与 §4.7 编译谓词的合并效果）。单语句引擎零开销（>1 语句才计算集合，且缓存命中零分配，
+  `BenchmarkStatelessFilterSend` 维持 4/8 allocs）。
 
 ### 4.2 单次谓词求值（消除重复求值）
 
@@ -241,8 +265,25 @@ ClientCompileLarge）与三条差分链（§3.1 同一命令）全部通过；`T
 
 ### 4.7 表达式求值的进一步特化
 
-- 当前表达式树以闭包逐节点求值；Java 通过生成类内联谓词并直接访问成员。若共享 API 面稳定，
-  可在引擎内部为热点谓词生成特化闭包（不改变 §2.2 的合格性判定与公共语义）。
+状态：已实施（stateless 限定）。`stateless_compile.go` 在计划解析时把已证明纯的谓词链编译为
+直线闭包：字段读取预解析 `structFieldTable` 候选路径（与泛型 `Schema.get`→`getOne`→
+`structFieldValue` 同一候选选择与回退、同一 Value 包装，Value/Row/Event 壳与非 struct 表示逐分支
+镜像或回落泛型 `Get`）；比较/包含/成员/逻辑/空探测节点复用与泛型闭包**完全相同**的操作函数
+（`EqualValues`/`compareValues`/`exactNumericCompare`/`As`/`equalValuesUnwrapped`/`strings.*`），
+仅消除逐节点闭包分发与名字解析；四个纯内建（`Lower`/`Upper`/`Trim`/`StringLength`，仅这四个
+构造器设置 `pureBuiltin`）按描述前缀识别并镜像 `Func1` 的 null 传播。编译集之外的节点使整链
+回落泛型（无部分编译）。`matchesEventFilter` 与 `processStatelessEvent` 在 `appliesTo` 成立时
+改用编译链，求值次数与结果不变。
+
+- 等价性证据：`TestStatelessCompiledMatchesGenericMatrix`（20 形态 × 6 事件矩阵，含 nil 指针
+  字段、null/missing 操作数、大小写、混合数值比较、指针字段与内建组合）与
+  `TestStatelessCompiledCaseInsensitiveAndFallback`（大小写不敏感解析、匿名 nil 指针候选回退）
+  逐事件断言编译链与泛型 `sourceNodeMatchesEventFilter` 同布尔结果。
+- 基准（同机交替 A/B，`GOMAXPROCS=1`，对 HEAD `e77d1880e`）：rejected 2008/2319 → 1402/1607 ns
+  （-32%），accepted 3908/4663 → 2012/2139 ns（-50%），分配不变（4/8 allocs）。
+- 后续（未实施）：Java 的生成类内联（直接成员访问、无 reflect）不可移植为 Go 代码生成面；
+  若需进一步压缩，可对 `field` 读取按字段类型做类型化特化闭包（当前保留一次 `reflect` 路径
+  行走 + `Present(Interface())` 装箱）。
 
 ### 4.8 NFR 登记
 
@@ -380,8 +421,9 @@ ClientCompileLarge）与三条差分链（§3.1 同一命令）全部通过；`T
   引用，需先验证所有持有语义后再减少 clone。
 - **Named Window/Table 位置索引增量维护（§4.9.5）**：hash 排序和空索引重建已优化；删除、压缩、unique
   replacement、restore 仍走完整重建，避免位置调整改变查询顺序。
-- **WHERE 下推、结果集 HANDTHROUGH、表达式生成特化和 NFR 登记（§4.3、§4.4、§4.7、§4.8）**：这些项目
-  需要独立 capability 证据、old/new 流验证和可复现基准，不能仅凭微优化提交状态。
+- **WHERE 下推、结果集 HANDTHROUGH、过滤索引第二阶段与 NFR 登记（§4.3、§4.4、§4.1 第二阶段、§4.8）**：
+  §4.7 编译谓词已实施（stateless 限定）；这些剩余项目需要独立 capability 证据、old/new 流验证和
+  可复现基准，不能仅凭微优化提交状态。
 - **派发循环内 panic 的 deferred 自死锁（§2.4 追加发现）**：panic 发生在持有 `e.mu` 的派发循环内时，
   deferred `finishExternalRoutes` 在栈展开中再次 `e.mu.Lock` 导致挂起而非报告 panic；修复需论证
   panic 期间的锁释放顺序，属可观测的故障呈现变化，单独成单元。
@@ -401,8 +443,46 @@ go test ./internal/esper -run 'TestClientCompileLarge|TestStatelessFilter' -coun
 # A/B：对 HEAD 与工作树交替运行同一基准，对消机器漂移
 GOMAXPROCS=1 go test ./internal/esper -run '^$' -bench BenchmarkStatelessFilterSend -benchmem -count 1
 
+# 第三轮（§4.7/§4.1）的常驻回归与基准
+go test ./internal/esper -run 'TestStatelessCompiled|TestAcceptIndex' -count=1
+GOMAXPROCS=1 go test ./internal/esper -run '^$' -bench 'StatelessFilterSend|AcceptIndexMultiStatement' -benchmem
+
 # 受影响差分链（Java trace 已在仓库内，无需重新生成）
 go run ./cmd/parity -mode event-bean-property-fragment-diff -scenario testdata/parity/event-bean-property-fragment.json -java-trace testdata/parity/event-bean-property-fragment.trace.json
 go run ./cmd/parity -mode expr-filter-optimizable-diff -scenario testdata/parity/expr-filter-optimizable.json -java-trace testdata/parity/expr-filter-optimizable.trace.json
 go run ./cmd/parity -mode expr-core-logical-diff -scenario testdata/parity/expr-core-logical.json -java-trace testdata/parity/expr-core-logical.trace.json
 ```
+
+
+## 7. 应用侧接入指引（bigsoc-app 落地多规则高性能形态）
+
+引擎侧三轮优化（§2.4、§4.7、§4.1）把成本结构变为：**单次 SendEvent 固定成本 ~1.5-2 µs +
+每命中类型语句 ~0.4 µs（编译谓词）+ 非命中类型语句 ~0（类型级裁剪）**。要兑现它，应用侧需要
+做以下改造（按收益排序）：
+
+1. **合并规则引擎：一引擎多语句，而非每规则一引擎。** 当前形态（278 规则 × 278 引擎 × 逐引擎
+   SendEvent）为每个事件支付 278 次完整 SendEvent 固定成本（锁、时钟、事件包装、变量快照、
+   派发装配），类型裁剪无从生效。改造为单一 `Engine` + 每规则一个 `Plan`/语句 + 各自
+   `Subscribe`：每事件一次 SendEvent，引擎按事件类型裁剪到相关语句（§4.1），同类型规则用编译
+   谓词判定（§4.7）。以基准推算：278 条双条件规则、事件命中其中一类的形态，从 ~每事件
+   278 × SendEvent 固定成本降到 1 × 固定成本 + 命中类型语句数 × ~0.4 µs。
+   - 语义注意：单引擎内语句按 priority/drop/部署序派发（与多引擎各自独立的顺序等价性由规则
+     互不依赖保证）；规则间无 insert-into/route 依赖时合并无观测差异。若个别规则需要隔离
+     （如独立 undeploy 生命周期），`Deployment` 粒度仍然可用——一引擎可持有多 deployment。
+2. **保持规则的快速路径资格**（§2.2 合格性，缺一则整条规则退回通用管线）：
+   - 事件用注册 struct（`RegisterStruct`），谓词只读**普通命名字段**（无 `child.value`/`items[0]`
+     路径语法）；
+   - 不用 `WithPropertyGetter`/`WithPropertyMethod`/JavaBean 访问器（注册 getter 即丧失资格）；
+   - 谓词只用纯算子：`Equal/NotEqual/Greater(Less)…/Contains/StartsWith/EndsWith/In/And/Or/Not/
+     IsNull/IsMissing` 与 `Lower/Upper/Trim/StringLength`（大小写不敏感形态用 `Lower`+`Equal`/
+     `Contains` 即可保资格）；用户自定义 `Func*`、变量、子查询、脚本一律退回通用管线；
+   - 无窗口/聚合/输出策略/上下文（纯过滤规则天然满足）。
+3. **发送路径**：事件类型固定时用 `Send(ctx, "TypeName", event)`（省去 `SendEvent` 的反射类型
+   推断）；同一 Go 类型只注册一个事件名（多注册名会强制 `Send` 显式名）。
+4. **监听器**：同步 listener 每批次一次 `batch.clone()`（保留语义必需）；不需要批次历史时不要在
+   listener 中持有 `ResultBatch` 引用（为将来批次复用优化保留空间，见 §4.9.3）。
+5. **验证方法**：合并前后用相同的规则集与事件流做行为对照（输出行、顺序、unmatched 计数），
+   并用 `BenchmarkAcceptIndexMultiStatement` 的形态自测：预期每事件成本 ≈ 固定成本 + 命中类型
+   规则数 × ~0.4 µs（单核，本机 2026-09 快照；非承诺阈值）。
+
+上述第 1 项是数量级收益的关键；第 2 项决定单条规则的判定成本档位。引擎侧已无待办阻塞应用改造。

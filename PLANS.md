@@ -78,25 +78,25 @@ Active: Draft 4.352 ('subselect-range-coercion-joins').
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: perf-dispatch-allocation-round2 (2026-09-10).
+Active: perf-compile-prune-round3 (2026-09-10, 两单元连续实施)。
 
-- Baseline: clean `master` `b02424055`; fixed Java `9e1b9f1cc9117fea4bf33ab043762c045d73839c` at `D:/Code/soc/esper`（本单元纯性能、零语义变化，Java oracle 无涉入范围）。
-- Scope: §2.4 六项分配削减（纯谓词语句跳过变量装配、send 空变量快照、routedQueue/deferred 栈背衬、finishExternalRoutes 惰性 drain ctx、SendEvent 免复制 typeNamesShared、listener 快照缓存、Literal 预装箱）+ 两项 nil 安全修复（bindParameterValues、executeVariableTriggerAction 写回）。允许文件：runtime.go、expr.go、plan.go、faf.go、trigger.go、docs/esper-go-performance.md、PLANS.md、CHANGELOG.md。
-- Delegation: 双只读 scout 并行（ListenerSnapshotScout：listeners 全部 6 个变更点 + 2 读者 + 顺序契约；SendPathLifetimeScout：send 局部切片生命周期、finishExternalRoutes、typeNames 锁定），PerfParityReviewer 独立复审。
-- Regression found & fixed: `snapshotVariables` 引入的 nil 快照使 `bindParameterValues` 向 nil map 写入 panic，且 panic 在持有 e.mu 时经 deferred finishExternalRoutes 自死锁（表现为测试挂起）；`TestClientCompileLargeSubstitutionParamsMatchesEsper` 稳定复现，修复后 0.02s。既有 deferred 自死锁结构问题记录于 docs §6。
-- Verification: 定向 + 全量 `go test ./... -count=1` 绿；定向 `-race` 绿；三条差分链 passing 0 differences；go vet、gofmt -l、`git diff --check` 干净（check-layout.sh 走 WSL 无 gofmt，环境限制，等价项已过）。A/B（源码树交替两轮，GOMAXPROCS=1）：rejected 10→4 allocs（1321→857 B），accepted 16→8 allocs（2080→1577 B），ns/op 中位 -20%。
-- [x] Scouts + contract freeze
-- [x] Implementation + regression fix
-- [x] Gates + A/B evidence + docs
-- [x] Independent review, commit and push（两个远端 origin / origin-github）
+- Baseline：clean `master` `e77d1880e`；纯性能、零语义变化，Java oracle 无涉入。
+- Unit A §4.7 编译谓词：`stateless_compile.go` 镜像泛型语义（同一操作函数、同一字段候选路径）编译纯谓词链；`matchesEventFilter`/`processStatelessEvent` 在 appliesTo 下使用编译链。等价性：矩阵差分测试（20 形态 × 6 事件 + 大小写/嵌入回退）。基准：rejected -32%、accepted 约 -50%。
+- Unit B §4.1 第一阶段：`accept_index.go` 事件类型级候选裁剪（语句描述符 + 事件侧接受名集合 + 引擎缓存 + >1 语句门 + outputState 活检）；守护：context/update-istream/子查询/输出策略/variant/contained/historical/method 不可裁剪。中途修复 `addName` 翻回 prunable 的单向置位 bug（contained/unnest/variant 经 join/pattern 三处失败驱动）。基准：64 语句/2 类型 84→20 µs、68→4 allocs（对 HEAD worktree 同基准）。
+- 应用侧接入指引：docs §7（合并引擎、快速路径资格、发送/监听器建议、验证方法）。
+- Verification：全量 test、定向 -race（含 accept-index/contained/unnest/variant/join/pattern/insert-into/named-window）、vet、gofmt、三条差分链 passing。
+- Delegation：ExprSemanticsScout（表达式语义全谱，识别三条陷阱）、DispatchAcceptanceScout（acceptsEventType/指标审计/子查询/上下文/输出策略可观测面）双只读 scout；PerfParityReviewer 终审。
+- [x] Unit A 实现/测试/门禁/文档
+- [x] Unit B 实现/守护测试/门禁/文档
+- [x] 应用侧指引 + 独立复审 + 提交推送两远端
 
-### Previous work unit
+### Previous work unit (prior)
 
 Draft 4.366 ('performance-property-access-stateless').
 
 - P0 属性访问元数据缓存 + P1 stateless 过滤特化；详见 CHANGELOG 4.366 与 `docs/esper-go-performance.md` §2.1/§2.2。`PerfParityReview` 两轮（round 1 FAIL：getter/method 背书属性可复用单次求值改变用户代码调用次数 → 计划增加 schema 声明/getter 排除/plain-name/appliesTo 身份校验；round 2 PASS）。提交 `cc93ba276`。
 
-### Previous work unit
+### Previous work unit (oldest)
 
 Draft 4.365 ('dataflow-beacon-source').
 
@@ -108,6 +108,10 @@ Draft 4.365 ('dataflow-beacon-source').
 - [x] Commit and push (single semantic commit with all checkpoint edits folded in; no post-commit checkpoint-only push).
 
 ## Delegation checkpoint
+perf-compile-prune-round3 unit:
+- Delegation gate: two read-only scouts in parallel — 'ExprSemanticsScout' (exact eval semantics of all stateless-eligible kinds incl. the As zero-value contract for string predicates, eq-vs-ordering numeric policy split, pureBuiltin construction sites) and 'DispatchAcceptanceScout' (acceptsEventType name/variant/supertype semantics, sourceNodeAcceptsEvent per-kind routing incl. routed StreamType early-exit, metrics/audit gating, subquery/context/output-policy observability for type-mismatched statements). Independent 'PerfParityReviewer' reviewed both units' final diff.
+- Primary owns all writes (shared surface single-writer), tests, benchmarks, docs, gates, commit, push.
+
 
 perf-dispatch-allocation-round2 unit:
 - Delegation gate: two read-only scouts dispatched in parallel — 'ListenerSnapshotScout' (complete listeners mutation census: 6 write sites incl. cleanupPreparedStatementLocked + markClosedLocked, dispatchSync the only structural reader, metrics.go len() reader, nextSubID monotonic ⇒ ascending ID = subscription order) and 'SendPathLifetimeScout' (send-local slice lifetimes incl. &-pointer gating, finishExternalRoutes control flow, typeNames cache replace-only semantics; delivered post-edit and doubled as implementation review). Independent 'PerfParityReviewer' reviewed the final diff.
