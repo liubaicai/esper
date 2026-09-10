@@ -260,6 +260,9 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
 
 #### 4.9.4 Schema 元数据的大小写不敏感 fold 索引
 
+状态：已实施（`f8145e81b`）。Schema 构造阶段为字段、getter、setter 和嵌套 schema 建立基于
+`unicode.SimpleFold` 轨道最小值的不可变索引；精确名称、`EqualFold` 确认和歧义错误语义保持不变。
+
 - 现状：`Schema.lookupField`（`schema.go:1657`）、`lookupGetter`（`schema.go:1688`）、
   `lookupSetter`（`schema.go:1714`）在精确名未命中且 resolution 非 `PropertyCaseSensitive` 时，
   分别对 `s.fields` / getter map / setter map 全量执行 `strings.EqualFold`（`lookupNestedSchema`
@@ -287,6 +290,9 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
   `keyOrder` 一致性必须保持。
 
 #### 4.9.6 事件类型解析入口缓存
+
+状态：已实施（`f8145e81b`）。Environment 对 `reflect.Type` 缓存注册名称快照，并在成功注册 schema
+时刷新；返回值仍复制切片，保持注册顺序和多名称歧义语义。
 
 - 现状：`Environment.typeNames`（`plan.go:171`）每次调用都取 `e.mu.RLock` 并
   `append([]string(nil), e.typeToName[typ]...)` 复制名称切片；`Engine.SendEvent`
