@@ -1842,7 +1842,11 @@ func Literal[T any](value T) Expression[T] {
 		description = "literal(" + canonicalDataflowPropertyValue(reflected, make(map[canonicalDataflowReference]bool)) + ")"
 	}
 	node := &exprNode{kind: "literal", typ: typeOf[T](), description: description, literalValue: value}
-	return typedExpr[T]{n: node, fn: func(EvalContext) Value { return Present(value) }}
+	// Box the constant once at construction. Evaluation returns the same
+	// immutable Value, so a per-eval Present(value) would re-allocate the
+	// identical interface box on every call with no observable difference.
+	boxed := Present(value)
+	return typedExpr[T]{n: node, fn: func(EvalContext) Value { return boxed }}
 }
 
 // DurationSeconds converts an analyzable numeric expression to a duration.

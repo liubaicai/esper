@@ -1638,18 +1638,24 @@ const (
 )
 
 type Statement struct {
-	mu                       sync.RWMutex
-	engine                   *Engine
-	deployment               *Deployment
-	deploymentOrder          uint64
-	plan                     Plan
-	userObject               any
-	parameters               ParameterValues
-	id                       string
-	name                     string
-	runtime                  statementRuntime
-	listeners                map[uint64]Listener
-	subscriber               Subscriber
+	mu              sync.RWMutex
+	engine          *Engine
+	deployment      *Deployment
+	deploymentOrder uint64
+	plan            Plan
+	userObject      any
+	parameters      ParameterValues
+	id              string
+	name            string
+	runtime         statementRuntime
+	listeners       map[uint64]Listener
+	subscriber      Subscriber
+	// listenerSnapshot is the dispatch view of listeners in ascending
+	// subscription-ID order, rebuilt under s.mu at every listener mutation
+	// (nextSubID never resets, so ascending ID order equals subscription
+	// order). dispatchSync reads it under RLock instead of re-collecting and
+	// re-sorting the map on every batch; nil always means "no listeners".
+	listenerSnapshot         []Listener
 	nextSubID                uint64
 	state                    StatementState
 	closed                   bool
@@ -2278,7 +2284,28 @@ func (s *Statement) Subscribe(listener Listener) (Subscription, error) {
 	s.nextSubID++
 	id := s.nextSubID
 	s.listeners[id] = listener
+	s.rebuildListenerSnapshotLocked()
 	return Subscription{statement: s, id: id}, nil
+}
+
+// rebuildListenerSnapshotLocked refreshes the cached dispatch view of the
+// listener map. Callers must hold s.mu (write). An empty map caches nil so
+// dispatchSync's nil check doubles as the "no listeners" fast path.
+func (s *Statement) rebuildListenerSnapshotLocked() {
+	if len(s.listeners) == 0 {
+		s.listenerSnapshot = nil
+		return
+	}
+	ids := make([]uint64, 0, len(s.listeners))
+	for id := range s.listeners {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	snapshot := make([]Listener, 0, len(ids))
+	for _, id := range ids {
+		snapshot = append(snapshot, s.listeners[id])
+	}
+	s.listenerSnapshot = snapshot
 }
 
 // SetSubscriber replaces the statement's single subscriber. Passing nil
@@ -2362,6 +2389,7 @@ func (s *Statement) SubscribeWithReplay(ctx context.Context, listener Listener) 
 	s.nextSubID++
 	id := s.nextSubID
 	s.listeners[id] = buffer.deliver
+	s.rebuildListenerSnapshotLocked()
 	s.mu.Unlock()
 
 	// Release the engine lock before entering application code. The buffering
@@ -2383,6 +2411,7 @@ func (s *Statement) removeSubscription(id uint64) error {
 		return nil
 	}
 	delete(s.listeners, id)
+	s.rebuildListenerSnapshotLocked()
 	return nil
 }
 
@@ -3310,6 +3339,7 @@ func (e *Engine) cleanupPreparedStatementLocked(statement *Statement) {
 	statement.closed = true
 	statement.state = StatementDestroyed
 	statement.listeners = make(map[uint64]Listener)
+	statement.rebuildListenerSnapshotLocked()
 }
 
 // seedNamedWindowRowRecogLocked replays the retained contents of a named
@@ -3808,6 +3838,7 @@ func (s *Statement) markClosedLocked() {
 		s.closed = true
 		s.state = StatementDestroyed
 		s.listeners = make(map[uint64]Listener)
+		s.rebuildListenerSnapshotLocked()
 		s.subscriber = nil
 		s.mu.Unlock()
 	})
@@ -3906,7 +3937,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	}
 	event.jsonRaw = jsonRaw
 	e.refreshVariablesLocked()
-	variables := cloneValues(e.variables)
+	variables := snapshotVariables(e.variables)
 	e.pendingStatementDispatches = nil
 	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
@@ -3919,7 +3950,11 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	e.pendingPatternSubexpressionLimits = nil
 	e.pendingAuditRecords = nil
 	dispatches := make([]statementDispatch, 0)
-	routedQueue := []Event{event}
+	// routedQueue is only ever seeded with the inbound event (routed events
+	// enter through processPendingRoutedEventsLocked), so a one-element stack
+	// buffer covers it without a heap allocation per send.
+	var routedQueueStorage [1]Event
+	routedQueue := append(routedQueueStorage[:0], event)
 	processedEvents := make([]Event, 0, 1)
 	unmatchedEvents := make([]Event, 0, 1)
 	processedRoutes := 0
@@ -3944,7 +3979,8 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		// aggregates multiple queued deltas into one consumer callback. Defer
 		// the mutation statements' own dispatches so the flushed wave precedes
 		// them, then append the deferred dispatches.
-		deferredTriggerDispatches := make([]statementDispatch, 0, 2)
+		var deferredTriggerDispatchesStorage [2]statementDispatch
+		deferredTriggerDispatches := deferredTriggerDispatchesStorage[:0]
 		for _, statement := range e.updateStatementsFirstLocked() {
 			accepted := statement.matchesEventFilter(current, now, variables)
 			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted, true)
@@ -4137,7 +4173,9 @@ func (e *Engine) SendEvent(ctx context.Context, underlying any) error {
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	names := e.env.typeNames(typ)
+	// SendEvent consumes the names transiently (length check, first name,
+	// error text), so the shared cache slice avoids one slice copy per send.
+	names := e.env.typeNamesShared(typ)
 	if len(names) == 0 {
 		return NewError(ErrorUnknownName, fmt.Sprintf("no registered event type for Go type %s", typ))
 	}
@@ -4267,11 +4305,10 @@ func (e *Engine) finishExternalRoutes(ctx context.Context) error {
 	e.mu.Unlock()
 	// A route accepted while dispatching is committed work. Preserve context
 	// values for the routed callbacks, but do not let cancellation discard the
-	// accepted FIFO queue before it has been attempted.
-	drainCtx := context.Background()
-	if ctx != nil {
-		drainCtx = context.WithoutCancel(ctx)
-	}
+	// accepted FIFO queue before it has been attempted. The drain context is
+	// built lazily on the first queued route: an empty queue (the common
+	// dispatch exit) costs no context allocation.
+	var drainCtx context.Context
 	var routeErrors []error
 	defer func() {
 		e.mu.Lock()
@@ -4291,6 +4328,12 @@ func (e *Engine) finishExternalRoutes(ctx context.Context) error {
 		e.pendingExternalRoutes = e.pendingExternalRoutes[1:]
 		e.dispatching = false
 		e.mu.Unlock()
+		if drainCtx == nil {
+			drainCtx = context.Background()
+			if ctx != nil {
+				drainCtx = context.WithoutCancel(ctx)
+			}
+		}
 		if err := e.send(drainCtx, route.eventType, route.underlying, nil); err != nil {
 			routeErrors = append(routeErrors, err)
 		}
@@ -5518,14 +5561,21 @@ func (s *Statement) dispatchSync(ctx context.Context, batch ResultBatch) error {
 		batch.Old = nil
 	}
 	s.mu.RLock()
-	listenerIDs := make([]uint64, 0, len(s.listeners))
-	for id := range s.listeners {
-		listenerIDs = append(listenerIDs, id)
-	}
-	sort.Slice(listenerIDs, func(i, j int) bool { return listenerIDs[i] < listenerIDs[j] })
-	listeners := make([]Listener, 0, len(listenerIDs))
-	for _, id := range listenerIDs {
-		listeners = append(listeners, s.listeners[id])
+	// The snapshot is rebuilt under s.mu at every listener mutation, so this
+	// is the same ascending-subscription-ID order the per-batch rebuild
+	// produced. The map check is a defensive fallback: if a snapshot were ever
+	// missing, rebuild locally rather than dropping listeners.
+	listeners := s.listenerSnapshot
+	if listeners == nil && len(s.listeners) != 0 {
+		listenerIDs := make([]uint64, 0, len(s.listeners))
+		for id := range s.listeners {
+			listenerIDs = append(listenerIDs, id)
+		}
+		sort.Slice(listenerIDs, func(i, j int) bool { return listenerIDs[i] < listenerIDs[j] })
+		listeners = make([]Listener, 0, len(listenerIDs))
+		for _, id := range listenerIDs {
+			listeners = append(listeners, s.listeners[id])
+		}
 	}
 	subscriber := s.subscriber
 	sink := s.plan.query.sink
@@ -7186,7 +7236,15 @@ func (s *Statement) matchesEventFilter(event Event, now time.Time, variables map
 	if s.closed || s.state != StatementStarted {
 		return false
 	}
-	variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+	// A resolved stateless plan proves the whole predicate chain reads only
+	// event fields and literals (statelessPureKinds): variables, parameters,
+	// subqueries and user code cannot observe this evaluation, so the
+	// per-statement variable assembly is skipped. The plan fields are written
+	// only under s.mu.Lock (Statement.process), making this RLock read
+	// synchronized; statements without a plan keep the generic assembly.
+	if s.statelessPlan == nil || !s.statelessPlanResolved {
+		variables = variablesWithEngineLockState(statementVariables(variables, s.parameters), s.engine, true)
+	}
 	query := s.plan.query
 	if query.join != nil {
 		for _, source := range joinDefinitionSources(query.join) {

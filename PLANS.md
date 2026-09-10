@@ -78,25 +78,23 @@ Active: Draft 4.352 ('subselect-range-coercion-joins').
 - Deferred: epl-other-as-keyword-backtick (FAF/on-trigger/merge integration complex — Go runner's SelectFromNamedWindow subscribes to both trigger and NW changes producing extra records; Java oracle had 37 compilation errors; both need engine-level investigation before retry). Next candidates after 4.336: ExprFilterOptimizableBooleanLimitedExpr ords 1+4 (N+2), EPLOtherPlanInKeywordQuery (9), EPLInsertIntoPopulateUnderlying (9), EPLInsertIntoEventPrecedence (7).
 
 ## Current work unit
-Active: performance-property-access-stateless (2026-09-10).
+Active: perf-dispatch-allocation-round2 (2026-09-10).
 
-- Baseline: clean `master`, Go `7704c1f71de6df8900b30ae42589f3e1058b9613`; fixed Java `9e1b9f1cc9117fea4bf33ab043762c045d73839c` at `D:/Code/soc/esper`.
-- Scope: P0 private immutable property access metadata, including ordered anonymous-field/nil fallbacks; P1 internal specialization for explicitly eligible stateless filters, with generic execution retained for unsupported semantics. No public API/schema/Plan canonical/hash changes, no application fork or DSL executor.
-- Parallel read-only contract refresh complete: `GoPerfScout` identified repeat evaluation in metrics/process and private exprNode purity metadata; `JavaPerfScout` froze unchanged bean resolution/filter contracts and existing `event-bean-property-fragment` (15 runtime IDs), `expr-filter-optimizable` (9 IDs), and logical-expression replays. Java HEAD and worktree provenance checked.
-- Ownership frozen in `local://esper-p0-p1-contract.md`: isolated `PerfCore` owns only `schema.go`, `runtime.go`, `metrics.go`, optional private `property_access.go`/`stateless.go`; isolated `PerfAssets` owns only new property-access/stateless performance regression test files. Both skip all validation. Primary owns all docs/checkpoint, generated proof, validation/review/commit/push.
-- Verification: retain and compare the same pre/post public-API microbenchmark; add semantic regressions for cached access boundaries and eligible/ineligible stateless lifecycle/results; replay affected existing Java/Go scenarios; run affected packages, manifest consistency, full local gates, race and relevant stress; independent parity review before commit/push.
-- No new capability/DV/NFR status claims from an optimization alone. Existing evidence and Plan identities must remain valid. Deferred optimization items are documented, not implemented in this unit.
-- Implementation: P0 `property_access.go` (immutable per-type field table with ordered candidate paths, fold-orbit case-insensitive keys, in-path cycle guard) replacing the per-lookup scan in `structFieldValue` (7 call sites updated; `stack` parameter removed) plus a plain-name `Schema.get` fast path; P1 `stateless.go` (structural eligibility + pure-expression allowlist + `pureBuiltin` marker on Lower/Upper/Trim/StringLength) with the `Statement.process` fast branch, `accepted/acceptedKnown` threading through `processStatementWithMetricsLocked` and both dispatch call sites, and the cached `Engine.dispatchOrder` invalidated at deploy/undeploy/rollout-rollback. Both delegated writers were parked by provider overload without writing files, so the primary implemented the frozen shared-core surface (runbook: shared core may be written by the primary) and the asset tests after `PerfAssets`/`PerfAssets2` produced nothing.
-- Verification so far: fixed Java traces regenerated from the pinned checkout are byte-identical to `testdata/parity/*.trace.json`; `event-bean-property-fragment` (15 runtime IDs), `expr-filter-optimizable` (9), `expr-core-logical` (3) all `passing` 0 differences before and after the change; `go test ./... -count=1` green (14 packages ok, 6 no tests); `go test -race ./... -count=1` green; `ESPER_STRESS=1 go test ./internal/esper -run '^TestStressSyntheticMediumLoad$'` green; `go vet ./...` clean; layout checks, generated facade/apidump drift and `git diff --check` clean; gofmt clean. Benchmarks (identical sources compiled against baseline worktree `7704c1f` and the final tree, run back-to-back on an idle machine, `GOMAXPROCS=1`): 512-field last-field read 258.44 µs/1557 allocs → 9.02 µs/10; 128-field last-field 64.32 µs/277 → 5.66 µs/10; app-shaped 278-rule candidate set 69.55 → 6.27 µs/candidate (445 → 10 allocs/event batch); insensitive operator variant 63.05 → 6.89 µs/candidate (449 → 12 allocs). All affected-package and full gates were re-run after the review fixes. No DV/NFR/manifest claim added.
-- Review: `PerfParityReview` round 1 FAIL with one P1 (a predicate over a getter/method-backed property could reuse the dispatch loop's single evaluation, changing user-code invocation counts) and two P3 (docs runtime-ID count 1 vs 3 for `expr-core-logical`; the user-code test did not defend the getter boundary). All fixed: plan now requires the source schema to declare the referenced fields, to have no registered getters/JavaBean accessors, and to use plain (path-free) property names, and the runtime requires the event to carry the provably identical source schema (`appliesTo` schema-identity check) before the fast branch; `TestStatelessFilterKeepsGetterBackedPropertySemantics` pins the generic pipeline's getter invocation count and was verified to fail when the getter exclusion is removed. Round 2 PASS, including confirmation that the plain-name requirement closes the nested-schema traversal residual.
-- Next-unit prefetch (read-only scout): ranked candidates `infra.nwtable.on-delete` (InfraNWTableOnDelete.java, 6 executions, `internal/esper/trigger.go`, no collision with this diff), `epl.dataflow.feedback` (EPLDataflowInputOutputVariations.java remaining executions), and the dataflow `EPLDataflowLargeNumOpsDataFlow`/`EPLDataflowFactorial` pair; N+1 writes not started.
-- New tests: `property_access_performance_test.go` (fallback order, recursion termination, tag precedence, EqualFold folding, position-independent allocation invariant, benchmark) and `stateless_performance_test.go` (listener semantics incl. stop/restart/undeploy and sequence, user-function predicate fallback, getter-backed property exclusion, benchmark) — 8 tests and 2 benchmarks in total.
-- Deferred optimization items recorded in `docs/esper-go-performance.md` (filter-service index, single predicate evaluation, WHERE pushdown, result-set processor specialization, remaining representations, update-first ordering cache, expression specialization, NFR registration).
-- [x] Inspect clean baseline and start both read-only scouts.
-- [x] Freeze exact core/asset contract and implement P0/P1.
-- [x] Generate before/after performance and differential proof; affected-package and full-suite gates green, including `-race ./...` and the stress gate.
-- [x] Document implementation, verification and deferred optimization work (roadmap Draft 4.366 supplement + P0 item 6, CHANGELOG 4.366, `docs/esper-go-performance.md`).
-- [x] Independent review, commit and push. (`PerfParityReview` round 1 FAIL → fixes → round 2 PASS; diagnostics for every finding were reproduced and fixed in-unit before the gates re-ran.)
+- Baseline: clean `master` `b02424055`; fixed Java `9e1b9f1cc9117fea4bf33ab043762c045d73839c` at `D:/Code/soc/esper`（本单元纯性能、零语义变化，Java oracle 无涉入范围）。
+- Scope: §2.4 六项分配削减（纯谓词语句跳过变量装配、send 空变量快照、routedQueue/deferred 栈背衬、finishExternalRoutes 惰性 drain ctx、SendEvent 免复制 typeNamesShared、listener 快照缓存、Literal 预装箱）+ 两项 nil 安全修复（bindParameterValues、executeVariableTriggerAction 写回）。允许文件：runtime.go、expr.go、plan.go、faf.go、trigger.go、docs/esper-go-performance.md、PLANS.md、CHANGELOG.md。
+- Delegation: 双只读 scout 并行（ListenerSnapshotScout：listeners 全部 6 个变更点 + 2 读者 + 顺序契约；SendPathLifetimeScout：send 局部切片生命周期、finishExternalRoutes、typeNames 锁定），PerfParityReviewer 独立复审。
+- Regression found & fixed: `snapshotVariables` 引入的 nil 快照使 `bindParameterValues` 向 nil map 写入 panic，且 panic 在持有 e.mu 时经 deferred finishExternalRoutes 自死锁（表现为测试挂起）；`TestClientCompileLargeSubstitutionParamsMatchesEsper` 稳定复现，修复后 0.02s。既有 deferred 自死锁结构问题记录于 docs §6。
+- Verification: 定向 + 全量 `go test ./... -count=1` 绿；定向 `-race` 绿；三条差分链 passing 0 differences；go vet、gofmt -l、`git diff --check` 干净（check-layout.sh 走 WSL 无 gofmt，环境限制，等价项已过）。A/B（源码树交替两轮，GOMAXPROCS=1）：rejected 10→4 allocs（1321→857 B），accepted 16→8 allocs（2080→1577 B），ns/op 中位 -20%。
+- [x] Scouts + contract freeze
+- [x] Implementation + regression fix
+- [x] Gates + A/B evidence + docs
+- [x] Independent review, commit and push（两个远端 origin / origin-github）
+
+### Previous work unit
+
+Draft 4.366 ('performance-property-access-stateless').
+
+- P0 属性访问元数据缓存 + P1 stateless 过滤特化；详见 CHANGELOG 4.366 与 `docs/esper-go-performance.md` §2.1/§2.2。`PerfParityReview` 两轮（round 1 FAIL：getter/method 背书属性可复用单次求值改变用户代码调用次数 → 计划增加 schema 声明/getter 排除/plain-name/appliesTo 身份校验；round 2 PASS）。提交 `cc93ba276`。
 
 ### Previous work unit
 
@@ -110,6 +108,10 @@ Draft 4.365 ('dataflow-beacon-source').
 - [x] Commit and push (single semantic commit with all checkpoint edits folded in; no post-commit checkpoint-only push).
 
 ## Delegation checkpoint
+
+perf-dispatch-allocation-round2 unit:
+- Delegation gate: two read-only scouts dispatched in parallel — 'ListenerSnapshotScout' (complete listeners mutation census: 6 write sites incl. cleanupPreparedStatementLocked + markClosedLocked, dispatchSync the only structural reader, metrics.go len() reader, nextSubID monotonic ⇒ ascending ID = subscription order) and 'SendPathLifetimeScout' (send-local slice lifetimes incl. &-pointer gating, finishExternalRoutes control flow, typeNames cache replace-only semantics; delivered post-edit and doubled as implementation review). Independent 'PerfParityReviewer' reviewed the final diff.
+- Primary owns all writes (shared semantic surface single-writer), docs, evidence, gates, commit, push.
 
 Draft 4.365 unit:
 - Delegation gate: two read-only scouts dispatched in parallel — 'DataflowBeaconJavaContract' (byte-exact graphs, BeaconSource configurations, expected outputs, determinism for all four executions) and 'DataflowBeaconGoSurface' (BeaconSourceWithOptions parameter/config surface, capture patterns) over the 4.356-4.364 precedents.

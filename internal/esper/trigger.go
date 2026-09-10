@@ -3167,9 +3167,11 @@ func executeVariableTriggerAction(ctx context.Context, engine *Engine, definitio
 			return err
 		}
 	}
-	for name, value := range working {
-		if _, exists := seen[name]; exists {
-			variables[name] = value
+	if variables != nil {
+		for name, value := range working {
+			if _, exists := seen[name]; exists {
+				variables[name] = value
+			}
 		}
 	}
 	return nil

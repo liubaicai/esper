@@ -70,6 +70,43 @@
 不变，现缓存于 `Engine.dispatchOrder`，在部署、卸载与 rollout 回滚三处目录变更点失效。消费者只读取
 该切片。
 
+### 2.4 P2：派发路径固定分配削减（第二轮）
+
+针对 §2.2 快速路径语句的剩余固定成本（此前 profile：accepted 16 allocs/op，其中快速路径自身
+仅约 1 个），按"零可观测语义变化"实施六项削减与两项随之暴露的 nil 安全修复：
+
+- **纯谓词语句跳过变量装配**：`Statement.matchesEventFilter` 在 `statelessPlanResolved` 且计划
+  非空时跳过 `statementVariables` + `variablesWithEngineLockState`（后者在快照为 nil 时每次
+  `make(map)` 并装箱 engine ref，约占 8% CPU 与 2.5 allocs/op）。计划已证明整条谓词链只读
+  事件字段与字面量，变量/参数/子查询/用户代码不可能观测该次求值；字段只在 `s.mu.Lock`
+  （`Statement.process`）下写入，此处在 `RLock` 下读取是同步的。无计划语句保持原装配。
+- **事件入口空变量快照**：`Engine.send` 改用 `snapshotVariables`（AdvanceTime 入口自
+  b8d8780c9 已用），引擎未声明变量时不再克隆出空 map。随之暴露两处 nil 写入并修复：
+  `bindParameterValues` 对 nil 快照物化结果 map（此前直接向 nil map 写入 panic，
+  `TestClientCompileLargeSubstitutionParamsMatchesEsper` 可复现）；`executeVariableTriggerAction`
+  的触发器写回循环对 nil 快照跳过（引擎级变量被写时快照必非 nil，nil 时只有分区变量写入，
+  无可写回目标）。
+- **栈背衬派发切片**：`routedQueue`（仅被入站事件种子，路由事件走
+  `processPendingRoutedEventsLocked`）与 `deferredTriggerDispatches`（上限 2，超出自动堆溢出）
+  改栈数组，每发送各省 1 次分配。
+- **惰性排空上下文**：`finishExternalRoutes` 的 `context.WithoutCancel` 延迟到弹出首条外部
+  路由时构造；空队列退出路径的控制流、draining/dispatching 标志与错误合并完全不变。
+- **typeNames 免复制读取**：新增 `Environment.typeNamesShared`（缓存条目只被整体替换、绝无
+  原地修改，RLock 下共享读安全），`SendEvent` 瞬态消费（长度检查、首名、错误文本）不再每次
+  复制名字切片。其余调用方（`schemaForGoType`、`materializeDataflowEvent`，冷路径）不变。
+- **监听器快照缓存**：`Statement.listenerSnapshot` 在 `s.mu` 写锁下于全部 6 个监听器变更点
+  （`Subscribe`、`SubscribeWithReplay`、`removeSubscription`、`cleanupPreparedStatementLocked`、
+  `markClosedLocked`、构造空表）重建，`dispatchSync` 在 `RLock` 下读取，替代每批次收集 ID、
+  排序、物化两个切片。`nextSubID` 永不复位，升序 ID 即订阅顺序，顺序契约不变；
+  `metrics.go` 的 `len(listeners)` 读者仍以 map 为准；dispatch 侧保留"快照缺失即地重建"的
+  防御回退。
+- **字面量预装箱**：`Literal[T]` 在构造期装箱一次 `Value`，求值返回同一不可变值，消除每次
+  求值的接口装箱（约 1.6 allocs/op）；Plan 身份仍取自节点描述与子树，不受影响。
+
+追加发现（未在本单元修改）：panic 若发生在持有 `e.mu` 的派发循环内，deferred
+`finishExternalRoutes` 的 `e.mu.Lock` 会在栈展开时自死锁（本单元修复的 nil map panic 即触发过，
+表现为测试挂起而非报告 panic）。属既有结构问题，留待独立工作单元论证修复。
+
 ## 3. 验证与证据
 
 ### 3.1 差分回放（固定 Java trace，未改动）
@@ -122,6 +159,24 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
    - `TestStatelessFilterKeepsUserCodePredicateSemantics`（用户函数谓词仍在通用路径正确判定）
    - `TestStatelessFilterKeepsGetterBackedPropertySemantics`（注册 getter 的属性读取排除在快速路径外，
      用户代码调用次数保持通用管线行为）
+
+### 3.3 第二轮（§2.4）的同机交替 A/B 证据
+
+方法：改动前后源码树交替各跑两轮（`GOMAXPROCS=1`，`BenchmarkStatelessFilterSend -benchmem
+-count 1`），对消机器漂移；分配计数四轮全部一致。
+
+| 形态 | 改动前 | 改动后 |
+| --- | ---: | ---: |
+| rejected（拒绝事件） | 2965/3487 ns，1321 B，10 allocs | 2519/2589 ns，857 B，**4 allocs** |
+| accepted（命中并派发） | 3348/4294 ns，2080 B，16 allocs | 2653/3150 ns，1577 B，**8 allocs** |
+
+分配恰好减半；耗时中位约 -20%，字节数 -24% ~ -35%。同轮门禁：`go vet ./...`、全量
+`go test ./... -count=1`、定向 `-race`（stateless/statement/engine/subscribe/listener/variable/
+ClientCompileLarge）与三条差分链（§3.1 同一命令）全部通过；`TestClientCompileLargeSubstitutionParamsMatchesEsper`
+在修复前可稳定复现 nil map panic（并触发上述 deferred 自死锁），修复后 0.02s 通过。
+
+`make check` 中的 `check-layout.sh` 在本机经 WSL 调用且 WSL 内无 gofmt，属环境限制；其等价项
+（vet、gofmt -l、全量 test）已分别通过。
 
 > 说明：上表为受控微基准与本机数据，不是端到端 EPS 结论，也不构成 `nfr-verified` 登记。
 
@@ -246,8 +301,9 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
 
 #### 4.9.3 变量上下文与 ResultBatch 的分配削减
 
-状态：部分实施。事件派发路径在无变量状态下不再为变量快照分配空 map；非空变量仍复制，保持
-语句评估期间的隔离语义。ResultBatch 借用和复用仍待单独验证监听器持有语义后处理。
+状态：大部分实施（§2.4）。发送入口空变量快照与纯谓词语句的变量装配跳过已落地；监听器快照缓存与
+字面量预装箱消除派发侧每批次分配；accepted/rejected 基准降至 8/4 allocs。仍保留：非空变量快照
+复制（隔离语义）、ResultBatch 借用/复用与监听器 `batch.clone()`——待单独验证监听器持有语义。
 
 - 变量上下文：发送路径每轮执行 `cloneValues(e.variables)`（`runtime.go:3898`）→
   `statementVariables(...)` → `variablesWithEngineLockState(...)`（`runtime.go:6907` 起、
@@ -326,6 +382,9 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
   replacement、restore 仍走完整重建，避免位置调整改变查询顺序。
 - **WHERE 下推、结果集 HANDTHROUGH、表达式生成特化和 NFR 登记（§4.3、§4.4、§4.7、§4.8）**：这些项目
   需要独立 capability 证据、old/new 流验证和可复现基准，不能仅凭微优化提交状态。
+- **派发循环内 panic 的 deferred 自死锁（§2.4 追加发现）**：panic 发生在持有 `e.mu` 的派发循环内时，
+  deferred `finishExternalRoutes` 在栈展开中再次 `e.mu.Lock` 导致挂起而非报告 panic；修复需论证
+  panic 期间的锁释放顺序，属可观测的故障呈现变化，单独成单元。
 
 保留这些项目是为了让后续 Esper capability 迁移继续使用原有 runtime、Plan identity 和差分证据；每个项目
 在进入实现前都必须建立可重放的 Java/Go 场景，并通过受影响包测试、差分回放和完整门禁。
@@ -336,6 +395,11 @@ go test ./internal/esper -run '^$' -bench 'PropertyAccess|StatelessFilter' -benc
 
 # 本轮修复的常驻回归
 go test ./internal/esper -run 'TestStructProperty|TestPropertyAccess|TestStatelessFilter' -count=1
+
+# 第二轮（§2.4）的常驻回归与 A/B 方法
+go test ./internal/esper -run 'TestClientCompileLarge|TestStatelessFilter' -count=1
+# A/B：对 HEAD 与工作树交替运行同一基准，对消机器漂移
+GOMAXPROCS=1 go test ./internal/esper -run '^$' -bench BenchmarkStatelessFilterSend -benchmem -count 1
 
 # 受影响差分链（Java trace 已在仓库内，无需重新生成）
 go run ./cmd/parity -mode event-bean-property-fragment-diff -scenario testdata/parity/event-bean-property-fragment.json -java-trace testdata/parity/event-bean-property-fragment.trace.json

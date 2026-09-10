@@ -2602,6 +2602,13 @@ func bindParameterValues(variables map[string]Value, parameters ParameterValues)
 		return variables
 	}
 	result := cloneValues(variables)
+	if result == nil {
+		// The event-path variable snapshot is nil when the engine declares no
+		// variables (snapshotVariables); the binding must still materialize a
+		// map to carry the parameter values, mirroring how
+		// variablesWithEngineLockState treats a nil snapshot.
+		result = make(map[string]Value, 1)
+	}
 	bound := make(map[string]Value, len(parameters))
 	for name, value := range parameters {
 		if value == nil {

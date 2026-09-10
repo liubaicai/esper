@@ -180,6 +180,20 @@ func (e *Environment) typeNames(typ reflect.Type) []string {
 	return append([]string(nil), e.typeNamesCache[typ]...)
 }
 
+// typeNamesShared is the non-copying counterpart of typeNames for transient
+// readers on the event hot path. The caller must not retain or mutate the
+// returned slice: registration replaces the cached slice with a fresh one
+// (never editing it in place), so a retained slice stays self-consistent but
+// may omit names registered after the read.
+func (e *Environment) typeNamesShared(typ reflect.Type) []string {
+	if e == nil || typ == nil {
+		return nil
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.typeNamesCache[typ]
+}
+
 func (e *Environment) Schema(name string) (Schema, bool) {
 	if e == nil {
 		return Schema{}, false
