@@ -1,0 +1,48 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-eventbus-source",
+ "description": "dataflow-eventbus-source differential chain over the EPLDataflowOpEventBusSource EventBusSource operator (primary source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEventBusSource.java) and the EPLDataflowOpFilter Filter operator (second source file regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpFilter.java, pinned here because the Go evidence model carries JavaSourceFiles) observed through DefaultSupportCaptureOp and DefaultSupportCaptureOpStatic reads: eventbus-all-types (ordinal 0) replays EPLDataflowAllTypes runAssertionAllTypes as four representation sub-runs in one case in the suite type order MyDefaultSupportGraphEvent, MyMapEvent, MyXMLEvent (over the regression/threeProperties.xsd classloader schema) and MyOAEvent, each sub-run deploying the byte-exact '@name('flow') create dataflow MyDataFlowOne EventBusSource -> ReceivedStream<T> {} DefaultSupportCaptureOp(ReceivedStream) {}' graph, sending events[0] through the representation SendableEvent before instantiate (asserted empty in-process, no record) and again after instantiate before start (recorded as the empty pre-start drop), starting, sending {myDouble=1.1,myInt=1,myString=one} then {myDouble=2.2,myInt=2,myString=two}, waiting via the capture poll for two rows, recording both rows in send order with the typed myDouble/myInt/myString projection handling bean/Map/object-array/XML representations losslessly, cancelling, sending events[0] once more and recording the empty post-cancel drop, then undeploying, for 12 records, after which the two compile-time invalid graphs 'create dataflow DF1 EventBusSource {}' (requires one output stream but produces 0 streams) and 'create dataflow DF1 EventBusSource -> ABC {}' (requires an event type declated for the output stream, preserving the genuine Java 'declated' typo) are asserted in-process by message prefix with no records, and the doc-sample flow path-deploys '@public create schema SampleSchema(tagId string, locX double, locY double)' plus the byte-exact multi-line MyDataFlow graph (three plain EventBusSource streams, one with filter tagId='001', one with the MyDummyCollector collector block and trailing comma) and instantiates with no options, never started, with no records; eventbus-schema-objectarray (ordinal 1) replays EPLDataflowSchemaObjectArray where '@public @buseventtype create objectarray schema MyEventOA(p0 string, p1 long)' is path-deployed under deployment id 'schema', the EventBean<MyEventOA> envelope sub-run records {'p0':'abc','p1':100}, the raw MyEventOA underlying sub-run records the captured Object[] positionally as {'0':'abc','1':100} pinning the new normalization that raw object-array underlyings serialize with ordinal-string keys and values as-is, and the filter 'p0 like 'A%'' sub-run with the MyCollector parameter provider records the filtered-out {'B',100} send as an empty read (collector.getLast() null asserted in-process) and the collector-resubmitted {'A',101} event as {'p0':'A','p1':101} with in-process asserts that the collector context emitter is non-null, the event type name is MyEventOA and isSubmitEventBean() is false, for 4 records; filter-all-types (ordinal 1 of EPLDataflowOpFilter) replays EPLDataflowOpFilter EPLDataflowAllTypes as four representation sub-runs in the Filter order MyDefaultSupportGraphEvent, MyXMLEvent, MyOAEvent, MyMapEvent over the byte-exact newline-joined MySelect graph 'DefaultSupportSourceOp -> instream.with.dot<T>{} / Filter(instream.with.dot) -> outstream.dot {filter: myString = 'two'} / DefaultSupportCaptureOp(outstream.dot) {}' instantiated with dataFlowInstanceUserObject 'myuserobject' and dataFlowInstanceId 'myinstanceid' and driven synchronously by instance.run(), each recording the single surviving 'two' row, then the doc-sample Filter MyDataFlow graph (inline 'create schema SampleSchema(tagId string, locX double),\t// sample type' with the literal tab, BeaconSource samplestream, single-stream Filter tags_001 and two-stream Filter tags_001/tags_other with trailing spaces) compiled, instantiated and never started with no records, then the captive two-streams MyFilter graph 'Emitter -> sb<SupportBean> {name : 'e1'} / Filter(sb) -> out.ok, out.fail {filter: theString = 'x'} / DefaultSupportCaptureOpStatic(out.ok) {}DefaultSupportCaptureOpStatic(out.fail) {}' driven through startCaptive and the 'e1' emitter, recording SupportBean 'x'/10 from the out.ok static instance and 'y'/11 from the out.fail static instance, for 6 records; filter-invalid (ordinal 0 of EPLDataflowOpFilter) is covered by the invalidity policy, asserting the five compile-time message prefixes in-process ('Failed to obtain operator 'Filter': Required parameter 'filter' providing the filter expression is not provided', the one-or-two-output-stream rejection for 3 and 0 streams, 'Failed to validate filter dataflow operator expression 'theString=1': Implicit conversion from datatype 'Integer' to 'String' is not allowed' and 'Invalid filter dataflow operator expression 'prev(theString,1)=\"abc\"': Aggregation, sub-select, previous or prior functions are not supported in this context') and contributing zero records; the statement-label decision is flow:DefaultSupportCaptureOp for every DefaultSupportCaptureOp read in eventbus-all-types, eventbus-schema-objectarray and the filter-all-types Filter sub-runs, and flow:DefaultSupportCaptureOpStatic for the two captive two-streams reads because those rows come from the static capture instances; every capture read is one record {case, operation:'capture', statement, sequence, time, new:[rows]} with rows shaped {'kind':'row','fields':{...}}, empty reads recorded explicitly with new:[], case-local sequences restarting at 1 and the fixed epoch time 1970-01-01T00:00:00Z, and the 22 records (12+4+6+0) carry the EventBusSource and Filter differential chain.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-dfb59d3bd4798d57cc0c",
+  "java-runtime-37aed9aedcbbb25c4826",
+  "java-runtime-73c4f6808b38087c5a59",
+  "java-runtime-0bc68f1db4dd07d89a66"
+ ],
+ "cases": [
+  {
+   "case": "eventbus-all-types",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-dfb59d3bd4798d57cc0c",
+   "executionName": "EPLDataflowAllTypes"
+  },
+  {
+   "case": "eventbus-schema-objectarray",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-37aed9aedcbbb25c4826",
+   "executionName": "EPLDataflowSchemaObjectArray"
+  },
+  {
+   "case": "filter-all-types",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-73c4f6808b38087c5a59",
+   "executionName": "EPLDataflowAllTypes"
+  },
+  {
+   "case": "filter-invalid",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-0bc68f1db4dd07d89a66",
+   "executionName": "EPLDataflowInvalid"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "eventbus-all-types"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "eventbus-schema-objectarray"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "filter-all-types"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "filter-invalid"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

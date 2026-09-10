@@ -16173,12 +16173,20 @@
    "javaRuntimeIds": [
     "java-runtime-37aed9aedcbbb25c4826",
     "java-runtime-dfb59d3bd4798d57cc0c",
-    "java-runtime-73c4f6808b38087c5a59"
+    "java-runtime-73c4f6808b38087c5a59",
+    "java-runtime-0bc68f1db4dd07d89a66"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-37aed9aedcbbb25c4826",
+    "java-runtime-dfb59d3bd4798d57cc0c",
+    "java-runtime-73c4f6808b38087c5a59",
+    "java-runtime-0bc68f1db4dd07d89a66"
    ],
    "javaNames": [
     "EPLDataflowSchemaObjectArray",
     "EPLDataflowAllTypes",
-    "EPLDataflowAllTypes"
+    "EPLDataflowAllTypes",
+    "EPLDataflowInvalid"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEventBusSource.java",
@@ -16196,22 +16204,34 @@
     "TestDataflowEventBusSourceWithFilterRoutesOnlyMatchingEventsMatchesEsper",
     "TestDataflowEventBusSourceWithFilterWorksOnLinearPathMatchesEsper",
     "TestDataflowEventBusSourceWithFilterRejectsNonBooleanPredicate",
-    "TestDataflowEventBusSourceWithUnderlyingMatchesEsper"
+    "TestDataflowEventBusSourceWithUnderlyingMatchesEsper",
+    "TestRunDataflowEventbusSourceDiffWritesPassingEvidence",
+    "TestRunDataflowEventbusSourceDirectReplay",
+    "TestRunDataflowEventbusSourceDiffRejectsTraceMutations",
+    "TestDataflowEventbusSourceFilterInvalidRejections"
    ],
    "tags": [
     "correctness",
     "dataflow",
     "lifecycle"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-baseline",
-    "go-unit"
+    "java-runtime-inventory",
+    "go-unit",
+    "testdata/parity/dataflow-eventbus-source.json",
+    "testdata/parity/dataflow-eventbus-source.trace.json",
+    "testdata/parity/dataflow-eventbus-source.go.trace.json",
+    "testdata/parity/dataflow-eventbus-source.evidence.json",
+    "tools/java-oracle/DataflowEventbusSourceScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-eventbus-source.sh"
    ],
-   "difference": "Go adds the fluent EventBusSourceWithFilter and EventBusSourceWithUnderlying APIs: filters evaluate against the Event envelope, while accepted values can enter graph or linear paths as the raw registered Go value. Struct, Map, ObjectArray and XML source representations are now exercised through the same typed graph boundary. Java additionally covers EventBean/object-array collector modes and broader source parameter/representation diagnostics; those remain open.",
+   "difference": "Go adds the fluent EventBusSourceWithFilter and EventBusSourceWithUnderlying APIs: filters evaluate against the Event envelope, while accepted values can enter graph or linear paths as the raw registered Go value. Struct, Map, ObjectArray and XML source representations are now exercised through the same typed graph boundary. Java additionally covers EventBean/object-array collector modes and broader source parameter/representation diagnostics; those remain open. Draft 4.367 differentially verifies all four executions through the eventbus ingress chain: EPLDataflowAllTypes (four representation sub-runs POJO/Map/XML/OA, each pinning the pre-start drop, the two-event fill {1.1,1,one}/{2.2,2,two} in send order, and the post-cancel drop; the two EventBusSource invalid compiles and the doc-sample flow are asserted internally), EPLDataflowSchemaObjectArray (envelope row {p0,p1}; the underlying row serializes the raw object-array positionally as {'0':'abc','1':100}; the filter+collector sub-run pins the filtered-out 'B' empty read and the collector-resubmitted {p0:A,p1:101} — the Java emitter-context identity asserts have no Go surface and stay listed as open collector modes), EPLDataflowAllTypes of the Filter operator (four representation sub-runs through a canned source with a synchronous run pinning the 'two' row, plus the two-stream captive pass/fail shape; Java's assertSame identity at capture is not representable Go-side and rows pin normalized fields), and EPLDataflowInvalid (invalidity policy: five compile-time rejections asserted in-process; the missing-filter shape maps to the Go Build nil/non-bool predicate rejection, while 3-output-streams and 0-output-streams are unrepresentable in the fluent API, implicit Integer-to-String conversion is a Go compile error, and prev() is not restricted in dataflow filter predicates — documented differences). Every capture read is one record with empty reads recorded explicitly (Go renders empty new arrays via the omitempty convention); 22 records per side (12+4+6+0).",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ]
   },
   {
@@ -43291,8 +43311,8 @@
  "summary": {
   "inventoriedCases": 636,
   "implementedCases": 634,
-  "differentialVerifiedCases": 252,
-  "differentialVerifiedRuntimeIds": 926,
+  "differentialVerifiedCases": 253,
+  "differentialVerifiedRuntimeIds": 930,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43302,10 +43322,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3556,
-  "referencedJavaRuntimeIds": 3291,
+  "runtimeAssociationCount": 3557,
+  "referencedJavaRuntimeIds": 3292,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 845,
+  "unreferencedJavaRuntimeIds": 844,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 636,

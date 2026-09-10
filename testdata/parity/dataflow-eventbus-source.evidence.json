@@ -1,0 +1,694 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-dfb59d3bd4798d57cc0c",
+    "java-runtime-37aed9aedcbbb25c4826",
+    "java-runtime-73c4f6808b38087c5a59",
+    "java-runtime-0bc68f1db4dd07d89a66"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEventBusSource.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpFilter.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowOpEventBusSource$EPLDataflowAllTypes",
+    "EPLDataflowOpEventBusSource$EPLDataflowSchemaObjectArray",
+    "EPLDataflowOpFilter$EPLDataflowAllTypes",
+    "EPLDataflowOpFilter$EPLDataflowInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-eventbus-source",
+    "steps": [
+      {
+        "op": "case",
+        "case": "eventbus-all-types"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "eventbus-schema-objectarray"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "filter-all-types"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "filter-invalid"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-eventbus-source",
+    "records": [
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 1.1,
+              "myInt": 1,
+              "myString": "one"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 1.1,
+              "myInt": 1,
+              "myString": "one"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 1.1,
+              "myInt": 1,
+              "myString": "one"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 1.1,
+              "myInt": 1,
+              "myString": "one"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-schema-objectarray",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "abc",
+              "p1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-schema-objectarray",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "0": "abc",
+              "1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-schema-objectarray",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-schema-objectarray",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 101
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOpStatic",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "x"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOpStatic",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 11,
+              "theString": "y"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-eventbus-source",
+    "records": [
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 1.1,
+              "myInt": 1,
+              "myString": "one"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 1.1,
+              "myInt": 1,
+              "myString": "one"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 1.1,
+              "myInt": 1,
+              "myString": "one"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 1.1,
+              "myInt": 1,
+              "myString": "one"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-schema-objectarray",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "abc",
+              "p1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-schema-objectarray",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "0": "abc",
+              "1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "eventbus-schema-objectarray",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "eventbus-schema-objectarray",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 101
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDouble": 2.2,
+              "myInt": 2,
+              "myString": "two"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOpStatic",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "x"
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter-all-types",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOpStatic",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 11,
+              "theString": "y"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

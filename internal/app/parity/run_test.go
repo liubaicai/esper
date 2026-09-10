@@ -41002,3 +41002,184 @@ func TestRunEplAsKeywordBacktickDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunDataflowEventbusSourceDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-source.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-eventbus-source.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-source.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-eventbus-source-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowEventbusSourceDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-source.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-eventbus-source",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 22 {
+		t.Fatalf("records = %d, want 22", len(trace.Records))
+	}
+	wantShape := []struct {
+		caseName string
+		rows     int
+	}{
+		{"eventbus-all-types", 0}, {"eventbus-all-types", 2}, {"eventbus-all-types", 0},
+		{"eventbus-all-types", 0}, {"eventbus-all-types", 2}, {"eventbus-all-types", 0},
+		{"eventbus-all-types", 0}, {"eventbus-all-types", 2}, {"eventbus-all-types", 0},
+		{"eventbus-all-types", 0}, {"eventbus-all-types", 2}, {"eventbus-all-types", 0},
+		{"eventbus-schema-objectarray", 1}, {"eventbus-schema-objectarray", 1},
+		{"eventbus-schema-objectarray", 0}, {"eventbus-schema-objectarray", 1},
+		{"filter-all-types", 1}, {"filter-all-types", 1}, {"filter-all-types", 1},
+		{"filter-all-types", 1}, {"filter-all-types", 1}, {"filter-all-types", 1},
+	}
+	for index, want := range wantShape {
+		got := trace.Records[index]
+		if got.Case != want.caseName || len(got.New) != want.rows {
+			t.Fatalf("record %d = {%s, %d rows}, want {%s, %d rows}", index, got.Case, len(got.New), want.caseName, want.rows)
+		}
+	}
+	// The underlying sub-run row projects the raw object-array positionally.
+	underlying := trace.Records[13]
+	if underlying.New[0].Fields["0"] != "abc" || fmt.Sprint(underlying.New[0].Fields["1"]) != "100" {
+		t.Fatalf("underlying row = %#v", underlying.New[0].Fields)
+	}
+	// The collector sub-run row stays typed ({p0,p1}) even though the Java
+	// collector re-submits the EventBean.
+	collectorRow := trace.Records[15].New[0].Fields
+	if collectorRow["p0"] != "A" || fmt.Sprint(collectorRow["p1"]) != "101" {
+		t.Fatalf("collector row = %#v", collectorRow)
+	}
+}
+
+func TestRunDataflowEventbusSourceDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "all-types-fill-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[1].Fields["myString"] = "twx"
+			},
+		},
+		{
+			name: "all-types-post-cancel-empty-removal",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records[:2], trace.Records[3:]...)
+			},
+		},
+		{
+			name: "schema-envelope-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].New[0].Fields["p0"] = "xyz"
+			},
+		},
+		{
+			name: "schema-underlying-positional-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].New[0].Fields["1"] = int64(101)
+			},
+		},
+		{
+			name: "collector-filtered-out-empty-removal",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records[:14], trace.Records[15:]...)
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:21]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-source.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-eventbus-source.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-eventbus-source.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-eventbus-source-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestDataflowEventbusSourceFilterInvalidRejections(t *testing.T) {
+	env := esper.NewEnvironment()
+	if _, err := esper.RegisterStruct[dataflowEventbusSourceSupportBean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	// Java: "Required parameter 'filter' providing the filter expression is
+	// not provided" — Go's typed builder rejects a nil predicate at Build.
+	builder := esper.DefineDataflow(env, "DF1").
+		BeaconSource("source", "e").
+		Filter("filter", nil).
+		Connect("source", "filter")
+	if _, err := builder.Build(); err == nil {
+		t.Fatal("nil filter predicate accepted")
+	}
+	// Non-bool predicate shapes are equally rejected.
+	_, err := esper.DefineDataflow(env, "DF2").
+		BeaconSource("source", "e").
+		Filter("filter", esper.Literal("x")).
+		Connect("source", "filter").
+		Build()
+	if err == nil {
+		t.Fatal("non-bool filter predicate accepted")
+	}
+	// The four remaining Java invalid shapes have no Go Build rejection:
+	// three-output-streams and zero-output-streams ports are unrepresentable
+	// (FilterWithPorts is fixed at two), implicit Integer->String conversion
+	// is a Go compile error, and prev() is not restricted in dataflow filter
+	// predicates (documented difference in the case's manifest entry).
+}
