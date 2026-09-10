@@ -133,6 +133,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-lifecycle-blocking" || *mode == "dataflow-lifecycle-blocking-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "epl-database-join" || *mode == "epl-database-join-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-doc-samples" || *mode == "dataflow-doc-samples-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
@@ -371,6 +373,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, dataflowLifecycleBlockingJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, dataflowLifecycleBlockingJavaSources),
 				splitMetadata(*javaExecutions, dataflowLifecycleBlockingJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-database-join" || *mode == "epl-database-join-diff" {
+		trace, err := runEplDatabaseJoinScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-database-join-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplDatabaseJoinJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplDatabaseJoinJavaSources),
+				splitMetadata(*javaExecutions, eplDatabaseJoinJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

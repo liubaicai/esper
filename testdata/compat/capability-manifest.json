@@ -30387,7 +30387,18 @@
     "java-runtime-33cc6c0610b2c801c1bb",
     "java-runtime-0d41625df368897ca97b",
     "java-runtime-45e68d7cf756824c19eb",
-    "java-runtime-a8180e298e71e8135b38"
+    "java-runtime-a8180e298e71e8135b38",
+    "java-runtime-67745eb75f864ea17fed",
+    "java-runtime-0a048d0e0005df5f6279",
+    "java-runtime-e0d7add1aff7aa06fa4a",
+    "java-runtime-4675598d7044c43fd088"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-67745eb75f864ea17fed",
+    "java-runtime-45e68d7cf756824c19eb",
+    "java-runtime-4675598d7044c43fd088",
+    "java-runtime-33cc6c0610b2c801c1bb",
+    "java-runtime-a6682a71c8c463babcff"
    ],
    "javaNames": [
     "EPLDatabaseMySQLDatabaseConnection",
@@ -30406,7 +30417,11 @@
     "EPLDatabasePropertyResolution",
     "EPLDatabaseRestartStatement",
     "EPLDatabaseSimpleJoinRight",
-    "EPLDatabaseJoinIndexNullType"
+    "EPLDatabaseJoinIndexNullType",
+    "EPLDatabaseSimpleJoinLeft",
+    "EPLDatabaseVariables",
+    "EPLDatabaseInvalidSQL",
+    "EPLDatabaseStreamNamesAndRename"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java"
@@ -30420,16 +30435,21 @@
     "sql",
     "pattern"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
-    "java-source",
-    "java-junit",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/epl-database-join.json",
+    "testdata/parity/epl-database-join.trace.json",
+    "testdata/parity/epl-database-join.go.trace.json",
+    "testdata/parity/epl-database-join.evidence.json",
+    "tools/java-oracle/EPLDatabaseJoinScenarioOracle.java",
+    "tools/java-oracle/run-epl-database-join.sh"
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ],
    "goTests": [
     "TestDatabaseSimpleJoinLeftParity",
@@ -30444,7 +30464,10 @@
     "TestDatabaseJoinInvalidBoundaryMatchesJava",
     "TestDatabase3StreamMatchesJava",
     "TestDatabaseVariablesMatchesJava",
-    "TestDatabaseRestartStatementMatchesJava"
+    "TestDatabaseRestartStatementMatchesJava",
+    "TestRunEplDatabaseJoinDiffWritesPassingEvidence",
+    "TestRunEplDatabaseJoinDirectReplay",
+    "TestRunEplDatabaseJoinDiffRejectsTraceMutations"
    ],
    "remaining": [
     "EPLDatabaseTimeBatch / TimeBatchOM / TimeBatchCompile historical+time_batch join snapshot and iterator evidence",
@@ -30452,7 +30475,7 @@
     "EPLDatabaseInvalidBothHistorical / InvalidPropertyEvent / InvalidSubviews typed compile diagnostics",
     "full Java differential trace for the remaining EPLDatabaseJoin executions"
    ],
-   "difference": "Go implements the covered EPLDatabaseJoin executions with typed fluent historical joins: parameterized historical rows persist with per-trigger lineage and pair only with the triggering event (2HistoricalStar/Inner keepall iterator parity), unrestricted triggerless SQL sides remain per-trigger lookup snapshots (3Stream parity), and pattern-driven historical polling evaluates an unrestricted SQL side once per completed timer match (WithPattern parity). SimpleJoin/StreamNames/PropertyResolution/JoinIndexNullType and the invalid historical self-reference boundary are covered by fake database/sql provider tests. These executions are implemented but not yet differential-verified; TimeBatch, MySQL database connection and the remaining invalid compile variants are still open."
+   "difference": "Go implements the covered EPLDatabaseJoin executions with typed fluent historical joins: parameterized historical rows persist with per-trigger lineage and pair only with the triggering event (2HistoricalStar/Inner keepall iterator parity), unrestricted triggerless SQL sides remain per-trigger lookup snapshots (3Stream parity), and pattern-driven historical polling evaluates an unrestricted SQL side once per completed timer match (WithPattern parity). SimpleJoin/StreamNames/PropertyResolution/JoinIndexNullType and the invalid historical self-reference boundary are covered by fake database/sql provider tests. These executions are implemented but not yet differential-verified; TimeBatch, MySQL database connection and the remaining invalid compile variants are still open. Draft 4.377 opens the database subdomain's differential coverage with the first EPLDatabaseJoin slice over the mysql:8.0 fixture (create_testdb.sql): SimpleJoinLeft (java-runtime-67745eb75f864ea17fed), SimpleJoinRight (java-runtime-45e68d7cf756824c19eb — stream order reversed, the nine event-type property types pinned in-process), StreamNamesAndRename (java-runtime-4675598d7044c43fd088 — the a..i column aliases projected under the canonical names), PropertyResolution (java-runtime-33cc6c0610b2c801c1bb — the nested-indexed ${s1.arrayProperty[0]} parameter selecting the mybigint-10 row whose mynumeric is NULL), and 2HistoricalStar (java-runtime-a6682a71c8c463babcff — two historical sides keyed on the same trigger with keepall lineage and the negative no-match send). 9 listener/count records per side. The Java oracle runs against the esper-mysql mysql:8.0 Docker fixture with create_testdb.sql loaded; the Go side feeds the same canonical 10-row fixture through a function-fed HistoricalProvider (BigDecimal scale-0 columns recorded as strings, NULL as the null marker, MySQL CHAR trailing-space stripping mirrored by the fixture values). Reconciliation: four executions missing from javaRuntimeIds (SimpleJoinLeft, Variables, InvalidSQL, StreamNamesAndRename) are appended; the remaining executions (TimeBatch/OM/Compile, WithPattern, Variables, 3Stream, RestartStatement, JoinIndexNullType, the invalid family, MySQLDatabaseConnection) stay implemented-not-differential pending later slices."
   },
   {
    "id": "case.resultset-row-per-group-simple",
@@ -43397,8 +43420,8 @@
  "summary": {
   "inventoriedCases": 636,
   "implementedCases": 634,
-  "differentialVerifiedCases": 258,
-  "differentialVerifiedRuntimeIds": 953,
+  "differentialVerifiedCases": 259,
+  "differentialVerifiedRuntimeIds": 958,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43408,7 +43431,7 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3558,
+  "runtimeAssociationCount": 3562,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,

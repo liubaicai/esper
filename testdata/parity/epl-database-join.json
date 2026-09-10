@@ -1,0 +1,88 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-database-join",
+ "description": "database-slices differential chain (work unit 4.377) over the first five deterministic executions of regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java (ordinals 1, 19, 15, 17 and 2; the remaining executions of the suite — the connection smoke test, the 2-historical inner join, the three time-batch variants, the variables case, the six invalid-compile cases, the pattern case, the restart loop and the null-typed index case — are later slices). The Java oracle runs against the established esper-mysql mysql:8.0 Docker fixture (docker run --name esper-mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=test -p 3306:3306 -d mysql:8.0, readiness via mysqladmin ping, fixture loaded from common/etc/regression/create_testdb.sql with the '//'-comment lines stripped; the load tolerates the pre-existing mytesttable_large/mytestupsert re-create errors so it is idempotent) and connects through SupportDatabaseService constants: DRIVER com.mysql.cj.jdbc.Driver, FULLURL jdbc:mysql://localhost/test?user=root&password=password&useSSL=false. Session configuration mirrors TestSuiteEPLDatabase.configure restricted to these executions: event types SupportBean, SupportBean_S0 and SupportBeanComplexProps registered as POJO types, and the 'MyDBWithRetain' database reference configured as a DriverManagerConnection (DRIVER/FULLURL/SupportDatabaseURL.newProperties()) with ConnectionLifecycleEnum RETAIN and no cache; the suite's setEnableJDBC(true)/setEnableQueryPlan(true) logging flags are dropped because they alter log observability only and have no recorded effect. Internal timer off, epoch initialization 0. Byte-exact statements (assembled with the suite's own concatenations, double spaces preserved): simple-join-left (ordinal 1) deploys '@name('s0') select mybigint, myint, myvarchar, mychar, mybool, mynumeric, mydecimal, mydouble, myreal from SupportBean_S0 as s0, sql:MyDBWithRetain ['select mybigint, myint, myvarchar, mychar, mybool, mynumeric, mydecimal, mydouble, myreal from mytesttable where ${id} = mytesttable.mybigint'] as s1' and sends SupportBean_S0(1); simple-join-right (ordinal 19) reverses the stream order with the historical stream leading — '@name('s0') select ' + fields + ' from  sql:MyDBWithRetain [' + ... + '] as s0,SupportBean_S0 as s1' (double space after 'from', no space after the comma) — and FIRST pins the statement event-type property types in-process (mybigint Long, myint Integer, myvarchar String, mychar String, mybool Boolean, mynumeric BigDecimal, mydecimal BigDecimal, mydouble Double, myreal Double; never recorded); stream-names-and-rename (ordinal 15) deploys the aliased statement whose SQL renames the columns to a..i and whose select renames them back under the canonical names (double space after 'as a,' before 'myint' inside the SQL and after 'mybigint,' before 's1.b' and after 'myreal' before 'from' in the select) and sends SupportBean_S0(1); property-resolution (ordinal 17) deploys the ${s1.arrayProperty[0]}-keyed statement joined against SupportBeanComplexProps as s1 and sends SupportBeanComplexProps.makeDefaultBean() whose arrayProperty is {10,20,30} so the historical lookup selects the mybigint-10 row whose mynumeric column is NULL; 2historical-star (ordinal 2) deploys the two-historical keepall statement with the trailing space after 'as s2 ' — '@name('s0') select intPrimitive, myint, myvarchar from SupportBean#keepall as s0,  sql:MyDBWithRetain ['select myint from mytesttable where ${intPrimitive} = mytesttable.mybigint'] as s1, sql:MyDBWithRetain ['select myvarchar from mytesttable where ${intPrimitive} = mytesttable.mybigint'] as s2 ' (double space after 's0,') — and replays: iterator count 0 (in-process), send SB(intPrimitive=6) recorded as one listener row, iterator snapshot count 1 (count record iterator-rows=1 with in-process full compare {6,60,'F'}), send SB(9) recorded as one listener row, iterator snapshot count 2 (count record iterator-rows=2 with in-process ordered compare [[6,60,'F'],[9,90,'I']]), the suite's milestone(0) replayed as the documented no-op it is in RegressionEnvironmentEsper, send SB(20) with the listener asserted not invoked in-process (no match: mybigint stops at 10) recorded as count listener-not-invoked=0, and the iterator asserted unchanged in-process. Record protocol: one record per listener delivery {case, operation:'listener', statement:'s0', sequence, time, new:[rows]} where rows are projected positionally in select-clause column order under the canonical output names (mybigint..myreal for the four single-delivery cases, intPrimitive/myint/myvarchar for 2historical-star) as {kind:'row', fields:{...}} objects with THE FOLLOWING VALUE FORMS, both sides matching because the Go side feeds the identical canonical 10-row fixture through a function-fed HistoricalProvider (no database driver): mybigint as JSON number (int64), myint as JSON number, myvarchar/mychar as JSON strings (MySQL strips CHAR(20) trailing spaces; values 'A'..'J' and 'Z','Y','X','W','V','T','S','R','Q','P'), mybool as JSON true/false, mynumeric/mydecimal as JSON STRINGS of the scale-0 BigDecimal (asserted scale 0 in-process; '5000','100','100','500','500','200','700','800','900','1000' for mydecimal and '5000','100','100','500','500','200',null-marker,'700','800','900','1000' pattern for mynumeric), mydouble/myreal as JSON numbers (1.2..10.2 / 1.3..10.3), and NULL column values as the differential protocol null marker object {'state':'null'} — the canonical null form both the Java oracle convention and the Go NormalizeResults/normalizeValue renderer emit, so the null mynumeric columns (rows 7-10, surfaced by property-resolution row 10 and no case 0-2 row) compare zero-difference under the structural trace diff; bare JSON null is never emitted because the Go side cannot produce it. Count records are {case, operation:'count', statement:'flow', sequence, time, name, count} mirroring the dataflow-oracle convention the Go runner pairs with (iterator-rows and listener-not-invoked). Sequence is case-local restarting at 1, the time is the fixed epoch 1970-01-01T00:00:00Z, each case runs on its own fresh runtime (internal timer off, epoch initialization 0, undeployAll after the case body, destroy in finally) with the runtime URI derived from the pinned java-runtime id. The 9 records (1 simple-join-left + 1 simple-join-right + 1 stream-names-and-rename + 1 property-resolution + 5 2historical-star) carry the database-join differential chain for the five Go case builders.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java",
+ "javaRuntimes": [
+  "java-runtime-67745eb75f864ea17fed",
+  "java-runtime-45e68d7cf756824c19eb",
+  "java-runtime-4675598d7044c43fd088",
+  "java-runtime-33cc6c0610b2c801c1bb",
+  "java-runtime-a6682a71c8c463babcff"
+ ],
+ "cases": [
+  {
+   "case": "simple-join-left",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-67745eb75f864ea17fed",
+   "executionName": "EPLDatabaseSimpleJoinLeft"
+  },
+  {
+   "case": "simple-join-right",
+   "ordinal": 19,
+   "runtimeId": "java-runtime-45e68d7cf756824c19eb",
+   "executionName": "EPLDatabaseSimpleJoinRight"
+  },
+  {
+   "case": "stream-names-and-rename",
+   "ordinal": 15,
+   "runtimeId": "java-runtime-4675598d7044c43fd088",
+   "executionName": "EPLDatabaseStreamNamesAndRename"
+  },
+  {
+   "case": "property-resolution",
+   "ordinal": 17,
+   "runtimeId": "java-runtime-33cc6c0610b2c801c1bb",
+   "executionName": "EPLDatabasePropertyResolution"
+  },
+  {
+   "case": "2historical-star",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-a6682a71c8c463babcff",
+   "executionName": "EPLDatabase2HistoricalStar"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "simple-join-left"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "simple-join-right"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "stream-names-and-rename"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "property-resolution"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "2historical-star"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  }
+ ]
+}

@@ -42208,3 +42208,152 @@ func TestRunDataflowLifecycleBlockingDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunEplDatabaseJoinDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-join.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-database-join.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-join.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-database-join-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplDatabaseJoinDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-join.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-database-join",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 9 {
+		t.Fatalf("records = %d, want 9", len(trace.Records))
+	}
+	wantCases := []string{
+		"simple-join-left", "simple-join-right", "stream-names-and-rename",
+		"property-resolution", "2historical-star",
+	}
+	for index, want := range wantCases {
+		if trace.Records[index].Case != want {
+			t.Fatalf("record %d case = %s, want %s", index, trace.Records[index].Case, want)
+		}
+		if len(trace.Records[index].New) != 1 {
+			t.Fatalf("record %d rows = %d, want 1", index, len(trace.Records[index].New))
+		}
+	}
+	// The rename case projects the a..i aliases under the canonical names.
+	rename := trace.Records[2].New[0].Fields
+	if fmt.Sprint(rename["mybigint"]) != "1" || fmt.Sprint(rename["myvarchar"]) != "A" {
+		t.Fatalf("rename row = %#v", rename)
+	}
+	// The star case: one row per trigger with keepall lineage and the
+	// negative no-match send.
+	starFirst := trace.Records[4].New[0].Fields
+	if fmt.Sprint(starFirst["intPrimitive"]) != "6" || starFirst["myvarchar"] != "F" {
+		t.Fatalf("star first row = %#v", starFirst)
+	}
+	starSecond := trace.Records[6].New[0].Fields
+	if fmt.Sprint(starSecond["intPrimitive"]) != "9" || starSecond["myvarchar"] != "I" {
+		t.Fatalf("star second row = %#v", starSecond)
+	}
+}
+
+func TestRunEplDatabaseJoinDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "simple-join-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["myvarchar"] = "Z"
+			},
+		},
+		{
+			name: "rename-mapping-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["mychar"] = "S"
+			},
+		},
+		{
+			name: "property-resolution-null-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["mynumeric"] = "500"
+			},
+		},
+		{
+			name: "star-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["myvarchar"] = "J"
+			},
+		},
+		{
+			name: "star-negative-row-added",
+			mutate: func(trace *compat.Trace) {
+				count := int64(1)
+				trace.Records[8].Count = &count
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:8]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-join.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-database-join.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-join.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-database-join-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
