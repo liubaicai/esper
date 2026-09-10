@@ -1,0 +1,113 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-9550df89e223e839e414",
+    "java-runtime-13cbd82acb5791b30d07"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpSelect.java"
+  ],
+  "javaExecutions": [
+    "EPLDataflowOpSelectWrapper{wrapperWithAdditionalProps=false}",
+    "EPLDataflowOpSelectWrapper{wrapperWithAdditionalProps=true}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-select-representation",
+    "steps": [
+      {
+        "op": "case",
+        "case": "select-wrapper-no-additional-props"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "select-wrapper-additional-props"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-select-representation",
+    "records": [
+      {
+        "case": "select-wrapper-no-additional-props",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-wrapper-additional-props",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "hello": "a",
+              "value": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "dataflow-select-representation",
+    "records": [
+      {
+        "case": "select-wrapper-no-additional-props",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "select-wrapper-additional-props",
+        "operation": "capture",
+        "statement": "flow:DefaultSupportCaptureOp",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "hello": "a",
+              "value": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

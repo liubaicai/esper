@@ -39609,6 +39609,116 @@ func TestRunViewGroupMergeViewDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunDataflowSelectRepresentationDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-representation.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "dataflow-select-representation.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-representation.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-select-representation-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunDataflowSelectRepresentationDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-representation.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "dataflow-select-representation",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 2 {
+		t.Fatalf("records = %d, want 2", len(trace.Records))
+	}
+}
+
+func TestRunDataflowSelectRepresentationDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "plain-surface-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["value"] = 11
+			},
+		},
+		{
+			name: "wrapper-union-hello-loss",
+			mutate: func(trace *compat.Trace) {
+				// The decorated surface must carry hello alongside value.
+				trace.Records[1].New[0].Fields["hello"] = nil
+			},
+		},
+		{
+			name: "wrapper-union-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["value"] = 20
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:1]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-representation.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "dataflow-select-representation.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-representation.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "dataflow-select-representation-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestDataflowSelectStateDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "dataflow-select-state.evidence.json"),

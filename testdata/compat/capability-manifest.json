@@ -1554,7 +1554,9 @@
     "java-runtime-323dd1ec14f5ed5c0586",
     "java-runtime-21dcd981de8124bf387c",
     "java-runtime-64f78048eb114d0e9cf9",
-    "java-runtime-553841d9498fc8d6d1c7"
+    "java-runtime-553841d9498fc8d6d1c7",
+    "java-runtime-9550df89e223e839e414",
+    "java-runtime-13cbd82acb5791b30d07"
    ],
    "representativeScenarioIds": [
     "dataflow-connector-output"
@@ -10446,15 +10448,27 @@
     "avro",
     "plan-identity"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-runtime-inventory",
-    "go-unit"
+    "testdata/parity/dataflow-select-representation.json",
+    "testdata/parity/dataflow-select-representation.trace.json",
+    "testdata/parity/dataflow-select-representation.go.trace.json",
+    "testdata/parity/dataflow-select-representation.evidence.json",
+    "tools/java-oracle/DataflowSelectRepresentationScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-select-representation.sh"
    ],
    "difference": "The Go fluent Dataflow Select consumes Struct, Map, ObjectArray and XML Event envelopes with the same field expressions and aggregate state, using ParseObjectArray/ParseXML and registered schemas without EPL. SelectPassThrough preserves the input Event/Row representation, while SelectEvent materializes a registered output event, retains source fields and overlays named properties, covering the Java select-star/wrapper value shape. SelectJoinEvent extends the typed output boundary to multi-input projections and materializes native Struct, Map, ObjectArray, JSON, XML and Avro values; empty or unknown targets fail during Build. Every Select state/output option participates in Plan v2 canonical identity. Java additionally covers dynamic statement/source forms, all dataflow operator representation combinations and representation-specific invalid diagnostics.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9550df89e223e839e414",
+    "java-runtime-13cbd82acb5791b30d07"
+   ],
+   "notes": [
+    "Draft 4.361 upgrades the two EPLDataflowOpSelectWrapper executions to differential-verified via a NEW replayed chain: {wrapperWithAdditionalProps=false} (java-runtime-9550df89e223e839e414, plain map passthrough {value:10}) and {wrapperWithAdditionalProps=true} (java-runtime-13cbd82acb5791b30d07, the decorated union surface {value:10, hello:a} reaching the sink). The Java Pair split (underlying vs additional namespaces) is representation-only: unobservable through the flat normalized capture protocol, covered by the case difference disposition. EPLDataflowAllTypes remains on the implemented umbrella surface (its executions span several dataflow chains) and is not claimed DV by this case. Go surface: DefineDataflow + Emitter + SelectPassThrough + Custom capture + captive emitter submission, zero engine change."
    ]
   },
   {
@@ -43119,8 +43133,8 @@
  "summary": {
   "inventoriedCases": 634,
   "implementedCases": 632,
-  "differentialVerifiedCases": 248,
-  "differentialVerifiedRuntimeIds": 916,
+  "differentialVerifiedCases": 249,
+  "differentialVerifiedRuntimeIds": 918,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43138,6 +43152,6 @@
   "representativeScenarioPassing": 107,
   "totalCases": 634,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 916
+  "differentialVerifiedRuntimeIDs": 918
  }
 }

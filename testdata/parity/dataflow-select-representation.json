@@ -1,0 +1,30 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-select-representation",
+ "description": "dataflow-select-representation differential chain over EPLDataflowOpSelect select-star passthrough representation observed on the non-captive event bus through DefaultSupportCaptureOp, with and without wrapper decoration: select-wrapper-no-additional-props (ordinal 9) replays EPLDataflowOpSelectWrapper{wrapperWithAdditionalProps=false} byte-exact where the @public @buseventtype schema A and the plain insert into B select * from A feed the OutputFlow dataflow wiring EventBusSource -> TheEvents<B> through Select (select: (select * from TheEvents)) into DefaultSupportCaptureOp, so one sendEventMap({value=10}, 'A') passes the select-star passthrough undecorated and the capture latch (1 row, 1-second get via DefaultSupportGraphOpProvider) releases exactly one plain Map row {value=10} pinned as the single field value=10; select-wrapper-additional-props (ordinal 10) replays EPLDataflowOpSelectWrapper{wrapperWithAdditionalProps=true} byte-exact where the insert into B select 'a' as hello, * from A adds the hello column, making B a wrapper (decorated) event type whose capture surface is the union {value,hello}: the Java oracle asserts the suite's Pair split internally (Pair.first is the underlying Map with value=10 and Pair.second is the additional Map with hello='a', mirroring suite lines 416-419) while the trace pins the flat union surface {hello='a', value=10} because the underlying-versus-additional namespace split is representation-only and documented in the manifest difference; each case performs exactly one compileDeploy of the flow, one capture latch read (no empty reads, no post-cancel reads), instance.cancel(), and undeployAll over a fresh runtime with internal timer off and epoch initialization, recording exactly one capture record per case, and the chain upgrades case.dataflow-select-representation to differential-verified.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-9550df89e223e839e414",
+  "java-runtime-13cbd82acb5791b30d07"
+ ],
+ "cases": [
+  {
+   "case": "select-wrapper-no-additional-props",
+   "ordinal": 9,
+   "runtimeId": "java-runtime-9550df89e223e839e414",
+   "executionName": "EPLDataflowOpSelectWrapper{wrapperWithAdditionalProps=false}"
+  },
+  {
+   "case": "select-wrapper-additional-props",
+   "ordinal": 10,
+   "runtimeId": "java-runtime-13cbd82acb5791b30d07",
+   "executionName": "EPLDataflowOpSelectWrapper{wrapperWithAdditionalProps=true}"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "select-wrapper-no-additional-props"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "select-wrapper-additional-props"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}
