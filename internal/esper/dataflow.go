@@ -4529,25 +4529,38 @@ func (d *DataflowInstance) statementSourceListener(operator DataflowOperator, st
 	}
 }
 
+// dataflowStatementSubscriptionKey keys one statement subscription. Direct
+// and name-bound sources follow a single statement per operator (a redeploy
+// replaces the subscription); a filter-bound source keeps one subscription
+// per matching statement, mirroring Java's per-statement listener attach —
+// an undeploy removes only that statement's listener while the other
+// matching statements keep delivering.
+func dataflowStatementSubscriptionKey(operator DataflowOperator, statement *Statement) string {
+	if operator.StatementFilter != nil && statement != nil {
+		return operator.Name + "\x00" + statement.DeploymentID() + "\x00" + statement.Name()
+	}
+	return operator.Name
+}
+
 func (d *DataflowInstance) attachStatementSource(operator DataflowOperator, statement *Statement) error {
 	if d == nil || statement == nil {
 		return nil
 	}
+	key := dataflowStatementSubscriptionKey(operator, statement)
 	d.mu.Lock()
 	if d.state != DataflowRunning {
 		d.mu.Unlock()
 		return nil
 	}
-	existing := d.statementSubscriptions[operator.Name]
-	if existing != nil {
-		if existing.statement == statement {
-			d.mu.Unlock()
-			return nil
-		}
-		delete(d.statementSubscriptions, operator.Name)
+	existing := d.statementSubscriptions[key]
+	replaced := existing != nil && existing.statement != statement
+	if existing != nil && !replaced {
+		d.mu.Unlock()
+		return nil
 	}
+	delete(d.statementSubscriptions, key)
 	d.mu.Unlock()
-	if existing != nil {
+	if replaced {
 		_ = existing.Close()
 	}
 
@@ -4560,17 +4573,15 @@ func (d *DataflowInstance) attachStatementSource(operator DataflowOperator, stat
 		d.mu.Unlock()
 		return subscription.Close()
 	}
-	existing = d.statementSubscriptions[operator.Name]
-	if existing != nil {
-		if existing.statement == statement {
-			d.mu.Unlock()
-			return subscription.Close()
-		}
-		delete(d.statementSubscriptions, operator.Name)
+	existing = d.statementSubscriptions[key]
+	replaced = existing != nil && existing.statement != statement
+	if existing != nil && !replaced {
+		d.mu.Unlock()
+		return subscription.Close()
 	}
-	d.statementSubscriptions[operator.Name] = &subscription
+	d.statementSubscriptions[key] = &subscription
 	d.mu.Unlock()
-	if existing != nil {
+	if replaced {
 		_ = existing.Close()
 	}
 	return nil
@@ -4581,14 +4592,22 @@ func (d *DataflowInstance) detachStatementSource(operatorName string, statement 
 		return
 	}
 	d.mu.Lock()
-	subscription := d.statementSubscriptions[operatorName]
-	if subscription == nil || (statement != nil && subscription.statement != statement) {
+	if statement == nil {
 		d.mu.Unlock()
 		return
 	}
-	delete(d.statementSubscriptions, operatorName)
+	// Remove every subscription of this operator bound to the undeployed
+	// statement; subscriptions of other statements of the same operator
+	// keep delivering.
+	for key, subscription := range d.statementSubscriptions {
+		if subscription != nil && subscription.statement == statement {
+			delete(d.statementSubscriptions, key)
+			d.mu.Unlock()
+			_ = subscription.Close()
+			d.mu.Lock()
+		}
+	}
 	d.mu.Unlock()
-	_ = subscription.Close()
 }
 
 func (d *DataflowInstance) onStatementDeployed(statement *Statement) {

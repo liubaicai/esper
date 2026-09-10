@@ -1,0 +1,48 @@
+{
+ "version": "esper-parity/v1",
+ "id": "dataflow-epstatement-source",
+ "description": "dataflow-epstatement-source differential chain over EPLDataflowOpEPStatementSource statement-source registry and attachment lifecycle observed through DefaultSupportCaptureOp: all-types (ordinal 0) replays EPLDataflowAllTypes runAssertionStatementNameExists as four sub-runs in one case, one per event representation (POJO MyDefaultSupportGraphEvent, Map MyMapEvent, ObjectArray MyOAEvent, XML MyXMLEvent over the regression/threeProperties.xsd classloader schema), each sub-run deploying the paired @Name('MyStatement') select * statement, interpolating that deployment id into the byte-exact MyDataFlowOne EPStatementSource graph with a latch-2 capture, sending myDouble=1.1,myInt=1,myString=one then myDouble=2.2,myInt=2,myString=two through the representation's EventSender, and recording two rows per representation where the double-preserving normalize renders myDouble 1.1/2.2 losslessly as JSON decimals so all four representations carry identical typed rows; stmt-name-dynamic (ordinal 1) replays EPLDataflowStmtNameDynamic byte-exact over the fixed statementDeploymentId 'MyDeploymentId' plus statementName 'MyStatement' pairing with the flow instantiated before the statement exists (getUserObject/getInstanceId null, empty read after E1), then attach on deploy of @Name('MyStatement') select theString as id (E2 projects id=E2), detach on undeploy (E3 empty), reattach on redeploying the same compiled unit (E4 projects id=E4), detach again (E5 empty), and attach of the redefined select 'X'||theString||'X' as id statement (E6 projects id=XE6X); statement-filter (ordinal 2) replays EPLDataflowStatementFilter where the pass-everything MyFilter statementFilter parameterProvider attaches the pre-existing unnamed select id from SupportBean_B deployment at open (B1 projects id=B1), dynamically deployed statements attach on deployment (unnamed select theString,intPrimitive from SupportBean with E1 projecting theString=E1,intPrimitive=1, then @name('s2') select id from SupportBean_A with A1 projecting id=A1), s2 undeploy detaches (A2 empty), s2 redeploy reattaches (A3 projects id=A3), the first B statement remains attached (B2 projects id=B2), and df.cancel() silences the source (E1/A1/B3 empty read); invalid (ordinal 3) replays EPLDataflowInvalid under the invalidity policy with Java-side prefix assertions only — instantiate-time Failed to instantiate data flow 'DF1' ... Failed to find required 'statementName' or 'statementFilter' parameter, compile-time zero-output-stream, and compile-time statementDeploymentId/statementName pairing diagnostics — and produces no trace rows; every capture read is one record over statement flow:DefaultSupportCaptureOp with empty reads recorded explicitly as new:[].",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaRuntimes": [
+  "java-runtime-2d7b6229c7a3b2bee40b",
+  "java-runtime-950696d7aa6356acb9d4",
+  "java-runtime-8c8f6f03b11605a16d11",
+  "java-runtime-ef085a37ed45eb35a13f"
+ ],
+ "cases": [
+  {
+   "case": "all-types",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-2d7b6229c7a3b2bee40b",
+   "executionName": "EPLDataflowAllTypes"
+  },
+  {
+   "case": "stmt-name-dynamic",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-950696d7aa6356acb9d4",
+   "executionName": "EPLDataflowStmtNameDynamic"
+  },
+  {
+   "case": "statement-filter",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-8c8f6f03b11605a16d11",
+   "executionName": "EPLDataflowStatementFilter"
+  },
+  {
+   "case": "invalid",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-ef085a37ed45eb35a13f",
+   "executionName": "EPLDataflowInvalid"
+  }
+ ],
+ "steps": [
+  {"op": "case", "case": "all-types"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "stmt-name-dynamic"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "statement-filter"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+  {"op": "case", "case": "invalid"},
+  {"op": "advance-time", "at": "1970-01-01T00:00:00Z"}
+ ]
+}

@@ -1556,7 +1556,11 @@
     "java-runtime-64f78048eb114d0e9cf9",
     "java-runtime-553841d9498fc8d6d1c7",
     "java-runtime-9550df89e223e839e414",
-    "java-runtime-13cbd82acb5791b30d07"
+    "java-runtime-13cbd82acb5791b30d07",
+    "java-runtime-2d7b6229c7a3b2bee40b",
+    "java-runtime-950696d7aa6356acb9d4",
+    "java-runtime-8c8f6f03b11605a16d11",
+    "java-runtime-ef085a37ed45eb35a13f"
    ],
    "representativeScenarioIds": [
     "dataflow-connector-output"
@@ -10322,6 +10326,67 @@
    "verification": [
     "inventoried",
     "implemented"
+   ],
+   "notes": [
+    "Draft 4.362 adds case.dataflow-epstatement-source, the differential-verified upgrade of this umbrella's EPLDataflowOpEPStatementSource executions (all four now DV); the Invalid execution's three reflective/declaration rejections are covered by the invalidity policy (Java-side prefix assertions; the representable no-binding rejection is a Go Build error class)."
+   ]
+  },
+  {
+   "id": "case.dataflow-epstatement-source",
+   "javaRuntimeIds": [
+    "java-runtime-2d7b6229c7a3b2bee40b",
+    "java-runtime-950696d7aa6356acb9d4",
+    "java-runtime-8c8f6f03b11605a16d11",
+    "java-runtime-ef085a37ed45eb35a13f"
+   ],
+   "javaStaticIds": [
+    "java-0d00c5ee5cd2000dbffb",
+    "java-0e4c15a16a7a83cf171e",
+    "java-48947597455266fa9ffe",
+    "java-d9ef690648fcd3899a05"
+   ],
+   "javaNames": [
+    "EPLDataflowAllTypes",
+    "EPLDataflowStmtNameDynamic",
+    "EPLDataflowStatementFilter",
+    "EPLDataflowInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/dataflow/EPLDataflowOpEPStatementSource.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunDataflowEPStatementSourceDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunDataflowEPStatementSourceDirectReplay",
+    "internal/app/parity/run_test.go:TestRunDataflowEPStatementSourceDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "dataflow",
+    "epstatement-source",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/dataflow-epstatement-source.json",
+    "testdata/parity/dataflow-epstatement-source.trace.json",
+    "testdata/parity/dataflow-epstatement-source.go.trace.json",
+    "testdata/parity/dataflow-epstatement-source.evidence.json",
+    "tools/java-oracle/DataflowEPStatementSourceScenarioOracle.java",
+    "tools/java-oracle/run-dataflow-epstatement-source.sh"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2d7b6229c7a3b2bee40b",
+    "java-runtime-950696d7aa6356acb9d4",
+    "java-runtime-8c8f6f03b11605a16d11",
+    "java-runtime-ef085a37ed45eb35a13f"
+   ],
+   "notes": [
+    "Draft 4.362 covers EPLDataflowOpEPStatementSource's four executions: the all-types case replays the four event representations (POJO, Map, ObjectArray, XML) with the paired statement's deployment id interpolated into the graph (2 rows each {myDouble,myInt,myString} = {1.1,1,one}/{2.2,2,two}); stmt-name-dynamic pins the registry lifecycle under fixed deployment id MyDeploymentId (start-before-deploy empty read, attach on deploy {id:E2}, detach on undeploy {empty}, redeploy {id:E4}, redefinition {id:XE6X}); statement-filter pins a filter selector attaching to pre-existing and dynamically deployed statements with detach-on-undeploy emptiness and cancel suppression. The invalid execution (three Java rejections) is covered by the invalidity policy: the representable no-binding rejection is a Go Build error class; the zero-output-stream and name-requires-deployment-id rejections have no Go surface and are case differences. Go engine change: filter-mode EPStatementSource subscriptions are keyed per statement (an undeploy detaches only that statement's listener while other matching statements keep delivering, matching Java per-statement listener semantics); named and direct modes keep single-slot replacement."
    ]
   },
   {
@@ -43128,13 +43193,17 @@
   {
    "caseId": "case.dataflow-select-flows",
    "capabilityId": "dataflow.graph"
+  },
+  {
+   "caseId": "case.dataflow-epstatement-source",
+   "capabilityId": "dataflow.graph"
   }
  ],
  "summary": {
-  "inventoriedCases": 634,
-  "implementedCases": 632,
-  "differentialVerifiedCases": 249,
-  "differentialVerifiedRuntimeIds": 918,
+  "inventoriedCases": 635,
+  "implementedCases": 633,
+  "differentialVerifiedCases": 250,
+  "differentialVerifiedRuntimeIds": 922,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43144,14 +43213,14 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3544,
+  "runtimeAssociationCount": 3548,
   "referencedJavaRuntimeIds": 3283,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 853,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 634,
+  "totalCases": 635,
   "totalCapabilities": 120,
-  "differentialVerifiedRuntimeIDs": 918
+  "differentialVerifiedRuntimeIDs": 922
  }
 }
