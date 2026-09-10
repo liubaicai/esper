@@ -278,8 +278,8 @@ oracle 或场景资产）。**本单元不新增 capability/DV/NFR 状态**；ma
 
 #### 4.9.5 Named Window/Table 索引的全量重建路径
 
-状态：部分实施。Table 索引重建已将排序移出逐行插入循环，避免重建阶段的 O(N² log N) 排序退化；增量
-维护和 Named Window 的位置索引仍待单独验证。
+状态：部分实施。Table 索引重建已将排序移出逐行插入循环，并跳过 hash 索引不需要的排序，避免重建阶段的
+O(N² log N) 排序退化；增量维护和 Named Window 的位置索引仍待单独验证。
 
 - 现状：`rebuildNamedWindowIndexesLocked`（`state.go:2045`）重建时遍历全部 `state.entries`，
   对每个索引重建 key map，最后对 entries 做一次 `sort.SliceStable`；
