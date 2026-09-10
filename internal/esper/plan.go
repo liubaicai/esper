@@ -1390,6 +1390,75 @@ func expressionContainsKind(node *exprNode, kind string) bool {
 // expressionFieldNames collects the inner-event field names an expression
 // reads, recursing into subqueries. Used by grouped subselect validation to
 // check that non-aggregate columns derive from the group-by key.
+// ungroupedSubselectAggregateTouchesOuterField reports whether any aggregate
+// argument inside the tree references a correlated outer-stream property
+// (Java: "Subselect aggregation functions cannot aggregate across correlated
+// properties").
+func ungroupedSubselectAggregateTouchesOuterField(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.subquery != nil {
+		return false
+	}
+	if expressionNodeIsAggregate(node) {
+		return ungroupedSubselectTreeReadsOuterField(node)
+	}
+	for _, child := range node.children {
+		if ungroupedSubselectAggregateTouchesOuterField(child) {
+			return true
+		}
+	}
+	return false
+}
+
+// ungroupedSubselectTreeReadsOuterField reports whether the tree reads an
+// outer-stream property anywhere.
+func ungroupedSubselectTreeReadsOuterField(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.subquery != nil {
+		return false
+	}
+	if node.kind == "outer-field" {
+		return true
+	}
+	for _, child := range node.children {
+		if ungroupedSubselectTreeReadsOuterField(child) {
+			return true
+		}
+	}
+	return false
+}
+
+// ungroupedSubselectViolations reports inner-stream fields read outside
+// aggregate boundaries in an ungrouped subselect expression tree (Java:
+// "Subselect properties must all be within aggregation functions" / the
+// having-clause variant). Outer-stream properties are exempt.
+func ungroupedSubselectViolations(node *exprNode) bool {
+	violating := false
+	var walk func(node *exprNode, insideAggregate bool)
+	walk = func(node *exprNode, insideAggregate bool) {
+		if node == nil || violating {
+			return
+		}
+		if node.subquery != nil {
+			return
+		}
+		insideAggregate = insideAggregate || expressionNodeIsAggregate(node)
+		if node.kind == "field" && !insideAggregate {
+			violating = true
+			return
+		}
+		for _, child := range node.children {
+			walk(child, insideAggregate)
+		}
+	}
+	walk(node, false)
+	return violating
+}
+
 func expressionFieldNames(node *exprNode) map[string]struct{} {
 	names := map[string]struct{}{}
 	var walk func(node *exprNode)
@@ -2945,6 +3014,31 @@ func (e *Environment) validateSubquery(definition *subqueryDefinition) error {
 		}
 		if err := e.validateExprFields(definition.source, definition.having); err != nil {
 			return WrapError(ErrorInvalidRule, "subquery having", err)
+		}
+		// The inner-field/outer-field invariants apply only once an
+		// aggregate is present: a having without aggregates is a legal
+		// row-by-row filter (matching Esper's accepted form).
+		if expressionNodeContainsAggregate(definition.having.node()) {
+			if ungroupedSubselectAggregateTouchesOuterField(definition.having.node()) {
+				return NewError(ErrorInvalidRule, "subselect aggregation functions cannot aggregate across correlated properties")
+			}
+			if ungroupedSubselectViolations(definition.having.node()) {
+				return NewError(ErrorInvalidRule, "subselect having-clause requires that all properties are under aggregation, consider using the 'first' aggregation function instead")
+			}
+		}
+	}
+	if definition.projection != nil && !definition.grouped && !definition.wholeEvent {
+		if expressionNodeContainsAggregate(definition.projection.node()) {
+			// Mirror Java's ungrouped single-value subselect invariants:
+			// (a) an aggregate argument must not reference correlated
+			// outer-stream properties; (b) with an aggregate present, the
+			// projection must not also read bare inner-stream fields.
+			if ungroupedSubselectAggregateTouchesOuterField(definition.projection.node()) {
+				return NewError(ErrorInvalidRule, "subselect aggregation functions cannot aggregate across correlated properties")
+			}
+			if ungroupedSubselectViolations(definition.projection.node()) {
+				return NewError(ErrorInvalidRule, "subselect properties must all be within aggregation functions")
+			}
 		}
 	}
 	if definition.multiColumn && len(definition.columns) == 0 && !definition.wholeEvent {

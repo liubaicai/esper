@@ -294,6 +294,8 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.363（2026-09-10），subselect 域 invalidity 政策收尾单元：登记六个 compile-only/invalid 执行的处置（无 trace 行，Java 侧字节精确消息前缀由断言钉定）。(a) `case.subselect-in` 登记 `EPLSubselectInvalid`（`java-runtime-b19d939e1d67b9257320`）：数组型左操作数的 IN 子查询比较被 Java 编译期拒绝（Go 类型化 API 结构性阻止该形状，any-typed 洞已记录为已知限制）；(b) `case.subselect-aggregated-single-value` 登记 `EPLSubselectAggregatedInvalid`（`java-runtime-4a313ed4ff15caa50489`）并新增引擎校验：非分组单值子查询的聚合参数不得引用关联外流属性、聚合出现时标量投影不得读取聚合边界外的内流字段、having 同规则——Go 在 Build 时拒绝全部六个 Java 无效形状（TestSubselectAggregatedInvalidParity）；(c) `case.subselect-exists` 登记四个 OM/Compile 变体为 compile-path-only intentionally-different（SODA round-trip 无 Go 对应面）。DV-list 合并问题确认解决：全部 250 个 DV 案例均携带 per-case differentialVerifiedRuntimeIds（并集 922 == summary）。manifest 更新为 635 cases、250 个 differential-verified case、922 个 differential runtime IDs（不变）、3554 条 associations（referenced 3289、unreferenced 847）；路线图 epl 253→247（6 个新关联 runtime ID）。
+
 > 最新补充：Draft 4.362（2026-09-10），dataflow 域第五个 differential-verified 链 `case.dataflow-epstatement-source`，对照固定 Java `EPLDataflowOpEPStatementSource.java` 的四个 execution（`EPLDataflowAllTypes` `java-runtime-2d7b6229c7a3b2bee40b`、`EPLDataflowStmtNameDynamic` `java-runtime-950696d7aa6356acb9d4`、`EPLDataflowStatementFilter` `java-runtime-8c8f6f03b11605a16d11`、`EPLDataflowInvalid` `java-runtime-ef085a37ed45eb35a13f`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 各 17 条 records、0 differences：all-types 以四种事件表示（POJO/Map/ObjectArray/XML，配对语句部署 id 插入图文本）各捕获 {1.1,1,one}/{2.2,2,two} 双行（double 无损渲染）；stmt-name-dynamic 钉定注册表生命周期——先于语句启动（空读）、部署即挂接 {id:E2}、卸载即分离（空）、重部署 {id:E4}、重定义 {id:XE6X}，固定部署 id MyDeploymentId；statement-filter 钉定过滤器选择器挂接既有与动态部署语句（B1/E1/A1）、卸载分离空读、重部署 A3、B2、取消后空。EPLDataflowInvalid 的三个拒绝按 invalidity 政策无 trace 行（Java 侧前缀断言；可表示的无绑定拒绝为 Go Build 错误类，其余两个无 Go 对应面登记于案例注释）。Go 引擎面改动：EPStatementSource 过滤器形态的订阅按语句键控（每次 undeploy 仅分离该语句的监听器，其余匹配语句持续投递，对齐 Java per-statement 监听器语义；命名/直接形态保持替换语义）（EPStatementSourceByDeployment/WithStatementFilter + 部署/卸载钩子）。manifest 更新为 635 cases、250 个 differential-verified case、922 个 differential runtime IDs、3548 条 associations（referenced 3283、unreferenced 853 均不变——四个 runtime ID 已由 umbrella 案例预关联，路线图计数维持 253）。
 
 > 最新补充：Draft 4.361（2026-09-10），dataflow Select 流 `case.dataflow-select-representation` 由 implemented 升级为 differential-verified（新重放链），对照固定 Java `EPLDataflowOpSelect.java` 的 wrapper 表示双变体（`EPLDataflowOpSelectWrapper{wrapperWithAdditionalProps=false}` `java-runtime-9550df89e223e839e414`、`{wrapperWithAdditionalProps=true}` `java-runtime-13cbd82acb5791b30d07`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go trace 各 2 条 records、0 differences：EventBusSource -> select-star passthrough -> DefaultSupportCaptureOp，无装饰变体捕获 {value:10}，装饰变体（insert-into 增加 hello 列使 B 成 wrapper 类型）捕获联合面 {value:10, hello:a}；Java Pair 拆分（underlying vs additional 命名空间）为表示性元数据，平坦捕获协议不可观测，登记于案例 difference 处置（oracle 内部断言 Pair 拆分）。Go 侧零引擎改动（DefineDataflow + Emitter + SelectPassThrough + Custom capture + captive emitter）。manifest 更新为 634 cases、249 个 differential-verified case、918 个 differential runtime IDs、3544 条 associations（referenced 3283、unreferenced 853 均不变）；EPLDataflowAllTypes 保持 umbrella 实现面不申索 DV。
@@ -1501,7 +1503,7 @@
 
 重点领域：
 
-- epl 剩余 253 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 247 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1526,7 +1528,7 @@
 ### 4.4 Phase 3 — 收尾与验收
 
 目标：100% 适用 Java runtime 映射并通过；所有门禁通过；文档、示例、性能、内存验收。
-- epl 剩余 253 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
+- epl 剩余 247 个未关联 runtime，优先 subselect、insertinto、database、dataflow 和方法源。
 - infra 剩余 156 个未关联 runtime，优先表、Named Window、mutation 和 transaction。
 - join 与 outer join 复杂链、unidirectional、Context Join。
 - resultset 聚合和输出高级特性（filtered、math-context、访问聚合、rollup、row-limit 组合）。
@@ -1548,7 +1550,7 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 253 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 247 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
@@ -1578,7 +1580,7 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 253 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 247 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |

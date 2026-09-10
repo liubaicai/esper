@@ -8684,7 +8684,8 @@
     "java-runtime-b49d7c217bee63a5aab4",
     "java-runtime-fc5e32b56ceb8866146f",
     "java-runtime-73e90c44540e5ba6b1fd",
-    "java-runtime-7d4d91983868b27f14b1"
+    "java-runtime-7d4d91983868b27f14b1",
+    "java-runtime-4a313ed4ff15caa50489"
    ],
    "javaNames": [
     "EPLSubselectUngroupedUncorrelatedNoDataWindow",
@@ -8701,7 +8702,8 @@
     "EPLSubselectUngroupedTableWHaving",
     "EPLSubselectGroupedTableWHaving",
     "EPLSubselectUngroupedJoin3StreamKeyRangeCoercion",
-    "EPLSubselectUngroupedJoin2StreamRangeCoercion"
+    "EPLSubselectUngroupedJoin2StreamRangeCoercion",
+    "EPLSubselectAggregatedInvalid"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectAggregatedSingleValue.java"
@@ -8710,7 +8712,8 @@
     "TestRunSubselectAggregatedSingleValueDiffWritesPassingEvidence",
     "TestRunSubselectAggregatedSingleValueDiffRejectsTraceMutations",
     "TestSubqueryGroupScalarSingleGroupWithMultipleEvents",
-    "TestSubqueryGroupedInAnyAllFollowsEmptySetAndHavingSemantics"
+    "TestSubqueryGroupedInAnyAllFollowsEmptySetAndHavingSemantics",
+    "internal/esper/epl_subselect_aggregated_invalid_test.go:TestSubselectAggregatedInvalidParity"
    ],
    "tags": [
     "correctness",
@@ -8757,6 +8760,9 @@
    ],
    "representativeScenarioIds": [
     "subselect-aggregated-single-value"
+   ],
+   "notes": [
+    "Draft 4.363 registers EPLSubselectAggregatedInvalid (java-runtime-4a313ed4ff15caa50489, implemented-not-differential): six compile-time rejections pinning ungrouped single-value subselect invariants — correlated properties inside aggregation arguments, bare inner-stream properties outside aggregation boundaries, having-clause outer-property aggregation, inner properties outside aggregation in the having, and non-boolean having. The Go engine now rejects the same invariants at Build (ungroupedSubselectViolations / ungroupedSubselectAggregateTouchesOuterField), pinned by TestSubselectAggregatedInvalidParity."
    ]
   },
   {
@@ -8776,7 +8782,8 @@
     "java-runtime-7ca64412e62473c7d2d7",
     "java-runtime-65e715bf6d8eebf884ee",
     "java-runtime-ad48b4b457ce24456800",
-    "java-runtime-462a485c982dc5360d48"
+    "java-runtime-462a485c982dc5360d48",
+    "java-runtime-b19d939e1d67b9257320"
    ],
    "javaNames": [
     "EPLSubselectInSelect",
@@ -8793,7 +8800,8 @@
     "EPLSubselectInMultiIndex",
     "EPLSubselectNotInNullRow",
     "EPLSubselectNotInSelect",
-    "EPLSubselectNotInNullableCoercion"
+    "EPLSubselectNotInNullableCoercion",
+    "EPLSubselectInvalid"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectIn.java"
@@ -8850,6 +8858,9 @@
    ],
    "representativeScenarioIds": [
     "subselect-in"
+   ],
+   "notes": [
+    "Draft 4.363 registers EPLSubselectInvalid (java-runtime-b19d939e1d67b9257320, implemented-not-differential): the array-typed left operand of an IN-subquery comparison is rejected by Java's compile-time validation (Collection/array comparison and null-type values are not allowed for the IN, ANY, SOME or ALL keywords). The Go typed API prevents the shape structurally (SubqueryIn's comparable constraint blocks array projections); the any-typed hole is documented as a known limitation, not pinned as behavior."
    ]
   },
   {
@@ -33245,14 +33256,22 @@
     "java-runtime-3ec7a4b16844a2a86478",
     "java-runtime-3c25177339d1cdff080e",
     "java-runtime-98a351db3777f8b53fc6",
-    "java-runtime-41c99f4279b018f64589"
+    "java-runtime-41c99f4279b018f64589",
+    "java-runtime-734eaed8189b7faedd98",
+    "java-runtime-25e3ac3f68aefee11293",
+    "java-runtime-ec3ea2a5c59a7c9dbbe5",
+    "java-runtime-9ada75189af485e306c1"
    ],
    "javaNames": [
     "EPLSubselectExistsInSelect",
     "EPLSubselectExistsSceneOne",
     "EPLSubselectExistsFiltered",
     "EPLSubselectTwoExistsFiltered",
-    "EPLSubselectNotExists"
+    "EPLSubselectNotExists",
+    "EPLSubselectExistsInSelectOM",
+    "EPLSubselectExistsInSelectCompile",
+    "EPLSubselectNotExistsOM",
+    "EPLSubselectNotExistsCompile"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/subselect/EPLSubselectExists.java"
@@ -33275,7 +33294,7 @@
     "java-oracle-trace",
     "go-unit"
    ],
-   "difference": null,
+   "difference": "The four OM/Compile executions (SODA object-model and EPL-to-model compile-path variants of the exists/not-exists statements) are compile-path-only: their runtime observable contracts are exactly the text counterparts' contracts, which this chain pins differentially. The Go fluent API has no SODA/OM compile-path duality (no object-model surface), so the compile-path variants are intentionally-different: not separately replayed.",
    "verification": [
     "inventoried",
     "implemented",
@@ -43213,10 +43232,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3548,
-  "referencedJavaRuntimeIds": 3283,
+  "runtimeAssociationCount": 3554,
+  "referencedJavaRuntimeIds": 3289,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 853,
+  "unreferencedJavaRuntimeIds": 847,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 635,
