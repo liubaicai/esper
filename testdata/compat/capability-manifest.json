@@ -2301,7 +2301,8 @@
     "internal/app/parity/infra_nwtable_subq_correl_coerce.go",
     "internal/app/parity/infra_named_window_keepall_delete.go",
     "internal/esper/namedwindow_statement_order_test.go",
-    "internal/app/parity/infra_named_window_retention_views.go"
+    "internal/app/parity/infra_named_window_retention_views.go",
+    "internal/app/parity/infra_named_window_unique_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2332,7 +2333,10 @@
     "java-runtime-26c44410c8018a34d696",
     "java-runtime-b85cc831b5c23a570cf7",
     "java-runtime-59100403b3c6affd0729",
-    "java-runtime-c2f54d9eb104d061950c"
+    "java-runtime-c2f54d9eb104d061950c",
+    "java-runtime-63daa6cfa27a786c0480",
+    "java-runtime-1ee31df7428f7c8e85eb",
+    "java-runtime-bb670bc21e9d4333cefd"
    ]
   },
   {
@@ -26984,6 +26988,67 @@
    "difference": "The legacy view spellings win:keepall() (ord 0) and std:lastevent() (ord 30) collapse to the KeepAll and LastEvent retention specs, and the #lastevent/#firstevent spellings to LastEvent and FirstEvent; EPL view text has no Go analogue because windows are declared from registered schemas. The key/value map window type (MySimpleKeyValueMap) and the scene-two projection are modelled as struct schemas (the Java type assertions cover the column types only), and the on-delete listener is excluded from the trace on both sides for the same reason as the keep-all/on-delete slice: the suite attaches it but never asserts its payload, while a no-match delete delivers nothing at all. Ord 0's only observable is the window statement plus the two-statement module teardown, which the Go chain replays as statement-targeted undeploys without records."
   },
   {
+   "id": "case.infra-namedwindow-views-unique",
+   "javaRuntimeIds": [
+    "java-runtime-63daa6cfa27a786c0480",
+    "java-runtime-1ee31df7428f7c8e85eb",
+    "java-runtime-bb670bc21e9d4333cefd"
+   ],
+   "javaNames": [
+    "InfraUnique",
+    "InfraUniqueSceneTwo",
+    "InfraFirstUnique"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowUniqueViewsDirectReplay",
+    "TestRunInfraNamedWindowUniqueViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowUniqueViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowUniqueViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowUniqueViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowUniqueViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsUniqueParity",
+    "TestInfraNWViewsUniqueSceneTwoParity",
+    "TestInfraNWViewsFirstUniqueParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "unique",
+    "first-unique",
+    "retention",
+    "replacement",
+    "irstream",
+    "on-delete",
+    "iterator-snapshot",
+    "any-order-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-63daa6cfa27a786c0480",
+    "java-runtime-1ee31df7428f7c8e85eb",
+    "java-runtime-bb670bc21e9d4333cefd"
+   ],
+   "difference": "The unique and firstunique data windows are declared with the Unique(key) and FirstUnique(key) retention specs, so the EPL view text (#unique(key)/#firstunique(key)) has no Go analogue. Multi-row iterator snapshots ride the Java views' HashMap iteration order, which the suite only ever asserts any-order; those steps carry mode \"any\" and both traces emit the rows in canonical sorted-field order (the differential protocol canonicalizes the region on both sides as well). The on-delete listener is excluded from the trace on both sides because the Java suite never asserts its payload - matching deletes DO deliver the removed rows to that listener as new data, so the exclusion rests on the never-asserted payload, not on silence. The unique-scene-two consumer statement is named \"consume\" in Java and is deployed without a listener, so it contributes no records; the key/value map window type is modelled as a struct schema as in the sibling slices."
+  },
+  {
    "id": "case.dataflow-connector-output",
    "javaRuntimeIds": [
     "java-runtime-1ecb769e10b4a818772c"
@@ -43572,13 +43637,17 @@
   {
    "caseId": "case.infra-namedwindow-views-retention",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-unique",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 638,
-  "implementedCases": 636,
-  "differentialVerifiedCases": 261,
-  "differentialVerifiedRuntimeIds": 973,
+  "inventoriedCases": 639,
+  "implementedCases": 637,
+  "differentialVerifiedCases": 262,
+  "differentialVerifiedRuntimeIds": 976,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43588,13 +43657,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3571,
+  "runtimeAssociationCount": 3574,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 638,
+  "totalCases": 639,
   "totalCapabilities": 120
  }
 }

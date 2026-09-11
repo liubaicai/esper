@@ -35,17 +35,22 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.379 ('database-slices') committed; Git owns identity. The eleven remaining EPLDatabaseJoin executions are enumerated as manifest dispositions (no trace change).
 - Shipped: Draft 4.380 ('timebatch-historical-release') committed as 58fa99c5f; Git owns identity. Engine fix releases joined rows at time-batch boundaries over historical joins; `EPLDatabaseTimeBatch` differential-verified.
 - Shipped by this commit: Draft 4.381 ('infra-namedwindow-views-keepall-delete'); Git owns identity. Second differential coverage of `InfraNamedWindowViews.java` (ord 1, 39-42, 5 runtime IDs; ord 3 was already verified via `case.time-window-long-running`); engine fix orders the window statement's output before tail-view consumer dispatches on the mutation path, guarded so mutation-preprocessing statement output keeps precedence (review finding); 637 cases, 260 DV cases, 969 DV runtime IDs.
-- Current target: Draft 4.382 'infra-namedwindow-views-lastevent-firstevent' - slice S1 of the InfraNamedWindowViews inventory: ord 0 `InfraKeepAllSimple` (`java-runtime-26c44410c8018a34d696`), ord 29 `InfraLastEvent` (`java-runtime-b85cc831b5c23a570cf7`), ord 30 `InfraLastEventSceneTwo` (`java-runtime-59100403b3c6affd0729`), ord 31 `InfraFirstEvent` (`java-runtime-c2f54d9eb104d061950c`). Follow-ups: remaining 13 InfraNamedWindowViews slices, ExprFilterOptimizableBooleanLimitedExpr leftovers, EPLOtherPlanInKeywordQuery, perf items, multithread/rowrecog/EsperIO domains.
+- Shipped by this commit: Draft 4.383 ('infra-named-window-unique-views'); Git owns identity. Third InfraNamedWindowViews slice (ords 32/33/34) differential-verified; new any-mode snapshot protocol.
+- Current target: Draft 4.384 'infra-namedwindow-views-length' - slice S1 of the InfraNamedWindowViews inventory: ord 0 `InfraKeepAllSimple` (`java-runtime-26c44410c8018a34d696`), ord 29 `InfraLastEvent` (`java-runtime-b85cc831b5c23a570cf7`), ord 30 `InfraLastEventSceneTwo` (`java-runtime-59100403b3c6affd0729`), ord 31 `InfraFirstEvent` (`java-runtime-c2f54d9eb104d061950c`). Follow-ups: remaining 13 InfraNamedWindowViews slices, ExprFilterOptimizableBooleanLimitedExpr leftovers, EPLOtherPlanInKeywordQuery, perf items, multithread/rowrecog/EsperIO domains.
 
 ## Current work unit
-Active: Draft 4.382 ('infra-named-window-retention-views') - Go chain, modes and tests built; asset lane generating the Java oracle/scenario/trace.
+Active: Draft 4.383 ('infra-named-window-unique-views') - chain, evidence and facts complete; gates and independent review in flight.
 
-- Scope (contract `local://infra-named-window-retention-views-contract.md`): slice S1 of the InfraNamedWindowViews inventory - ord 0 `InfraKeepAllSimple` (`java-runtime-26c44410c8018a34d696`), ord 29 `InfraLastEvent` (`java-runtime-b85cc831b5c23a570cf7`), ord 30 `InfraLastEventSceneTwo` (`java-runtime-59100403b3c6affd0729`), ord 31 `InfraFirstEvent` (`java-runtime-c2f54d9eb104d061950c`); 43 records (2/18/7/16).
-- Ownership: primary owns `internal/app/parity/infra_named_window_retention_views.go`, `run.go` modes, the `run_test.go` family, trace/evidence, manifest/roadmap/CHANGELOG/PLANS, gates, review and commit; `RetentionViewsAssets` owns the oracle, script, scenario and generated Java trace.
-- [x] Parallel read-only scouts (prefetched during 4.381): `ViewsNextJavaContract` (byte-exact EPL, listener sets, per-step observables) and `ViewsNextGoSurface` (all four executions already Go-implemented; only a statement-targeted `undeploy` op was missing from the chain idiom).
-- [x] Contract frozen; Go chain + modes + 6-test family built; throwaway probe replay reproduces the frozen 43 records and per-case counts, and every payload matches contract section 5 (replacement IR pairs, silent first-event drop and no-match delete, empty snapshots, re-admission after empty).
-- [ ] Oracle/scenario/Java trace from the asset lane; Go trace + evidence; manifest/roadmap/CHANGELOG; gates; independent review; commit.
-- Follow-up carried from 4.381: mixed mutation waves (update-istream + on-delete trigger listener + window statement + consumers) order the trigger's own output differently from Java's main dispatch; needs its own Java oracle scenario before an engine change.
+- Scope (contract `local://infra-named-window-unique-views-contract.md`): slice S2 of the InfraNamedWindowViews inventory - ord 32 `InfraUnique` (`java-runtime-63daa6cfa27a786c0480`), ord 33 `InfraUniqueSceneTwo` (`java-runtime-1ee31df7428f7c8e85eb`), ord 34 `InfraFirstUnique` (`java-runtime-bb670bc21e9d4333cefd`); 46 records (20/9/17).
+- New protocol element: snapshot steps carry `mode` `ordered` or `any`; multi-row snapshots ride the Java views' HashMap iteration order and are canonically sorted on both sides (loader pins the per-case mode sequence; `sortRowsCanonical` on the Go side).
+- Ownership: primary owns the Go chain, modes, tests, traces/evidence, manifest/roadmap/CHANGELOG/PLANS, gates, review and commit; `UniqueViewsAssets` owns oracle, script, scenario and generated Java trace.
+- [x] Scouts in hand before implementation (`ViewsUniqueJavaContract`, `ViewsUniqueGoSurface`); contract frozen.
+- [x] Go chain `internal/app/parity/infra_named_window_unique_views.go` + modes + 6-test family; probe replay reproduced the frozen 46 records and per-case counts before the authored scenario landed.
+- [x] Asset lane delivered oracle/script/scenario/trace (46 records, deterministic, key sets as locked); Go trace and evidence passing with 0 differences.
+- [x] Manifest (`case.infra-namedwindow-views-unique`, mapping, capability DV +3, summary 639/637/262/976/3574/3293/843), CHANGELOG 4.383, roadmap 4.383, README stats, PLANS.
+- [ ] Full local gates and independent parity review.
+- [ ] Commit and push.
+- Follow-up carried: mixed mutation waves (update-istream + on-delete trigger listener + window statement + consumers) order the trigger's own output differently from Java's main dispatch; needs its own Java oracle scenario before an engine change.
 
 
 ## Delegation checkpoint (recent)
