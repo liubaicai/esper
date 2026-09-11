@@ -4946,6 +4946,18 @@ func (e *Engine) flushNamedWindowConsumerWaveLocked(ctx context.Context, now tim
 	if e == nil || variables == nil || dispatches == nil {
 		return nil
 	}
+	// Esper delivers the window's own statement output (the direct create-window
+	// child) before the tail-view consumer dispatches for the same window
+	// delta, on every delta kind including the delete/update mutation path
+	// where the consumer wave is flushed before the deferred trigger
+	// dispatches. The ordinary routed loop drains direct dispatches right
+	// before this flush and finds nothing pending here. Statement output
+	// produced while preprocessing a mutation keeps its documented precedence
+	// over the direct child, so the drain is skipped while such output is
+	// still queued (see the routed loop's drain order).
+	if len(e.pendingStatementDispatches) == 0 {
+		e.drainPendingDirectNamedWindowDispatchesLocked(dispatches)
+	}
 	statements := e.dispatchStatementsLocked()
 	for len(e.pendingNamedWindowConsumerDeltas) > 0 {
 		raw := append([]namedWindowConsumerDelta(nil), e.pendingNamedWindowConsumerDeltas...)

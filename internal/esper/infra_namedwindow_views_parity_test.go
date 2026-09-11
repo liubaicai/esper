@@ -2172,10 +2172,11 @@ func TestInfraNWViewsWithDeleteParity(t *testing.T) {
 	nwViewsSubscribeResults(t, s2Deployment.Statements()[0], []string{"key", "value"}, s2)
 	s3 := &nwViewsProbe{}
 	nwViewsSubscribeResults(t, s3Deployment.Statements()[0], []string{"key", "value"}, s3)
-	// Go delete-trigger statements deliver deleted window events as the old
-	// data of the trigger batch (Esper delivers them as the new data of the
-	// on-delete statement); both fire exactly when rows matched, so the Java
-	// invocation assertions are mirrored by counting batches.
+	// Go delete-trigger statements publish the removed window rows as the new
+	// data of the trigger batch, matching Esper's on-delete output (the Java
+	// invocation assertions are mirrored by counting batches here; the row
+	// payloads are pinned through the window and consumer remove-stream
+	// assertions above).
 	deleteCount := 0
 	if _, err := deleteDeployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
 		deleteCount++
