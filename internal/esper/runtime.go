@@ -338,6 +338,9 @@ type Engine struct {
 	tables                             map[string]*Table
 	namedWindows                       map[string]*NamedWindow
 	statements                         map[string]*Statement
+	// sharedFilterIndex is an additional candidate guard for pure equality
+	// filters. It never replaces statement evaluation.
+	sharedFilterIndex sharedFilterIndex
 	// dispatchOrder caches the immutable continuous-statement order derived
 	// from the statement catalog. It is invalidated whenever the catalog
 	// changes, so per-event dispatch does not re-sort the catalog.
@@ -420,6 +423,7 @@ func NewEngine(env *Environment, options ...EngineOption) *Engine {
 		tables:                           make(map[string]*Table),
 		namedWindows:                     make(map[string]*NamedWindow),
 		statements:                       make(map[string]*Statement),
+		sharedFilterIndex:                sharedFilterIndex{entries: make(map[sharedFilterKey][]*Statement)},
 		deployments:                      make(map[string]*Deployment),
 		resourceDependents:               make(map[deploymentResourceRef]map[string]struct{}),
 		activeProtectedModules:           make(map[string]string),
@@ -1681,6 +1685,7 @@ type Statement struct {
 	// filters; statelessPlanResolved records that the plan was computed.
 	statelessPlan         *statelessExecutionPlan
 	statelessPlanResolved bool
+	sharedFilterKey       *sharedFilterKey
 }
 
 func (s *Statement) ID() string {
@@ -2994,6 +2999,12 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 	}
 	for _, statement := range deployment.statements {
 		e.statements[statement.id] = statement
+		// Resolve the pure plan once while the statement is still private, then
+		// register its safe equality candidate in the shared dispatch index.
+		statement.mu.Lock()
+		statement.statelessPlanLocked()
+		statement.mu.Unlock()
+		e.sharedFilterIndex.add(statement)
 		e.registerStatementMetricsLocked(statement)
 	}
 	e.invalidateDispatchOrderLocked()
@@ -3643,6 +3654,7 @@ func (e *Engine) undeploy(ctx context.Context, deploymentID string, force bool) 
 	removedStatements := append([]*Statement(nil), deployment.statements...)
 	for _, statement := range deployment.statements {
 		e.removeStatementMetricsLocked(statement)
+		e.sharedFilterIndex.remove(statement)
 		delete(e.statements, statement.id)
 		statement.markClosedLocked()
 	}
@@ -3999,12 +4011,21 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 		if len(dispatchOrder) > 1 {
 			acceptedNames = e.eventAcceptedTypeNamesCached(current)
 		}
+		sharedGeneration := e.sharedFilterIndex.candidates(current)
 		for _, statement := range dispatchOrder {
 			if idx := statement.acceptIndex; idx.prunable && acceptedNames != nil && statement.runtime.outputState == nil && !idx.mayAccept(acceptedNames) {
 				// Provable type mismatch: this statement's filter decision
 				// would be "cannot accept" with no output, no metric or audit
 				// record, and no replace/drop contribution.
 				continue
+			}
+			if statement.sharedFilterKey != nil && statement.statelessPlan != nil && statement.statelessPlan.appliesTo(current) {
+				if !e.sharedFilterIndex.contains(statement, sharedGeneration) {
+					// A pure equality predicate is necessary for this statement
+					// to match. The original Esper plan remains authoritative for
+					// every candidate that survives this guard.
+					continue
+				}
 			}
 			accepted := statement.matchesEventFilter(current, now, variables)
 			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted, true)
@@ -4020,6 +4041,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 				// The replaced event can carry a different schema; recompute
 				// the event-side name set so pruning stays exact.
 				acceptedNames = e.eventAcceptedTypeNamesCached(current)
+				sharedGeneration = e.sharedFilterIndex.candidates(current)
 			}
 			if statement.takeDroppedEvent() {
 				break
@@ -5205,10 +5227,16 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		if len(routedOrder) > 1 {
 			acceptedNames = e.eventAcceptedTypeNamesCached(current.event)
 		}
+		sharedGeneration := e.sharedFilterIndex.candidates(current.event)
 		for _, statement := range routedOrder {
 			if idx := statement.acceptIndex; idx.prunable && acceptedNames != nil && statement.runtime.outputState == nil && !idx.mayAccept(acceptedNames) {
 				// Provable type mismatch (see the send-loop guard).
 				continue
+			}
+			if statement.sharedFilterKey != nil && statement.statelessPlan != nil && statement.statelessPlan.appliesTo(current.event) {
+				if !e.sharedFilterIndex.contains(statement, sharedGeneration) {
+					continue
+				}
 			}
 			needsAccepted := unmatchedEvents != nil || e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
 			accepted := needsAccepted && statement.matchesEventFilter(current.event, now, variables)
@@ -5222,6 +5250,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 			if replaced, replacedOK := statement.takeReplacedEvent(); replacedOK {
 				current.event = replaced
 				acceptedNames = e.eventAcceptedTypeNamesCached(current.event)
+				sharedGeneration = e.sharedFilterIndex.candidates(current.event)
 			}
 			if statement.takeDroppedEvent() {
 				break

@@ -529,3 +529,62 @@ func BenchmarkAcceptIndexMultiStatement(b *testing.B) {
 		}
 	}
 }
+
+type sharedFilterNumericEvent struct {
+	Value int64 `esper:"value"`
+}
+
+// Numeric equality is intentionally left on the normal Esper path because
+// Esper's numeric coercion allows equivalent values with different concrete
+// Go types; a typed hash key could otherwise create a false negative.
+func TestSharedFilterIndexNumericFallback(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[sharedFilterNumericEvent](env, "SharedFilterNumeric"); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(From[sharedFilterNumericEvent](env, "SharedFilterNumeric").
+		Filter(Equal[int64](Field[sharedFilterNumericEvent, int64]("value"), Literal(int64(1)))).
+		Query(StatementName("numeric")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statement := deployment.Statements()[0]
+	if statement.sharedFilterKey != nil {
+		t.Fatalf("numeric equality unexpectedly entered shared index: %#v", statement.sharedFilterKey)
+	}
+}
+
+func TestSharedFilterIndexKeepsSubtypeEvents(t *testing.T) {
+	env := acceptIndexEnv(t)
+	plan, err := env.Build(From[acceptIndexParent](env, "AcceptIndexParent").
+		Filter(Equal[string](Field[acceptIndexParent, string]("base"), Literal("hit"))).
+		Query(StatementName("parent-filter")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		count += len(batch.New)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "AcceptIndexChild", acceptIndexChild{acceptIndexParent: acceptIndexParent{Base: "hit"}}); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("subtype event count=%d, want 1", count)
+	}
+}
