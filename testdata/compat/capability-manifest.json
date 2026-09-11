@@ -2300,7 +2300,8 @@
     "internal/app/parity/infra_named_window_insert_from.go",
     "internal/app/parity/infra_nwtable_subq_correl_coerce.go",
     "internal/app/parity/infra_named_window_keepall_delete.go",
-    "internal/esper/namedwindow_statement_order_test.go"
+    "internal/esper/namedwindow_statement_order_test.go",
+    "internal/app/parity/infra_named_window_retention_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2327,7 +2328,11 @@
     "java-runtime-6d4a6e1168f100add522",
     "java-runtime-8fe8d92928db5eba5fc3",
     "java-runtime-b47bdbdf2ac26de6cb0d",
-    "java-runtime-594ea469769e1990e60f"
+    "java-runtime-594ea469769e1990e60f",
+    "java-runtime-26c44410c8018a34d696",
+    "java-runtime-b85cc831b5c23a570cf7",
+    "java-runtime-59100403b3c6affd0729",
+    "java-runtime-c2f54d9eb104d061950c"
    ]
   },
   {
@@ -26915,6 +26920,70 @@
    "difference": "The four InfraWithDelete* alias spellings (trigger-only, window-only, both, none) collapse into one typed plan: the Go trigger/window builder qualifies key and symbol by role (NamedWindowField versus Field), so Java stream aliases have no Go spelling and all four executions are byte-identical in the trace. The Java on-delete listener is excluded from the trace on both sides: the suite never asserts its payload, and assertListenerInvoked reads getIsInvokedAndReset(), which is still true from the previous successful delete, while a no-op delete delivers nothing at all. insert into ... select irstream over a plain stream is inert (no remove rows exist), so both spellings map to the same insert-into trigger. The keep-all scene-two window projects intBoxed (Java Integer) and the WithDelete family declares the MySimpleKeyValueMap long column; both are modelled as struct schemas because the Java-side type identity assertions cover the column types only."
   },
   {
+   "id": "case.infra-namedwindow-views-retention",
+   "javaRuntimeIds": [
+    "java-runtime-26c44410c8018a34d696",
+    "java-runtime-b85cc831b5c23a570cf7",
+    "java-runtime-59100403b3c6affd0729",
+    "java-runtime-c2f54d9eb104d061950c"
+   ],
+   "javaNames": [
+    "InfraKeepAllSimple",
+    "InfraLastEvent",
+    "InfraLastEventSceneTwo",
+    "InfraFirstEvent"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowRetentionViewsDirectReplay",
+    "TestRunInfraNamedWindowRetentionViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowRetentionViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowRetentionViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowRetentionViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowRetentionViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsKeepAllSimpleParity",
+    "TestInfraNWViewsLastEventParity",
+    "TestInfraNWViewsLastEventSceneTwoParity",
+    "TestInfraNWViewsFirstEventParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "keep-all",
+    "last-event",
+    "first-event",
+    "retention",
+    "irstream",
+    "on-delete",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-26c44410c8018a34d696",
+    "java-runtime-b85cc831b5c23a570cf7",
+    "java-runtime-59100403b3c6affd0729",
+    "java-runtime-c2f54d9eb104d061950c"
+   ],
+   "difference": "The legacy view spellings win:keepall() (ord 0) and std:lastevent() (ord 30) collapse to the KeepAll and LastEvent retention specs, and the #lastevent/#firstevent spellings to LastEvent and FirstEvent; EPL view text has no Go analogue because windows are declared from registered schemas. The key/value map window type (MySimpleKeyValueMap) and the scene-two projection are modelled as struct schemas (the Java type assertions cover the column types only), and the on-delete listener is excluded from the trace on both sides for the same reason as the keep-all/on-delete slice: the suite attaches it but never asserts its payload, while a no-match delete delivers nothing at all. Ord 0's only observable is the window statement plus the two-statement module teardown, which the Go chain replays as statement-targeted undeploys without records."
+  },
+  {
    "id": "case.dataflow-connector-output",
    "javaRuntimeIds": [
     "java-runtime-1ecb769e10b4a818772c"
@@ -43499,13 +43568,17 @@
   {
    "caseId": "case.infra-namedwindow-views-keepall-delete",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-retention",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 637,
-  "implementedCases": 635,
-  "differentialVerifiedCases": 260,
-  "differentialVerifiedRuntimeIds": 969,
+  "inventoriedCases": 638,
+  "implementedCases": 636,
+  "differentialVerifiedCases": 261,
+  "differentialVerifiedRuntimeIds": 973,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43515,13 +43588,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3567,
+  "runtimeAssociationCount": 3571,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 637,
+  "totalCases": 638,
   "totalCapabilities": 120
  }
 }
