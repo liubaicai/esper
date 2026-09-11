@@ -46371,3 +46371,562 @@ func infraNWRXCheckScenarioMetadata(version, id, description, javaCommit, javaSo
 	}
 	return nil
 }
+
+func TestRunInfraNamedWindowTimeOrderAccumViewsDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWRAId,
+		"-scenario", filepath.Join(root, infraNWRAId+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraNWRATrace(t, trace)
+}
+
+func TestRunInfraNamedWindowTimeOrderAccumViewsDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraNWRAId+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWRAId + "-diff",
+		"-scenario", filepath.Join(root, infraNWRAId+".json"),
+		"-java-trace", filepath.Join(root, infraNWRAId+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if err := infraNWRACheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("Java metadata: %v", err)
+	}
+	assertInfraNWRATrace(t, evidence.JavaTrace)
+	assertInfraNWRATrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraNamedWindowTimeOrderAccumViewsDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "time-order-expiry-time-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].Time = "1970-01-01T00:00:10Z"
+			},
+		},
+		{
+			name: "time-order-expiry-old-loss",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].Old = nil
+			},
+		},
+		{
+			name: "time-order-iterator-order-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[0], trace.Records[6].New[1] = trace.Records[6].New[1], trace.Records[6].New[0]
+			},
+		},
+		{
+			name: "pass-through-old-loss",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[20].Old = nil
+			},
+		},
+		{
+			name: "accum-burst-row-loss",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[50].Old = trace.Records[50].Old[:2]
+			},
+		},
+		{
+			name: "accum-burst-order-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[50].Old[0], trace.Records[50].Old[1] = trace.Records[50].Old[1], trace.Records[50].Old[0]
+			},
+		},
+		{
+			name: "accum-cancelled-timer-flush",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records[:85],
+					append([]compat.TraceRecord{{
+						Case: "time-accum", Operation: "listener", Statement: "create", Sequence: 14,
+						Time: "1970-01-01T00:01:00Z",
+						Old:  []compat.ResultRecord{{Kind: "row", Fields: map[string]any{"key": "E8", "value": json.Number("8")}}},
+					}}, trace.Records[85:]...)...)
+			},
+		},
+		{
+			name: "scene-two-burst-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[100].Old[1].Fields["key"] = "G9"
+			},
+		},
+		{
+			name: "statement-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].Statement = "create"
+			},
+		},
+		{
+			name: "sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].Sequence = 9
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:100]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraNWRAId+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraNWRAId+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraNWRAId + "-diff",
+				"-scenario", filepath.Join(root, infraNWRAId+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraNamedWindowTimeOrderAccumViewsCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraNWRAId+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraNWRAId+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraNWRAId+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if err := infraNWRACheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("checked-in Java metadata: %v", err)
+	}
+	assertInfraNWRATrace(t, javaTrace)
+	assertInfraNWRATrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, infraNWRAId+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		infraNWRAJavaCommit,
+		infraNWRAJavaRuntimeIDs,
+		[]string{infraNWRASource},
+		infraNWRAJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWRAId,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertInfraNWRATrace(t, replayed)
+}
+
+func TestRunInfraNamedWindowTimeOrderAccumViewsRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWRAId+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "flags-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": ["ADVANCETIME"]`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-320f1b03eddb24520308"`),
+				[]byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 14`), []byte(`"ordinal": 15`), 1)
+		}},
+		{name: "time-order-spelling-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`create window MyWindow.ext:time_order(value, 10)`),
+				[]byte(`create window MyWindow#time_order(value, 10)`), 1)
+		}},
+		{name: "accum-window-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`create window MyWindowTA#time_accum(10 sec)`),
+				[]byte(`create window MyWindowTA#time(10 sec)`), 1)
+		}},
+		{name: "advance-time-format-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"at": "1970-01-01T00:00:05Z"`), []byte(`"at": "1970-01-01T00:00:05+02:00"`), 1)
+		}},
+		{name: "snapshot-mode-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"mode": "ordered"`), []byte(`"mode": "any"`), 1)
+		}},
+		{name: "deploy-statement-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "consume"`), []byte(`"statement": "s0"`), 1)
+		}},
+		{name: "unknown-op", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "undeploy-all"`), []byte(`"op": "close-all"`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), infraNWRAId+".json")
+			if err := os.WriteFile(path, test.mutate(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", infraNWRAId, "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q was accepted", test.name)
+			}
+		})
+	}
+}
+
+func TestRunInfraNamedWindowTimeOrderAccumViewsRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", infraNWRAId+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version      string   `json:"version"`
+		ID           string   `json:"id"`
+		Description  string   `json:"description"`
+		JavaCommit   string   `json:"javaCommit"`
+		JavaSource   string   `json:"javaSource"`
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaFlags    []string `json:"javaFlags"`
+		Cases        []struct {
+			Case              string   `json:"case"`
+			Ordinal           int      `json:"ordinal"`
+			RuntimeID         string   `json:"runtimeId"`
+			ExecutionName     string   `json:"executionName"`
+			CreateEPL         string   `json:"createEpl"`
+			InsertEPL         string   `json:"insertEpl"`
+			SelectEPL         string   `json:"s0Epl"`
+			ConsumeEPL        string   `json:"consumeEpl"`
+			DeleteEPL         string   `json:"deleteEpl"`
+			Deploys           []string `json:"deploys"`
+			Listened          []string `json:"listened"`
+			IteratorSnapshots int      `json:"iteratorSnapshots"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if err := infraNWRACheckScenarioMetadata(document.Version, document.ID, document.Description,
+		document.JavaCommit, document.JavaSource, document.JavaRuntimes, document.JavaNames, document.JavaFlags); err != nil {
+		t.Fatalf("scenario metadata: %v", err)
+	}
+	if len(document.Cases) != len(infraNWRACases) {
+		t.Fatalf("scenario cases = %d, want %d", len(document.Cases), len(infraNWRACases))
+	}
+	for index, entry := range document.Cases {
+		spec := infraNWRACaseSpecs[index]
+		if entry.Case != spec.name || entry.Ordinal != spec.ordinal ||
+			entry.RuntimeID != spec.runtimeID || entry.ExecutionName != spec.execution ||
+			entry.CreateEPL != spec.createEPL || entry.InsertEPL != spec.insertEPL ||
+			entry.SelectEPL != spec.selectEPL || entry.ConsumeEPL != spec.consumeEPL ||
+			entry.DeleteEPL != spec.deleteEPL ||
+			reflect.DeepEqual(entry.Deploys, spec.deploys) == false || entry.IteratorSnapshots != spec.snapshots {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+		if len(entry.Listened) != len(spec.listened) {
+			t.Fatalf("scenario case %d listened = %v", index, entry.Listened)
+		}
+		for _, name := range entry.Listened {
+			if !spec.listened[name] {
+				t.Fatalf("scenario case %d listens to %q which is not pinned", index, name)
+			}
+		}
+	}
+}
+
+// infraNWRARenderRows renders trace rows as sorted field:value pairs for the
+// pinned layout comparison; the Java null state map renders as null.
+func infraNWRARenderRows(rows []compat.ResultRecord) string {
+	if len(rows) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(rows))
+	for _, row := range rows {
+		names := make([]string, 0, len(row.Fields))
+		for name := range row.Fields {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		pairs := make([]string, 0, len(names))
+		for _, name := range names {
+			value := fmt.Sprintf("%v", row.Fields[name])
+			if state, ok := row.Fields[name].(map[string]any); ok && state["state"] == "null" {
+				value = "null"
+			}
+			pairs = append(pairs, name+":"+value)
+		}
+		parts = append(parts, strings.Join(pairs, ","))
+	}
+	return strings.Join(parts, ";")
+}
+
+func assertInfraNWRATrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraNWRAId {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	type line struct {
+		caseName  string
+		operation string
+		statement string
+		sequence  uint64
+		time      string
+		newRows   string
+		oldRows   string
+	}
+	expected := []line{
+		{"time-order-window", "listener", "create", 1, "1970-01-01T00:00:05Z", "key:E1,value:3000", ""},
+		{"time-order-window", "listener", "s0", 1, "1970-01-01T00:00:05Z", "key:E1,value:3000", ""},
+		{"time-order-window", "listener", "create", 2, "1970-01-01T00:00:06Z", "key:E2,value:2000", ""},
+		{"time-order-window", "listener", "s0", 2, "1970-01-01T00:00:06Z", "key:E2,value:2000", ""},
+		{"time-order-window", "listener", "create", 3, "1970-01-01T00:00:10Z", "key:E3,value:1000", ""},
+		{"time-order-window", "listener", "s0", 3, "1970-01-01T00:00:10Z", "key:E3,value:1000", ""},
+		{"time-order-window", "snapshot", "create", 0, "1970-01-01T00:00:10Z", "key:E3,value:1000;key:E2,value:2000;key:E1,value:3000", ""},
+		{"time-order-window", "listener", "create", 4, "1970-01-01T00:00:11Z", "", "key:E3,value:1000"},
+		{"time-order-window", "listener", "s0", 4, "1970-01-01T00:00:11Z", "", "key:E3,value:1000"},
+		{"time-order-window", "snapshot", "create", 0, "1970-01-01T00:00:11Z", "key:E2,value:2000;key:E1,value:3000", ""},
+		{"time-order-window", "listener", "create", 5, "1970-01-01T00:00:11Z", "", "key:E2,value:2000"},
+		{"time-order-window", "listener", "s0", 5, "1970-01-01T00:00:11Z", "", "key:E2,value:2000"},
+		{"time-order-window", "snapshot", "create", 0, "1970-01-01T00:00:11Z", "key:E1,value:3000", ""},
+		{"time-order-window", "listener", "create", 6, "1970-01-01T00:00:13Z", "", "key:E1,value:3000"},
+		{"time-order-window", "listener", "s0", 6, "1970-01-01T00:00:13Z", "", "key:E1,value:3000"},
+		{"time-order-window", "snapshot", "create", 0, "1970-01-01T00:00:13Z", "", ""},
+		{"time-order-scene-two", "listener", "create", 1, "1970-01-01T00:00:20Z", "key:G1", ""},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:20Z", "key:G1", ""},
+		{"time-order-scene-two", "listener", "create", 2, "1970-01-01T00:00:20Z", "key:G2", ""},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:20Z", "key:G2;key:G1", ""},
+		{"time-order-scene-two", "listener", "create", 3, "1970-01-01T00:00:21Z", "key:G3", "key:G3"},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:21Z", "key:G2;key:G1", ""},
+		{"time-order-scene-two", "listener", "create", 4, "1970-01-01T00:00:21Z", "", "key:G2"},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:21Z", "key:G1", ""},
+		{"time-order-scene-two", "listener", "create", 5, "1970-01-01T00:00:22Z", "key:G4", ""},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:22Z", "key:G4;key:G1", ""},
+		{"time-order-scene-two", "listener", "create", 6, "1970-01-01T00:00:23Z", "key:G5", ""},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:23Z", "key:G4;key:G5;key:G1", ""},
+		{"time-order-scene-two", "listener", "create", 7, "1970-01-01T00:00:28Z", "", "key:G4"},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:28Z", "key:G5;key:G1", ""},
+		{"time-order-scene-two", "listener", "create", 8, "1970-01-01T00:00:32Z", "", "key:G5"},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:32Z", "key:G1", ""},
+		{"time-order-scene-two", "listener", "create", 9, "1970-01-01T00:00:32Z", "key:G6", ""},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:32Z", "key:G1;key:G6", ""},
+		{"time-order-scene-two", "listener", "create", 10, "1970-01-01T00:00:32Z", "", "key:G1"},
+		{"time-order-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:32Z", "key:G6", ""},
+		{"time-order-scene-two", "listener", "create", 11, "1970-01-01T00:00:35Z", "", "key:G6"},
+		{"time-accum", "listener", "create", 1, "1970-01-01T00:00:01Z", "key:E1,value:1", ""},
+		{"time-accum", "listener", "s0", 1, "1970-01-01T00:00:01Z", "key:E1,value:1", ""},
+		{"time-accum", "listener", "create", 2, "1970-01-01T00:00:05Z", "key:E2,value:2", ""},
+		{"time-accum", "listener", "s0", 2, "1970-01-01T00:00:05Z", "key:E2,value:2", ""},
+		{"time-accum", "listener", "create", 3, "1970-01-01T00:00:10Z", "key:E3,value:3", ""},
+		{"time-accum", "listener", "s0", 3, "1970-01-01T00:00:10Z", "key:E3,value:3", ""},
+		{"time-accum", "listener", "create", 4, "1970-01-01T00:00:15Z", "key:E4,value:4", ""},
+		{"time-accum", "listener", "s0", 4, "1970-01-01T00:00:15Z", "key:E4,value:4", ""},
+		{"time-accum", "snapshot", "create", 0, "1970-01-01T00:00:15Z", "key:E1,value:1;key:E2,value:2;key:E3,value:3;key:E4,value:4", ""},
+		{"time-accum", "listener", "create", 5, "1970-01-01T00:00:15Z", "", "key:E2,value:2"},
+		{"time-accum", "listener", "s0", 5, "1970-01-01T00:00:15Z", "", "key:E2,value:2"},
+		{"time-accum", "snapshot", "create", 0, "1970-01-01T00:00:15Z", "key:E1,value:1;key:E3,value:3;key:E4,value:4", ""},
+		{"time-accum", "listener", "create", 6, "1970-01-01T00:00:25Z", "", "key:E1,value:1;key:E3,value:3;key:E4,value:4"},
+		{"time-accum", "listener", "s0", 6, "1970-01-01T00:00:25Z", "", "key:E1,value:1;key:E3,value:3;key:E4,value:4"},
+		{"time-accum", "snapshot", "create", 0, "1970-01-01T00:00:25Z", "", ""},
+		{"time-accum", "listener", "create", 7, "1970-01-01T00:00:30Z", "key:E5,value:5", ""},
+		{"time-accum", "listener", "s0", 7, "1970-01-01T00:00:30Z", "key:E5,value:5", ""},
+		{"time-accum", "listener", "create", 8, "1970-01-01T00:00:31Z", "key:E6,value:6", ""},
+		{"time-accum", "listener", "s0", 8, "1970-01-01T00:00:31Z", "key:E6,value:6", ""},
+		{"time-accum", "listener", "create", 9, "1970-01-01T00:00:38Z", "key:E7,value:7", ""},
+		{"time-accum", "listener", "s0", 9, "1970-01-01T00:00:38Z", "key:E7,value:7", ""},
+		{"time-accum", "snapshot", "create", 0, "1970-01-01T00:00:38Z", "key:E5,value:5;key:E6,value:6;key:E7,value:7", ""},
+		{"time-accum", "listener", "create", 10, "1970-01-01T00:00:38Z", "", "key:E7,value:7"},
+		{"time-accum", "listener", "s0", 10, "1970-01-01T00:00:38Z", "", "key:E7,value:7"},
+		{"time-accum", "snapshot", "create", 0, "1970-01-01T00:00:38Z", "key:E5,value:5;key:E6,value:6", ""},
+		{"time-accum", "listener", "create", 11, "1970-01-01T00:00:41Z", "", "key:E5,value:5;key:E6,value:6"},
+		{"time-accum", "listener", "s0", 11, "1970-01-01T00:00:41Z", "", "key:E5,value:5;key:E6,value:6"},
+		{"time-accum", "snapshot", "create", 0, "1970-01-01T00:00:41Z", "", ""},
+		{"time-accum", "listener", "create", 12, "1970-01-01T00:00:50Z", "key:E8,value:8", ""},
+		{"time-accum", "listener", "s0", 12, "1970-01-01T00:00:50Z", "key:E8,value:8", ""},
+		{"time-accum", "snapshot", "create", 0, "1970-01-01T00:00:50Z", "key:E8,value:8", ""},
+		{"time-accum", "listener", "create", 13, "1970-01-01T00:00:55Z", "", "key:E8,value:8"},
+		{"time-accum", "listener", "s0", 13, "1970-01-01T00:00:55Z", "", "key:E8,value:8"},
+		{"time-accum", "snapshot", "create", 0, "1970-01-01T00:00:55Z", "", ""},
+		{"time-accum-scene-two", "listener", "create", 1, "1970-01-01T00:00:01Z", "key:G1,value:1", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:05Z", "key:G1,value:1", ""},
+		{"time-accum-scene-two", "listener", "create", 2, "1970-01-01T00:00:05Z", "key:G2,value:2", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:05Z", "key:G1,value:1;key:G2,value:2", ""},
+		{"time-accum-scene-two", "listener", "create", 3, "1970-01-01T00:00:05Z", "", "key:G2,value:2"},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:05Z", "key:G1,value:1", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:10.999Z", "key:G1,value:1", ""},
+		{"time-accum-scene-two", "listener", "create", 4, "1970-01-01T00:00:11Z", "", "key:G1,value:1"},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:11Z", "", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:11Z", "", ""},
+		{"time-accum-scene-two", "listener", "create", 5, "1970-01-01T00:00:20Z", "key:G3,value:3", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:20Z", "key:G3,value:3", ""},
+		{"time-accum-scene-two", "listener", "create", 6, "1970-01-01T00:00:29.999Z", "key:G4,value:4", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:29.999Z", "key:G3,value:3;key:G4,value:4", ""},
+		{"time-accum-scene-two", "listener", "create", 7, "1970-01-01T00:00:29.999Z", "", "key:G3,value:3"},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:29.999Z", "key:G4,value:4", ""},
+		{"time-accum-scene-two", "listener", "create", 8, "1970-01-01T00:00:29.999Z", "", "key:G4,value:4"},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:29.999Z", "", ""},
+		{"time-accum-scene-two", "listener", "create", 9, "1970-01-01T00:00:41Z", "key:G5,value:5", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:41Z", "key:G5,value:5", ""},
+		{"time-accum-scene-two", "listener", "create", 10, "1970-01-01T00:00:42Z", "key:G6,value:6", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:42Z", "key:G5,value:5;key:G6,value:6", ""},
+		{"time-accum-scene-two", "listener", "create", 11, "1970-01-01T00:00:43Z", "key:G7,value:7", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:43Z", "key:G5,value:5;key:G6,value:6;key:G7,value:7", ""},
+		{"time-accum-scene-two", "listener", "create", 12, "1970-01-01T00:00:44Z", "key:G8,value:8", ""},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:44Z", "key:G5,value:5;key:G6,value:6;key:G7,value:7;key:G8,value:8", ""},
+		{"time-accum-scene-two", "listener", "create", 13, "1970-01-01T00:00:44Z", "", "key:G6,value:6"},
+		{"time-accum-scene-two", "snapshot", "create", 0, "1970-01-01T00:00:44Z", "key:G5,value:5;key:G7,value:7;key:G8,value:8", ""},
+		{"time-accum-scene-two", "listener", "create", 14, "1970-01-01T00:00:44Z", "", "key:G8,value:8"},
+		{"time-accum-scene-two", "listener", "create", 15, "1970-01-01T00:00:53Z", "", "key:G5,value:5;key:G7,value:7"},
+	}
+	if len(trace.Records) != len(expected) {
+		t.Fatalf("trace records = %d, want %d", len(trace.Records), len(expected))
+	}
+	for index, want := range expected {
+		got := trace.Records[index]
+		gotNew := infraNWRARenderRows(got.New)
+		gotOld := infraNWRARenderRows(got.Old)
+		if got.Case != want.caseName || got.Operation != want.operation ||
+			got.Statement != want.statement || got.Sequence != want.sequence ||
+			got.Time != want.time || gotNew != want.newRows || gotOld != want.oldRows {
+			t.Fatalf("record %d = %s|%s|%s|%d|%s|%s|%s, want %s|%s|%s|%d|%s|%s|%s", index,
+				got.Case, got.Operation, got.Statement, got.Sequence, got.Time, gotNew, gotOld,
+				want.caseName, want.operation, want.statement, want.sequence, want.time, want.newRows, want.oldRows)
+		}
+	}
+}
+
+// infraNWRACheckJavaMetadata verifies differential evidence carries the pinned
+// Java commit, runtime IDs, source files and executions.
+func infraNWRACheckJavaMetadata(javaCommit string, runtimeIDs, sourceFiles, executions []string) error {
+	if javaCommit != infraNWRAJavaCommit {
+		return fmt.Errorf("Java commit = %q, want %q", javaCommit, infraNWRAJavaCommit)
+	}
+	if !reflect.DeepEqual(runtimeIDs, infraNWRAJavaRuntimeIDs) {
+		return fmt.Errorf("Java runtime IDs = %v, want %v", runtimeIDs, infraNWRAJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(sourceFiles, []string{infraNWRASource}) {
+		return fmt.Errorf("Java source files = %v, want %v", sourceFiles, []string{infraNWRASource})
+	}
+	if !reflect.DeepEqual(executions, infraNWRAJavaExecutions) {
+		return fmt.Errorf("Java executions = %v, want %v", executions, infraNWRAJavaExecutions)
+	}
+	return nil
+}
+
+// infraNWRACheckScenarioMetadata verifies the scenario document carries the
+// pinned slice identity and no Java flags.
+func infraNWRACheckScenarioMetadata(version, id, description, javaCommit, javaSource string, runtimes, names, flags []string) error {
+	if version != compat.ScenarioVersion || id != infraNWRAId || description != infraNWRADescription ||
+		javaCommit != infraNWRAJavaCommit || javaSource != infraNWRASource {
+		return fmt.Errorf("scenario identity = %q/%q/%q/%q/%q", version, id, description, javaCommit, javaSource)
+	}
+	if !reflect.DeepEqual(runtimes, infraNWRAJavaRuntimeIDs) {
+		return fmt.Errorf("scenario javaRuntimes = %v, want %v", runtimes, infraNWRAJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(names, infraNWRAJavaExecutions) {
+		return fmt.Errorf("scenario javaNames = %v, want %v", names, infraNWRAJavaExecutions)
+	}
+	if len(flags) != 0 {
+		return fmt.Errorf("scenario javaFlags = %v, want none", flags)
+	}
+	return nil
+}
