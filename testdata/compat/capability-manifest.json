@@ -2308,7 +2308,8 @@
     "internal/app/parity/infra_named_window_time_views.go",
     "internal/app/parity/infra_named_window_ext_time_views.go",
     "internal/app/parity/infra_named_window_time_order_accum_views.go",
-    "internal/app/parity/infra_named_window_time_batch_views.go"
+    "internal/app/parity/infra_named_window_time_batch_views.go",
+    "internal/app/parity/infra_named_window_groupwin_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2365,7 +2366,11 @@
     "java-runtime-1eb11f5cf275069ef6b5",
     "java-runtime-bb926d092e7110db203f",
     "java-runtime-22bf6b3644a24862df7d",
-    "java-runtime-dd924e1b7e500df135f8"
+    "java-runtime-dd924e1b7e500df135f8",
+    "java-runtime-083a289ee5f82dd87ad3",
+    "java-runtime-accaf82c3c846493832b",
+    "java-runtime-3326973240f20b92dced",
+    "java-runtime-0ec49d4098c9796540b0"
    ]
   },
   {
@@ -41157,6 +41162,73 @@
     "java-runtime-dd924e1b7e500df135f8"
    ],
    "difference": "The time_batch(10 sec) and time_length_batch(10 sec, N) EPL texts collapse to the TimeBatch and TimeLengthBatch retention specs under the advance-time protocol: a batch boundary fires during a clock move with no send. The slice pins the buffered-arrival rule (no callback while accumulating, deletes remove pending rows silently), the boundary flush as ONE delivery carrying new=the completed batch in insertion order together with old=the previous batch (first flush carries no old rows), the absence of any callback when both batches are empty, the anchor surviving an all-empty flush (ord 17 flushes at 21000 rather than 25000), the time_length_batch size trigger flushing immediately on the third arrival and re-arming the boundary so the later time trigger carries the remaining row with the prior batch as old data, and the late-deployed ungrouped sum consumer whose batch preload is skipped so its single first row covers the whole batch including rows that arrived before it existed. Ungrouped aggregate consumers over a batch window must be built with the Aggregate builder; a plain Select projection evaluates per event and yields null aggregate rows and is therefore not equivalent."
+  },
+  {
+   "id": "case.infra-namedwindow-views-groupwin",
+   "javaRuntimeIds": [
+    "java-runtime-083a289ee5f82dd87ad3",
+    "java-runtime-accaf82c3c846493832b",
+    "java-runtime-3326973240f20b92dced",
+    "java-runtime-0ec49d4098c9796540b0"
+   ],
+   "javaNames": [
+    "InfraLengthWindowPerGroup",
+    "InfraTimeBatchPerGroup",
+    "InfraSelectGroupedViewLateStart",
+    "InfraSelectGroupedViewLateStartVariableIterate"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowGroupwinViewsDirectReplay",
+    "TestRunInfraNamedWindowGroupwinViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowGroupwinViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowGroupwinViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowGroupwinViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowGroupwinViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsLengthWindowPerGroupParity",
+    "TestInfraNWViewsTimeBatchPerGroupParity",
+    "TestInfraNWViewsSelectGroupedViewLateStartParity",
+    "TestInfraNWViewsSelectGroupedViewLateStartVariableIterateParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "groupwin",
+    "per-group",
+    "length-window",
+    "virtual-clock",
+    "batch-flush",
+    "late-start",
+    "grouped-aggregate",
+    "having",
+    "runtime-variable",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-083a289ee5f82dd87ad3",
+    "java-runtime-accaf82c3c846493832b",
+    "java-runtime-3326973240f20b92dced",
+    "java-runtime-0ec49d4098c9796540b0"
+   ],
+   "difference": "The #groupwin(view) EPL texts collapse to the GroupWindow/GroupWindowKeys retention specs under the chain harness. The slice pins the per-group sub-view model: the window iterator walks groups in group-creation order and each group in insertion order, a length sub-view expires only on insert so a delete removes without expiring (and its listener wave is old-only), a per-group capacity expiry delivers the arriving row and the evicted row in ONE callback, and a per-group time_batch anchors its boundary at the group's first arrival so same-instant group flushes concatenate into a single new-data callback in group-creation order with no old data at the first flush. The two projection windows are filled before their grouped consumers deploy, so the preload replays the whole window into the grouped aggregation (count(*) per group, avg/count per group including a group whose two values average 5.5), and the variable-driven consumer evaluates its having clause against the runtime variable at iterate time, so the on-set trigger switches the reported group without rebuilding the aggregation state. Java asserts only the row count at the two window-iterator sites, so those snapshots project no fields and leave row order unconstrained rather than asserting values Java does not check."
   }
  ],
  "mappings": [
@@ -44075,13 +44147,17 @@
   {
    "caseId": "case.infra-namedwindow-views-time-batch",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-groupwin",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 645,
-  "implementedCases": 643,
-  "differentialVerifiedCases": 268,
-  "differentialVerifiedRuntimeIds": 999,
+  "inventoriedCases": 646,
+  "implementedCases": 644,
+  "differentialVerifiedCases": 269,
+  "differentialVerifiedRuntimeIds": 1003,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -44091,13 +44167,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3597,
+  "runtimeAssociationCount": 3601,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 645,
+  "totalCases": 646,
   "totalCapabilities": 120
  }
 }
