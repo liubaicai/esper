@@ -11358,6 +11358,13 @@ func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBat
 		}
 		state.sides[index] = r.assignJoinLineageIDs(side, state.sides[index])
 	}
+	if joinSnapshotBatchRedrive(plan.query.join) {
+		redriven, redriveErr := r.snapshotBatchJoinState(plan.query.join, state, now)
+		if redriveErr != nil {
+			return result
+		}
+		state = redriven
+	}
 	tuples := joinTuples(plan.query.join, state, now, r)
 	tuples = filterJoinTuples(tuples, plan.query, now, r.variables)
 	result.New = orderJoinResults(
@@ -11369,6 +11376,113 @@ func (r *statementRuntime) snapshotJoinBatch(plan Plan, now time.Time) ResultBat
 	}
 	result.New = applyResultWindow(result.New, plan.query, r.variables)
 	return result
+}
+
+// joinSnapshotBatchRedrive reports whether the join's iterator needs the
+// batch-release re-drive: a batch window side (its iterator content is the
+// pending batch, which a flush empties) combined with a triggered historical
+// side. Esper's static join recomposes the iterator from each stream's
+// current view content and re-polls the historical per content row, while
+// the engine's retained join state holds the last released batch until the
+// next boundary — the exact inverse of the iterator contract.
+func joinSnapshotBatchRedrive(definition *joinDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	hasBatchWindow := false
+	hasTriggeredHistorical := false
+	for _, source := range joinDefinitionSources(definition) {
+		base, err := sourceNode(source)
+		if err != nil || base == nil {
+			continue
+		}
+		if base.kind == streamHistorical && base.historical != nil && base.historical.trigger != "" {
+			hasTriggeredHistorical = true
+		}
+		for _, window := range streamWindowNodes(source) {
+			if isLengthOrTimeBatchWindow(window.window) {
+				hasBatchWindow = true
+			}
+		}
+	}
+	return hasBatchWindow && hasTriggeredHistorical
+}
+
+// snapshotBatchJoinState rebuilds the joined iterator state read-only for a
+// join with a batch window and a triggered historical side. Sides without a
+// batch window keep their retained rows (their window content and join state
+// agree); a batch window side contributes only its pending batch
+// (windowIteratorEvents mirrors TimeBatchView.getIterator over currentBatch,
+// so it is empty right after a flush); and each triggered historical side is
+// re-polled per composed content row with the poll results bound to that
+// row's lineage, mirroring HistoricalDataQueryStrategy.lookup. No engine
+// state is touched: the retained join state, window states and lineage
+// counter are only read, and the provider polls are the same read-only
+// lookups Esper's iterator performs.
+func (r *statementRuntime) snapshotBatchJoinState(definition *joinDefinition, state *joinRuntimeState, now time.Time) (*joinRuntimeState, error) {
+	sources := joinDefinitionSources(definition)
+	redriven := &joinRuntimeState{sides: make([][]storedEvent, len(sources))}
+	lineage := uint64(0)
+	content := make([][]storedEvent, len(sources))
+	for index, source := range sources {
+		base, err := sourceNode(source)
+		if err != nil || base == nil || base.kind == streamHistorical {
+			continue
+		}
+		batched := false
+		for _, window := range streamWindowNodes(source) {
+			if isLengthOrTimeBatchWindow(window.window) {
+				batched = true
+				break
+			}
+		}
+		if !batched {
+			if index < len(state.sides) {
+				content[index] = state.sides[index]
+			}
+			continue
+		}
+		for _, window := range streamWindowNodes(source) {
+			if !isLengthOrTimeBatchWindow(window.window) {
+				continue
+			}
+			for _, event := range windowIteratorEvents(window.window, r.windows[window]) {
+				lineage++
+				content[index] = append(content[index], storedEvent{
+					event: event, receivedAt: event.ReceivedAt(), lineageID: lineage,
+				})
+			}
+		}
+	}
+	for index, source := range sources {
+		base, err := sourceNode(source)
+		if err != nil || base == nil || base.kind != streamHistorical || base.historical == nil || base.historical.trigger == "" {
+			redriven.sides[index] = content[index]
+			continue
+		}
+		for triggerIndex, rows := range content {
+			if triggerIndex == index {
+				continue
+			}
+			for _, row := range rows {
+				if base.historical.trigger != row.event.TypeName() {
+					continue
+				}
+				delta, err := r.insert(source, row.event, now)
+				if err != nil {
+					return nil, err
+				}
+				for _, newEvent := range delta.newEvents {
+					lineage++
+					redriven.sides[index] = append(redriven.sides[index], storedEvent{
+						event: newEvent, receivedAt: now, lineageID: lineage,
+						lineage: map[int]uint64{triggerIndex: row.lineageID},
+					})
+				}
+			}
+		}
+	}
+	return redriven, nil
 }
 
 func cloneJoinRuntimeState(state *joinRuntimeState) *joinRuntimeState {
@@ -12657,6 +12771,16 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				rebuiltSides[index] = r.joinState.sides[index]
 				r.joinState.sides[index] = nil
 			}
+			if base.kind == streamHistorical && base.historical != nil && base.historical.trigger != "" &&
+				hasEventDrivenSource && len(triggerNewRows) == 0 {
+				// Esper's JoinSetComposerHistoricalImpl re-drives historical
+				// lookups from the rows each cycle posts into the join. A
+				// batch window absorbs the trigger row until its boundary
+				// (TimeBatchView.update does not update child views), so no
+				// driver row exists yet: defer the poll to the scheduled
+				// release, which re-polls per released row (see expireJoin).
+				continue
+			}
 			delta, err := r.insert(source, event, now)
 			if err != nil {
 				return joinDelta{}, err
@@ -13220,6 +13344,14 @@ func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 	}
 	before := joinKeyedTuples(definition, r.joinState, now, r)
 	_, windowDeltas := r.expireWindowDeltas(now)
+	// releasedBySide records the rows a scheduled window release just posted
+	// into the join (time_batch/length_batch flush, time window expiry).
+	// Esper's JoinSetComposerHistoricalImpl composes a scheduled release by
+	// running the driver stream's HistoricalDataQueryStrategy over the
+	// released rows, which polls the historical viewable once per released
+	// row and pairs each poll result with that row; the historical sides
+	// must re-poll here for the released rows to reach the output batch.
+	releasedBySide := make(map[int][]storedEvent)
 	for index, source := range joinDefinitionSources(definition) {
 		for _, window := range streamWindowNodes(source) {
 			delta, ok := windowDeltas[window]
@@ -13234,10 +13366,46 @@ func (r *statementRuntime) expireJoin(now time.Time) (joinDelta, error) {
 				if joinSideContainsEvent(r.joinState.sides[index], retained.event) {
 					continue
 				}
-				r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{
+				stored := storedEvent{
 					event: retained.event, receivedAt: retained.receivedAt,
 					lineageID: r.nextJoinLineageID(),
-				})
+				}
+				r.joinState.sides[index] = append(r.joinState.sides[index], stored)
+				releasedBySide[index] = append(releasedBySide[index], stored)
+			}
+		}
+	}
+	if len(releasedBySide) > 0 {
+		for index, source := range joinDefinitionSources(definition) {
+			base, baseErr := sourceNode(source)
+			if baseErr != nil || base == nil || base.kind != streamHistorical || base.historical == nil || base.historical.trigger == "" {
+				continue
+			}
+			for triggerIndex, rows := range releasedBySide {
+				if triggerIndex == index {
+					continue
+				}
+				for _, row := range rows {
+					if base.historical.trigger != row.event.TypeName() {
+						continue
+					}
+					delta, pollErr := r.insert(source, row.event, now)
+					if pollErr != nil {
+						return joinDelta{}, pollErr
+					}
+					// The poll results bind to the released row's lineage so
+					// each historical row pairs only inside its own release
+					// tuple (Esper binds SQL results to their triggering
+					// event), and cascade out together with it at the next
+					// batch rollover.
+					for _, newEvent := range delta.newEvents {
+						r.joinState.sides[index] = append(r.joinState.sides[index], storedEvent{
+							event: newEvent, receivedAt: now,
+							lineageID: r.nextJoinLineageID(),
+							lineage:   map[int]uint64{triggerIndex: row.lineageID},
+						})
+					}
+				}
 			}
 		}
 	}

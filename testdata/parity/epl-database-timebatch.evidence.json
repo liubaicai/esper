@@ -1,0 +1,255 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-fb0cea6fe1e469ee8237"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java"
+  ],
+  "javaExecutions": [
+    "EPLDatabaseTimeBatch"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-database-timebatch",
+    "steps": [
+      {
+        "op": "case",
+        "case": "timebatch"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-database-timebatch",
+    "records": [
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 1
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 2
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 3
+      },
+      {
+        "case": "timebatch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mybigint": 10,
+              "mybool": true,
+              "mychar": "P",
+              "mydecimal": "1000",
+              "mydouble": 10.2,
+              "myint": 100,
+              "mynumeric": {
+                "state": "null"
+              },
+              "myreal": 10.3,
+              "myvarchar": "J"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mybigint": 5,
+              "mybool": false,
+              "mychar": "V",
+              "mydecimal": "500",
+              "mydouble": 5.2,
+              "myint": 50,
+              "mynumeric": "500",
+              "myreal": 5.3,
+              "myvarchar": "E"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mybigint": 2,
+              "mybool": false,
+              "mychar": "Y",
+              "mydecimal": "200",
+              "mydouble": 2.2,
+              "myint": 20,
+              "mynumeric": "100",
+              "myreal": 2.3,
+              "myvarchar": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 0
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 1
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 2
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-database-timebatch",
+    "records": [
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 1
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 2
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 3
+      },
+      {
+        "case": "timebatch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mybigint": 10,
+              "mybool": true,
+              "mychar": "P",
+              "mydecimal": "1000",
+              "mydouble": 10.2,
+              "myint": 100,
+              "mynumeric": {
+                "state": "null"
+              },
+              "myreal": 10.3,
+              "myvarchar": "J"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mybigint": 5,
+              "mybool": false,
+              "mychar": "V",
+              "mydecimal": "500",
+              "mydouble": 5.2,
+              "myint": 50,
+              "mynumeric": "500",
+              "myreal": 5.3,
+              "myvarchar": "E"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "mybigint": 2,
+              "mybool": false,
+              "mychar": "Y",
+              "mydecimal": "200",
+              "mydouble": 2.2,
+              "myint": 20,
+              "mynumeric": "100",
+              "myreal": 2.3,
+              "myvarchar": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 0
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 1
+      },
+      {
+        "case": "timebatch",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "iterator-rows",
+        "count": 2
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

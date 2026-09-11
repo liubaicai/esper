@@ -137,6 +137,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-database-join-2" || *mode == "epl-database-join-2-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "epl-database-timebatch" || *mode == "epl-database-timebatch-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-doc-samples" || *mode == "dataflow-doc-samples-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "infra-named-window-on-update" || *mode == "infra-named-window-on-update-diff" {
@@ -407,6 +409,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplDatabaseJoin2JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplDatabaseJoin2JavaSources),
 				splitMetadata(*javaExecutions, eplDatabaseJoin2JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-database-timebatch" || *mode == "epl-database-timebatch-diff" {
+		trace, err := runEplDatabaseTimeBatchScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-database-timebatch-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplDatabaseTimeBatchJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplDatabaseTimeBatchJavaSources),
+				splitMetadata(*javaExecutions, eplDatabaseTimeBatchJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

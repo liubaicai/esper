@@ -42576,3 +42576,193 @@ func TestRunEplDatabaseJoin2DiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunEplDatabaseTimeBatchDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-timebatch.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-database-timebatch.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-timebatch.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-database-timebatch-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplDatabaseTimeBatchDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-timebatch.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-database-timebatch",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 7 {
+		t.Fatalf("records = %d, want 7", len(trace.Records))
+	}
+	// The exact case layout: three pre-flush iterator counts, the single
+	// flush listener batch of three rows, then the cleared iterator and the
+	// two re-buffered sends — one count record per in-process iterator
+	// compare, sequences case-local restarting at 1.
+	type wantRecord struct {
+		operation string
+		statement string
+		sequence  uint64
+		name      string
+		count     *int64
+		rows      int
+	}
+	count := func(v int64) *int64 { return &v }
+	want := []wantRecord{
+		{"count", "flow", 1, "iterator-rows", count(1), 0},
+		{"count", "flow", 2, "iterator-rows", count(2), 0},
+		{"count", "flow", 3, "iterator-rows", count(3), 0},
+		{"listener", "s0", 4, "", nil, 3},
+		{"count", "flow", 5, "iterator-rows", count(0), 0},
+		{"count", "flow", 6, "iterator-rows", count(1), 0},
+		{"count", "flow", 7, "iterator-rows", count(2), 0},
+	}
+	for index, record := range trace.Records {
+		expected := want[index]
+		if record.Case != "timebatch" || record.Operation != expected.operation ||
+			record.Statement != expected.statement || record.Sequence != expected.sequence {
+			t.Fatalf("record %d = {%s %s %s seq %d}, want {timebatch %s %s seq %d}",
+				index, record.Case, record.Operation, record.Statement, record.Sequence,
+				expected.operation, expected.statement, expected.sequence)
+		}
+		if record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d time = %s", index, record.Time)
+		}
+		if expected.count == nil {
+			if record.Count != nil || len(record.New) != expected.rows || len(record.Old) != 0 {
+				t.Fatalf("record %d = %#v, want one listener delivery of %d rows without old data",
+					index, record, expected.rows)
+			}
+			continue
+		}
+		if record.Count == nil || *record.Count != *expected.count || record.Name != expected.name {
+			t.Fatalf("record %d count = {%s %v}, want {%s %d}",
+				index, record.Name, record.Count, expected.name, *expected.count)
+		}
+	}
+	// The flush batch carries the byte-exact select list — the nine canonical
+	// mytesttable columns — in release order, with the mybigint-10 row's NULL
+	// mynumeric as the differential protocol null marker.
+	wantRows := []map[string]string{
+		{"mybigint": "10", "myint": "100", "myvarchar": "J", "mychar": "P", "mybool": "true", "mydecimal": "1000", "mydouble": "10.2", "myreal": "10.3"},
+		{"mybigint": "5", "myint": "50", "myvarchar": "E", "mychar": "V", "mybool": "false", "mynumeric": "500", "mydecimal": "500", "mydouble": "5.2", "myreal": "5.3"},
+		{"mybigint": "2", "myint": "20", "myvarchar": "B", "mychar": "Y", "mybool": "false", "mynumeric": "100", "mydecimal": "200", "mydouble": "2.2", "myreal": "2.3"},
+	}
+	for index, wantFields := range wantRows {
+		fields := trace.Records[3].New[index].Fields
+		if len(fields) != 9 {
+			t.Fatalf("flush row %d carries %d fields, want the 9 canonical columns", index, len(fields))
+		}
+		for key, value := range wantFields {
+			if fmt.Sprint(fields[key]) != value {
+				t.Fatalf("flush row %d field %s = %v, want %s", index, key, fields[key], value)
+			}
+		}
+	}
+	if marker, ok := trace.Records[3].New[0].Fields["mynumeric"].(map[string]any); !ok || marker["state"] != "null" {
+		t.Fatalf("flush row 0 mynumeric = %#v, want the null marker", trace.Records[3].New[0].Fields["mynumeric"])
+	}
+}
+
+func TestRunEplDatabaseTimeBatchDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "flush-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["myvarchar"] = "E"
+			},
+		},
+		{
+			name: "flush-null-marker-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["mynumeric"] = "5000"
+			},
+		},
+		{
+			name: "flush-batch-row-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New = trace.Records[3].New[:2]
+			},
+		},
+		{
+			name: "pre-flush-iterator-count-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(4)
+				trace.Records[1].Count = &count
+			},
+		},
+		{
+			name: "post-flush-iterator-count-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(2)
+				trace.Records[5].Count = &count
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:6]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-timebatch.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-database-timebatch.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-timebatch.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-database-timebatch-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
