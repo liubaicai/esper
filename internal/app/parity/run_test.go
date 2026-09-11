@@ -42357,3 +42357,222 @@ func TestRunEplDatabaseJoinDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+// eplDatabaseJoin2JavaTraceFixture mirrors the delivered Java oracle trace
+// for the second EPLDatabaseJoin slice (work unit 4.378). It is embedded so
+// the family stays hermetic: the in-repo scenario
+// testdata/parity/epl-database-join-2.json carries no evidence file and the
+// raw oracle trace lives outside the tree.
+const eplDatabaseJoin2JavaTraceFixture = `{"version":"esper-parity/v1","id":"epl-database-join-2","javaCommit":"9e1b9f1cc9117fea4bf33ab043762c045d73839c","java":"17.0.20","records":[` +
+	`{"case":"2historical-star-inner","operation":"count","statement":"flow","sequence":1,"time":"1970-01-01T00:00:00Z","name":"negative-sends","count":3},` +
+	`{"case":"2historical-star-inner","operation":"listener","statement":"s0","sequence":2,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"a":"B","b":3,"c":"B","d":"B"}}]},` +
+	`{"case":"2historical-star-inner","operation":"count","statement":"flow","sequence":3,"time":"1970-01-01T00:00:00Z","name":"negative-sends","count":1},` +
+	`{"case":"join-index-null-type","operation":"count","statement":"flow","sequence":1,"time":"1970-01-01T00:00:00Z","name":"capture-empty","count":0},` +
+	`{"case":"with-pattern","operation":"listener","statement":"s0","sequence":1,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"mychar":"Y"}}]},` +
+	`{"case":"with-pattern","operation":"count","statement":"flow","sequence":2,"time":"1970-01-01T00:00:00Z","name":"silent-advances","count":1},` +
+	`{"case":"with-pattern","operation":"listener","statement":"s0","sequence":3,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"mychar":"Y"}}]},` +
+	`{"case":"variables","operation":"listener","statement":"s0","sequence":1,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"myint":50}}]},` +
+	`{"case":"variables","operation":"listener","statement":"s0","sequence":2,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"myint":60}}]},` +
+	`{"case":"3stream","operation":"listener","statement":"s0","sequence":1,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"myint":30,"stringTwo":"T2","theString":"T2"}}]},` +
+	`{"case":"3stream","operation":"listener","statement":"s0","sequence":2,"time":"1970-01-01T00:00:00Z","new":[{"kind":"row","fields":{"myint":40,"stringTwo":"T3","theString":"T3"}}]}]}`
+
+func writeEplDatabaseJoin2JavaTraceFixture(t *testing.T, mutate func(*compat.Trace)) string {
+	t.Helper()
+	trace, err := compat.LoadTrace(strings.NewReader(eplDatabaseJoin2JavaTraceFixture))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutate(&trace)
+	data, err := json.Marshal(trace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "epl-database-join-2-java-trace.json")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestRunEplDatabaseJoin2DiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeEplDatabaseJoin2JavaTraceFixture(t, func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-database-join-2.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-join-2.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-database-join-2-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplDatabaseJoin2DirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-join-2.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-database-join-2",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trace.Records) != 11 {
+		t.Fatalf("records = %d, want 11", len(trace.Records))
+	}
+	// The exact case-local layout: sequences restart at 1 per case and the
+	// count records sit at the positions of the Java in-process assertions.
+	type wantRecord struct {
+		caseName  string
+		operation string
+		statement string
+		sequence  uint64
+		name      string
+		count     *int64
+		fields    map[string]any
+	}
+	count := func(v int64) *int64 { return &v }
+	want := []wantRecord{
+		{"2historical-star-inner", "count", "flow", 1, "negative-sends", count(3), nil},
+		{"2historical-star-inner", "listener", "s0", 2, "", nil,
+			map[string]any{"a": "B", "b": 3, "c": "B", "d": "B"}},
+		{"2historical-star-inner", "count", "flow", 3, "negative-sends", count(1), nil},
+		{"join-index-null-type", "count", "flow", 1, "capture-empty", count(0), nil},
+		{"with-pattern", "listener", "s0", 1, "", nil, map[string]any{"mychar": "Y"}},
+		{"with-pattern", "count", "flow", 2, "silent-advances", count(1), nil},
+		{"with-pattern", "listener", "s0", 3, "", nil, map[string]any{"mychar": "Y"}},
+		{"variables", "listener", "s0", 1, "", nil, map[string]any{"myint": 50}},
+		{"variables", "listener", "s0", 2, "", nil, map[string]any{"myint": 60}},
+		{"3stream", "listener", "s0", 1, "", nil,
+			map[string]any{"myint": 30, "stringTwo": "T2", "theString": "T2"}},
+		{"3stream", "listener", "s0", 2, "", nil,
+			map[string]any{"myint": 40, "stringTwo": "T3", "theString": "T3"}},
+	}
+	for index, record := range trace.Records {
+		expected := want[index]
+		if record.Case != expected.caseName || record.Operation != expected.operation ||
+			record.Statement != expected.statement || record.Sequence != expected.sequence {
+			t.Fatalf("record %d = {%s %s %s seq %d}, want {%s %s %s seq %d}",
+				index, record.Case, record.Operation, record.Statement, record.Sequence,
+				expected.caseName, expected.operation, expected.statement, expected.sequence)
+		}
+		if record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d time = %s", index, record.Time)
+		}
+		if expected.count == nil {
+			if record.Count != nil || len(record.New) != 1 {
+				t.Fatalf("record %d = %#v, want one listener row", index, record)
+			}
+			for key, value := range expected.fields {
+				if fmt.Sprint(record.New[0].Fields[key]) != fmt.Sprint(value) {
+					t.Fatalf("record %d field %s = %v, want %v",
+						index, key, record.New[0].Fields[key], value)
+				}
+			}
+			continue
+		}
+		if record.Count == nil || *record.Count != *expected.count || record.Name != expected.name {
+			t.Fatalf("record %d count = {%s %v}, want {%s %d}",
+				index, record.Name, record.Count, expected.name, *expected.count)
+		}
+	}
+}
+
+func TestRunEplDatabaseJoin2DiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "inner-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["d"] = "C"
+			},
+		},
+		{
+			name: "inner-negative-count-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(4)
+				trace.Records[0].Count = &count
+			},
+		},
+		{
+			name: "null-type-capture-count-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(1)
+				trace.Records[3].Count = &count
+			},
+		},
+		{
+			name: "pattern-silent-count-drift",
+			mutate: func(trace *compat.Trace) {
+				count := int64(2)
+				trace.Records[5].Count = &count
+			},
+		},
+		{
+			name: "variables-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[0].Fields["myint"] = 70
+			},
+		},
+		{
+			name: "three-stream-row-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[10].New[0].Fields["myint"] = 50
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:10]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeEplDatabaseJoin2JavaTraceFixture(t, test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-database-join-2.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-join-2.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-database-join-2-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}

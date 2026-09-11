@@ -1,0 +1,88 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-database-join-2",
+ "description": "database-slices differential chain (work unit 4.378) over five later executions of regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java (ordinals 3, 20, 16, 8 and 4; the earlier slice epl-database-join covered ordinals 1, 19, 15, 17 and 2; the remaining executions of the suite — the connection smoke test, the three time-batch variants, the six invalid-compile cases and the restart loop — are still later slices). The Java oracle runs against the established esper-mysql mysql:8.0 Docker fixture (docker run --name esper-mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=test -p 3306:3306 -d mysql:8.0, readiness via mysqladmin ping, fixture loaded from common/etc/regression/create_testdb.sql with the '//'-comment lines stripped; the load tolerates the pre-existing mytesttable_large/mytestupsert re-create errors so it is idempotent) and connects through SupportDatabaseService constants: DRIVER com.mysql.cj.jdbc.Driver, FULLURL jdbc:mysql://localhost/test?user=root&password=password&useSSL=false. Session configuration mirrors TestSuiteEPLDatabase.configure restricted to these executions: event types SupportBean, SupportBeanTwo and SupportBean_A registered as POJO types (the InputEvent schema of join-index-null-type is created by the statement text itself) and the 'MyDBWithRetain' database reference configured as a DriverManagerConnection (DRIVER/FULLURL/SupportDatabaseURL.newProperties()) with ConnectionLifecycleEnum RETAIN and no cache; the suite's setEnableJDBC(true)/setEnableQueryPlan(true) logging flags, its unrelated myvariableOCC/myvariableIPC/myvariableORC variables and its other database references are dropped because they are not named by these executions and have no recorded effect. Internal timer off, epoch initialization 0, per-case fresh runtime (undeployAll after the case body, destroy in finally, runtime URI derived from the pinned java-runtime id). Byte-exact statements (assembled with the suite's own concatenations, exact spacing preserved): 2historical-star-inner (ordinal 3) deploys '@name('s0') select theString as a, intPrimitive as b, s1.myvarchar as c, s2.myvarchar as d from SupportBean#keepall as s0  inner join  sql:MyDBWithRetain ['select myvarchar from mytesttable where ${intPrimitive} <> mytesttable.mybigint'] as s1  on s1.myvarchar=s0.theString  inner join  sql:MyDBWithRetain ['select myvarchar from mytesttable where ${intPrimitive} <> mytesttable.myint'] as s2  on s2.myvarchar=s0.theString ' (DOUBLE spaces around each 'inner join' from the segment trailing/leading spaces, TRAILING space at the end), asserts the empty iterator in-process, and replays: sends SupportBean('E1',1), SupportBean('A',1) and SupportBean('A',10) — the <> conditions exclude every theString-matching row ('E1' matches no myvarchar, intPrimitive=1 drops the mybigint-1 'A' row from s1, intPrimitive=10 drops the myint-10 'A' row from s2) so each inner join is empty, asserted listener-not-invoked in-process and recorded as ONE count record negative-sends=3 BEFORE the delivery record; send SupportBean('B',3) delivering one row asserted in-process and recorded as the listener row {a:'B', b:3, c:'B', d:'B'}; send SupportBean('D',4) with the listener again not invoked (intPrimitive=4 drops the mybigint-4 'D' row from s1) recorded as count negative-sends=1. join-index-null-type (ordinal 20) compiles the create-schema and s0 statements as ONE module separated by '\n' — '@public @buseventtype create schema InputEvent(id string, fieldTypeNull null);\n@name('s0') select mybigint from InputEvent#unique(id) as s0, sql:MyDBWithRetain ['select mybigint from mytesttable where ${fieldTypeNull} = mytesttable.mybigint'] as s1 where s1.mybigint is null' — and sends an EMPTY InputEvent map event: the null-typed fieldTypeNull indexed key matches nothing in the mybigint unique index, the 's1.mybigint is null' filter never sees a row, the listener is asserted not invoked in-process and the null-key no-match disposition is recorded as count capture-empty=0. with-pattern (ordinal 16) advanceTime(0) before the deploy, deploys '@name('s0') select mychar from  sql:MyDBWithRetain ['select mychar from mytesttable where mytesttable.mybigint = 2'] as s0, pattern [every timer:interval(5 sec) ]' (DOUBLE space after 'from', SINGLE space after 'as s0,' — the pattern segment starts with one space, per the Java source), advanceTime(5000) delivering {mychar:'Y'} (the mybigint-2 row), advanceTime(9999) silent — asserted in-process and recorded as count silent-advances=1, advanceTime(10000) delivering {mychar:'Y'} again, then the suite's 'with variable' part replayed in-process with NO records: the '@public create variable long VarLastTimestamp = 0' path deployment and the '@Name('Poll every 5 seconds') insert into PollStream select * from pattern[every timer:interval(5 sec)], sql:MyDBWithRetain ['select mychar from mytesttable where mytesttable.mybigint > ${VarLastTimestamp}'] as s0' statement deployed from its parsed object model (the internal timer is off so the interval never fires). variables (ordinal 8) builds the RegressionPath analog: '@public create variable int queryvar' and 'on SupportBean set queryvar=intPrimitive' as path deployments, v1 '@name('s0') select myint from  sql:MyDBWithRetain ['select myint from mytesttable where ${queryvar} = mytesttable.mybigint'] as s0, SupportBean_A#keepall as s1' (DOUBLE space after 'from', single space after 'as s0,'), send SupportBean(intPrimitive=5) then SupportBean_A('A1') delivering {myint:50}, undeployModuleContaining('s0'), then v2 with the stream order reversed '@name('s0') select myint from SupportBean_A#keepall as s1, sql:MyDBWithRetain ['select myint from mytesttable where ${queryvar} = mytesttable.mybigint'] as s0' (SINGLE space after 'from'), send SupportBean(intPrimitive=6) then SupportBean_A('A1') delivering {myint:60}. 3stream (ordinal 4) deploys '@name('s0') select * from SupportBean#lastevent sb, SupportBeanTwo#lastevent sbt, sql:MyDBWithRetain ['select myint from mytesttable'] as s1   where sb.theString = sbt.stringTwo and s1.myint = sbt.intPrimitiveTwo' (THREE spaces before 'where' — the segments 'as s1 ' + '  where' concatenate, per the Java source) and FIRST asserts isStatelessSelect false in-process, then replays: SupportBeanTwo('T1',2) + SupportBean('T1',-1) with no delivery (no myint=2 row exists), SupportBeanTwo('T2',30) + SupportBean('T2',-1) delivering one row, the suite's milestone(0) replayed as the documented no-op it is in RegressionEnvironmentEsper, and SupportBean('T3',-1) + SupportBeanTwo('T3',40) delivering one row — the T3 send order (SupportBean first with sbt still T2 and no delivery, then the SupportBeanTwo trigger) pins that the unrestricted historical is re-polled on every trigger cycle and filtered against the current window states, which is exactly the Java single-lookahead semantics for 3Stream that Go's unrestricted FromHistorical must reproduce by re-polling per trigger cycle; the 3stream field values are read through the stream-qualified paths sb.theString/sbt.stringTwo/s1.myint the Java assertions use and recorded under the short names theString/stringTwo/myint. Record protocol: one record per listener delivery {case, operation:'listener', statement:'s0', sequence, time, new:[rows]} where rows are projected {kind:'row', fields:{...}} objects under the select-clause output names the Java assertions read (a/b/c/d for 2historical-star-inner, mychar for with-pattern, myint for variables, theString/stringTwo/myint for 3stream) with field names sorted alphabetically for human-diffable traces (the canonical comparator is order-insensitive). Value forms, both sides matching because the Go side feeds the identical canonical 10-row fixture through a function-fed HistoricalProvider (no database driver): integer values as JSON numbers (b carries the trigger intPrimitive; myint carries the JDBC integer: 50/60 polled through queryvar=5/6 from the mybigint-5/6 rows, 30/40 for 3stream) and strings as JSON strings (MySQL strips CHAR(20) trailing spaces; mychar 'Y' is the mybigint-2 row). NULL column values would be the differential protocol null marker object {'state':'null'} but the five cases deliver no NULL columns. Count records are {case, operation:'count', statement:'flow', sequence, time, name, count} mirroring the dataflow-oracle convention the Go runner pairs with (negative-sends, capture-empty and silent-advances); count records are emitted at the same positions as the corresponding in-process assertions, so case 0's record order is count negative-sends=3, listener row, count negative-sends=1. Sequence is case-local restarting at 1, the time is the fixed epoch 1970-01-01T00:00:00Z. The 11 records (3 2historical-star-inner + 1 join-index-null-type + 3 with-pattern + 2 variables + 2 3stream) carry the database-join-2 differential chain for the five Go case builders.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java",
+ "javaRuntimes": [
+  "java-runtime-8961178ee540998a99f3",
+  "java-runtime-a8180e298e71e8135b38",
+  "java-runtime-3ddf3346fbe67a639057",
+  "java-runtime-0a048d0e0005df5f6279",
+  "java-runtime-fc8c20664fc4787fc987"
+ ],
+ "cases": [
+  {
+   "case": "2historical-star-inner",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-8961178ee540998a99f3",
+   "executionName": "EPLDatabase2HistoricalStarInner"
+  },
+  {
+   "case": "join-index-null-type",
+   "ordinal": 20,
+   "runtimeId": "java-runtime-a8180e298e71e8135b38",
+   "executionName": "EPLDatabaseJoinIndexNullType"
+  },
+  {
+   "case": "with-pattern",
+   "ordinal": 16,
+   "runtimeId": "java-runtime-3ddf3346fbe67a639057",
+   "executionName": "EPLDatabaseWithPattern"
+  },
+  {
+   "case": "variables",
+   "ordinal": 8,
+   "runtimeId": "java-runtime-0a048d0e0005df5f6279",
+   "executionName": "EPLDatabaseVariables"
+  },
+  {
+   "case": "3stream",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-fc8c20664fc4787fc987",
+   "executionName": "EPLDatabase3Stream"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "2historical-star-inner"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "join-index-null-type"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "with-pattern"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "variables"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "3stream"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  }
+ ]
+}

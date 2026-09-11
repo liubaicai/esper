@@ -1,0 +1,377 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-8961178ee540998a99f3",
+    "java-runtime-a8180e298e71e8135b38",
+    "java-runtime-3ddf3346fbe67a639057",
+    "java-runtime-0a048d0e0005df5f6279",
+    "java-runtime-fc8c20664fc4787fc987"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java"
+  ],
+  "javaExecutions": [
+    "EPLDatabase2HistoricalStarInner",
+    "EPLDatabaseJoinIndexNullType",
+    "EPLDatabaseWithPattern",
+    "EPLDatabaseVariables",
+    "EPLDatabase3Stream"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-database-join-2",
+    "steps": [
+      {
+        "op": "case",
+        "case": "2historical-star-inner"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "join-index-null-type"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "with-pattern"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "variables"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "3stream"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-database-join-2",
+    "records": [
+      {
+        "case": "2historical-star-inner",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "negative-sends",
+        "count": 3
+      },
+      {
+        "case": "2historical-star-inner",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "B",
+              "b": 3,
+              "c": "B",
+              "d": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "2historical-star-inner",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "negative-sends",
+        "count": 1
+      },
+      {
+        "case": "join-index-null-type",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "capture-empty",
+        "count": 0
+      },
+      {
+        "case": "with-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mychar": "Y"
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-pattern",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "silent-advances",
+        "count": 1
+      },
+      {
+        "case": "with-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mychar": "Y"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variables",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myint": 50
+            }
+          }
+        ]
+      },
+      {
+        "case": "variables",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myint": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "3stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myint": 30,
+              "stringTwo": "T2",
+              "theString": "T2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "3stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myint": 40,
+              "stringTwo": "T3",
+              "theString": "T3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-database-join-2",
+    "records": [
+      {
+        "case": "2historical-star-inner",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "negative-sends",
+        "count": 3
+      },
+      {
+        "case": "2historical-star-inner",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "B",
+              "b": 3,
+              "c": "B",
+              "d": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "2historical-star-inner",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "negative-sends",
+        "count": 1
+      },
+      {
+        "case": "join-index-null-type",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "capture-empty",
+        "count": 0
+      },
+      {
+        "case": "with-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mychar": "Y"
+            }
+          }
+        ]
+      },
+      {
+        "case": "with-pattern",
+        "operation": "count",
+        "statement": "flow",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "silent-advances",
+        "count": 1
+      },
+      {
+        "case": "with-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mychar": "Y"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variables",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myint": 50
+            }
+          }
+        ]
+      },
+      {
+        "case": "variables",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myint": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "3stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myint": 30,
+              "stringTwo": "T2",
+              "theString": "T2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "3stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myint": 40,
+              "stringTwo": "T3",
+              "theString": "T3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
