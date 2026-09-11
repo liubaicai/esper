@@ -1,0 +1,1196 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f0a1da1fe931e132c21f",
+    "java-runtime-fe6adc5803da60bf18f5",
+    "java-runtime-f195548d023dfbde1aed",
+    "java-runtime-baa0bd4ca41b9b2c5f94"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+  ],
+  "javaExecutions": [
+    "InfraBeanBacked",
+    "InfraBeanContained",
+    "InfraBeanSchemaBacked",
+    "InfraDeepSupertypeInsert"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-bean-views",
+    "steps": [
+      {
+        "op": "case",
+        "case": "bean-backed"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "create",
+        "epl": "@EventRepresentation('objectarray') @name('create') @public create window MyWindowBB#keepall as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "insert",
+        "epl": "@public insert into MyWindowBB select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from MyWindowBB"
+      },
+      {
+        "op": "send",
+        "case": "bean-backed",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "update",
+        "epl": "@name('update') on SupportBean_A update MyWindowBB set theString='s'"
+      },
+      {
+        "op": "send",
+        "case": "bean-backed",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bean-backed"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "create",
+        "epl": "@EventRepresentation('map') @name('create') @public create window MyWindowBB#keepall as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "insert",
+        "epl": "@public insert into MyWindowBB select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from MyWindowBB"
+      },
+      {
+        "op": "send",
+        "case": "bean-backed",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "update",
+        "epl": "@name('update') on SupportBean_A update MyWindowBB set theString='s'"
+      },
+      {
+        "op": "send",
+        "case": "bean-backed",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bean-backed"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindowBB#keepall as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "insert",
+        "epl": "@public insert into MyWindowBB select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from MyWindowBB"
+      },
+      {
+        "op": "send",
+        "case": "bean-backed",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "update",
+        "epl": "@name('update') on SupportBean_A update MyWindowBB set theString='s'"
+      },
+      {
+        "op": "send",
+        "case": "bean-backed",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bean-backed"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "create",
+        "epl": "@EventRepresentation('avro') @name('create') @public create window MyWindowBB#keepall as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "insert",
+        "epl": "@public insert into MyWindowBB select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from MyWindowBB"
+      },
+      {
+        "op": "send",
+        "case": "bean-backed",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "deploy",
+        "case": "bean-backed",
+        "statement": "update",
+        "epl": "@name('update') on SupportBean_A update MyWindowBB set theString='s'"
+      },
+      {
+        "op": "send",
+        "case": "bean-backed",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "A1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bean-backed"
+      },
+      {
+        "op": "case",
+        "case": "bean-contained"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-contained",
+        "statement": "create",
+        "epl": "@EventRepresentation('objectarray') @name('create') @public create window MyWindowBC#keepall as (bean SupportBean_S0)"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-contained",
+        "statement": "insert",
+        "epl": "insert into MyWindowBC select bean.* as bean from SupportBean_S0 as bean"
+      },
+      {
+        "op": "send",
+        "case": "bean-contained",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bean-contained"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-contained",
+        "statement": "create",
+        "epl": "@EventRepresentation('map') @name('create') @public create window MyWindowBC#keepall as (bean SupportBean_S0)"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-contained",
+        "statement": "insert",
+        "epl": "insert into MyWindowBC select bean.* as bean from SupportBean_S0 as bean"
+      },
+      {
+        "op": "send",
+        "case": "bean-contained",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bean-contained"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-contained",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindowBC#keepall as (bean SupportBean_S0)"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-contained",
+        "statement": "insert",
+        "epl": "insert into MyWindowBC select bean.* as bean from SupportBean_S0 as bean"
+      },
+      {
+        "op": "send",
+        "case": "bean-contained",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bean-contained"
+      },
+      {
+        "op": "case",
+        "case": "bean-schema-backed"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-schema-backed",
+        "statement": "schema",
+        "epl": "@public create schema ABC as com.espertech.esper.common.internal.support.SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-schema-backed",
+        "statement": "create",
+        "epl": "@public create window MyWindowBSB#keepall as ABC"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-schema-backed",
+        "statement": "insert",
+        "epl": "insert into MyWindowBSB select * from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "bean-schema-backed",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "faf",
+        "case": "bean-schema-backed",
+        "statement": "faf",
+        "epl": "select * from MyWindowBSB"
+      },
+      {
+        "op": "deploy",
+        "case": "bean-schema-backed",
+        "statement": "s0",
+        "epl": "@name('s0') select * from ABC"
+      },
+      {
+        "op": "send",
+        "case": "bean-schema-backed",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "bean-schema-backed"
+      },
+      {
+        "op": "case",
+        "case": "deep-supertype-insert"
+      },
+      {
+        "op": "deploy",
+        "case": "deep-supertype-insert",
+        "statement": "create",
+        "epl": "@name('create') create window MyWindowDSI#keepall as select * from SupportOverrideBase"
+      },
+      {
+        "op": "deploy",
+        "case": "deep-supertype-insert",
+        "statement": "insert",
+        "epl": "insert into MyWindowDSI select * from SupportOverrideOneA"
+      },
+      {
+        "op": "send",
+        "case": "deep-supertype-insert",
+        "eventType": "SupportOverrideOneA",
+        "payload": {
+          "valOneA": "1a",
+          "valOne": "1",
+          "val": "base"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "deep-supertype-insert",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "deep-supertype-insert"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-bean-views",
+    "records": [
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-contained",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bean.p00": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-contained",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bean.p00": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-contained",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bean.p00": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-schema-backed",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBSB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "deep-supertype-insert",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": "1a"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-bean-views",
+    "records": [
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-backed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "bean-contained",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bean.p00": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-contained",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bean.p00": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-contained",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bean.p00": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "bean-schema-backed",
+        "operation": "faf",
+        "statement": "faf",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "type": "MyWindowBSB",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "deep-supertype-insert",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "val": "1a"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

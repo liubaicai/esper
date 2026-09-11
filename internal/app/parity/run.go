@@ -169,6 +169,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWGWScenario(file)
 	} else if *mode == "infra-named-window-consumer-views" || *mode == "infra-named-window-consumer-views-diff" {
 		scenario, err = loadInfraNWCViewScenario(file)
+	} else if *mode == "infra-named-window-bean-views" || *mode == "infra-named-window-bean-views-diff" {
+		scenario, err = loadInfraNWBVScenario(file)
 	} else if *mode == "resultset-aggregate-filter-named-parameter-linear-join" || *mode == "resultset-aggregate-filter-named-parameter-linear-join-diff" {
 		scenario, err = loadResultsetAggregateFilterNamedParameterLinearJoinScenario(file)
 	} else if *mode == "resultset-aggregate-filter-named-parameter-sorted-join" || *mode == "resultset-aggregate-filter-named-parameter-sorted-join-diff" {
@@ -847,6 +849,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWCViewJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWCViewJavaSources),
 				splitMetadata(*javaExecutions, infraNWCViewJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-named-window-bean-views" || *mode == "infra-named-window-bean-views-diff" {
+		trace, err := runInfraNWBVScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-named-window-bean-views-diff" {
+			return runDifferentialModeWithGoNormalizer(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWBVJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWBVJavaSources),
+				splitMetadata(*javaExecutions, infraNWBVJavaExecutions), scenario, trace, normalizeInfraNWBVTrace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

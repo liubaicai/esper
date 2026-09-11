@@ -2310,7 +2310,8 @@
     "internal/app/parity/infra_named_window_time_order_accum_views.go",
     "internal/app/parity/infra_named_window_time_batch_views.go",
     "internal/app/parity/infra_named_window_groupwin_views.go",
-    "internal/app/parity/infra_named_window_consumer_views.go"
+    "internal/app/parity/infra_named_window_consumer_views.go",
+    "internal/app/parity/infra_named_window_bean_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2376,7 +2377,11 @@
     "java-runtime-502dd5b0e84f28fb2c68",
     "java-runtime-5ccc9535c9241efda4cc",
     "java-runtime-5118f72a4d8684d593d0",
-    "java-runtime-c49a6a43a1efd3fa0729"
+    "java-runtime-c49a6a43a1efd3fa0729",
+    "java-runtime-f0a1da1fe931e132c21f",
+    "java-runtime-fe6adc5803da60bf18f5",
+    "java-runtime-f195548d023dfbde1aed",
+    "java-runtime-baa0bd4ca41b9b2c5f94"
    ]
   },
   {
@@ -41304,6 +41309,71 @@
     "java-runtime-c49a6a43a1efd3fa0729"
    ],
    "difference": "The named-window consumer views of this slice collapse to the Unique, KeepAll and univariate-statistics retentions plus filtered/aggregate/join consumers under the chain harness. The slice pins the from-clause consumer filter applied to both streams independently: a unique-window replacement whose new and old rows both pass is delivered as one new+old callback, one with only a single passing side is delivered as that side alone, and one where neither side passes produces no callback. It also pins the unique window's replace pair, prior-access select rows including null priors, the univariate derived view's average as the only projected statistics column (single-value rows on the non-irstream consumer and new+old state pairs on the irstream consumer; the empty-state NaN case is not exercised by this slice), a late-started filtered aggregate consumer whose preload sums the already-retained rows, and a left-outer join of the named window against a stream window with null-padded left rows. Where the Java suite asserts iterator content without order (the unique window states and the join states), the scenario marks those snapshots any-order; there is no count-only site in this slice."
+  },
+  {
+   "id": "case.infra-namedwindow-views-beans",
+   "javaRuntimeIds": [
+    "java-runtime-f0a1da1fe931e132c21f",
+    "java-runtime-fe6adc5803da60bf18f5",
+    "java-runtime-f195548d023dfbde1aed",
+    "java-runtime-baa0bd4ca41b9b2c5f94"
+   ],
+   "javaNames": [
+    "InfraBeanBacked",
+    "InfraBeanContained",
+    "InfraBeanSchemaBacked",
+    "InfraDeepSupertypeInsert"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowBeanViewsDirectReplay",
+    "TestRunInfraNamedWindowBeanViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowBeanViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowBeanViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowBeanViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowBeanViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsBeanBackedParity",
+    "TestInfraNWViewsBeanContainedParity",
+    "TestInfraNWViewsBeanSchemaBackedParity",
+    "TestInfraNWViewsDeepSupertypeInsertParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "bean-event-type",
+    "schema-backed",
+    "nested-fragment",
+    "supertype-insert",
+    "fire-and-forget",
+    "on-trigger-update",
+    "iterator-snapshot",
+    "differential",
+    "trace-normalizer"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-f0a1da1fe931e132c21f",
+    "java-runtime-fe6adc5803da60bf18f5",
+    "java-runtime-f195548d023dfbde1aed",
+    "java-runtime-baa0bd4ca41b9b2c5f94"
+   ],
+   "difference": "The bean/schema named-window executions collapse to the same CreateNamedWindow/InsertIntoNamedWindow harness as the earlier slices, but the event-representation surface is pinned explicitly: the window statements are declared over bean-backed types, over a nested bean fragment projected with an expression, and over the contained-bean variant with an Avro compile rejection, and one execution inserts a subtype into a window declared over its supertype (the payload carries valOneA/valOne/val while the window property reads the most-derived override). One execution observes the insert through a fire-and-forget query result and another drives an on-trigger update, whose wave the Go engine publishes with the consumer record before the trigger statement's own record while Java publishes the trigger record first: the chain normalizes exactly that adjacent pair for that case through the repository's established Go-normalizer hook, the checked-in Go trace keeps the raw engine order, and no other record is affected — the remaining 20 records are byte-identical to the Java trace."
   }
  ],
  "mappings": [
@@ -44230,13 +44300,17 @@
   {
    "caseId": "case.infra-namedwindow-views-consumers",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-beans",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 647,
-  "implementedCases": 645,
-  "differentialVerifiedCases": 270,
-  "differentialVerifiedRuntimeIds": 1008,
+  "inventoriedCases": 648,
+  "implementedCases": 646,
+  "differentialVerifiedCases": 271,
+  "differentialVerifiedRuntimeIds": 1012,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -44246,13 +44320,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3606,
+  "runtimeAssociationCount": 3610,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 647,
+  "totalCases": 648,
   "totalCapabilities": 120
  }
 }

@@ -1,6 +1,7 @@
 import com.espertech.esper.common.client.EPCompiled;
 import com.espertech.esper.common.client.EventBean;
 import com.espertech.esper.common.client.configuration.Configuration;
+import com.espertech.esper.common.client.fireandforget.EPFireAndForgetQueryResult;
 import com.espertech.esper.common.client.json.minimaljson.Json;
 import com.espertech.esper.common.client.json.minimaljson.JsonArray;
 import com.espertech.esper.common.client.json.minimaljson.JsonNumber;
@@ -12,8 +13,12 @@ import com.espertech.esper.common.client.hook.exception.ExceptionHandler;
 import com.espertech.esper.common.client.hook.exception.ExceptionHandlerFactory;
 import com.espertech.esper.common.client.hook.exception.ExceptionHandlerFactoryContext;
 import com.espertech.esper.common.client.util.UndeployRethrowPolicy;
+import com.espertech.esper.common.internal.context.util.StatementContext;
+import com.espertech.esper.common.internal.event.bean.core.BeanEventType;
 import com.espertech.esper.common.internal.support.SupportBean;
+import com.espertech.esper.common.internal.support.SupportBean_S0;
 import com.espertech.esper.compiler.client.CompilerArguments;
+import com.espertech.esper.compiler.client.EPCompileException;
 import com.espertech.esper.compiler.client.EPCompilerProvider;
 import com.espertech.esper.runtime.client.DeploymentOptions;
 import com.espertech.esper.runtime.client.EPDeployment;
@@ -21,6 +26,7 @@ import com.espertech.esper.runtime.client.EPRuntime;
 import com.espertech.esper.runtime.client.EPRuntimeProvider;
 import com.espertech.esper.runtime.client.EPStatement;
 import com.espertech.esper.runtime.client.UpdateListener;
+import com.espertech.esper.runtime.internal.kernel.statement.EPStatementSPI;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,113 +44,103 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Java oracle for the infra-named-window-consumer-views slice of
- * InfraNamedWindowViews.java: the ord-43 {@code InfraFilteringConsumer}
- * {@code MyWindowFC#unique(key)} window with its filtered consumer
- * (lines 2947-2995), the ord-45 {@code InfraFilteringConsumerLateStart}
- * {@code MyWindowFCLS#keepall} window whose filtered aggregate consumer is
- * deployed after the window was filled (lines 3120-3166), the ord-49
- * {@code InfraPriorStats} {@code MyWindowPS#keepall} window with its
- * prior-values consumer and the {@code #uni(value)} statistics consumer
- * (lines 3221-3260), the ord-50 {@code InfraLateConsumer}
- * {@code MyWindowLCL#keepall} window with its late {@code #uni} and
- * {@code count(*)} consumers (lines 3262-3311) and the ord-51
- * {@code InfraLateConsumerJoin} window whose left-outer join consumer against
- * {@code SupportMarketDataBean#keepall} is deployed after the window was filled
- * (lines 3313-3370).
+ * Java oracle for the infra-named-window-bean-views slice of
+ * InfraNamedWindowViews.java: the ord-2 {@code InfraBeanBacked} execution that
+ * runs its helper once per event-representation annotation over a window
+ * declared {@code as SupportBean} (lines 298-305 with the helper at
+ * 3591-3611), the ord-35 {@code InfraBeanContained} execution whose window is
+ * declared {@code as (bean SupportBean_S0)} and fed by a stream-wildcard insert
+ * (lines 307-318 with the helper at 3498-3509), the ord-37
+ * {@code InfraBeanSchemaBacked} execution that aliases the bean class through a
+ * schema and reads the window with a fire-and-forget query (lines 342-362) and
+ * the ord-38 {@code InfraDeepSupertypeInsert} execution whose window is
+ * declared from {@code as select * from SupportOverrideBase} and fed by a
+ * subtype insert (lines 364-373).
  *
- * <p>None of the five executions moves the engine clock, so every record
+ * <p>None of the four executions moves the engine clock, so every record
  * carries the pinned start instant; one EPRuntime is created per case with the
- * clock pinned at 0 before any statement is deployed, which keeps that instant
- * deterministic instead of inheriting the wall clock or the previous case's
- * position ({@code SchedulingServiceImpl.setTime} assigns unconditionally).
+ * clock pinned at 0 before any statement is deployed.
  *
- * <p>Deployment grouping follows the Java source, not the step fan-out: the
- * scenario lists one deploy step per statement (the Go runner maps each step
- * onto one plan), while ord 43 (INV:2951-2955) and ord 49 (INV:3226-3230)
- * compile all their statements as one module, ord 45 deploys module A
- * (create+insert, INV:3125-3127), its filtered consumer (INV:3135) and the
- * delete trigger (INV:3152) separately, ord 50 deploys four single-statement
- * modules (INV:3269-3270, 3277-3278, 3287-3288, 3299-3300) and ord 51 three
- * (INV:3319-3320, 3327-3328, 3338-3341).  Joining the pinned step EPLs of one
+ * <p>Deployment grouping follows the Java source, not the step fan-out: ord 2
+ * deploys its four statements as four separate modules in every sub-run
+ * (INV:3594/3596/3598/3605), ord 35 its window and insert as two modules per
+ * sub-run (INV:3500/3503), ord 37 its schema, window and insert as ONE module
+ * (INV:347-350) plus the {@code s0} consumer (INV:355), and ord 38 its window
+ * and insert as one module (INV:366-368).  Joining the pinned step EPLs of one
  * module with ";\n" reproduces the source literal minus its trailing
- * terminator; the window creates of the multi-module cases carry {@code @public}
- * because the later modules resolve the window through the runtime path.
+ * terminator.
  *
- * <p>Listener set: create and s0 for ord 43, s0 only for ord 45, s0 and s3 for
- * ord 49, create and s0 for ord 50 and create and s2 for ord 51.  Never-asserted
- * listeners stay excluded exactly like the sibling slices (ord 43's and ord 45's
- * delete triggers, ord 49's create, ord 50's s2), while every invocation of an
- * attached listener is recorded - including the two ord-43 waves the suite never
- * asserts (INV:2989-2990).
+ * <p>The representation matrix is replayed in full: ord 2 runs its helper four
+ * times in source order (OBJECTARRAY, MAP, DEFAULT, AVRO; INV:300-303) and ord
+ * 35 three times (OBJECTARRAY, MAP, DEFAULT; INV:309-313), each sub-run on a
+ * fresh RegressionPath and torn down with undeployAll before the next one.  The
+ * four sub-runs of ord 2 differ only by the annotation prefix of the create
+ * statement, which the engine ignores for the {@code as <class>} form: the
+ * window event type stays a bean type named after the window in every sub-run,
+ * which the oracle checks per sub-run instead of trusting the annotation.  Ord
+ * 35's AVRO variant is the compiler-reject assertion of INV:315-316: the oracle
+ * compiles that EPL and requires the pinned failure message; it emits no record.
  *
- * <p>Snapshot steps replay the execution's iterator assertions in source order
- * and carry their own projection list and comparison mode.  The suite reads
- * order-sensitive and order-insensitive iterators side by side: ord 43's
- * {@code #unique(key)} window iterator and its filtered consumer iterate a
- * HashMap (INV:2969/2981/2991 are the any-order assertions while INV:2970 and
- * the empty INV:2982 stay ordered), ord 45's {@code sum} iterator is a single
- * RowForAll row, ord 49's {@code #uni(value)} statistics view exposes exactly
- * one row at every site, ord 50 reads one {@code #uni} row and one
- * {@code count(*)} row and ord 51's join iterator is recomputed from the join
- * repositories - ordered while only unmatched rows exist (INV:3343) and
- * any-order afterwards (INV:3357/3361/3366).  The ord-51 case marker carries
- * {@code mode: "any"} because that execution's two-row join invocation order is
- * deliberately unpinned by the suite; all other case markers carry no mode.
- * No snapshot of this slice is count-only, so no step uses the empty-field
- * encoding.  An empty iterator emits the snapshot record with the {@code new}
- * key omitted, which is how INV:2982's exhausted-iterator assertion shows up.
+ * <p>Rows: this slice's Java assertions are mostly metadata assertions.  Ord 2's
+ * three listener assertions per sub-run ({@code assertEvent(event,
+ * "MyWindowBB")}) check that the delivered event is a bean event of the window
+ * type named MyWindowBB and never read a property, so its rows carry the
+ * delivered event type name in the protocol's {@code type} field and project NO
+ * field.  Ord 37's single assertion is the same metadata check on the
+ * fire-and-forget row, so its one record is a {@code faf} record whose single
+ * row carries {@code type=MyWindowBSB} and no fields.  Ord 35 asserts one real
+ * value ({@code bean.p00 == "E1"}) and ord 38 one ({@code val == "1a"}), so
+ * those rows project exactly those fields.  The oracle also checks the
+ * window-type shape per sub-run (ord 2: a bean type named MyWindowBB with a
+ * SupportBean underlying and NAMED_WINDOW metadata; ord 35: an Object[] window
+ * for the objectarray annotation and a Map window for map/default) and that ord
+ * 2's {@code s0} select is stateless, all as harness-internal expectations that
+ * emit no records, exactly like the suite's {@code assertEvent} and
+ * {@code assertStatelessStmt}.
  *
- * <p>Record counts are pinned to the Java source and the attached listeners:
- * ord 43 emits 19 records (14 listener callbacks + 5 snapshots), ord 45 emits 9
- * (3 + 6), ord 49 emits 12 (8 + 4), ord 50 emits 15 (8 + 7, because its create
- * listener keeps firing on the three arrivals that follow the statistics
- * consumer's deploy even though the suite asserts it only twice) and ord 51
- * emits 9 (5 + 4), 64 in total over 87 scenario steps.
+ * <p>Event representations: SupportBean and SupportBean_S0 are the real
+ * configured classes; {@code SupportBean_A} is modelled as a map schema
+ * (id:String) because the regression-lib bean is not on the oracle classpath and
+ * the update trigger reads no property; SupportOverrideBase/-One/-OneA are
+ * re-declared here with the same simple names, hierarchy and override chain as
+ * the regression-lib beans so the deep-supertype insert and the {@code val}
+ * read behave exactly like the suite's.
  *
- * <p>Semantics this oracle observes and the Go side must reproduce: the
- * {@code #unique(key)} window replaces a row in ONE callback carrying the new
- * and the replaced row (ord 43's G1 waves), the consumer filter is evaluated on
- * BOTH streams so a filtered-out new row still delivers the passing old row and
- * a filtered-out pair is fully silent, {@code #uni(value)} is the univariate
- * statistics view (single-row iterators, {@code average} as a Double) rather
- * than a dedupe view, the late-start preload pushes the window snapshot into the
- * aggregation or the join before the statement is dispatchable (ord 45's 7, ord
- * 50's 1.5 and 4, ord 51's null-padded rows), ord 49's {@code prior(1|2, key)}
- * reads the statement's own arrival history, and ord 51's join iterator
- * recomputes the full left-outer join so an unmatched row disappears from the
- * iterator without a remove-stream record once a matching market event exists.
+ * <p>Record counts are pinned to the Java source and the engine's delivery
+ * wiring: ord 2 emits 20 records (five per sub-run - the create and s0
+ * callbacks of the insert, then the update's three deliveries to the window
+ * listener, the s0 consumer and the update listener - over its four sub-runs),
+ * ord 35 emits 3 (one create callback per sub-run), ord 37 emits 1 (the
+ * fire-and-forget row) and ord 38 emits 1 (the window iterator state), 25 in
+ * total over 57 scenario steps.
  */
-public final class InfraNamedWindowConsumerViewsScenarioOracle {
+public final class InfraNamedWindowBeanViewsScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
-    private static final String ID = "infra-named-window-consumer-views";
-    private static final String DESCRIPTION = "InfraNamedWindowViews consumer slice: the unique-key window with its filtered consumer and the keepall window with a late filtered aggregate, plus the prior-value, late univariate-statistics and late left-outer-join consumers whose preload and iterator shapes differ from their listener deltas (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java).";
+    private static final String ID = "infra-named-window-bean-views";
+    private static final String DESCRIPTION = "InfraNamedWindowViews bean slice: the bean-backed window with its representation matrix and on-trigger update, the contained-bean window fed by a stream-wildcard insert, the schema alias read through a fire-and-forget query, and the deep-supertype insert whose window reads the most-derived override (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java).";
     private static final String JAVA_COMMIT = "9e1b9f1cc9117fea4bf33ab043762c045d73839c";
     private static final String JAVA_SOURCE =
             "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/"
                     + "InfraNamedWindowViews.java";
 
     private static final String[] CASE_NAMES = {
-            "filtering-consumer",
-            "filtering-consumer-late-start",
-            "prior-stats",
-            "late-consumer",
-            "late-consumer-join"
+            "bean-backed",
+            "bean-contained",
+            "bean-schema-backed",
+            "deep-supertype-insert"
     };
-    private static final int[] ORDINALS = {43, 45, 49, 50, 51};
+    private static final int[] ORDINALS = {2, 35, 37, 38};
     private static final String[] RUNTIME_IDS = {
-            "java-runtime-a7827f22ee0c135e84d2",
-            "java-runtime-502dd5b0e84f28fb2c68",
-            "java-runtime-5ccc9535c9241efda4cc",
-            "java-runtime-5118f72a4d8684d593d0",
-            "java-runtime-c49a6a43a1efd3fa0729"
+            "java-runtime-f0a1da1fe931e132c21f",
+            "java-runtime-fe6adc5803da60bf18f5",
+            "java-runtime-f195548d023dfbde1aed",
+            "java-runtime-baa0bd4ca41b9b2c5f94"
     };
     private static final String[] EXECUTION_NAMES = {
-            "InfraFilteringConsumer",
-            "InfraFilteringConsumerLateStart",
-            "InfraPriorStats",
-            "InfraLateConsumer",
-            "InfraLateConsumerJoin"
+            "InfraBeanBacked",
+            "InfraBeanContained",
+            "InfraBeanSchemaBacked",
+            "InfraDeepSupertypeInsert"
     };
 
     /**
@@ -153,189 +149,172 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
      * shell script can pin the same bytes independently of this oracle.
      */
     private static final String[] CASE_DESCRIPTIONS = {
-            "unique(key) window over the theString/intPrimitive projection: a same-key arrival replaces the stored row in one callback carrying the new and the replaced row, and the filtered consumer evaluates its filter on both streams so the replaced row still passes while the filtered-out new row is dropped",
-            "keepall window over the theString/intPrimitive projection with a late filtered aggregate consumer: the preload pushes the two matching window rows as one update so the sum starts at 7, and a filtered-out arrival never enters the aggregation, not even for its later delete",
-            "keepall map window with a prior-values consumer and a univariate-statistics consumer: prior(1|2, key) reads the statement's own arrival history while the uni(value) view exposes the running average as a single-row iterator on every update",
-            "keepall map window whose univariate-statistics consumer and count(*) consumer are both deployed late: the two independent preloads start the average at 1.5 and the count at 4, and the statistics consumer is irstream so the previous average is delivered as old data",
-            "keepall map window whose left-outer join consumer against the market-data window is deployed late: the replayed window arrives in the join before the first iterator read, the market send matches both rows in either order, and the join iterator recomputes the full result so an unmatched row vanishes without a remove-stream record"
+            "keepall window declared as SupportBean and replayed once per event-representation annotation: the annotation is ignored, so every sub-run delivers bean events of the window type named MyWindowBB through the create and s0 listeners and an on-trigger update that delivers the updated row as new and the pre-update row as old",
+            "keepall window declared as (bean SupportBean_S0) with one sub-run per representation: the objectarray and map/default annotations shape the window underlying and the nested bean.p00 property is read through the stream-wildcard insert, while the avro variant must fail to compile",
+            "keepall window declared over a schema alias of the SupportBean class: the schema type ABC is distinct from the configured SupportBean type, so the second bean send feeds only the window and the fire-and-forget query reads one row of the window type MyWindowBSB while the select over ABC stays uninvoked",
+            "keepall window declared from as select * from SupportOverrideBase and fed by an insert from SupportOverrideOneA: the same underlying object is re-typed into the window and the val property reads the most-derived override"
     };
 
-    // Transcriptions of InfraNamedWindowViews lines 2951-2954
-    // (InfraFilteringConsumer), deployed as ONE module exactly like the source's
-    // single compileDeploy.  The window create carries no @public (the source
-    // omits it) and projects intPrimitive as value, so the window column is an
-    // Integer; the consumer filter is part of the from-clause.
-    private static final String EPL_FC_CREATE =
-            "@name('create') create window MyWindowFC#unique(key)"
-                    + " as select theString as key, intPrimitive as value from SupportBean";
-    private static final String EPL_FC_INSERT =
-            "insert into MyWindowFC select theString as key, intPrimitive as value from SupportBean";
-    private static final String EPL_FC_S0 =
-            "@name('s0') select irstream key, value as value from MyWindowFC(value > 0, value < 10)";
-    private static final String EPL_FC_DELETE =
-            "@name('delete') on SupportMarketDataBean as s0 delete from MyWindowFC as s1"
-                    + " where s0.symbol = s1.key";
+    // Transcriptions of InfraNamedWindowViews lines 3594/3596/3598/3605
+    // (tryAssertionBeanBacked).  The create statement is deployed once per
+    // representation with that representation's annotation prefix; the DEFAULT
+    // variant's leading space (the source's "" + " @name..." concatenation) is
+    // trimmed because it has no semantic effect.
+    private static final String EPL_BB_CREATE =
+            "@name('create') @public create window MyWindowBB#keepall as SupportBean";
+    private static final String EPL_BB_CREATE_OBJECTARRAY =
+            "@EventRepresentation('objectarray') @name('create') @public"
+                    + " create window MyWindowBB#keepall as SupportBean";
+    private static final String EPL_BB_CREATE_MAP =
+            "@EventRepresentation('map') @name('create') @public"
+                    + " create window MyWindowBB#keepall as SupportBean";
+    private static final String EPL_BB_CREATE_AVRO =
+            "@EventRepresentation('avro') @name('create') @public"
+                    + " create window MyWindowBB#keepall as SupportBean";
+    private static final String EPL_BB_INSERT =
+            "@public insert into MyWindowBB select * from SupportBean";
+    private static final String EPL_BB_S0 =
+            "@name('s0') select * from MyWindowBB";
+    private static final String EPL_BB_UPDATE =
+            "@name('update') on SupportBean_A update MyWindowBB set theString='s'";
 
-    // Transcriptions of InfraNamedWindowViews lines 3125-3126, 3135 and 3152
-    // (InfraFilteringConsumerLateStart): module A holds the window and its
-    // insert, the filtered aggregate consumer is a second module deployed after
-    // the three fills and the delete trigger is a third one deployed after the
-    // consumer snapshots.  The window create is @public because the later
-    // modules resolve it by name, and the consumer filter sits in the
-    // from-clause so the preload only sees the matching rows.
-    private static final String EPL_FCLS_CREATE =
-            "@name('create') @public create window MyWindowFCLS#keepall"
-                    + " as select theString as key, intPrimitive as value from SupportBean";
-    private static final String EPL_FCLS_INSERT =
-            "insert into MyWindowFCLS select theString as key, intPrimitive as value from SupportBean";
-    private static final String EPL_FCLS_S0 =
-            "@name('s0') select irstream sum(value) as sumvalue from MyWindowFCLS(value > 0, value < 10)";
-    private static final String EPL_FCLS_DELETE =
-            "@name('delete') on SupportMarketDataBean as s0 delete from MyWindowFCLS as s1"
-                    + " where s0.symbol = s1.key";
+    // Transcriptions of InfraNamedWindowViews lines 3500/3503 and the
+    // negative-compile text of 315 (tryAssertionBeanContained).  The insert is
+    // unnamed and the window is a contained-bean type whose single property is
+    // the SupportBean_S0 POJO.
+    private static final String EPL_BC_CREATE =
+            "@name('create') @public create window MyWindowBC#keepall as (bean SupportBean_S0)";
+    private static final String EPL_BC_CREATE_OBJECTARRAY =
+            "@EventRepresentation('objectarray') @name('create') @public"
+                    + " create window MyWindowBC#keepall as (bean SupportBean_S0)";
+    private static final String EPL_BC_CREATE_MAP =
+            "@EventRepresentation('map') @name('create') @public"
+                    + " create window MyWindowBC#keepall as (bean SupportBean_S0)";
+    private static final String EPL_BC_INSERT =
+            "insert into MyWindowBC select bean.* as bean from SupportBean_S0 as bean";
+    private static final String EPL_BC_CREATE_AVRO =
+            "@EventRepresentation('avro') @name('create')"
+                    + " create window MyWindowBC#keepall as (bean SupportBean_S0)";
+    private static final String EPL_BC_AVRO_ERROR =
+            "Property 'bean' type 'com.espertech.esper.common.internal.support.SupportBean_S0'"
+                    + " does not have a mapping to an Avro type ";
 
-    // Transcriptions of InfraNamedWindowViews lines 3226-3229 (InfraPriorStats),
-    // deployed as ONE module exactly like the source's single compileDeploy.
-    // The window create deliberately has NO @public; the univariate-statistics
-    // derived view lives on the window spec of the s3 statement and adds the
-    // "average" column the suite reads.
-    private static final String EPL_PS_CREATE =
-            "@name('create') create window MyWindowPS#keepall as MySimpleKeyValueMap";
-    private static final String EPL_PS_INSERT =
-            "insert into MyWindowPS select theString as key, longBoxed as value from SupportBean";
-    private static final String EPL_PS_S0 =
-            "@name('s0') select prior(1, key) as priorKeyOne, prior(2, key) as priorKeyTwo"
-                    + " from MyWindowPS";
-    private static final String EPL_PS_S3 =
-            "@name('s3') select average from MyWindowPS#uni(value)";
+    // Transcriptions of InfraNamedWindowViews lines 347-349, 353 and 355
+    // (InfraBeanSchemaBacked).  The schema statement aliases the configured
+    // SupportBean class under the name ABC, which makes ABC a distinct event
+    // type from SupportBean even though both wrap the same class.
+    private static final String EPL_BSB_SCHEMA =
+            "@public create schema ABC as com.espertech.esper.common.internal.support.SupportBean";
+    private static final String EPL_BSB_CREATE =
+            "@public create window MyWindowBSB#keepall as ABC";
+    private static final String EPL_BSB_INSERT =
+            "insert into MyWindowBSB select * from SupportBean";
+    private static final String EPL_BSB_S0 =
+            "@name('s0') select * from ABC";
+    private static final String EPL_BSB_FAF =
+            "select * from MyWindowBSB";
 
-    // Transcriptions of InfraNamedWindowViews lines 3269-3270, 3277-3278,
-    // 3287-3288 and 3299-3300 (InfraLateConsumer), deployed as FOUR
-    // single-statement modules on one shared path exactly like the source's
-    // four compileDeploy calls.  The statistics consumer preloads the two
-    // filled rows, the count consumer preloads the four rows that exist by its
-    // own deploy time and neither has a listener on the count statement.
-    private static final String EPL_LCL_CREATE =
-            "@name('create') @public create window MyWindowLCL#keepall as MySimpleKeyValueMap";
-    private static final String EPL_LCL_INSERT =
-            "insert into MyWindowLCL select theString as key, longBoxed as value from SupportBean";
-    private static final String EPL_LCL_S0 =
-            "@name('s0') select irstream average from MyWindowLCL#uni(value)";
-    private static final String EPL_LCL_S2 =
-            "@name('s2') select count(*) as cnt from MyWindowLCL";
-
-    // Transcriptions of InfraNamedWindowViews lines 3319-3320, 3327-3328 and
-    // 3338-3341 (InfraLateConsumerJoin), deployed as THREE single-statement
-    // modules.  The join consumer selects from the window and the market-data
-    // window with a left outer join on the shared Long key and is deployed
-    // after the window was filled, which is what makes the replay into the join
-    // observable: without it the first iterator read would be empty.
-    private static final String EPL_LCJ_CREATE =
-            "@name('create') @public create window MyWindowLCJ#keepall as MySimpleKeyValueMap";
-    private static final String EPL_LCJ_INSERT =
-            "insert into MyWindowLCJ select theString as key, longBoxed as value from SupportBean";
-    private static final String EPL_LCJ_S2 =
-            "@name('s2') select key, value, symbol from MyWindowLCJ as s0"
-                    + " left outer join SupportMarketDataBean#keepall as s1"
-                    + " on s0.value = s1.volume";
+    // Transcriptions of InfraNamedWindowViews lines 366-367
+    // (InfraDeepSupertypeInsert).  The window type is a bean replication of the
+    // base class (only the val property) and the insert accepts the deeper
+    // subtype, re-typing the same underlying object.
+    private static final String EPL_DSI_CREATE =
+            "@name('create') create window MyWindowDSI#keepall as select * from SupportOverrideBase";
+    private static final String EPL_DSI_INSERT =
+            "insert into MyWindowDSI select * from SupportOverrideOneA";
 
     private static final String[] CASE_CREATE_EPLS = {
-            EPL_FC_CREATE, EPL_FCLS_CREATE, EPL_PS_CREATE, EPL_LCL_CREATE, EPL_LCJ_CREATE
+            EPL_BB_CREATE, EPL_BC_CREATE, EPL_BSB_CREATE, EPL_DSI_CREATE
+    };
+    private static final String[] CASE_CREATE_OBJECTARRAY_EPLS = {
+            EPL_BB_CREATE_OBJECTARRAY, EPL_BC_CREATE_OBJECTARRAY, "", ""
+    };
+    private static final String[] CASE_CREATE_MAP_EPLS = {
+            EPL_BB_CREATE_MAP, EPL_BC_CREATE_MAP, "", ""
+    };
+    private static final String[] CASE_CREATE_AVRO_EPLS = {
+            EPL_BB_CREATE_AVRO, "", "", ""
     };
     private static final String[] CASE_INSERT_EPLS = {
-            EPL_FC_INSERT, EPL_FCLS_INSERT, EPL_PS_INSERT, EPL_LCL_INSERT, EPL_LCJ_INSERT
+            EPL_BB_INSERT, EPL_BC_INSERT, EPL_BSB_INSERT, EPL_DSI_INSERT
     };
     private static final String[] CASE_S0_EPLS = {
-            EPL_FC_S0, EPL_FCLS_S0, EPL_PS_S0, EPL_LCL_S0, ""
+            EPL_BB_S0, "", EPL_BSB_S0, ""
     };
-    private static final String[] CASE_S2_EPLS = {
-            "", "", "", EPL_LCL_S2, EPL_LCJ_S2
-    };
-    private static final String[] CASE_S3_EPLS = {
-            "", "", EPL_PS_S3, "", ""
-    };
-    private static final String[] CASE_CONSUME_EPLS = {"", "", "", "", ""};
-    private static final String[] CASE_DELETE_EPLS = {
-            EPL_FC_DELETE, EPL_FCLS_DELETE, "", "", ""
-    };
-    private static final String[] CASE_VAR_EPLS = {"", "", "", "", ""};
-    private static final String[] CASE_ONSET_EPLS = {"", "", "", "", ""};
+    private static final String[] CASE_S2_EPLS = {"", "", "", ""};
+    private static final String[] CASE_S3_EPLS = {"", "", "", ""};
+    private static final String[] CASE_CONSUME_EPLS = {"", "", "", ""};
+    private static final String[] CASE_DELETE_EPLS = {"", "", "", ""};
+    private static final String[] CASE_VAR_EPLS = {"", "", "", ""};
+    private static final String[] CASE_ONSET_EPLS = {"", "", "", ""};
+    private static final String[] CASE_SCHEMA_EPLS = {"", "", EPL_BSB_SCHEMA, ""};
+    private static final String[] CASE_UPDATE_EPLS = {EPL_BB_UPDATE, "", "", ""};
+    private static final String[] CASE_FAF_EPLS = {"", "", EPL_BSB_FAF, ""};
+    private static final String[] CASE_NEGATIVE_COMPILE_EPLS = {"", EPL_BC_CREATE_AVRO, "", ""};
     private static final String[][] CASE_DEPLOYS = {
-            {"create", "insert", "s0", "delete"},
-            {"create", "insert", "s0", "delete"},
-            {"create", "insert", "s0", "s3"},
-            {"create", "insert", "s0", "s2"},
-            {"create", "insert", "s2"}
+            {"create", "insert", "s0", "update"},
+            {"create", "insert"},
+            {"schema", "create", "insert", "s0"},
+            {"create", "insert"}
     };
     private static final String[][] CASE_LISTENED = {
-            {"create", "s0"},
+            {"create", "s0", "update"},
+            {"create"},
             {"s0"},
-            {"s0", "s3"},
-            {"create", "s0"},
-            {"create", "s2"}
+            {}
     };
 
     /**
      * Listener row projection per case and deploy position (parallel to
-     * CASE_DEPLOYS; unused slots are empty): ord 43 and ord 51 project the
-     * window's key/value (and the join's symbol), ord 45 projects the aggregate
-     * sumvalue, ord 49's prior consumer projects its two key columns while its
-     * statistics consumer projects average, and ord 50's statistics consumer
-     * projects average.
+     * CASE_DEPLOYS; unused slots are empty).  Ord 2's three listeners assert
+     * only the delivered event type, so they project no field and the record's
+     * rows carry the type name instead; ord 35's create listener asserts
+     * {@code bean.p00}.
      */
     private static final String[][][] CASE_LISTENER_FIELDS = {
             {
-                    {"key", "value"}, {"key", "value"}, {"key", "value"}, {}
+                    {}, {}, {}, {}
             },
             {
-                    {"sumvalue"}, {"sumvalue"}, {"sumvalue"}, {}
+                    {"bean.p00"}, {}
             },
             {
-                    {"key", "value"}, {}, {"priorKeyOne", "priorKeyTwo"}, {"average"}
+                    {}, {}, {}, {}
             },
             {
-                    {"key", "value"}, {}, {"average"}, {}
-            },
-            {
-                    {"key", "value"}, {}, {"key", "value", "symbol"}
+                    {}, {}
             }
     };
 
     /**
-     * Snapshot-step count per case: ord 43 asserts five iterator states
-     * (INV:2969/2970/2981/2982/2991), ord 45 six (INV:3136/3140/3144/3148/3156/
-     * 3160), ord 49 four (INV:3241/3246/3251/3256), ord 50 seven (INV:3289/
-     * 3293/3297/3301/3302/3306/3307) and ord 51 four (INV:3343/3357/3361/3366).
-     */
-    private static final int[] CASE_SNAPSHOTS = {5, 6, 4, 7, 4};
-
-    /**
-     * Module grouping per deploy position: ord 43 and ord 49 compile all their
-     * statements as one module, ord 45 deploys module A (create+insert), the
-     * consumer and the delete trigger as three modules, ord 50 four
-     * single-statement modules and ord 51 three.  See the class comment.
+     * Module grouping per deploy position: ord 2 deploys four single-statement
+     * modules per sub-run, ord 35 two, ord 37 the schema/window/insert module
+     * plus the consumer and ord 38 one module with both statements.
      */
     private static final int[][] CASE_MODULE_KEYS = {
-            {0, 0, 0, 0},
-            {0, 0, 1, 2},
-            {0, 0, 0, 0},
             {0, 1, 2, 3},
-            {0, 1, 2}
+            {0, 1},
+            {0, 0, 0, 1},
+            {0, 0}
     };
 
     /**
-     * Orders 49, 50 and 51 assert the window event type's property types
-     * (String key, Long value) through {@code assertStatement} at
-     * INV:3232-3235, INV:3272-3275 and INV:3322-3325; the two intPrimitive
-     * projections of ords 43/45 are not covered by that assertion.
+     * Snapshot-step count per case: only ord 38 reads an iterator
+     * ({@code assertIterator("create", …)} at INV:370).
      */
-    private static final boolean[] CASE_WINDOW_PROPERTY_PINS = {false, false, true, true, true};
+    private static final int[] CASE_SNAPSHOTS = {0, 0, 0, 1};
 
     /**
-     * Listener discipline: create and s0 for ord 43, s0 only for ord 45, s0 and
-     * s3 for ord 49, create and s0 for ord 50 and create and s2 for ord 51.
-     * The never-asserted delete listeners of ords 43/45 and ord 49's create
-     * listener are excluded; ord 50's s2 has no listener in the suite at all.
+     * Cases whose records carry the delivered event type name on every row
+     * (ord 2's listener events and ord 37's fire-and-forget row): the Java
+     * assertions of both are metadata-only checks on the window type.
+     */
+    private static final boolean[] CASE_ROW_TYPE_PINS = {true, false, true, false};
+
+    /**
+     * Listener discipline: create/s0/update for ord 2, create only for ord 35,
+     * s0 only for ord 37 (never invoked, which is the point of that execution)
+     * and no listener for ord 38.
      */
     private static final Map<String, Set<String>> LISTENED_STATEMENTS;
 
@@ -343,22 +322,27 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
 
     private static final Map<String, Map<String, String[]>> LISTENER_FIELDS;
 
+    private static final Map<String, Boolean> ROW_TYPE_PINS;
+
     /**
-     * Per-case record totals: 14 listener callbacks + 5 snapshots for ord 43,
-     * 3 + 6 for ord 45, 8 + 4 for ord 49, 8 + 7 for ord 50 and 5 + 4 for
-     * ord 51.  Ord 50's create listener keeps firing on the three arrivals that
-     * follow the statistics consumer's deploy (the suite asserts it only at the
-     * first two), so that case emits eight listener records, not the five its
-     * assertion sites alone suggest.
+     * Per-case record totals: five listener callbacks per sub-run over ord 2's
+     * four sub-runs, one create callback per sub-run over ord 35's three
+     * sub-runs, one fire-and-forget row for ord 37 and one iterator state for
+     * ord 38.  Ord 2's five-per-cycle shape is the insert's create+s0 pair plus
+     * the update's three deliveries: the on-trigger statement updates the
+     * window root view (which drives the window's own listener with new AND old
+     * and the s0 consumer with new only) before its own listener receives the
+     * same pair.
      */
-    private static final int[] EXPECTED_CASE_RECORDS = {19, 9, 12, 15, 9};
-    private static final int EXPECTED_RECORDS = 64;
-    private static final int EXPECTED_STEPS = 87;
+    private static final int[] EXPECTED_CASE_RECORDS = {20, 3, 1, 1};
+    private static final int EXPECTED_RECORDS = 25;
+    private static final int EXPECTED_STEPS = 57;
 
     static {
         Map<String, Set<String>> listened = new HashMap<>();
         Map<String, Map<String, Integer>> modules = new HashMap<>();
         Map<String, Map<String, String[]>> listenerFields = new HashMap<>();
+        Map<String, Boolean> rowTypePins = new HashMap<>();
         for (int index = 0; index < CASE_NAMES.length; index++) {
             listened.put(CASE_NAMES[index],
                     new HashSet<>(Arrays.asList(CASE_LISTENED[index])));
@@ -371,19 +355,69 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
             }
             modules.put(CASE_NAMES[index], moduleKeys);
             listenerFields.put(CASE_NAMES[index], fieldsByStatement);
+            rowTypePins.put(CASE_NAMES[index], CASE_ROW_TYPE_PINS[index]);
         }
         LISTENED_STATEMENTS = Collections.unmodifiableMap(listened);
         MODULE_KEYS = Collections.unmodifiableMap(modules);
         LISTENER_FIELDS = Collections.unmodifiableMap(listenerFields);
+        ROW_TYPE_PINS = Collections.unmodifiableMap(rowTypePins);
     }
 
-    private InfraNamedWindowConsumerViewsScenarioOracle() {
+    /**
+     * The regression-lib SupportOverrideBase hierarchy (SupportOverrideBase
+     * lines 18-28, SupportOverrideOne lines 13-19, SupportOverrideOneA lines
+     * 18-26): each class overrides {@code getVal()}, so the most-derived
+     * override wins on virtual dispatch.  The oracle re-declares the three
+     * classes because regression-lib is not on the oracle classpath; the simple
+     * class names are what the suite sends and the window type derives from.
+     */
+    public static class SupportOverrideBase {
+        private final String val;
+
+        public SupportOverrideBase(String val) {
+            this.val = val;
+        }
+
+        public String getVal() {
+            return val;
+        }
+    }
+
+    public static class SupportOverrideOne extends SupportOverrideBase {
+        private final String valOne;
+
+        public SupportOverrideOne(String valOne, String val) {
+            super(val);
+            this.valOne = valOne;
+        }
+
+        @Override
+        public String getVal() {
+            return valOne;
+        }
+    }
+
+    public static class SupportOverrideOneA extends SupportOverrideOne {
+        private final String valOneA;
+
+        public SupportOverrideOneA(String valOneA, String valOne, String val) {
+            super(valOne, val);
+            this.valOneA = valOneA;
+        }
+
+        @Override
+        public String getVal() {
+            return valOneA;
+        }
+    }
+
+    private InfraNamedWindowBeanViewsScenarioOracle() {
     }
 
     public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             throw new IllegalArgumentException(
-                    "usage: InfraNamedWindowConsumerViewsScenarioOracle <scenario.json>");
+                    "usage: InfraNamedWindowBeanViewsScenarioOracle <scenario.json>");
         }
         JsonValue parsed = Json.parse(Files.readString(Path.of(args[0]), StandardCharsets.UTF_8));
         if (!parsed.isObject()) {
@@ -396,8 +430,15 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
 
         Configuration configuration = new Configuration();
         configuration.getCommon().addEventType(SupportBean.class);
-        configuration.getCommon().addEventType("SupportMarketDataBean", marketDataSchema());
-        configuration.getCommon().addEventType("MySimpleKeyValueMap", simpleKeyValueSchema());
+        configuration.getCommon().addEventType(SupportBean_S0.class);
+        configuration.getCommon().addEventType("SupportBean_A", supportBeanASchema());
+        configuration.getCommon().addEventType("SupportOverrideBase", SupportOverrideBase.class);
+        configuration.getCommon().addEventType("SupportOverrideOne", SupportOverrideOne.class);
+        configuration.getCommon().addEventType("SupportOverrideOneA", SupportOverrideOneA.class);
+        // The suite's harness enables Avro (TestSuiteInfraNamedWindow line 127),
+        // which is what makes ord 35's AVRO variant fail on the POJO mapping
+        // rather than on the missing Avro provider.
+        configuration.getCommon().getEventMeta().getAvroSettings().setEnableAvro(true);
         configuration.getRuntime().getThreading().setInternalTimerEnabled(false);
         configuration.getRuntime().getExceptionHandling().addClass(
                 HarnessRethrowExceptionHandlerFactory.class);
@@ -429,36 +470,14 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
     }
 
     /**
-     * The map event type the suite registers as MySimpleKeyValueMap
-     * (TestSuiteInfraNamedWindow lines 136-139): key string, value long, which
-     * is also the join key of ord 51.  Ord 49/50/51 insert the Long projection
-     * of longBoxed, mirroring the {@code 1L} literals of their assertions and
-     * the {@code Long.class} property-type pins at INV:3232-3235,
-     * INV:3272-3275 and INV:3322-3325.
+     * Map event type mirroring the regression-lib SupportBean_A read surface
+     * (SupportBean_A lines 18-24 extends SupportBeanAtoFBase, whose single
+     * property is id:String); the regression-lib bean is not on the oracle
+     * classpath and ord 2's update trigger reads no property, so the trigger
+     * only needs the same type name and the id column the suite's send sets.
      */
-    private static Map<String, Object> simpleKeyValueSchema() {
+    private static Map<String, Object> supportBeanASchema() {
         Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("key", String.class);
-        schema.put("value", long.class);
-        return schema;
-    }
-
-    /**
-     * Map event type carrying the regression-lib SupportMarketDataBean read
-     * surface (symbol, price, volume, feed, id); the regression-lib bean is not
-     * on the oracle classpath.  Ord 43's and ord 45's delete triggers compare
-     * symbol with the window's key column, and ord 51's join matches the
-     * boxed Long volume of a market event against the window's Long value, so
-     * the sender sets volume from the payload (defaulting to 0L) exactly like
-     * sendMarketBean(env, symbol, volume) and new SupportMarketDataBean(symbol,
-     * 0, volume, "").
-     */
-    private static Map<String, Object> marketDataSchema() {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("symbol", String.class);
-        schema.put("price", double.class);
-        schema.put("volume", Long.class);
-        schema.put("feed", String.class);
         schema.put("id", String.class);
         return schema;
     }
@@ -512,6 +531,9 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
             JsonObject step = stepValue.asObject();
             if ("case".equals(string(step, "op"))) {
                 inCase = caseName.equals(string(step, "case"));
+                if (inCase) {
+                    checkNegativeCompile(configuration, caseName);
+                }
                 continue;
             }
             if (!inCase) {
@@ -554,6 +576,35 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
                                 + caseName);
                     }
                     records.add(snapshot(runtime, statement, caseName, fieldsOf(step)));
+                    break;
+                }
+                case "faf": {
+                    // Fire-and-forget query against the named window, mirroring
+                    // RegressionEnvironmentBase.compileExecuteFAF: compiled
+                    // with the runtime path and executed on demand.
+                    CompilerArguments fafArgs = new CompilerArguments(configuration);
+                    fafArgs.getPath().add(runtime.getRuntimePath());
+                    EPCompiled query = EPCompilerProvider.getCompiler()
+                            .compileQuery(string(step, "epl"), fafArgs);
+                    EPFireAndForgetQueryResult result = runtime.getFireAndForgetService()
+                            .executeQuery(query);
+                    JsonArray rows = new JsonArray();
+                    for (EventBean row : result.getArray()) {
+                        checkDeliveryType(caseName, row);
+                        rows.add(projectedRow(row, fieldsOf(step), rowTypePin(caseName)));
+                    }
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "faf");
+                    record.add("statement", string(step, "statement"));
+                    record.add("sequence", 0);
+                    record.add("time",
+                            Instant.ofEpochMilli(runtime.getEventService().getCurrentTime())
+                                    .toString());
+                    if (rows.size() > 0) {
+                        record.add("new", rows);
+                    }
+                    records.add(record);
                     break;
                 }
                 case "advance-time":
@@ -657,19 +708,7 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
                         + "another statement " + name);
             }
             statementsByName.put(name, statement);
-            if ("create".equals(name) && windowPropertyPin(caseName)) {
-                // The suite's assertStatement blocks of INV:3232-3235,
-                // INV:3272-3275 and INV:3322-3325 pin the window event type's
-                // property types; this harness-internal pin keeps them checked
-                // without adding a record the suite does not assert.
-                if (statement.getEventType().getPropertyType("key") != String.class
-                        || statement.getEventType().getPropertyType("value") != Long.class) {
-                    throw new IllegalStateException("case " + caseName + " window event type = key "
-                            + statement.getEventType().getPropertyType("key") + ", value "
-                            + statement.getEventType().getPropertyType("value")
-                            + ", want String and Long");
-                }
-            }
+            checkDeployment(caseName, name, epls.get(index), statement);
             if (listened.contains(name)) {
                 statement.addListener(listener(caseName, listenerFields.get(name), sequences, records,
                         runtime));
@@ -677,14 +716,86 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
         }
     }
 
-    /** Whether the case asserts the window event type's property types. */
-    private static boolean windowPropertyPin(String caseName) {
+    /**
+     * The suite's {@code tryInvalidCompile} check of INV:315-316: ord 35's
+     * AVRO-contained window EPL must fail to compile with the pinned message
+     * prefix.  The check runs without a path exactly like the suite's, and emits
+     * no record because it deploys nothing.
+     */
+    private static void checkNegativeCompile(Configuration configuration, String caseName)
+            throws Exception {
+        int index = caseIndex(caseName);
+        String epl = CASE_NEGATIVE_COMPILE_EPLS[index];
+        if (epl.isEmpty()) {
+            return;
+        }
+        try {
+            EPCompilerProvider.getCompiler().compile(epl, new CompilerArguments(configuration));
+        } catch (EPCompileException ex) {
+            if (!ex.getMessage().startsWith(EPL_BC_AVRO_ERROR)) {
+                throw new IllegalStateException("case " + caseName + " avro compile message = "
+                        + ex.getMessage() + ", want prefix " + EPL_BC_AVRO_ERROR);
+            }
+            return;
+        }
+        throw new IllegalStateException("case " + caseName + " avro EPL compiled but must fail: "
+                + epl);
+    }
+
+    /** The pinned index of one case name. */
+    private static int caseIndex(String caseName) {
         for (int index = 0; index < CASE_NAMES.length; index++) {
             if (CASE_NAMES[index].equals(caseName)) {
-                return CASE_WINDOW_PROPERTY_PINS[index];
+                return index;
             }
         }
         throw new IllegalStateException("unknown case " + caseName);
+    }
+
+    /**
+     * Harness-internal expectations the suite asserts through
+     * {@code assertStatement} or {@code assertStatelessStmt} and that emit no
+     * records of their own: ord 2's window must be a bean event named
+     * MyWindowBB over SupportBean in every sub-run (which is what proves the
+     * representation annotation was ignored, INV:3623-3626), its s0 select must
+     * be stateless (INV:3599) and ord 35's window underlying must be Object[]
+     * for the objectarray annotation and a Map for map/default (INV:3502 with
+     * EventRepresentationChoice.matchesClass).
+     */
+    private static void checkDeployment(String caseName, String statementName, String epl,
+                                        EPStatement statement) {
+        if ("bean-backed".equals(caseName) && "create".equals(statementName)) {
+            if (!(statement.getEventType() instanceof BeanEventType)
+                    || !"MyWindowBB".equals(statement.getEventType().getName())
+                    || !SupportBean.class.equals(statement.getEventType().getUnderlyingType())) {
+                throw new IllegalStateException("case " + caseName + " window type = "
+                        + statement.getEventType().getName() + " ("
+                        + statement.getEventType().getClass().getSimpleName() + ", underlying "
+                        + statement.getEventType().getUnderlyingType()
+                        + "), want a bean window type MyWindowBB over SupportBean"
+                        + " regardless of the representation annotation");
+            }
+            return;
+        }
+        if ("bean-backed".equals(caseName) && "s0".equals(statementName)) {
+            StatementContext context = ((EPStatementSPI) statement).getStatementContext();
+            if (!context.isStatelessSelect()) {
+                throw new IllegalStateException("case " + caseName + " s0 is not stateless");
+            }
+            return;
+        }
+        if ("bean-contained".equals(caseName) && "create".equals(statementName)) {
+            Class<?> underlying = statement.getEventType().getUnderlyingType();
+            boolean objectArray = epl.contains("@EventRepresentation('objectarray')");
+            if (objectArray && underlying != Object[].class) {
+                throw new IllegalStateException("case " + caseName + " objectarray window underlying = "
+                        + underlying + ", want Object[]");
+            }
+            if (!objectArray && (underlying == null || !Map.class.isAssignableFrom(underlying))) {
+                throw new IllegalStateException("case " + caseName + " map/default window underlying = "
+                        + underlying + ", want a Map implementation");
+            }
+        }
     }
 
     /**
@@ -703,8 +814,8 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
                                            EPRuntime runtime) {
         return (newEvents, oldEvents, statement, ignoredRuntime) -> {
             int sequence = sequences.merge(statement.getName(), 1, Integer::sum);
-            JsonArray newRows = rows(newEvents, fields);
-            JsonArray oldRows = rows(oldEvents, fields);
+            JsonArray newRows = rows(caseName, newEvents, fields);
+            JsonArray oldRows = rows(caseName, oldEvents, fields);
             if (newRows.size() == 0 && oldRows.size() == 0) {
                 throw new IllegalStateException("listener for statement " + statement.getName()
                         + " was invoked without a stream in case " + caseName);
@@ -745,7 +856,9 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
                                        String[] fields) {
         JsonArray rows = new JsonArray();
         for (Iterator<EventBean> iterator = statement.iterator(); iterator.hasNext(); ) {
-            rows.add(projectedRow(iterator.next(), fields));
+            EventBean event = iterator.next();
+            checkDeliveryType(caseName, event);
+            rows.add(projectedRow(event, fields, rowTypePin(caseName)));
         }
         JsonObject record = new JsonObject();
         record.add("case", caseName);
@@ -778,10 +891,19 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
         return names;
     }
 
-    /** Projected row rendering projected to exactly the fields the Java assertions read. */
-    private static JsonObject projectedRow(EventBean event, String[] fields) {
+    /**
+     * Projected row rendering projected to exactly the fields the Java
+     * assertions read.  When the case's assertions are metadata-only (ord 2 and
+     * ord 37) the row also carries the delivered event type name, which is the
+     * language-neutral part of the suite's {@code assertEvent} predicate; the
+     * field map stays empty there because Java never reads a property.
+     */
+    private static JsonObject projectedRow(EventBean event, String[] fields, boolean withType) {
         JsonObject item = new JsonObject();
         item.add("kind", "row");
+        if (withType) {
+            item.add("type", event.getEventType().getName());
+        }
         item.add("fields", projectedFields(event, fields));
         return item;
     }
@@ -796,15 +918,61 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
     }
 
     /** Projected rows for listener delivery, in delivery order. */
-    private static JsonArray rows(EventBean[] events, String[] fields) {
+    private static JsonArray rows(String caseName, EventBean[] events, String[] fields) {
         JsonArray array = new JsonArray();
         if (events == null) {
             return array;
         }
+        boolean withType = rowTypePin(caseName);
         for (EventBean event : events) {
-            array.add(projectedRow(event, fields));
+            checkDeliveryType(caseName, event);
+            array.add(projectedRow(event, fields, withType));
         }
         return array;
+    }
+
+    /** Whether the case's assertions carry the delivered event type on each row. */
+    private static boolean rowTypePin(String caseName) {
+        Boolean pin = ROW_TYPE_PINS.get(caseName);
+        if (pin == null) {
+            throw new IllegalStateException("unknown case " + caseName);
+        }
+        return pin;
+    }
+
+    /**
+     * The suite's {@code assertEvent} predicate (INV:3622-3627) for the cases
+     * whose listener or fire-and-forget rows are asserted as window-typed bean
+     * events; a harness-internal expectation that emits no record of its own.
+     */
+    private static void checkDeliveryType(String caseName, EventBean event) {
+        String expectedName = expectedWindowTypeName(caseName);
+        if (expectedName == null) {
+            return;
+        }
+        if (!(event.getEventType() instanceof BeanEventType)
+                || !(event.getUnderlying() instanceof SupportBean)
+                || event.getEventType().getMetadata().getTypeClass()
+                        != com.espertech.esper.common.client.meta.EventTypeTypeClass.NAMED_WINDOW
+                || !expectedName.equals(event.getEventType().getName())) {
+            throw new IllegalStateException("case " + caseName + " delivered event type "
+                    + event.getEventType().getName() + " ("
+                    + event.getEventType().getClass().getSimpleName() + ", underlying "
+                    + (event.getUnderlying() == null ? "null"
+                            : event.getUnderlying().getClass().getSimpleName())
+                    + "), want a bean event of window type " + expectedName + " over SupportBean");
+        }
+    }
+
+    /** The window type name the metadata assertions of the case pin, or null. */
+    private static String expectedWindowTypeName(String caseName) {
+        if ("bean-backed".equals(caseName)) {
+            return "MyWindowBB";
+        }
+        if ("bean-schema-backed".equals(caseName)) {
+            return "MyWindowBSB";
+        }
+        return null;
     }
 
     /**
@@ -832,23 +1000,23 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
     }
 
     /**
-     * Sends one scenario event.  SupportBean carries theString plus intPrimitive
-     * for ords 43/45 and theString plus longBoxed for ords 49/50/51; the market
-     * map carries symbol (plus the optional volume that ord 51's join matches)
-     * and the delete triggers of ords 43/45 only use symbol.
+     * Sends one scenario event under the event-type name the suite's
+     * {@code sendEventBean} derives from the simple class name.  SupportBean's
+     * no-arg send carries an empty payload (every property keeps its Java
+     * default, theString included); SupportBean_S0, SupportBean_A and
+     * SupportOverrideOneA carry the columns their EPL and assertions touch.
      */
     private static void sendEvent(EPRuntime runtime, String type, JsonObject payload) {
         switch (type) {
             case "SupportBean": {
                 SupportBean bean = new SupportBean();
-                bean.setTheString(string(payload, "theString"));
+                JsonValue theString = payload.get("theString");
+                if (theString != null) {
+                    bean.setTheString(string(payload, "theString"));
+                }
                 JsonValue intPrimitive = payload.get("intPrimitive");
                 if (intPrimitive != null) {
                     bean.setIntPrimitive(integer(payload, "intPrimitive"));
-                }
-                JsonValue intBoxed = payload.get("intBoxed");
-                if (intBoxed != null) {
-                    bean.setIntBoxed(integer(payload, "intBoxed"));
                 }
                 JsonValue longBoxed = payload.get("longBoxed");
                 if (longBoxed != null) {
@@ -861,15 +1029,23 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
                 runtime.getEventService().sendEventBean(bean, type);
                 break;
             }
-            case "SupportMarketDataBean": {
+            case "SupportBean_S0": {
+                SupportBean_S0 bean = new SupportBean_S0(
+                        integer(payload, "id"), string(payload, "p00"));
+                runtime.getEventService().sendEventBean(bean, type);
+                break;
+            }
+            case "SupportBean_A": {
                 Map<String, Object> event = new LinkedHashMap<>();
-                event.put("symbol", string(payload, "symbol"));
-                event.put("price", 0.0d);
-                JsonValue volume = payload.get("volume");
-                event.put("volume", volume == null ? 0L : longInteger(volume, "volume"));
-                event.put("feed", "");
-                event.put("id", null);
+                event.put("id", string(payload, "id"));
                 runtime.getEventService().sendEventMap(event, type);
+                break;
+            }
+            case "SupportOverrideOneA": {
+                SupportOverrideOneA bean = new SupportOverrideOneA(
+                        string(payload, "valOneA"), string(payload, "valOne"),
+                        string(payload, "val"));
+                runtime.getEventService().sendEventBean(bean, type);
                 break;
             }
             default:
@@ -899,15 +1075,20 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
         for (int index = 0; index < cases.size(); index++) {
             JsonObject definition = object(cases.get(index), "case definition");
             requireFields(definition, "case", "ordinal", "runtimeId", "executionName",
-                    "description", "createEpl", "insertEpl", "s0Epl", "s2Epl", "s3Epl",
-                    "consumeEpl", "deleteEpl", "varEpl", "onSetEpl", "deploys", "listened",
-                    "iteratorSnapshots");
+                    "description", "createEpl", "createEplObjectArray", "createEplMap",
+                    "createEplAvro", "insertEpl", "s0Epl", "s2Epl", "s3Epl", "consumeEpl",
+                    "deleteEpl", "varEpl", "onSetEpl", "schemaEpl", "updateEpl", "fafEpl",
+                    "negativeCompileEpl", "deploys", "listened", "iteratorSnapshots");
             if (!CASE_NAMES[index].equals(string(definition, "case"))
                     || integer(definition, "ordinal") != ORDINALS[index]
                     || !RUNTIME_IDS[index].equals(string(definition, "runtimeId"))
                     || !EXECUTION_NAMES[index].equals(string(definition, "executionName"))
                     || !CASE_DESCRIPTIONS[index].equals(string(definition, "description"))
                     || !CASE_CREATE_EPLS[index].equals(string(definition, "createEpl"))
+                    || !CASE_CREATE_OBJECTARRAY_EPLS[index]
+                            .equals(string(definition, "createEplObjectArray"))
+                    || !CASE_CREATE_MAP_EPLS[index].equals(string(definition, "createEplMap"))
+                    || !CASE_CREATE_AVRO_EPLS[index].equals(string(definition, "createEplAvro"))
                     || !CASE_INSERT_EPLS[index].equals(string(definition, "insertEpl"))
                     || !CASE_S0_EPLS[index].equals(string(definition, "s0Epl"))
                     || !CASE_S2_EPLS[index].equals(string(definition, "s2Epl"))
@@ -916,6 +1097,11 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
                     || !CASE_DELETE_EPLS[index].equals(string(definition, "deleteEpl"))
                     || !CASE_VAR_EPLS[index].equals(string(definition, "varEpl"))
                     || !CASE_ONSET_EPLS[index].equals(string(definition, "onSetEpl"))
+                    || !CASE_SCHEMA_EPLS[index].equals(string(definition, "schemaEpl"))
+                    || !CASE_UPDATE_EPLS[index].equals(string(definition, "updateEpl"))
+                    || !CASE_FAF_EPLS[index].equals(string(definition, "fafEpl"))
+                    || !CASE_NEGATIVE_COMPILE_EPLS[index]
+                            .equals(string(definition, "negativeCompileEpl"))
                     || integer(definition, "iteratorSnapshots") != CASE_SNAPSHOTS[index]) {
                 throw new IllegalArgumentException("case metadata is not pinned at index " + index);
             }
@@ -930,11 +1116,10 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
             throw new IllegalArgumentException("scenario must contain exactly " + EXPECTED_STEPS
                     + " steps, got " + steps.size());
         }
-        int offset = validateFilteringConsumer(steps, 0);
-        offset = validateFilteringConsumerLateStart(steps, offset);
-        offset = validatePriorStats(steps, offset);
-        offset = validateLateConsumer(steps, offset);
-        offset = validateLateConsumerJoin(steps, offset);
+        int offset = validateBeanBacked(steps, 0);
+        offset = validateBeanContained(steps, offset);
+        offset = validateBeanSchemaBacked(steps, offset);
+        offset = validateDeepSupertypeInsert(steps, offset);
         if (offset != steps.size()) {
             throw new IllegalArgumentException("scenario steps contain an unexpected suffix");
         }
@@ -943,159 +1128,164 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
 
 
     /**
-     * Exact InfraFilteringConsumer step sequence mirroring lines 2951-2993: the
-     * single four-statement module deploy, the two same-key G1 arrivals whose
-     * replacement is one new-plus-old delta, the G2 arrival with its any-order
-     * window and ordered consumer snapshots (INV:2969/2970), the G2 delete, the
-     * filtered-out G3 arrival and delete with the exhausted consumer iterator of
-     * INV:2982, and the two closing arrivals whose consumer state is read
-     * any-order (INV:2991).  No clock moves.
+     * Exact InfraBeanBacked step sequence mirroring the helper at lines
+     * 3591-3611 run once per representation (INV:300-303): create, insert and
+     * s0 for the first fill, the on-trigger update module, the SupportBean_A
+     * trigger and a full teardown, repeated for objectarray, map, default and
+     * avro.  No clock moves.
      */
-    private static int validateFilteringConsumer(JsonArray steps, int offset) {
+    private static int validateBeanBacked(JsonArray steps, int offset) {
         String caseName = CASE_NAMES[0];
         validateCaseMarker(steps.get(offset++), caseName);
-        validateDeploy(steps.get(offset++), caseName, "create", EPL_FC_CREATE);
-        validateDeploy(steps.get(offset++), caseName, "insert", EPL_FC_INSERT);
-        validateDeploy(steps.get(offset++), caseName, "s0", EPL_FC_S0);
-        validateDeploy(steps.get(offset++), caseName, "delete", EPL_FC_DELETE);
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G1", 5);
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G1", 15);
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G2", 8);
-        validateSnapshot(steps.get(offset++), caseName, "create", "any", "key", "value");
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "key", "value");
-        validateMarketSend(steps.get(offset++), caseName, "G2");
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G3", -1);
-        validateSnapshot(steps.get(offset++), caseName, "create", "any", "key", "value");
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "key", "value");
-        validateMarketSend(steps.get(offset++), caseName, "G3");
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G1", 6);
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G2", 7);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "any", "key", "value");
-        validateUndeployAll(steps.get(offset++), caseName);
+        String[] createEpls = {
+                EPL_BB_CREATE_OBJECTARRAY, EPL_BB_CREATE_MAP, EPL_BB_CREATE, EPL_BB_CREATE_AVRO
+        };
+        for (String createEpl : createEpls) {
+            validateDeploy(steps.get(offset++), caseName, "create", createEpl);
+            validateDeploy(steps.get(offset++), caseName, "insert", EPL_BB_INSERT);
+            validateDeploy(steps.get(offset++), caseName, "s0", EPL_BB_S0);
+            validateEmptyBeanSend(steps.get(offset++), caseName);
+            validateDeploy(steps.get(offset++), caseName, "update", EPL_BB_UPDATE);
+            validateBeanASend(steps.get(offset++), caseName, "A1");
+            validateUndeployAll(steps.get(offset++), caseName);
+        }
         return offset;
     }
 
     /**
-     * Exact InfraFilteringConsumerLateStart step sequence mirroring lines
-     * 3125-3164: the two-statement module A, the three fills that arrive before
-     * any listener exists, the MID-TIMELINE deploy of the filtered aggregate
-     * consumer at its source position (INV:3135) whose preload the first
-     * ordered snapshot reads, the four filtered/unfiltered arrivals and their
-     * snapshots, the late delete module (INV:3152), the two market deletes and
-     * the three module-scoped undeploys in source order.  No clock moves.
+     * Exact InfraBeanContained step sequence mirroring the helper at lines
+     * 3498-3509 run once per representation (INV:309-313): the contained-bean
+     * window, the stream-wildcard insert, the SupportBean_S0 fill and a full
+     * teardown, repeated for objectarray, map and default.  The avro variant of
+     * INV:315-316 never deploys; the oracle checks its compile failure
+     * separately.  No clock moves.
      */
-    private static int validateFilteringConsumerLateStart(JsonArray steps, int offset) {
+    private static int validateBeanContained(JsonArray steps, int offset) {
         String caseName = CASE_NAMES[1];
         validateCaseMarker(steps.get(offset++), caseName);
-        validateDeploy(steps.get(offset++), caseName, "create", EPL_FCLS_CREATE);
-        validateDeploy(steps.get(offset++), caseName, "insert", EPL_FCLS_INSERT);
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G1", 5);
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G2", 15);
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G3", 2);
-        validateDeploy(steps.get(offset++), caseName, "s0", EPL_FCLS_S0);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "sumvalue");
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G4", 1);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "sumvalue");
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G5", 20);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "sumvalue");
-        validateIntPrimitiveSend(steps.get(offset++), caseName, "G6", 9);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "sumvalue");
-        validateDeploy(steps.get(offset++), caseName, "delete", EPL_FCLS_DELETE);
-        validateMarketSend(steps.get(offset++), caseName, "G4");
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "sumvalue");
-        validateMarketSend(steps.get(offset++), caseName, "G5");
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "sumvalue");
-        validateUndeploy(steps.get(offset++), caseName, "s0");
-        validateUndeploy(steps.get(offset++), caseName, "delete");
-        validateUndeploy(steps.get(offset++), caseName, "create");
+        String[] createEpls = {EPL_BC_CREATE_OBJECTARRAY, EPL_BC_CREATE_MAP, EPL_BC_CREATE};
+        for (String createEpl : createEpls) {
+            validateDeploy(steps.get(offset++), caseName, "create", createEpl);
+            validateDeploy(steps.get(offset++), caseName, "insert", EPL_BC_INSERT);
+            validateBeanS0Send(steps.get(offset++), caseName, 1, "E1");
+            validateUndeployAll(steps.get(offset++), caseName);
+        }
         return offset;
     }
 
     /**
-     * Exact InfraPriorStats step sequence mirroring lines 3226-3258: the single
-     * four-statement module deploy and the four arrivals, each followed by the
-     * ordered statistics snapshot of INV:3241/3246/3251/3256.  The prior-values
-     * consumer and the statistics consumer are asserted through their listener
-     * records only for the new stream; no clock moves.
+     * Exact InfraBeanSchemaBacked step sequence mirroring lines 347-360: the
+     * schema/window/insert module, the first bean send, the fire-and-forget
+     * query of INV:353, the late {@code select * from ABC} consumer and the
+     * second bean send whose only observable is that the consumer stays
+     * silent.  No clock moves.
      */
-    private static int validatePriorStats(JsonArray steps, int offset) {
+    private static int validateBeanSchemaBacked(JsonArray steps, int offset) {
         String caseName = CASE_NAMES[2];
         validateCaseMarker(steps.get(offset++), caseName);
-        validateDeploy(steps.get(offset++), caseName, "create", EPL_PS_CREATE);
-        validateDeploy(steps.get(offset++), caseName, "insert", EPL_PS_INSERT);
-        validateDeploy(steps.get(offset++), caseName, "s0", EPL_PS_S0);
-        validateDeploy(steps.get(offset++), caseName, "s3", EPL_PS_S3);
-        validateLongSend(steps.get(offset++), caseName, "E1", 1L);
-        validateSnapshot(steps.get(offset++), caseName, "s3", "ordered", "average");
-        validateLongSend(steps.get(offset++), caseName, "E2", 2L);
-        validateSnapshot(steps.get(offset++), caseName, "s3", "ordered", "average");
-        validateLongSend(steps.get(offset++), caseName, "E3", 2L);
-        validateSnapshot(steps.get(offset++), caseName, "s3", "ordered", "average");
-        validateLongSend(steps.get(offset++), caseName, "E4", 2L);
-        validateSnapshot(steps.get(offset++), caseName, "s3", "ordered", "average");
+        validateDeploy(steps.get(offset++), caseName, "schema", EPL_BSB_SCHEMA);
+        validateDeploy(steps.get(offset++), caseName, "create", EPL_BSB_CREATE);
+        validateDeploy(steps.get(offset++), caseName, "insert", EPL_BSB_INSERT);
+        validateEmptyBeanSend(steps.get(offset++), caseName);
+        validateFaf(steps.get(offset++), caseName, EPL_BSB_FAF);
+        validateDeploy(steps.get(offset++), caseName, "s0", EPL_BSB_S0);
+        validateEmptyBeanSend(steps.get(offset++), caseName);
         validateUndeployAll(steps.get(offset++), caseName);
         return offset;
     }
 
     /**
-     * Exact InfraLateConsumer step sequence mirroring lines 3269-3309: the four
-     * single-statement modules, the two fills that exist before the statistics
-     * consumer is deployed mid-timeline (INV:3288, first ordered snapshot
-     * INV:3289), the two updates, the second late consumer at INV:3300 with the
-     * count preload (INV:3301) and the final update with both consumer
-     * snapshots of INV:3306/3307.  No clock moves.
+     * Exact InfraDeepSupertypeInsert step sequence mirroring lines 366-371: the
+     * two-statement module, the subtype send and the single window iterator
+     * state of INV:370.  No clock moves.
      */
-    private static int validateLateConsumer(JsonArray steps, int offset) {
+    private static int validateDeepSupertypeInsert(JsonArray steps, int offset) {
         String caseName = CASE_NAMES[3];
         validateCaseMarker(steps.get(offset++), caseName);
-        validateDeploy(steps.get(offset++), caseName, "create", EPL_LCL_CREATE);
-        validateDeploy(steps.get(offset++), caseName, "insert", EPL_LCL_INSERT);
-        validateLongSend(steps.get(offset++), caseName, "E1", 1L);
-        validateLongSend(steps.get(offset++), caseName, "E2", 2L);
-        validateDeploy(steps.get(offset++), caseName, "s0", EPL_LCL_S0);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "average");
-        validateLongSend(steps.get(offset++), caseName, "E3", 2L);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "average");
-        validateLongSend(steps.get(offset++), caseName, "E4", 2L);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "average");
-        validateDeploy(steps.get(offset++), caseName, "s2", EPL_LCL_S2);
-        validateSnapshot(steps.get(offset++), caseName, "s2", "ordered", "cnt");
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "average");
-        validateLongSend(steps.get(offset++), caseName, "E5", 3L);
-        validateSnapshot(steps.get(offset++), caseName, "s0", "ordered", "average");
-        validateSnapshot(steps.get(offset++), caseName, "s2", "ordered", "cnt");
+        validateDeploy(steps.get(offset++), caseName, "create", EPL_DSI_CREATE);
+        validateDeploy(steps.get(offset++), caseName, "insert", EPL_DSI_INSERT);
+        validateOverrideSend(steps.get(offset++), caseName, "1a", "1", "base");
+        validateSnapshot(steps.get(offset++), caseName, "create", "ordered", "val");
         validateUndeployAll(steps.get(offset++), caseName);
         return offset;
     }
 
+    /** The no-argument SupportBean send of ords 2 and 37 (empty payload). */
+    private static void validateEmptyBeanSend(JsonValue value, String caseName) {
+        JsonObject step = object(value, "SupportBean step");
+        requireFields(step, "op", "case", "eventType", "payload");
+        if (!"send".equals(string(step, "op")) || !caseName.equals(string(step, "case"))
+                || !"SupportBean".equals(string(step, "eventType"))) {
+            throw new IllegalArgumentException("SupportBean step is not pinned for " + caseName);
+        }
+        requireFields(object(step.get("payload"), "SupportBean payload"));
+    }
+
+    /** Ord 35's SupportBean_S0 fill: new SupportBean_S0(1, "E1"). */
+    private static void validateBeanS0Send(JsonValue value, String caseName, int expectedId,
+                                           String expectedP00) {
+        JsonObject step = object(value, "SupportBean_S0 step");
+        requireFields(step, "op", "case", "eventType", "payload");
+        if (!"send".equals(string(step, "op")) || !caseName.equals(string(step, "case"))
+                || !"SupportBean_S0".equals(string(step, "eventType"))) {
+            throw new IllegalArgumentException("SupportBean_S0 step is not pinned for " + caseName);
+        }
+        JsonObject payload = object(step.get("payload"), "SupportBean_S0 payload");
+        requireFields(payload, "id", "p00");
+        if (integer(payload, "id") != expectedId || !expectedP00.equals(string(payload, "p00"))) {
+            throw new IllegalArgumentException("SupportBean_S0 payload is not pinned for " + caseName);
+        }
+    }
+
+    /** Ord 2's update trigger: new SupportBean_A("A1"). */
+    private static void validateBeanASend(JsonValue value, String caseName, String expectedId) {
+        JsonObject step = object(value, "SupportBean_A step");
+        requireFields(step, "op", "case", "eventType", "payload");
+        if (!"send".equals(string(step, "op")) || !caseName.equals(string(step, "case"))
+                || !"SupportBean_A".equals(string(step, "eventType"))) {
+            throw new IllegalArgumentException("SupportBean_A step is not pinned for " + caseName);
+        }
+        JsonObject payload = object(step.get("payload"), "SupportBean_A payload");
+        requireFields(payload, "id");
+        if (!expectedId.equals(string(payload, "id"))) {
+            throw new IllegalArgumentException("SupportBean_A payload is not pinned for " + caseName);
+        }
+    }
+
+    /** Ord 38's subtype send: new SupportOverrideOneA("1a", "1", "base"). */
+    private static void validateOverrideSend(JsonValue value, String caseName, String expectedValOneA,
+                                             String expectedValOne, String expectedVal) {
+        JsonObject step = object(value, "SupportOverrideOneA step");
+        requireFields(step, "op", "case", "eventType", "payload");
+        if (!"send".equals(string(step, "op")) || !caseName.equals(string(step, "case"))
+                || !"SupportOverrideOneA".equals(string(step, "eventType"))) {
+            throw new IllegalArgumentException("SupportOverrideOneA step is not pinned for "
+                    + caseName);
+        }
+        JsonObject payload = object(step.get("payload"), "SupportOverrideOneA payload");
+        requireFields(payload, "valOneA", "valOne", "val");
+        if (!expectedValOneA.equals(string(payload, "valOneA"))
+                || !expectedValOne.equals(string(payload, "valOne"))
+                || !expectedVal.equals(string(payload, "val"))) {
+            throw new IllegalArgumentException("SupportOverrideOneA payload is not pinned for "
+                    + caseName);
+        }
+    }
+
     /**
-     * Exact InfraLateConsumerJoin step sequence mirroring lines 3319-3368: the
-     * three single-statement modules, the two fills, the MID-TIMELINE deploy of
-     * the left-outer join consumer at INV:3341 whose replayed window the ordered
-     * null-padded snapshot of INV:3343 reads, the two market sends (S1 matching
-     * both rows in the any-order invocation order the suite leaves open, S2
-     * matching nothing) with their any-order snapshots, the third window arrival
-     * that joins S2 and its any-order snapshot.  The case marker carries the
-     * mode "any" the suite's ambiguity requires; no clock moves.
+     * Ord 37's fire-and-forget query step: the query text is compiled with the
+     * runtime path and executed on demand, and the step's projection list is
+     * empty because the suite reads only the returned row's event type.
      */
-    private static int validateLateConsumerJoin(JsonArray steps, int offset) {
-        String caseName = CASE_NAMES[4];
-        validateCaseMarkerWithMode(steps.get(offset++), caseName, "any");
-        validateDeploy(steps.get(offset++), caseName, "create", EPL_LCJ_CREATE);
-        validateDeploy(steps.get(offset++), caseName, "insert", EPL_LCJ_INSERT);
-        validateLongSend(steps.get(offset++), caseName, "E1", 1L);
-        validateLongSend(steps.get(offset++), caseName, "E2", 1L);
-        validateDeploy(steps.get(offset++), caseName, "s2", EPL_LCJ_S2);
-        validateSnapshot(steps.get(offset++), caseName, "s2", "ordered",
-                "key", "value", "symbol");
-        validateMarketVolumeSend(steps.get(offset++), caseName, "S1", 1L);
-        validateSnapshot(steps.get(offset++), caseName, "s2", "any", "key", "value", "symbol");
-        validateMarketVolumeSend(steps.get(offset++), caseName, "S2", 2L);
-        validateSnapshot(steps.get(offset++), caseName, "s2", "any", "key", "value", "symbol");
-        validateLongSend(steps.get(offset++), caseName, "E3", 2L);
-        validateSnapshot(steps.get(offset++), caseName, "s2", "any", "key", "value", "symbol");
-        validateUndeployAll(steps.get(offset++), caseName);
-        return offset;
+    private static void validateFaf(JsonValue value, String caseName, String expectedEpl) {
+        JsonObject step = object(value, "faf step");
+        requireFields(step, "op", "case", "statement", "epl", "fields");
+        if (!"faf".equals(string(step, "op")) || !caseName.equals(string(step, "case"))
+                || !"faf".equals(string(step, "statement"))
+                || !expectedEpl.equals(string(step, "epl"))) {
+            throw new IllegalArgumentException("faf step is not pinned for " + caseName);
+        }
+        validateStringArray(step.get("fields"), new String[0], "faf fields for " + caseName);
     }
 
     private static void validateCaseMarker(JsonValue value, String expectedCase) {
@@ -1106,22 +1296,7 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
         }
     }
 
-    /**
-     * Ord 51's case marker carries the any-order mode that tells the
-     * differential to sort that case's listener rows; every other case marker
-     * has no mode key at all.
-     */
-    private static void validateCaseMarkerWithMode(JsonValue value, String expectedCase,
-                                                   String expectedMode) {
-        JsonObject marker = object(value, "case marker");
-        requireFields(marker, "op", "case", "mode");
-        if (!"case".equals(string(marker, "op")) || !expectedCase.equals(string(marker, "case"))
-                || !expectedMode.equals(string(marker, "mode"))) {
-            throw new IllegalArgumentException("case marker is not pinned for " + expectedCase
-                    + " with mode " + expectedMode);
-        }
-    }
-
+    /** Deploy step of one module statement, pinned byte-exactly. */
     private static void validateDeploy(JsonValue value, String caseName, String expectedStatement,
                                        String expectedEpl) {
         JsonObject step = object(value, "deploy step");
@@ -1132,80 +1307,6 @@ public final class InfraNamedWindowConsumerViewsScenarioOracle {
                 || !expectedEpl.equals(string(step, "epl"))) {
             throw new IllegalArgumentException("deploy step is not pinned for " + caseName + "/"
                     + expectedStatement);
-        }
-    }
-
-    /**
-     * Ords 43 and 45 send theString plus intPrimitive (the
-     * sendSupportBeanInt helper, which never touches longBoxed); every other
-     * SupportBean property stays at its Java default.
-     */
-    private static void validateIntPrimitiveSend(JsonValue value, String caseName,
-                                                 String expectedString, int expectedIntPrimitive) {
-        JsonObject payload = validateBeanStep(value, caseName);
-        requireFields(payload, "theString", "intPrimitive");
-        if (!expectedString.equals(string(payload, "theString"))
-                || integer(payload, "intPrimitive") != expectedIntPrimitive) {
-            throw new IllegalArgumentException("SupportBean payload is not pinned for " + caseName);
-        }
-    }
-
-    /** Ords 49, 50 and 51 send theString plus longBoxed, the value their windows read. */
-    private static void validateLongSend(JsonValue value, String caseName, String expectedString,
-                                         long expectedLongBoxed) {
-        JsonObject payload = validateBeanStep(value, caseName);
-        requireFields(payload, "theString", "longBoxed");
-        if (!expectedString.equals(string(payload, "theString"))
-                || longInteger(payload.get("longBoxed"), "longBoxed") != expectedLongBoxed) {
-            throw new IllegalArgumentException("SupportBean payload is not pinned for " + caseName);
-        }
-    }
-
-    private static JsonObject validateBeanStep(JsonValue value, String caseName) {
-        JsonObject step = object(value, "SupportBean step");
-        requireFields(step, "op", "case", "eventType", "payload");
-        if (!"send".equals(string(step, "op"))
-                || !caseName.equals(string(step, "case"))
-                || !"SupportBean".equals(string(step, "eventType"))) {
-            throw new IllegalArgumentException("SupportBean step is not pinned for " + caseName);
-        }
-        return object(step.get("payload"), "SupportBean payload");
-    }
-
-    private static void validateMarketSend(JsonValue value, String caseName, String expectedSymbol) {
-        JsonObject step = object(value, "SupportMarketDataBean step");
-        requireFields(step, "op", "case", "eventType", "payload");
-        if (!"send".equals(string(step, "op"))
-                || !caseName.equals(string(step, "case"))
-                || !"SupportMarketDataBean".equals(string(step, "eventType"))) {
-            throw new IllegalArgumentException("SupportMarketDataBean step is not pinned for "
-                    + caseName);
-        }
-        JsonObject payload = object(step.get("payload"), "SupportMarketDataBean payload");
-        requireFields(payload, "symbol");
-        if (!expectedSymbol.equals(string(payload, "symbol"))) {
-            throw new IllegalArgumentException("SupportMarketDataBean payload is not pinned for "
-                    + caseName);
-        }
-    }
-
-    /** Ord 51 sends a market event whose boxed Long volume is the join key. */
-    private static void validateMarketVolumeSend(JsonValue value, String caseName,
-                                                 String expectedSymbol, long expectedVolume) {
-        JsonObject step = object(value, "SupportMarketDataBean step");
-        requireFields(step, "op", "case", "eventType", "payload");
-        if (!"send".equals(string(step, "op"))
-                || !caseName.equals(string(step, "case"))
-                || !"SupportMarketDataBean".equals(string(step, "eventType"))) {
-            throw new IllegalArgumentException("SupportMarketDataBean step is not pinned for "
-                    + caseName);
-        }
-        JsonObject payload = object(step.get("payload"), "SupportMarketDataBean payload");
-        requireFields(payload, "symbol", "volume");
-        if (!expectedSymbol.equals(string(payload, "symbol"))
-                || longInteger(payload.get("volume"), "volume") != expectedVolume) {
-            throw new IllegalArgumentException("SupportMarketDataBean payload is not pinned for "
-                    + caseName);
         }
     }
 
