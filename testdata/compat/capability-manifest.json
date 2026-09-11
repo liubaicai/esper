@@ -2302,7 +2302,8 @@
     "internal/app/parity/infra_named_window_keepall_delete.go",
     "internal/esper/namedwindow_statement_order_test.go",
     "internal/app/parity/infra_named_window_retention_views.go",
-    "internal/app/parity/infra_named_window_unique_views.go"
+    "internal/app/parity/infra_named_window_unique_views.go",
+    "internal/app/parity/infra_named_window_length_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2336,7 +2337,11 @@
     "java-runtime-c2f54d9eb104d061950c",
     "java-runtime-63daa6cfa27a786c0480",
     "java-runtime-1ee31df7428f7c8e85eb",
-    "java-runtime-bb670bc21e9d4333cefd"
+    "java-runtime-bb670bc21e9d4333cefd",
+    "java-runtime-d931bfbbbaa3ea632c2b",
+    "java-runtime-793f6ec7608e25556803",
+    "java-runtime-b53dbf8f541e79537f32",
+    "java-runtime-c656dd0eeae6618a4162"
    ]
   },
   {
@@ -27049,6 +27054,70 @@
    "difference": "The unique and firstunique data windows are declared with the Unique(key) and FirstUnique(key) retention specs, so the EPL view text (#unique(key)/#firstunique(key)) has no Go analogue. Multi-row iterator snapshots ride the Java views' HashMap iteration order, which the suite only ever asserts any-order; those steps carry mode \"any\" and both traces emit the rows in canonical sorted-field order (the differential protocol canonicalizes the region on both sides as well). The on-delete listener is excluded from the trace on both sides because the Java suite never asserts its payload - matching deletes DO deliver the removed rows to that listener as new data, so the exclusion rests on the never-asserted payload, not on silence. The unique-scene-two consumer statement is named \"consume\" in Java and is deployed without a listener, so it contributes no records; the key/value map window type is modelled as a struct schema as in the sibling slices."
   },
   {
+   "id": "case.infra-namedwindow-views-length",
+   "javaRuntimeIds": [
+    "java-runtime-d931bfbbbaa3ea632c2b",
+    "java-runtime-793f6ec7608e25556803",
+    "java-runtime-b53dbf8f541e79537f32",
+    "java-runtime-c656dd0eeae6618a4162"
+   ],
+   "javaNames": [
+    "InfraLengthWindow",
+    "InfraLengthWindowSceneTwo",
+    "InfraLengthFirstWindow",
+    "InfraLengthWindowSceneThree"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowLengthViewsDirectReplay",
+    "TestRunInfraNamedWindowLengthViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowLengthViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowLengthViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowLengthViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowLengthViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsLengthWindowParity",
+    "TestInfraNWViewsLengthWindowSceneTwoParity",
+    "TestInfraNWViewsLengthFirstWindowParity",
+    "TestInfraNWViewsLengthWindowSceneThreeParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "length-window",
+    "first-length",
+    "retention",
+    "eviction",
+    "irstream",
+    "on-delete",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d931bfbbbaa3ea632c2b",
+    "java-runtime-793f6ec7608e25556803",
+    "java-runtime-b53dbf8f541e79537f32",
+    "java-runtime-c656dd0eeae6618a4162"
+   ],
+   "difference": "The length(N) and firstlength(N) EPL view texts collapse to the LengthWindow and FirstLength retention specs. Eviction and admission semantics are pinned exactly: a length window delivers the new row and the evicted row in ONE invocation, and a firstlength window drops inserts once full with no callback anywhere, freeing capacity only on delete and appending the next arrival at the tail. Ord 25 drives the window through a SupportBean_A trigger compared against the window row's theString and observes a wildcard irstream consumer projected to theString; its first two snapshots are empty and emit records without rows. The on-delete listener is excluded from the trace on both sides for ords 11/12/13 (attached but never asserted; matching deletes do deliver the removed rows to it as new data), while ord 25 attaches no delete listener at all. The key/value map window type is modelled as a struct schema as in the sibling slices."
+  },
+  {
    "id": "case.dataflow-connector-output",
    "javaRuntimeIds": [
     "java-runtime-1ecb769e10b4a818772c"
@@ -43641,13 +43710,17 @@
   {
    "caseId": "case.infra-namedwindow-views-unique",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-length",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 639,
-  "implementedCases": 637,
-  "differentialVerifiedCases": 262,
-  "differentialVerifiedRuntimeIds": 976,
+  "inventoriedCases": 640,
+  "implementedCases": 638,
+  "differentialVerifiedCases": 263,
+  "differentialVerifiedRuntimeIds": 980,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43657,13 +43730,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3574,
+  "runtimeAssociationCount": 3578,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 639,
+  "totalCases": 640,
   "totalCapabilities": 120
  }
 }

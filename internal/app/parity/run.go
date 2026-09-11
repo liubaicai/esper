@@ -153,6 +153,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWRVScenario(file)
 	} else if *mode == "infra-named-window-unique-views" || *mode == "infra-named-window-unique-views-diff" {
 		scenario, err = loadInfraNWRUScenario(file)
+	} else if *mode == "infra-named-window-length-views" || *mode == "infra-named-window-length-views-diff" {
+		scenario, err = loadInfraNWRLScenario(file)
 	} else if *mode == "resultset-aggregate-filter-named-parameter-linear-join" || *mode == "resultset-aggregate-filter-named-parameter-linear-join-diff" {
 		scenario, err = loadResultsetAggregateFilterNamedParameterLinearJoinScenario(file)
 	} else if *mode == "resultset-aggregate-filter-named-parameter-sorted-join" || *mode == "resultset-aggregate-filter-named-parameter-sorted-join-diff" {
@@ -783,6 +785,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultsetAggregateFilterNamedParameterLinearJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, resultsetAggregateFilterNamedParameterLinearJoinJavaSources),
 				splitMetadata(*javaExecutions, resultsetAggregateFilterNamedParameterLinearJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-named-window-length-views" || *mode == "infra-named-window-length-views-diff" {
+		trace, err := runInfraNWRLScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-named-window-length-views-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWRLJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWRLJavaSources),
+				splitMetadata(*javaExecutions, infraNWRLJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
