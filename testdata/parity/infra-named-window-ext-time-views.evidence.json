@@ -1,0 +1,2327 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-c960628819cddf06d0bd",
+    "java-runtime-aa7fe5003096f5bf1cf8",
+    "java-runtime-3af75eefff14ce16ae81"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+  ],
+  "javaExecutions": [
+    "InfraExtTimeWindow",
+    "InfraExtTimeWindowSceneTwo",
+    "InfraExternallyTimedBatch"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-ext-time-views",
+    "steps": [
+      {
+        "op": "case",
+        "case": "ext-time-window"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-time-window",
+        "statement": "create",
+        "epl": "@name('create') create window MyWindowETW#ext_timed(value, 10 sec) as MySimpleKeyValueMap"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-time-window",
+        "statement": "insert",
+        "epl": "insert into MyWindowETW select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-time-window",
+        "statement": "s0",
+        "epl": "@name('s0') select irstream key, value as value from MyWindowETW"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-time-window",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportMarketDataBean delete from MyWindowETW where symbol = key"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longBoxed": 1000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "longBoxed": 5000
+        }
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "longBoxed": 10000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "longBoxed": 11000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "longBoxed": 15000
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "ext-time-window"
+      },
+      {
+        "op": "case",
+        "case": "ext-time-window-scene-two"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindow.win:ext_timed(value, 10 sec) as select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-time-window-scene-two",
+        "statement": "insert",
+        "epl": "insert into MyWindow(key, value) select irstream theString, longBoxed from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-time-window-scene-two",
+        "statement": "consume",
+        "epl": "@name('consume') select irstream key, value as value from MyWindow"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-time-window-scene-two",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol = s1.key"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "longBoxed": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "longBoxed": 5000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G3",
+          "longBoxed": 10000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G4",
+          "longBoxed": 15000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G3"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-time-window-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G5",
+          "longBoxed": 21000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-time-window-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "ext-time-window-scene-two"
+      },
+      {
+        "op": "case",
+        "case": "ext-timed-batch"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-timed-batch",
+        "statement": "create",
+        "epl": "@name('create') create window MyWindowETB#ext_timed_batch(value, 10 sec, 0L) as MySimpleKeyValueMap"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-timed-batch",
+        "statement": "insert",
+        "epl": "insert into MyWindowETB select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-timed-batch",
+        "statement": "s0",
+        "epl": "@name('s0') select irstream key, value as value from MyWindowETB"
+      },
+      {
+        "op": "deploy",
+        "case": "ext-timed-batch",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindowETB as s1 where s0.symbol = s1.key"
+      },
+      {
+        "op": "send",
+        "case": "ext-timed-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longBoxed": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "ext-timed-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "longBoxed": 8000
+        }
+      },
+      {
+        "op": "send",
+        "case": "ext-timed-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "longBoxed": 9999
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-timed-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-timed-batch",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-timed-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-timed-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "longBoxed": 10000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-timed-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-timed-batch",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E4"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-timed-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-timed-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "longBoxed": 14000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-timed-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "ext-timed-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "longBoxed": 21000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ext-timed-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "ext-timed-batch"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-ext-time-views",
+    "records": [
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 11000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 11000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 11000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 11000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G5",
+              "value": 21000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G5",
+              "value": 21000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G5",
+              "value": 21000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 8000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 8000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 8000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 14000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 14000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 14000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 21000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-ext-time-views",
+    "records": [
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 11000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 11000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 11000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 11000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 5000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G5",
+              "value": 21000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G5",
+              "value": 21000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-time-window-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 15000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G5",
+              "value": 21000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 8000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 8000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 8000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 14000
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 14000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 14000
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1000
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 9999
+            }
+          }
+        ]
+      },
+      {
+        "case": "ext-timed-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 21000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

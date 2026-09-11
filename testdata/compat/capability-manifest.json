@@ -2305,7 +2305,8 @@
     "internal/app/parity/infra_named_window_unique_views.go",
     "internal/app/parity/infra_named_window_length_views.go",
     "internal/app/parity/infra_named_window_lengthbatch_sort_views.go",
-    "internal/app/parity/infra_named_window_time_views.go"
+    "internal/app/parity/infra_named_window_time_views.go",
+    "internal/app/parity/infra_named_window_ext_time_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2350,7 +2351,10 @@
     "java-runtime-5fb3e9a4d20bc3964f5f",
     "java-runtime-879d6ad8aee378657a02",
     "java-runtime-5f5a65dd5f72c8e24619",
-    "java-runtime-a6bfdd3389c077127861"
+    "java-runtime-a6bfdd3389c077127861",
+    "java-runtime-c960628819cddf06d0bd",
+    "java-runtime-aa7fe5003096f5bf1cf8",
+    "java-runtime-3af75eefff14ce16ae81"
    ]
   },
   {
@@ -27251,6 +27255,66 @@
    "difference": "This slice is the first to run under virtual time: scenario steps carry advance-time with the RFC3339 instant and every record is stamped with the clock value at delivery on both sides. Sliding-window expiry is pinned at the exact boundary (t=10000 and t=36000 deliver old-only rows to the window statement and its separately deployed consumer, 35999 stays silent), as is firsttime's deploy-anchored close (the window stops admitting at 11000 without any delivery while retained rows survive until deleted; the Go gate reads the deploy-time anchor, matching Java here). The time(N sec) EPL text collapses to the TimeWindow/FirstTime retention specs, the bean-backed ord-8 window projects theString only, and the never-asserted on-delete listener stays excluded from the trace on both sides as in the sibling slices."
   },
   {
+   "id": "case.infra-namedwindow-views-ext-time",
+   "javaRuntimeIds": [
+    "java-runtime-c960628819cddf06d0bd",
+    "java-runtime-aa7fe5003096f5bf1cf8",
+    "java-runtime-3af75eefff14ce16ae81"
+   ],
+   "javaNames": [
+    "InfraExtTimeWindow",
+    "InfraExtTimeWindowSceneTwo",
+    "InfraExternallyTimedBatch"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowExtTimeViewsDirectReplay",
+    "TestRunInfraNamedWindowExtTimeViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowExtTimeViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowExtTimeViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowExtTimeViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowExtTimeViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsExtTimeWindowParity",
+    "TestInfraNWViewsExtTimeWindowSceneTwoParity",
+    "TestInfraNWViewsExternallyTimedBatchParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "ext-timed",
+    "event-time",
+    "sliding-window",
+    "ext-timed-batch",
+    "irstream",
+    "on-delete",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c960628819cddf06d0bd",
+    "java-runtime-aa7fe5003096f5bf1cf8",
+    "java-runtime-3af75eefff14ce16ae81"
+   ],
+   "difference": "These windows are driven purely by the arriving event's timestamp property: the clock stays pinned at the epoch, no timer exists and no advance-time step is replayed, so the Go engine's insert-driven external-timed paths (and the intentional absence of an external-timed arm in the named-window expiry switch, which makes AdvanceTime a no-op for them) match Java by design. The ext_timed(..., 10 sec) text collapses to the ExternallyTimed retention spec and the epoch-referenced ext_timed_batch(..., 0L) to ExternallyTimedBatchWithReference with the explicit zero reference. Sliding expiry releases expired rows as old data together with the arriving row in one invocation; deleted rows emit old-only and swept tombstones stay silent; batch arrivals stay silent until the ten-second boundary and the first flush carries no old data. Ord 7 deploys a consume consumer that the suite never observes, so only its window statement is traced, and the never-asserted on-delete listeners stay excluded on both sides as in the sibling slices. Known limitation of this slice: the Go named-window batch path anchors the ext_timed_batch boundary at the epoch and does not read the reference argument, so the chain's explicit 0L reference is observationally inert here (Java honours the parameter); a future execution with a non-zero or absent reference is not covered by this evidence."
+  },
+  {
    "id": "case.dataflow-connector-output",
    "javaRuntimeIds": [
     "java-runtime-1ecb769e10b4a818772c"
@@ -43855,13 +43919,17 @@
   {
    "caseId": "case.infra-namedwindow-views-time",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-ext-time",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 642,
-  "implementedCases": 640,
-  "differentialVerifiedCases": 265,
-  "differentialVerifiedRuntimeIds": 987,
+  "inventoriedCases": 643,
+  "implementedCases": 641,
+  "differentialVerifiedCases": 266,
+  "differentialVerifiedRuntimeIds": 990,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43871,13 +43939,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3585,
+  "runtimeAssociationCount": 3588,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 642,
+  "totalCases": 643,
   "totalCapabilities": 120
  }
 }
