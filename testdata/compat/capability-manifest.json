@@ -2303,7 +2303,8 @@
     "internal/esper/namedwindow_statement_order_test.go",
     "internal/app/parity/infra_named_window_retention_views.go",
     "internal/app/parity/infra_named_window_unique_views.go",
-    "internal/app/parity/infra_named_window_length_views.go"
+    "internal/app/parity/infra_named_window_length_views.go",
+    "internal/app/parity/infra_named_window_lengthbatch_sort_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2341,7 +2342,11 @@
     "java-runtime-d931bfbbbaa3ea632c2b",
     "java-runtime-793f6ec7608e25556803",
     "java-runtime-b53dbf8f541e79537f32",
-    "java-runtime-c656dd0eeae6618a4162"
+    "java-runtime-c656dd0eeae6618a4162",
+    "java-runtime-81f4d92e62dbafdd7f2f",
+    "java-runtime-ce4a95ec7941743a7bfe",
+    "java-runtime-7edfd8382e4eee6892dc",
+    "java-runtime-5fb3e9a4d20bc3964f5f"
    ]
   },
   {
@@ -27118,6 +27123,70 @@
    "difference": "The length(N) and firstlength(N) EPL view texts collapse to the LengthWindow and FirstLength retention specs. Eviction and admission semantics are pinned exactly: a length window delivers the new row and the evicted row in ONE invocation, and a firstlength window drops inserts once full with no callback anywhere, freeing capacity only on delete and appending the next arrival at the tail. Ord 25 drives the window through a SupportBean_A trigger compared against the window row's theString and observes a wildcard irstream consumer projected to theString; its first two snapshots are empty and emit records without rows. The on-delete listener is excluded from the trace on both sides for ords 11/12/13 (attached but never asserted; matching deletes do deliver the removed rows to it as new data), while ord 25 attaches no delete listener at all. The key/value map window type is modelled as a struct schema as in the sibling slices."
   },
   {
+   "id": "case.infra-namedwindow-views-lengthbatch-sort",
+   "javaRuntimeIds": [
+    "java-runtime-81f4d92e62dbafdd7f2f",
+    "java-runtime-ce4a95ec7941743a7bfe",
+    "java-runtime-7edfd8382e4eee6892dc",
+    "java-runtime-5fb3e9a4d20bc3964f5f"
+   ],
+   "javaNames": [
+    "InfraLengthBatch",
+    "InfraLengthBatchSceneTwo",
+    "InfraSortWindow",
+    "InfraSortWindowSceneTwo"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowLengthBatchSortViewsDirectReplay",
+    "TestRunInfraNamedWindowLengthBatchSortViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowLengthBatchSortViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowLengthBatchSortViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowLengthBatchSortViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowLengthBatchSortViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsLengthBatchParity",
+    "TestInfraNWViewsLengthBatchSceneTwoParity",
+    "TestInfraNWViewsSortWindowParity",
+    "TestInfraNWViewsSortWindowSceneTwoParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "length-batch",
+    "sort-window",
+    "retention",
+    "eviction",
+    "irstream",
+    "on-delete",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-81f4d92e62dbafdd7f2f",
+    "java-runtime-ce4a95ec7941743a7bfe",
+    "java-runtime-7edfd8382e4eee6892dc",
+    "java-runtime-5fb3e9a4d20bc3964f5f"
+   ],
+   "difference": "The length_batch(N) and sort(N, key) view texts collapse to the LengthBatch and SortWindow retention specs. The batch release is pinned exactly: only the size boundary flushes, the window statement delivers the buffered rows as new data with the rows the batch replaced as old data (the first flush carries none), the batch window is empty after a flush, and deletes of unflushed rows stay silent. Sort retention keeps the N smallest values, expels the current maximum on overflow in one invocation carrying new and old, orders equal values newest-first and evicts an arriving row that does not survive its own insert (ord 22 G6 appears in both streams). Consumers in the length_batch and sort cases are istream-only, so delete waves reach the window statement alone (no consumer old rows). The Java on-delete listener is excluded from the trace on both sides because the suite never asserts its payload. The key/value map window type is modelled as a struct schema."
+  },
+  {
    "id": "case.dataflow-connector-output",
    "javaRuntimeIds": [
     "java-runtime-1ecb769e10b4a818772c"
@@ -43714,13 +43783,17 @@
   {
    "caseId": "case.infra-namedwindow-views-length",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-lengthbatch-sort",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 640,
-  "implementedCases": 638,
-  "differentialVerifiedCases": 263,
-  "differentialVerifiedRuntimeIds": 980,
+  "inventoriedCases": 641,
+  "implementedCases": 639,
+  "differentialVerifiedCases": 264,
+  "differentialVerifiedRuntimeIds": 984,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43730,13 +43803,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3578,
+  "runtimeAssociationCount": 3582,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 640,
+  "totalCases": 641,
   "totalCapabilities": 120
  }
 }
