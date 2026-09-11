@@ -2304,7 +2304,8 @@
     "internal/app/parity/infra_named_window_retention_views.go",
     "internal/app/parity/infra_named_window_unique_views.go",
     "internal/app/parity/infra_named_window_length_views.go",
-    "internal/app/parity/infra_named_window_lengthbatch_sort_views.go"
+    "internal/app/parity/infra_named_window_lengthbatch_sort_views.go",
+    "internal/app/parity/infra_named_window_time_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2346,7 +2347,10 @@
     "java-runtime-81f4d92e62dbafdd7f2f",
     "java-runtime-ce4a95ec7941743a7bfe",
     "java-runtime-7edfd8382e4eee6892dc",
-    "java-runtime-5fb3e9a4d20bc3964f5f"
+    "java-runtime-5fb3e9a4d20bc3964f5f",
+    "java-runtime-879d6ad8aee378657a02",
+    "java-runtime-5f5a65dd5f72c8e24619",
+    "java-runtime-a6bfdd3389c077127861"
    ]
   },
   {
@@ -27187,6 +27191,66 @@
    "difference": "The length_batch(N) and sort(N, key) view texts collapse to the LengthBatch and SortWindow retention specs. The batch release is pinned exactly: only the size boundary flushes, the window statement delivers the buffered rows as new data with the rows the batch replaced as old data (the first flush carries none), the batch window is empty after a flush, and deletes of unflushed rows stay silent. Sort retention keeps the N smallest values, expels the current maximum on overflow in one invocation carrying new and old, orders equal values newest-first and evicts an arriving row that does not survive its own insert (ord 22 G6 appears in both streams). Consumers in the length_batch and sort cases are istream-only, so delete waves reach the window statement alone (no consumer old rows). The Java on-delete listener is excluded from the trace on both sides because the suite never asserts its payload. The key/value map window type is modelled as a struct schema."
   },
   {
+   "id": "case.infra-namedwindow-views-time",
+   "javaRuntimeIds": [
+    "java-runtime-879d6ad8aee378657a02",
+    "java-runtime-5f5a65dd5f72c8e24619",
+    "java-runtime-a6bfdd3389c077127861"
+   ],
+   "javaNames": [
+    "InfraTimeWindowSceneTwo",
+    "InfraTimeFirstWindow",
+    "InfraExtTimeWindowSceneThree"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowTimeViewsDirectReplay",
+    "TestRunInfraNamedWindowTimeViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowTimeViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowTimeViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowTimeViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowTimeViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsTimeWindowSceneTwoParity",
+    "TestInfraNWViewsTimeFirstWindowParity",
+    "TestInfraNWViewsExtTimeWindowSceneThreeParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "time-window",
+    "first-time",
+    "virtual-clock",
+    "expiry",
+    "irstream",
+    "on-delete",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-879d6ad8aee378657a02",
+    "java-runtime-5f5a65dd5f72c8e24619",
+    "java-runtime-a6bfdd3389c077127861"
+   ],
+   "difference": "This slice is the first to run under virtual time: scenario steps carry advance-time with the RFC3339 instant and every record is stamped with the clock value at delivery on both sides. Sliding-window expiry is pinned at the exact boundary (t=10000 and t=36000 deliver old-only rows to the window statement and its separately deployed consumer, 35999 stays silent), as is firsttime's deploy-anchored close (the window stops admitting at 11000 without any delivery while retained rows survive until deleted; the Go gate reads the deploy-time anchor, matching Java here). The time(N sec) EPL text collapses to the TimeWindow/FirstTime retention specs, the bean-backed ord-8 window projects theString only, and the never-asserted on-delete listener stays excluded from the trace on both sides as in the sibling slices."
+  },
+  {
    "id": "case.dataflow-connector-output",
    "javaRuntimeIds": [
     "java-runtime-1ecb769e10b4a818772c"
@@ -43787,13 +43851,17 @@
   {
    "caseId": "case.infra-namedwindow-views-lengthbatch-sort",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-time",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 641,
-  "implementedCases": 639,
-  "differentialVerifiedCases": 264,
-  "differentialVerifiedRuntimeIds": 984,
+  "inventoriedCases": 642,
+  "implementedCases": 640,
+  "differentialVerifiedCases": 265,
+  "differentialVerifiedRuntimeIds": 987,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -43803,13 +43871,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3582,
+  "runtimeAssociationCount": 3585,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 641,
+  "totalCases": 642,
   "totalCapabilities": 120
  }
 }
