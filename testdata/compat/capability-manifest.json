@@ -2307,7 +2307,8 @@
     "internal/app/parity/infra_named_window_lengthbatch_sort_views.go",
     "internal/app/parity/infra_named_window_time_views.go",
     "internal/app/parity/infra_named_window_ext_time_views.go",
-    "internal/app/parity/infra_named_window_time_order_accum_views.go"
+    "internal/app/parity/infra_named_window_time_order_accum_views.go",
+    "internal/app/parity/infra_named_window_time_batch_views.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2359,7 +2360,12 @@
     "java-runtime-320f1b03eddb24520308",
     "java-runtime-ed5bfc247d088a603224",
     "java-runtime-d74b2c9c614b26973637",
-    "java-runtime-8b4e2e7d81bb990c7d72"
+    "java-runtime-8b4e2e7d81bb990c7d72",
+    "java-runtime-1ad42a8ed8025c4a0730",
+    "java-runtime-1eb11f5cf275069ef6b5",
+    "java-runtime-bb926d092e7110db203f",
+    "java-runtime-22bf6b3644a24862df7d",
+    "java-runtime-dd924e1b7e500df135f8"
    ]
   },
   {
@@ -41083,6 +41089,74 @@
    "notes": [
     "EPLOtherSelectExprStreamSelector closes the alias-with-properties pair (ordinals 8/9) left uncovered by case.stream-selector: stream-dot notation with alias (theString.* as s0/s1) beside plain property aliases (intPrimitive as a/b) over a length window, and a mixed join select combining stream-as-object columns (s0stream/s1stream via SelectSourceEvent) with plain and aliased properties (intPrimitive, theString, symbol as sym) over a length-keepall inner join. The Go surface is pure composition (Alias with EventValue[esper.Event], SelectFrom, SelectSourceEvent) with zero engine work. Remaining ords 0-7/10-16 are covered by case.stream-selector, case.stream-selector-extended, or remain unrepresented (invalid-compiles ords 0/16 have no Go rejection surface)."
    ]
+  },
+  {
+   "id": "case.infra-namedwindow-views-time-batch",
+   "javaRuntimeIds": [
+    "java-runtime-1ad42a8ed8025c4a0730",
+    "java-runtime-1eb11f5cf275069ef6b5",
+    "java-runtime-bb926d092e7110db203f",
+    "java-runtime-22bf6b3644a24862df7d",
+    "java-runtime-dd924e1b7e500df135f8"
+   ],
+   "javaNames": [
+    "InfraTimeBatch",
+    "InfraTimeBatchSceneTwo",
+    "InfraTimeBatchLateConsumer",
+    "InfraTimeLengthBatch",
+    "InfraTimeLengthBatchSceneTwo"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowTimeBatchViewsDirectReplay",
+    "TestRunInfraNamedWindowTimeBatchViewsDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowTimeBatchViewsDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowTimeBatchViewsCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowTimeBatchViewsRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowTimeBatchViewsRuntimeIDMappingMatchesScenario",
+    "TestInfraNWViewsTimeBatchParity",
+    "TestInfraNWViewsTimeBatchSceneTwoParity",
+    "TestInfraNWViewsTimeBatchLateConsumerParity",
+    "TestInfraNWViewsTimeLengthBatchParity",
+    "TestInfraNWViewsTimeLengthBatchSceneTwoParity"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "time-batch",
+    "time-length-batch",
+    "virtual-clock",
+    "batch-flush",
+    "late-consumer",
+    "aggregate",
+    "iterator-snapshot",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1ad42a8ed8025c4a0730",
+    "java-runtime-1eb11f5cf275069ef6b5",
+    "java-runtime-bb926d092e7110db203f",
+    "java-runtime-22bf6b3644a24862df7d",
+    "java-runtime-dd924e1b7e500df135f8"
+   ],
+   "difference": "The time_batch(10 sec) and time_length_batch(10 sec, N) EPL texts collapse to the TimeBatch and TimeLengthBatch retention specs under the advance-time protocol: a batch boundary fires during a clock move with no send. The slice pins the buffered-arrival rule (no callback while accumulating, deletes remove pending rows silently), the boundary flush as ONE delivery carrying new=the completed batch in insertion order together with old=the previous batch (first flush carries no old rows), the absence of any callback when both batches are empty, the anchor surviving an all-empty flush (ord 17 flushes at 21000 rather than 25000), the time_length_batch size trigger flushing immediately on the third arrival and re-arming the boundary so the later time trigger carries the remaining row with the prior batch as old data, and the late-deployed ungrouped sum consumer whose batch preload is skipped so its single first row covers the whole batch including rows that arrived before it existed. Ungrouped aggregate consumers over a batch window must be built with the Aggregate builder; a plain Select projection evaluates per event and yields null aggregate rows and is therefore not equivalent."
   }
  ],
  "mappings": [
@@ -43997,13 +44071,17 @@
   {
    "caseId": "case.infra-namedwindow-views-time-order-accum",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-time-batch",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 644,
-  "implementedCases": 642,
-  "differentialVerifiedCases": 267,
-  "differentialVerifiedRuntimeIds": 994,
+  "inventoriedCases": 645,
+  "implementedCases": 643,
+  "differentialVerifiedCases": 268,
+  "differentialVerifiedRuntimeIds": 999,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -44013,13 +44091,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3592,
+  "runtimeAssociationCount": 3597,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 644,
+  "totalCases": 645,
   "totalCapabilities": 120
  }
 }

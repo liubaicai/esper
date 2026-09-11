@@ -1,0 +1,2631 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-1ad42a8ed8025c4a0730",
+    "java-runtime-1eb11f5cf275069ef6b5",
+    "java-runtime-bb926d092e7110db203f",
+    "java-runtime-22bf6b3644a24862df7d",
+    "java-runtime-dd924e1b7e500df135f8"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+  ],
+  "javaExecutions": [
+    "InfraTimeBatch",
+    "InfraTimeBatchSceneTwo",
+    "InfraTimeBatchLateConsumer",
+    "InfraTimeLengthBatch",
+    "InfraTimeLengthBatchSceneTwo"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-time-batch-views",
+    "steps": [
+      {
+        "op": "case",
+        "case": "time-batch"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch",
+        "statement": "create",
+        "epl": "@name('create') create window MyWindowTB#time_batch(10 sec) as MySimpleKeyValueMap"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch",
+        "statement": "insert",
+        "epl": "insert into MyWindowTB select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch",
+        "statement": "s0",
+        "epl": "@name('s0') select key, value as value from MyWindowTB"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindowTB as s1 where s0.symbol = s1.key"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longBoxed": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "longBoxed": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "longBoxed": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-batch",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch",
+        "at": "1970-01-01T00:00:11Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch",
+        "at": "1970-01-01T00:00:21Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "longBoxed": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-batch",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E4"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch",
+        "at": "1970-01-01T00:00:31Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "time-batch"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-scene-two"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindow.win:time_batch(10) as select theString as key, intBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch-scene-two",
+        "statement": "insert",
+        "epl": "insert into MyWindow(key, value) select irstream theString, intBoxed from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch-scene-two",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol = s1.key"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-scene-two",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intBoxed": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-scene-two",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intBoxed": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-scene-two",
+        "at": "1970-01-01T00:00:11Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-scene-two",
+        "at": "1970-01-01T00:00:15Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G3",
+          "intBoxed": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G4",
+          "intBoxed": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G5",
+          "intBoxed": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G5"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-scene-two",
+        "at": "1970-01-01T00:00:18Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G6",
+          "intBoxed": 6
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-scene-two",
+        "at": "1970-01-01T00:00:21Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-scene-two",
+        "at": "1970-01-01T00:00:22Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G7",
+          "intBoxed": 7
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G8",
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G9",
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G7"
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G9"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-scene-two",
+        "at": "1970-01-01T00:00:31Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "time-batch-scene-two"
+      },
+      {
+        "op": "case",
+        "case": "time-batch-late-consumer"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-late-consumer",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch-late-consumer",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindowTBLC#time_batch(10 sec) as MySimpleKeyValueMap"
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch-late-consumer",
+        "statement": "insert",
+        "epl": "insert into MyWindowTBLC select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-late-consumer",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-late-consumer",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longBoxed": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-late-consumer",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-late-consumer",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "longBoxed": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "time-batch-late-consumer",
+        "statement": "s0",
+        "epl": "@name('s0') select sum(value) as value from MyWindowTBLC"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-late-consumer",
+        "at": "1970-01-01T00:00:08Z"
+      },
+      {
+        "op": "send",
+        "case": "time-batch-late-consumer",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "longBoxed": 3
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-batch-late-consumer",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-batch-late-consumer",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "time-batch-late-consumer"
+      },
+      {
+        "op": "case",
+        "case": "time-length-batch"
+      },
+      {
+        "op": "deploy",
+        "case": "time-length-batch",
+        "statement": "create",
+        "epl": "@name('create') create window MyWindowTLB#time_length_batch(10 sec, 3) as MySimpleKeyValueMap"
+      },
+      {
+        "op": "deploy",
+        "case": "time-length-batch",
+        "statement": "insert",
+        "epl": "insert into MyWindowTLB select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "time-length-batch",
+        "statement": "s0",
+        "epl": "@name('s0') select key, value as value from MyWindowTLB"
+      },
+      {
+        "op": "deploy",
+        "case": "time-length-batch",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindowTLB as s1 where s0.symbol = s1.key"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longBoxed": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "longBoxed": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "longBoxed": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "longBoxed": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "longBoxed": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "longBoxed": 6
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E5"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch",
+        "at": "1970-01-01T00:00:10.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch",
+        "at": "1970-01-01T00:00:11Z"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "time-length-batch"
+      },
+      {
+        "op": "case",
+        "case": "time-length-batch-scene-two"
+      },
+      {
+        "op": "deploy",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyWindow.win:time_length_batch(10 sec, 4) as select theString as key, intBoxed as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "time-length-batch-scene-two",
+        "statement": "insert",
+        "epl": "insert into MyWindow(key, value) select irstream theString, intBoxed from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "time-length-batch-scene-two",
+        "statement": "delete",
+        "epl": "@name('delete') on SupportMarketDataBean as s0 delete from MyWindow as s1 where s0.symbol = s1.key"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intBoxed": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intBoxed": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:11Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:15Z"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G3",
+          "intBoxed": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G4",
+          "intBoxed": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:16Z"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G5",
+          "intBoxed": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G5"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:18Z"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G6",
+          "intBoxed": 6
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:24.999Z"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:25Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:28Z"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G7",
+          "intBoxed": 7
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G8",
+          "intBoxed": 8
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G9",
+          "intBoxed": 9
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G7"
+        }
+      },
+      {
+        "op": "send",
+        "case": "time-length-batch-scene-two",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "G9"
+        }
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:34.999Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "advance-time",
+        "case": "time-length-batch-scene-two",
+        "at": "1970-01-01T00:00:35Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "time-length-batch-scene-two",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "time-length-batch-scene-two"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-time-batch-views",
+    "records": [
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:11Z"
+      },
+      {
+        "case": "time-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:21Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:21Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:21Z"
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z"
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:21Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:21Z"
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:22Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:31Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:31Z"
+      },
+      {
+        "case": "time-batch-late-consumer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-late-consumer",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10Z"
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z"
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 6
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z"
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:16Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G5",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:16Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:25Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:25Z"
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:28Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G7",
+              "value": 7
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G9",
+              "value": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:34.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:35Z"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-time-batch-views",
+    "records": [
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:11Z"
+      },
+      {
+        "case": "time-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:21Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:21Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:21Z"
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z"
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:21Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:21Z"
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:22Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:31Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:31Z"
+      },
+      {
+        "case": "time-batch-late-consumer",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-batch-late-consumer",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:10Z"
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z"
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E5",
+              "value": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 6
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:11Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G2",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G1",
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:05Z"
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:15Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:16Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G5",
+              "value": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:16Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:25Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:25Z"
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:28Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G7",
+              "value": 7
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G9",
+              "value": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:34.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G8",
+              "value": 8
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G3",
+              "value": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G4",
+              "value": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "key": "G6",
+              "value": 6
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-length-batch-scene-two",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:35Z"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
