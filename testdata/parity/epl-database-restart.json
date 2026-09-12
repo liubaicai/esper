@@ -1,0 +1,28 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-database-restart",
+ "description": "database-slices differential chain (work unit 4.393) over the EPLDatabaseRestartStatement execution of regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java (ordinal 18, the restart loop that draft 4.379 deferred pending the connection-lifecycle accounting on the real fixture; the earlier slices epl-database-join covered ordinals 1, 19, 15, 17 and 2, epl-database-join-2 covered ordinals 3, 20, 16, 8 and 4, and epl-database-timebatch covered ordinal 5). The Java oracle runs against the established esper-mysql mysql:8.0 Docker fixture (docker run --name esper-mysql -e MYSQL_ROOT_PASSWORD=password -e MYSQL_DATABASE=test -p 3306:3306 -d mysql:8.0, readiness via mysqladmin ping, fixture loaded from common/etc/regression/create_testdb.sql with the '//'-comment lines stripped; the load tolerates the pre-existing mytesttable_large/mytestupsert re-create errors so it is idempotent) and connects through SupportDatabaseService constants: DRIVER com.mysql.cj.jdbc.Driver, FULLURL jdbc:mysql://localhost/test?user=root&password=password&useSSL=false. Session configuration mirrors TestSuiteEPLDatabase.configure restricted to this execution: the SupportBean_S0 POJO event type (the only event type it names) registered as a POJO type, and the 'MyDBWithRetain' database reference configured as a DriverManagerConnection (DRIVER/FULLURL/SupportDatabaseURL.newProperties()) with ConnectionLifecycleEnum RETAIN and no cache; the suite's setEnableJDBC(true)/setEnableQueryPlan(true) logging flags are dropped because they alter log observability only and have no recorded effect. Internal timer off, epoch initialization 0, per-case fresh runtime (undeployAll after the case body, destroy in finally, runtime URI derived from the pinned java-runtime id). Byte-exact statement (suite lines 397-399, assembled with the suite's own concatenations, exact spacing preserved): restart-statement deploys '@name('s0') select mychar from SupportBean_S0 as s0, sql:MyDBWithRetain ['select mychar from mytesttable where ${id} = mytesttable.mybigint'] as s1' (SINGLE space after 's0,' — the ' sql:' segment starts with one space) — the SupportBean_S0 trigger stream leads and the ${id}-keyed single-column mychar lookup follows. Replay of suite lines 400-414: the statement is compiled ONCE and the SAME EPCompiled object is deployed once before the loop with NO listener (the suite's initial env.deploy(compiled) attaches none), then the 100-cycle loop runs, per cycle: undeployModuleContaining('s0'); sendEventS0(1) — SupportBean_S0(id=1) with NO statement deployed, so no listener can observe it, it is unrecorded, and the Go side replays it as the same unobservable undeployed-send; re-deploy the SAME compiled module and addListener('s0') (a fresh listener per cycle mirrors the fresh deployment); sendEventS0(1) again delivering exactly one row from the mybigint-1 fixture row; and the suite's assertEqualsNew('s0', 'mychar', 'Z') replayed in-process as exactly one delivery whose first new event carries mychar 'Z' (a double delivery fails loudly). Suite line 414's env.undeployAll() happens at the case boundary. The 100-cycle loop is the suite's connection-leak probe (suite line 403 comment: 'Too many connections unless the stop actually relieves them'): each undeploy must release the RETAIN-lifecycle connection or a later cycle fails on MySQL's connection ceiling — the uniform 100-record trace is itself the evidence that every cycle delivered without connection exhaustion. Record protocol: exactly ONE record per listener delivery {case, operation:'listener', statement:'s0', sequence, time, new:[rows]} where rows are {kind:'row', fields:{mychar:'Z'}} objects with field names sorted alphabetically for human-diffable traces (the canonical comparator is order-insensitive; mychar is the sole output column). Value form, both sides matching because the Go side feeds the identical canonical 10-row fixture through a function-fed HistoricalProvider (no database driver): mychar as a JSON string (MySQL strips CHAR(20) trailing spaces; 'Z' is the mybigint-1 row). There are deliberately NO count records (unlike the sibling database slices): the undeployed send between cycles has no statement and no listener to observe it, and the fixed record count of 100 — one per cycle — is the leak-probe observable the Go runner pairs with. Sequence is case-local restarting at 1 and runs 1..100; the time is the fixed epoch 1970-01-01T00:00:00Z. The 100 records carry the database-restart differential chain for the Go case builder.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/database/EPLDatabaseJoin.java",
+ "javaRuntimes": [
+  "java-runtime-0d41625df368897ca97b"
+ ],
+ "cases": [
+  {
+   "case": "restart-statement",
+   "ordinal": 18,
+   "runtimeId": "java-runtime-0d41625df368897ca97b",
+   "executionName": "EPLDatabaseRestartStatement"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "restart-statement"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  }
+ ]
+}

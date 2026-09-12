@@ -498,8 +498,9 @@ func TestDatabaseWithPatternMatchesJava(t *testing.T) {
 // TestDatabase2HistoricalStarInnerMatchesJava covers
 // EPLDatabase2HistoricalStarInner: inner joins onto two historical streams.
 
-// TestDatabaseTimeBatchMatchesJava covers EPLDatabaseTimeBatch (and the OM /
-// Compile variants, which share runtestTimeBatch).
+// TestDatabaseTimeBatchMatchesJava lives in database_join_timebatch_test.go
+// (it covers EPLDatabaseTimeBatch; the OM/Compile variants share
+// runtestTimeBatch and are covered there too).
 
 // TestDatabaseStreamNamesAndRenameMatchesJava covers
 // EPLDatabaseStreamNamesAndRename: historical column aliases.
@@ -712,8 +713,10 @@ func TestDatabaseJoinIndexNullTypeMatchesJava(t *testing.T) {
 }
 
 // TestDatabaseJoinInvalidBoundaryMatchesJava covers the Go typed boundary for
-// the EPLDatabaseJoin invalid executions: self-referencing historical
-// parameters and views on historical streams are rejected at Build.
+// the EPLDatabaseJoin invalid executions: a self-referencing historical
+// parameter resolves as Missing and produces no rows; views on historical
+// streams are accepted by the Go builder (documented divergence from Java's
+// compile-time rejection).
 func TestDatabaseJoinInvalidBoundaryMatchesJava(t *testing.T) {
 	env := NewEnvironment()
 	dbJoinRegisterSupportBean(t, env)

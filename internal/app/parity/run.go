@@ -137,6 +137,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-database-join-2" || *mode == "epl-database-join-2-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "epl-database-restart" || *mode == "epl-database-restart-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-database-timebatch" || *mode == "epl-database-timebatch-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-doc-samples" || *mode == "dataflow-doc-samples-diff" {
@@ -433,6 +435,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplDatabaseJoin2JavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplDatabaseJoin2JavaSources),
 				splitMetadata(*javaExecutions, eplDatabaseJoin2JavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-database-restart" || *mode == "epl-database-restart-diff" {
+		trace, err := runEplDatabaseRestartScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-database-restart-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplDatabaseRestartJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplDatabaseRestartJavaSources),
+				splitMetadata(*javaExecutions, eplDatabaseRestartJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

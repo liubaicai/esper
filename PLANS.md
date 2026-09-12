@@ -47,12 +47,18 @@ activity or a single coverage percentage.
 - Shipped by this commit: Draft 4.392 ('infra-named-window-bean-views'); Git owns identity. Twelfth InfraNamedWindowViews slice (ords 2/35/37/38) differential-verified: bean/schema representations, nested fragment, supertype insert and FAF observation; the ord-2 update-wave adjacency is oracle-pinned and normalized through the established hook.
 
 ## Current work unit
-Active: Draft 4.392 ('infra-named-window-bean-views') - complete, review passed.
+Active: Draft 4.393 ('database-restart-statement').
 
-- [x] Test family: 6 functions at run_test.go:49055-49448 (passing-evidence diff, direct replay with full-layout pins, 13 trace mutations incl. the order-swap and injected-s0 rejection, checked-in-evidence consistency, malformed-scenario rejection, runtime-ID mapping) - all green.
-- [x] Gates: make check green, compat green, git diff --check clean; replay determinism verified (fresh replay == committed Go trace).
-- [x] Independent parity review: agent_edc56626 OVERALL PASS - all EPL literals byte-exact, assertion-to-record mapping verified for all four executions, manifest summary recounted exactly (648/271/1012/3610/3293/843), the recorded engine ordering difference verified as oracle-pinned and provably a no-op on the Java trace, 13 mutations + 14 loader rejections discriminating, ownership clean. One P3 fixed pre-commit: the AVRO compile-reject attribution corrected in three prose spots (belongs to ord 35's contained-bean window, not the schema-backed variant). Two informational P3s noted: Java's in-process metadata asserts are oracle-replayed with the Go chain pinning the observable half (declared residual in capability remaining); /root/app/esper untracked scratch predates the unit.
-- [x] Commit and push (single semantic commit with all checkpoint edits folded in; no post-commit checkpoint-only push).
+- [x] Contract frozen from the 4.377 scouts' reports (no new dispatch - the Java contract scout agent_c6cc2607 already covered RestartStatement: EPL `@name('s0') select mychar from SupportBean_S0 as s0, sql:MyDBWithRetain ['select mychar from mytesttable where ${id} = mytesttable.mybigint'] as s1`; compile once; 100 iterations of undeployModuleContaining -> send S0(1) (no listener) -> deploy+addListener -> send S0(1) -> mychar="Z"; the loop guards against "Too many connections" unless stop relieves them). Housekeeping folded in: stale docstrings in database_join_class_parity_test.go.
+- [x] Writer dispatched (oracle + script + scenario + Java trace ~100 listener records, one per cycle) + Go runner implementer dispatched in parallel with the frozen record layout.
+- [x] Go runner + mode + tests built (delegated to implementer agent_6741a52f with the precise frozen layout): epl_database_restart.go — 100 deploy/undeploy/redeploy cycles with zero-new/one-new delivery guards, reusing eplDatabaseJoinProvider + the 9-column schema; run.go 'epl-database-restart'/-diff modes; run_test.go family (evidence, 100-record direct replay, 7 mutations).
+- [x] Evidence pipeline, manifest dv-list extension, roadmap, CHANGELOG. (Writer agent_2065c50d delivered oracle + script + scenario + Java trace 100 records, all cycles delivered, byte-stable. Evidence passing, 0 differences; 100/100 records semantically equal. Manifest case.inventory.epl-database-join dv list += 0d41625d (11->12); summary dvIds corrected at integration to the live recount 1013 — the base was stale session-local memory, the parallel OMP units had advanced it to 1012; dvCases 271, assoc 3610, referenced 3293 / unreferenced 843 unchanged. Roadmap + CHANGELOG 4.393 supplements newest-first. Housekeeping: two stale docstrings in database_join_class_parity_test.go corrected per 4.379/4.380 review notes.)
+- [ ] Gates + independent parity review.
+- [ ] Commit and push (single semantic commit with all checkpoint edits folded in).
+
+### Previous work unit (prior)
+
+Active: Draft 4.392 ('infra-named-window-bean-views').
 
 ### Previous work unit (prior)
 

@@ -49793,3 +49793,156 @@ func infraNWBVCheckScenarioMetadata(version, id, description, javaCommit, javaSo
 	}
 	return nil
 }
+
+func TestRunEplDatabaseRestartDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-restart.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-database-restart.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-restart.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-database-restart-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplDatabaseRestartDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-restart.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-database-restart",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// One listener record per restart cycle: 100 deliveries {mychar:"Z"},
+	// statement s0, epoch time, case-local sequences restarting at 1.
+	if len(trace.Records) != 100 {
+		t.Fatalf("records = %d, want 100", len(trace.Records))
+	}
+	for index, record := range trace.Records {
+		if record.Case != "restart-statement" || record.Operation != "listener" || record.Statement != "s0" {
+			t.Fatalf("record %d = {%s %s %s}, want {restart-statement listener s0}",
+				index, record.Case, record.Operation, record.Statement)
+		}
+		if record.Sequence != uint64(index+1) {
+			t.Fatalf("record %d sequence = %d, want %d", index, record.Sequence, index+1)
+		}
+		if record.Time != "1970-01-01T00:00:00Z" {
+			t.Fatalf("record %d time = %s", index, record.Time)
+		}
+		if record.Count != nil || len(record.New) != 1 {
+			t.Fatalf("record %d = %#v, want one listener row", index, record)
+		}
+		if fmt.Sprint(record.New[0].Fields["mychar"]) != "Z" {
+			t.Fatalf("record %d row = %#v, want {mychar:Z}", index, record.New[0].Fields)
+		}
+	}
+	// The undeployed sends inside each cycle leave no trace: the 100
+	// deliveries are the only records.
+	first, last := trace.Records[0], trace.Records[99]
+	if first.Sequence != 1 || last.Sequence != 100 {
+		t.Fatalf("boundary sequences = %d/%d, want 1/100", first.Sequence, last.Sequence)
+	}
+}
+
+func TestRunEplDatabaseRestartDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "first-delivery-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["mychar"] = "Y"
+			},
+		},
+		{
+			name: "mid-cycle-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[49].New[0].Fields["mychar"] = "P"
+			},
+		},
+		{
+			name: "mid-cycle-sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[49].Sequence = 51
+			},
+		},
+		{
+			name: "last-delivery-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[99].New[0].Fields["mychar"] = "Q"
+			},
+		},
+		{
+			name: "statement-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[42].Statement = "s1"
+			},
+		},
+		{
+			name: "cycle-delivery-dropped",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records[:50], trace.Records[51:]...)
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:99]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-restart.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-database-restart.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-database-restart.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-database-restart-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
