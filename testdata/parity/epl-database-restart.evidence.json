@@ -16,7 +16,9 @@
     "steps": [
       {
         "op": "case",
-        "case": "restart-statement"
+        "case": "restart-statement",
+        "label": "undeploy-send-redeploy-send",
+        "count": 100
       },
       {
         "op": "advance-time",

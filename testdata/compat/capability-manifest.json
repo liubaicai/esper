@@ -30970,8 +30970,7 @@
     "java-runtime-3ddf3346fbe67a639057",
     "java-runtime-0a048d0e0005df5f6279",
     "java-runtime-fc8c20664fc4787fc987",
-    "java-runtime-fb0cea6fe1e469ee8237",
-    "java-runtime-0d41625df368897ca97b"
+    "java-runtime-fb0cea6fe1e469ee8237"
    ],
    "javaNames": [
     "EPLDatabaseMySQLDatabaseConnection",
@@ -31008,21 +31007,21 @@
     "sql",
     "pattern"
    ],
-   "status": "differential-verified",
+   "status": "implemented",
    "evidence": [
     "java-runtime-inventory",
     "go-unit",
     "testdata/parity/epl-database-join.json",
     "testdata/parity/epl-database-join.trace.json",
-    "testdata/parity/epl-database-join.go.trace.json",
     "testdata/parity/epl-database-join.evidence.json",
     "tools/java-oracle/EPLDatabaseJoinScenarioOracle.java",
-    "tools/java-oracle/run-epl-database-join.sh"
-   ],
-   "verification": [
-    "inventoried",
-    "implemented",
-    "differential-verified"
+    "tools/java-oracle/run-epl-database-join.sh",
+    "testdata/parity/epl-database-restart.json",
+    "testdata/parity/epl-database-restart.trace.json",
+    "testdata/parity/epl-database-restart.go.trace.json",
+    "testdata/parity/epl-database-restart.evidence.json",
+    "tools/java-oracle/EPLDatabaseRestartScenarioOracle.java",
+    "tools/java-oracle/run-epl-database-restart.sh"
    ],
    "goTests": [
     "TestDatabaseSimpleJoinLeftParity",
@@ -31037,7 +31036,10 @@
     "TestDatabaseJoinInvalidBoundaryMatchesJava",
     "TestDatabase3StreamMatchesJava",
     "TestDatabaseVariablesMatchesJava",
-    "TestDatabaseRestartStatementMatchesJava",
+    "TestRunEplDatabaseRestartCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunEplDatabaseRestartDiffWritesPassingEvidence",
+    "TestRunEplDatabaseRestartDirectReplay",
+    "TestRunEplDatabaseRestartDiffRejectsTraceMutations",
     "TestRunEplDatabaseJoinDiffWritesPassingEvidence",
     "TestRunEplDatabaseJoinDirectReplay",
     "TestRunEplDatabaseJoinDiffRejectsTraceMutations"
@@ -31048,7 +31050,12 @@
     "EPLDatabaseInvalidBothHistorical / InvalidPropertyEvent / InvalidSubviews typed compile diagnostics",
     "full Java differential trace for the remaining EPLDatabaseJoin executions"
    ],
-   "difference": "Go implements the covered EPLDatabaseJoin executions with typed fluent historical joins: parameterized historical rows persist with per-trigger lineage and pair only with the triggering event (2HistoricalStar/Inner keepall iterator parity), unrestricted triggerless SQL sides remain per-trigger lookup snapshots (3Stream parity), and pattern-driven historical polling evaluates an unrestricted SQL side once per completed timer match (WithPattern parity). SimpleJoin/StreamNames/PropertyResolution/JoinIndexNullType and the invalid historical self-reference boundary are covered by fake database/sql provider tests. These executions are implemented but not yet differential-verified; TimeBatch, MySQL database connection and the remaining invalid compile variants are still open. Draft 4.377 opens the database subdomain's differential coverage with the first EPLDatabaseJoin slice over the mysql:8.0 fixture (create_testdb.sql): SimpleJoinLeft (java-runtime-67745eb75f864ea17fed), SimpleJoinRight (java-runtime-45e68d7cf756824c19eb — stream order reversed, the nine event-type property types pinned in-process), StreamNamesAndRename (java-runtime-4675598d7044c43fd088 — the a..i column aliases projected under the canonical names), PropertyResolution (java-runtime-33cc6c0610b2c801c1bb — the nested-indexed ${s1.arrayProperty[0]} parameter selecting the mybigint-10 row whose mynumeric is NULL), and 2HistoricalStar (java-runtime-a6682a71c8c463babcff — two historical sides keyed on the same trigger with keepall lineage and the negative no-match send). 9 listener/count records per side. The Java oracle runs against the esper-mysql mysql:8.0 Docker fixture with create_testdb.sql loaded; the Go side feeds the same canonical 10-row fixture through a function-fed HistoricalProvider (BigDecimal scale-0 columns recorded as strings, NULL as the null marker, MySQL CHAR trailing-space stripping mirrored by the fixture values). Reconciliation: four executions missing from javaRuntimeIds (SimpleJoinLeft, Variables, InvalidSQL, StreamNamesAndRename) are appended; the remaining executions (TimeBatch/OM/Compile, WithPattern, Variables, 3Stream, RestartStatement, JoinIndexNullType, the invalid family, MySQLDatabaseConnection) stay implemented-not-differential pending later slices. Draft 4.378 extends the case with the second slice: 2HistoricalStarInner (java-runtime-8961178ee540998a99f3 — two exclusion-keyed historical sides inner-joined on the trigger's theString; three negative sends then the {a:B,b:3,c:B,d:B} row), JoinIndexNullType (java-runtime-a8180e298e71e8135b38 — a null-typed key matches nothing under #unique(id)), WithPattern (java-runtime-3ddf3346fbe67a639057 — a timer:interval pattern polling the historical side, AdvanceTime-driven at 5 s/9.999 s/10 s with the silent middle advance recorded), Variables (java-runtime-0a048d0e0005df5f6279 — the queryvar variable parameterizing the historical lookup at 50 then 60), and 3Stream (java-runtime-fc8c20664fc4787fc987 — two #lastevent windows joined with an unrestricted historical side, rows at T2/30 and T3/40). 11 records per side (3+1+3+2+2). Go's SetVariable engine call replaces Java's on-set statement and the reversed stream order is builder text — both documented; the stateless-flag assertion is in-process. Draft 4.379 enumerates the dispositions for the eleven executions still implemented-not-differential, closing the case's remaining-state account: EPLDatabaseTimeBatch / EPLDatabaseTimeBatchOM / EPLDatabaseTimeBatchCompile (java-runtime-fb0cea6fe1e469ee8237 / b86f31a8dc33eda9fc51 / d1a52864d392f7c194e5) are deferred pending engine-level investigation — a Go-side probe confirmed that a time_batch window over a historical driving stream buffers without releasing the joined rows at the time boundary (the window-release/poll interaction needs engine work), and the OM/Compile variants additionally require the SODA/eplToModel compile surface Go does not have; EPLDatabaseMySQLDatabaseConnection (java-runtime-dd10cb6cfcc160f4f9da) is a raw JDBC smoke with no Esper observables; EPLDatabaseInvalidSQL (java-runtime-e0d7add1aff7aa06fa4a) embeds MySQL-server-version-specific error 1064 text (intentionally-different diagnostic surface); EPLDatabaseInvalidBothHistorical / InvalidPropertyEvent / InvalidPropertyHistorical / Invalid1Stream / InvalidSubviews (java-runtime-e5109d0a7a6693f0bef9 / 4cbe25d2f647599d420a / 6a92efa5731f590e1820 / 6ff003e9d79daa5b835d / 197aa4b52632b4230504) are compile-path diagnostic asserts — the typed Go builder structurally prevents the circular historical substitution and self-reference resolves as Missing producing zero rows (engine-pinned), while views onto historical streams are accepted rather than rejected (documented divergence); EPLDatabaseRestartStatement (java-runtime-0d41625df368897ca97b) is deterministic but deferred pending the connection-lifecycle accounting on the real MySQL fixture (the 100-cycle loop guards against 'Too many connections'). Draft 4.380 differentially verifies EPLDatabaseTimeBatch (java-runtime-fb0cea6fe1e469ee8237) via the epl-database-timebatch chain (7 records: iterator counts 1/2/3 accumulating pre-flush with ordered myint [100,50,20], one 3-row flush listener batch at the 10s boundary, empty iterator post-flush, re-buffered [90]/[80]), enabled by the engine fix in this unit: updateJoin skips the driverless arrival poll when the trigger is batch-buffered, and expireJoin re-polls the triggered historical sides per released row with lineage binding. dv list 10->11; summary dvIds 958->964. Draft 4.393 differentially verifies EPLDatabaseRestartStatement (java-runtime-0d41625df368897ca97b) via the epl-database-restart chain (100 listener records — the 100-cycle undeploy/redeploy loop is the connection-leak probe, and every cycle delivers {mychar:Z}); the undeployed-send produces no delivery in-process on both sides. dv list 11->12; summary dvIds 1012->1013 at integration (live recount; the parallel 4.381-4.392 units had advanced the base)."
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "difference": "Go implements the covered EPLDatabaseJoin executions with typed fluent historical joins: parameterized historical rows persist with per-trigger lineage and pair only with the triggering event (2HistoricalStar/Inner keepall iterator parity), unrestricted triggerless SQL sides remain per-trigger lookup snapshots (3Stream parity), and pattern-driven historical polling evaluates an unrestricted SQL side once per completed timer match (WithPattern parity). SimpleJoin/StreamNames/PropertyResolution/JoinIndexNullType and the invalid historical self-reference boundary are covered by fake database/sql provider tests. RestartStatement has a separate 100-cycle Go/Java output-parity replay with an in-process undeployed-send guard, but it does not prove MySQL/JDBC connection acquisition, release, or pool-exhaustion semantics and remains implemented rather than differential-verified. TimeBatch, MySQL database connection and the remaining invalid compile variants are still open."
   },
   {
    "id": "case.resultset-row-per-group-simple",
@@ -44311,7 +44318,7 @@
   "inventoriedCases": 648,
   "implementedCases": 646,
   "differentialVerifiedCases": 271,
-  "differentialVerifiedRuntimeIds": 1013,
+  "differentialVerifiedRuntimeIds": 1012,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,

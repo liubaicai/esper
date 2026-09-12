@@ -25,7 +25,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 
 /**
- * Direct Esper 9.0.0 oracle for the database-slices differential chain (work
+ * Direct Esper 9.0.0 oracle for the database-slices output-replay scenario (work
  * unit 4.393, epl-database-restart): the EPLDatabaseRestartStatement
  * execution of EPLDatabaseJoin (ordinal 18) over the mytesttable MySQL
  * fixture — the restart loop that draft 4.379 deferred pending the
@@ -68,11 +68,11 @@ import java.util.Arrays;
  * assertEqualsNew("s0", "mychar", "Z") replayed in-process as exactly one
  * delivery whose first new event carries mychar "Z" (a fresh listener per
  * cycle mirrors the fresh deployment, so a double delivery fails loudly).
- * Suite line 414's undeployAll happens at the case boundary. The 100-cycle
- * loop is the suite's connection-leak probe ("Too many connections unless the
- * stop actually relieves them"): undeploy must release the RETAIN-lifecycle
- * connection each cycle or cycle ~N fails on MySQL's connection ceiling — the
- * uniform 100-record trace is itself the evidence that every cycle delivered.
+ * Suite line 414's undeployAll happens at the case boundary. The suite's
+ * 100-cycle loop exercises its RETAIN connection lifecycle. The fixed Java
+ * trace records only the observable successful listener deliveries; the Go
+ * replay intentionally uses a function-fed provider and does not claim JDBC
+ * connection acquisition, release, or pool-exhaustion parity.
  *
  * Record protocol: exactly one record per listener delivery {case,
  * operation:"listener", statement:"s0", sequence, time, new:[rows]} where rows
@@ -82,16 +82,15 @@ import java.util.Arrays;
  * a JSON string (MySQL strips CHAR(20) trailing spaces; "Z" is the
  * mybigint-1 row), both sides matching because the Go side feeds the identical
  * canonical 10-row fixture through a function-fed HistoricalProvider (no
- * database driver). There are deliberately NO count records (unlike the
  * sibling database slices): the undeployed send between the cycles has no
  * statement and no listener to observe it, and the fixed record count of 100
- * — one per cycle — is the leak-probe observable the Go runner pairs with.
+ * — one per cycle — is the output-count observable the Go runner pairs with.
  * Sequence is case-local restarting at 1 and runs 1..100; the time is the
  * fixed epoch 1970-01-01T00:00:00Z. The case runs on its own fresh runtime
  * (internal timer off, epoch initialization 0, undeployAll after the case
  * body, destroy in finally) with the runtime URI derived from the pinned
- * java-runtime id. The 100 records carry the database-restart differential
- * chain for the Go case builder.
+ * java-runtime id. The 100 records carry the output-replay contract for the
+ * Go chain; they are not a Go JDBC lifecycle proof.
  */
 public final class EPLDatabaseRestartScenarioOracle {
     private static final String VERSION = "esper-parity/v1";
@@ -104,6 +103,7 @@ public final class EPLDatabaseRestartScenarioOracle {
     private static final String RUNTIME_ID = "java-runtime-0d41625df368897ca97b";
     private static final String EXECUTION_NAME = "EPLDatabaseRestartStatement";
     private static final int RESTART_CYCLES = 100;
+    private static final String RESTART_LIFECYCLE = "undeploy-send-redeploy-send";
     private static final int TOTAL_RECORDS = 100;
     private static final String EPOCH = "1970-01-01T00:00:00Z";
 
@@ -173,8 +173,11 @@ public final class EPLDatabaseRestartScenarioOracle {
         JsonArray steps = stepValue.asArray();
         JsonObject marker = object(steps.get(0), "case marker 0");
         if (!"case".equals(marker.getString("op", ""))
-                || !CASE_RESTART_STATEMENT.equals(marker.getString("case", ""))) {
-            throw new IllegalArgumentException("the restart-statement case must appear once");
+                || !CASE_RESTART_STATEMENT.equals(marker.getString("case", ""))
+                || !RESTART_LIFECYCLE.equals(marker.getString("label", ""))
+                || marker.getInt("count", -1) != RESTART_CYCLES) {
+            throw new IllegalArgumentException("the restart-statement lifecycle must pin " + RESTART_CYCLES
+                    + " " + RESTART_LIFECYCLE + " cycles");
         }
         JsonObject advance = object(steps.get(1), "advance-time 0");
         if (!"advance-time".equals(advance.getString("op", "")) || !EPOCH.equals(advance.getString("at", ""))) {
@@ -241,11 +244,10 @@ public final class EPLDatabaseRestartScenarioOracle {
 
     /**
      * EPLDatabaseJoin EPLDatabaseRestartStatement (ordinal 18): compile once,
-     * deploy listener-less, then the 100-cycle stop/redeploy loop — the
-     * suite's connection-leak probe. Each cycle undeploys, sends to the
-     * deployment-less runtime (unobservable, unrecorded), redeploys the SAME
-     * compiled module with a fresh listener, sends again and asserts exactly
-     * one delivery carrying mychar "Z".
+     * deploy listener-less, then the 100-cycle redeploy loop. Each cycle
+     * undeploys, sends to the deployment-less runtime (unobservable,
+     * unrecorded), redeploys the SAME compiled module with a fresh listener,
+     * sends again and asserts exactly one delivery carrying mychar "Z".
      */
     private static void runRestartStatement(EPRuntime runtime, Configuration configuration, TraceWriter writer)
             throws Exception {
@@ -255,9 +257,8 @@ public final class EPLDatabaseRestartScenarioOracle {
         EPCompiled compiled = EPCompilerProvider.getCompiler().compile(RESTART_EPL, compilerArgs);
         runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
 
-        // suite lines 404-412: "Too many connections unless the stop
-        // actually relieves them" — undeploy, unobserved send, redeploy +
-        // listener, send, assertEqualsNew("s0", "mychar", "Z").
+        // suite lines 404-412: undeploy, unobserved send, redeploy + listener,
+        // send, assertEqualsNew("s0", "mychar", "Z").
         for (int i = 0; i < RESTART_CYCLES; i++) {
             undeployModuleContaining(runtime, "s0");
 

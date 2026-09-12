@@ -9,25 +9,20 @@ import (
 	"github.com/liubaicai/esper/internal/compat"
 )
 
-// Parity coverage for the third EPLDatabaseJoin slice — the
+// Output-parity coverage for the third EPLDatabaseJoin slice — the
 // EPLDatabaseRestartStatement execution (java-runtime-0d41625df368897ca97b).
-// The statement `@name('s0') select mychar from SupportBean_S0 as s0,
-// sql:MyDBWithRetain ['select mychar from mytesttable where ${id} =
-// mytesttable.mybigint'] as s1` is deployed once and then cycled 100 times:
-// undeployModuleContaining("s0"), send S0(id=1) with no listener attached
-// (nothing delivers), deploy the same statement again with the listener
-// re-added, send S0(id=1) for exactly one {mychar:"Z"} delivery. The loop is
-// the Java regression's guard against "Too many connections" — all 100
-// cycles must deliver. The Go engine has no connection pool to leak, which
-// is the point of the differential: the redeploy path must never strand the
-// historical join or the delivery.
+// The fixed lifecycle contract is undeploy, send while undeployed, redeploy,
+// send with a fresh listener, repeated 100 times. The scenario pins that
+// contract and the runner validates and consumes its cycle count.
 //
-// The Go side reuses the first slice's canonical mytesttable fixture
-// verbatim through eplDatabaseJoinSeedRowMaps(), the full 9-column schema
-// via eplDatabaseJoinFullRowSchema(), and the function-fed
-// eplDatabaseJoinProvider keyed on the trigger id (no database driver); the
-// Java oracle runs against the esper-mysql mysql:8.0 Docker fixture and
-// records the identical canonical forms.
+// This Go replay uses a function-fed HistoricalProvider over the canonical
+// fixture rows. It does not exercise database/sql, MySQL/JDBC connection
+// acquisition or release, or connection-pool limits. The checked-in Java/Go
+// evidence therefore proves only positive listener-output equivalence; the
+// real MySQL/JDBC lifecycle accounting remains open.
+//
+// The runner also checks that the undeployed send produces no in-process
+// delivery, but that negative guard is not represented as a trace record.
 const eplDatabaseRestartJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 
 var eplDatabaseRestartJavaSources = []string{
@@ -51,20 +46,39 @@ type eplDatabaseRestartS0 struct {
 	Id int64 `esper:"id"`
 }
 
-// eplDatabaseRestartCycles mirrors the Java loop length: 100
-// undeploy/redeploy cycles, each ending in exactly one delivery.
+// eplDatabaseRestartCycles is the fixed Java lifecycle count pinned by the
+// scenario contract.
 const eplDatabaseRestartCycles = 100
 
-func runEplDatabaseRestartScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
+const eplDatabaseRestartLifecycle = "undeploy-send-redeploy-send"
+
+func validateEplDatabaseRestartScenario(scenario compat.Scenario) (int, error) {
 	if err := scenario.Validate(); err != nil {
-		return compat.Trace{}, err
+		return 0, err
 	}
-	if len(scenario.Steps) == 0 {
-		return compat.Trace{}, fmt.Errorf("epl-database-restart scenario has no steps")
+	if len(scenario.Steps) != 2 {
+		return 0, fmt.Errorf("epl-database-restart scenario requires exactly 2 steps")
+	}
+	caseStep, advanceStep := scenario.Steps[0], scenario.Steps[1]
+	if caseStep.Op != "case" || caseStep.Case != "restart-statement" ||
+		caseStep.Label != eplDatabaseRestartLifecycle || caseStep.Count == nil ||
+		*caseStep.Count != eplDatabaseRestartCycles {
+		return 0, fmt.Errorf("epl-database-restart lifecycle contract is not pinned to %d %s cycles", eplDatabaseRestartCycles, eplDatabaseRestartLifecycle)
+	}
+	if advanceStep.Op != "advance-time" || advanceStep.At != "1970-01-01T00:00:00Z" {
+		return 0, fmt.Errorf("epl-database-restart scenario must pin the epoch advance-time step")
+	}
+	return int(*caseStep.Count), nil
+}
+
+func runEplDatabaseRestartScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
+	cycles, err := validateEplDatabaseRestartScenario(scenario)
+	if err != nil {
+		return compat.Trace{}, err
 	}
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
 	for caseIndex, caseName := range eplDatabaseRestartCases {
-		caseTrace, err := runEplDatabaseRestartCase(ctx, caseName, caseIndex)
+		caseTrace, err := runEplDatabaseRestartCase(ctx, caseName, caseIndex, cycles)
 		if err != nil {
 			return compat.Trace{}, fmt.Errorf("epl-database-restart case %q: %w", caseName, err)
 		}
@@ -73,7 +87,7 @@ func runEplDatabaseRestartScenario(ctx context.Context, scenario compat.Scenario
 	return trace, nil
 }
 
-func runEplDatabaseRestartCase(ctx context.Context, caseName string, caseIndex int) ([]compat.TraceRecord, error) {
+func runEplDatabaseRestartCase(ctx context.Context, caseName string, caseIndex, cycles int) ([]compat.TraceRecord, error) {
 	now := time.Unix(0, 0).UTC()
 	sequence := uint64(0)
 	var records []compat.TraceRecord
@@ -127,9 +141,9 @@ func runEplDatabaseRestartCase(ctx context.Context, caseName string, caseIndex i
 		if err != nil {
 			return nil, err
 		}
-		// subscribe re-adds the listener on each freshly deployed statement;
-		// deliveries counts every listener invocation across the cycles so
-		// the per-phase guards can compare deltas.
+		// The initial deployment is listener-less, matching the Java setup.
+		// Subscribe only after each fresh deployment; deliveries counts every
+		// listener invocation across cycles for the per-phase guards.
 		deliveries := 0
 		subscribe := func(deployment *esper.Deployment) error {
 			_, subErr := deployment.Statements()[0].Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
@@ -139,10 +153,7 @@ func runEplDatabaseRestartCase(ctx context.Context, caseName string, caseIndex i
 			})
 			return subErr
 		}
-		if err := subscribe(deployed); err != nil {
-			return nil, err
-		}
-		for cycle := 1; cycle <= eplDatabaseRestartCycles; cycle++ {
+		for cycle := 1; cycle <= cycles; cycle++ {
 			// undeployModuleContaining("s0"), then the silent send while no
 			// statement exists: nothing may deliver.
 			before := deliveries
