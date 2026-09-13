@@ -10080,15 +10080,19 @@
     "fan-in",
     "fan-out"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "The Go fluent CustomTypedPorts API declares generic input/output value types, validates assignability at graph Build time and rejects a wrong runtime value at an edge. The mapped fan-in/fan-out trace routes two typed input families through four named ports and emits them to separate output ports. Java's larger custom operator lifecycle, concurrency/backpressure and cross-process configuration matrix remain open; factorial feedback and the deep linear graph are mapped separately in case.dataflow-feedback.",
+   "difference": "The Go fluent CustomTypedPorts API declares generic input/output value types, validates assignability at graph Build time and rejects a wrong runtime value at an edge. The mapped fan-in/fan-out trace routes two typed input families through four named ports and emits them to separate output ports. Java's larger custom operator lifecycle, concurrency/backpressure and cross-process configuration matrix remain open; factorial feedback and the deep linear graph are mapped separately in case.dataflow-feedback. Draft 4.397 consolidation: the case's single execution (EPLDataflowFanInOut, java-runtime-6309a6b7e0f0ba981a97) is already differentially verified by case.dataflow-captive-emitter-ports's chain (the submitPort cross-routing fan-in/out shape with four captures). Cross-case DV reuse; no new chain required.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-6309a6b7e0f0ba981a97"
    ]
   },
   {
@@ -10432,6 +10436,12 @@
     "java-runtime-8c8f6f03b11605a16d11",
     "java-runtime-ef085a37ed45eb35a13f"
    ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2d7b6229c7a3b2bee40b",
+    "java-runtime-950696d7aa6356acb9d4",
+    "java-runtime-8c8f6f03b11605a16d11",
+    "java-runtime-ef085a37ed45eb35a13f"
+   ],
    "javaNames": [
     "EPLDataflowAllTypes",
     "EPLDataflowStmtNameDynamic",
@@ -10465,15 +10475,16 @@
     "epstatement-source",
     "row"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
     "go-unit"
    ],
-   "difference": "Go maps the EPStatement source through an existing fluent Pattern statement and preserves projected Row values into the graph; built-in Filter/Select can consume those rows through analyzable ResultField expressions, source-side EPStatementSourceWithFilter evaluates a typed predicate before graph delivery, Build infers Event versus Row for EventBus/statement ports with connected narrowing, EPStatementSourceByName follows deployment/undeployment/redeployment of a named statement, EPStatementSourceByDeployment preserves the statementDeploymentId + statementName scope, EPStatementSourceWithStatementFilter selects matching statement metadata across current and future deployments, value collectors can suppress, transform or duplicate new values, batch collectors receive a cloned ResultBatch with both new and old streams, and WithUnderlying forms emit Event underlying values or projection Row maps. Java also covers all event representations, combined statement-filter/collector parameter variants and invalid EPL-specific source diagnostics.",
+   "difference": "Go maps the EPStatement source through an existing fluent Pattern statement and preserves projected Row values into the graph; built-in Filter/Select can consume those rows through analyzable ResultField expressions, source-side EPStatementSourceWithFilter evaluates a typed predicate before graph delivery, Build infers Event versus Row for EventBus/statement ports with connected narrowing, EPStatementSourceByName follows deployment/undeployment/redeployment of a named statement, EPStatementSourceByDeployment preserves the statementDeploymentId + statementName scope, EPStatementSourceWithStatementFilter selects matching statement metadata across current and future deployments, value collectors can suppress, transform or duplicate new values, batch collectors receive a cloned ResultBatch with both new and old streams, and WithUnderlying forms emit Event underlying values or projection Row maps. Java also covers all event representations, combined statement-filter/collector parameter variants and invalid EPL-specific source diagnostics. Draft 4.397 consolidation: this case's four executions are the same Java execution classes (EPLDataflowAllTypes, EPLDataflowStmtNameDynamic, EPLDataflowStatementFilter, EPLDataflowInvalid) with the same four runtime IDs already differentially verified by case.dataflow-epstatement-source's chain (EPLDataflowOpEPStatementSource.java; the pattern case maps the EPStatement source through a Pattern statement — the same source surface the chain covers). Cross-case DV reuse: the executions, runtime IDs, and differential evidence are identical; no new chain is required.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ],
    "notes": [
     "Draft 4.362 adds case.dataflow-epstatement-source, the differential-verified upgrade of this umbrella's EPLDataflowOpEPStatementSource executions (all four now DV); the Invalid execution's three reflective/declaration rejections are covered by the invalidity policy (Java-side prefix assertions; the representable no-binding rejection is a Go Build error class)."
@@ -44473,7 +44484,7 @@
  "summary": {
   "inventoriedCases": 651,
   "implementedCases": 649,
-  "differentialVerifiedCases": 273,
+  "differentialVerifiedCases": 275,
   "differentialVerifiedRuntimeIds": 1018,
   "intentionallyDifferentCases": 24,
   "representativeVerifiedCases": 104,

@@ -56,7 +56,7 @@ import java.util.List;
  * off, epoch initialization 0.
  *
  * The statement is byte-exact from EPLDatabaseTimeBatch (suite lines
- * 443-446), assembled with the suite's own ALL_FIELDS concatenation: the
+ * 92-97), assembled with the suite's own ALL_FIELDS concatenation: the
  * select-leading 'from ' plus the segment-start ' sql:' leave a DOUBLE space
  * after "from"; the SQL carries a literal LF+CR ("\n\r") pair between
  * "mytesttable " and "where"; and the second stream segment appends with NO
@@ -134,7 +134,7 @@ public final class EPLDatabaseTimeBatchScenarioOracle {
     private static final String ALL_FIELDS =
             "mybigint, myint, myvarchar, mychar, mybool, mynumeric, mydecimal, mydouble, myreal";
 
-    // Byte-exact statement from EPLDatabaseTimeBatch (suite lines 443-446),
+    // Byte-exact statement from EPLDatabaseTimeBatch (suite lines 92-97),
     // assembled with the suite's own concatenations: DOUBLE space after
     // "from" ("from " + " sql:"), a literal LF+CR pair inside the SQL, and NO
     // space after "as s0," before the SupportBean segment.
