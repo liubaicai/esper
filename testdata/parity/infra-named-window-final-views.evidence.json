@@ -1,0 +1,536 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-476271957d6ffdb3a878",
+    "java-runtime-3c2f3a2696127c04b2a6"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+  ],
+  "javaExecutions": [
+    "InfraPattern",
+    "InfraNamedWindowTimeToLiveDelete"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-final-views",
+    "steps": [
+      {
+        "op": "case",
+        "case": "pattern"
+      },
+      {
+        "op": "deploy",
+        "case": "pattern",
+        "statement": "create",
+        "epl": "@name('create') create window MyWindowPAT#keepall as MySimpleKeyValueMap"
+      },
+      {
+        "op": "deploy",
+        "case": "pattern",
+        "statement": "s0",
+        "epl": "@name('s0') select a.key as key, a.value as value from pattern [every a=MyWindowPAT(key='S1') or a=MyWindowPAT(key='S2')]"
+      },
+      {
+        "op": "deploy",
+        "case": "pattern",
+        "statement": "insert",
+        "epl": "insert into MyWindowPAT select theString as key, longBoxed as value from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "longBoxed": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "longBoxed": 2,
+          "theString": "S1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "longBoxed": 3,
+          "theString": "S1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "longBoxed": 4,
+          "theString": "S2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "longBoxed": 1,
+          "theString": "S1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "pattern"
+      },
+      {
+        "op": "case",
+        "case": "ttl-delete"
+      },
+      {
+        "op": "advance-time",
+        "case": "ttl-delete",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deploy",
+        "case": "ttl-delete",
+        "statement": "win",
+        "epl": "@name('win') create window MyWindow#timetolive(current_timestamp() + longPrimitive) as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "ttl-delete",
+        "statement": "merge",
+        "epl": "on SupportBean merge MyWindow insert select *"
+      },
+      {
+        "op": "deploy",
+        "case": "ttl-delete",
+        "statement": "delete",
+        "epl": "on SupportBean_S0 delete from MyWindow where theString = p00"
+      },
+      {
+        "op": "send",
+        "case": "ttl-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 2000,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "ttl-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 3000,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "ttl-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 1000,
+          "theString": "E3"
+        }
+      },
+      {
+        "op": "send",
+        "case": "ttl-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "longPrimitive": 2000,
+          "theString": "E4"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ttl-delete",
+        "statement": "win",
+        "mode": "any"
+      },
+      {
+        "op": "advance-time",
+        "case": "ttl-delete",
+        "at": "1970-01-01T00:00:00.500Z"
+      },
+      {
+        "op": "send",
+        "case": "ttl-delete",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ttl-delete",
+        "statement": "win",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "ttl-delete",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "ttl-delete",
+        "statement": "win",
+        "mode": "any"
+      },
+      {
+        "op": "advance-time",
+        "case": "ttl-delete",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "ttl-delete",
+        "statement": "win",
+        "mode": "any"
+      },
+      {
+        "op": "advance-time",
+        "case": "ttl-delete",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "snapshot",
+        "case": "ttl-delete",
+        "statement": "win",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "ttl-delete"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-final-views",
+    "records": [
+      {
+        "case": "pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "S1",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "S1",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "S2",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:02Z"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-final-views",
+    "records": [
+      {
+        "case": "pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "S1",
+              "value": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "S1",
+              "value": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "S2",
+              "value": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ttl-delete",
+        "operation": "snapshot",
+        "statement": "win",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:02Z"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

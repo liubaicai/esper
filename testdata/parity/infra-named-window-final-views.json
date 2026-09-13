@@ -1,0 +1,266 @@
+{
+  "cases": [
+    {
+      "case": "pattern",
+      "createEpl": "@name('create') create window MyWindowPAT#keepall as MySimpleKeyValueMap",
+      "deleteEpl": "",
+      "deploys": [
+        "create",
+        "s0",
+        "insert"
+      ],
+      "description": "pattern consumer over the named-window insert stream: every S1 match re-arms while the single S2 match quits the whole or-expression",
+      "epl": "@name('create') create window MyWindowPAT#keepall as MySimpleKeyValueMap",
+      "executionName": "InfraPattern",
+      "insertEpl": "insert into MyWindowPAT select theString as key, longBoxed as value from SupportBean",
+      "iteratorSnapshots": 0,
+      "listened": [
+        "s0"
+      ],
+      "mergeEpl": "",
+      "observation": "listener",
+      "ordinal": 52,
+      "runtimeId": "java-runtime-476271957d6ffdb3a878",
+      "s0Epl": "@name('s0') select a.key as key, a.value as value from pattern [every a=MyWindowPAT(key='S1') or a=MyWindowPAT(key='S2')]"
+    },
+    {
+      "case": "ttl-delete",
+      "createEpl": "@name('win') create window MyWindow#timetolive(current_timestamp() + longPrimitive) as SupportBean",
+      "deleteEpl": "on SupportBean_S0 delete from MyWindow where theString = p00",
+      "deploys": [
+        "win",
+        "merge",
+        "delete"
+      ],
+      "description": "whole-bean timetolive window with merge insert and p00 deletes observed through any-order iterator snapshots over absolute virtual time",
+      "epl": "@name('win') create window MyWindow#timetolive(current_timestamp() + longPrimitive) as SupportBean",
+      "executionName": "InfraNamedWindowTimeToLiveDelete",
+      "insertEpl": "",
+      "iteratorSnapshots": 5,
+      "listened": [],
+      "mergeEpl": "on SupportBean merge MyWindow insert select *",
+      "observation": "iterator",
+      "ordinal": 57,
+      "runtimeId": "java-runtime-3c2f3a2696127c04b2a6",
+      "s0Epl": ""
+    }
+  ],
+  "description": "InfraNamedWindowViews final slice: the pattern consumer over the named-window insert stream with or-quit silence, and the time-to-live window with merge insert and on-delete triggers observed through any-order iterator snapshots under absolute virtual time (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java).",
+  "id": "infra-named-window-final-views",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaFlags": [],
+  "javaNames": [
+    "InfraPattern",
+    "InfraNamedWindowTimeToLiveDelete"
+  ],
+  "javaRuntimes": [
+    "java-runtime-476271957d6ffdb3a878",
+    "java-runtime-3c2f3a2696127c04b2a6"
+  ],
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java",
+  "javaStaticIds": [
+    "java-030c8e6d456d680e8745"
+  ],
+  "steps": [
+    {
+      "case": "pattern",
+      "op": "case"
+    },
+    {
+      "case": "pattern",
+      "epl": "@name('create') create window MyWindowPAT#keepall as MySimpleKeyValueMap",
+      "op": "deploy",
+      "statement": "create"
+    },
+    {
+      "case": "pattern",
+      "epl": "@name('s0') select a.key as key, a.value as value from pattern [every a=MyWindowPAT(key='S1') or a=MyWindowPAT(key='S2')]",
+      "op": "deploy",
+      "statement": "s0"
+    },
+    {
+      "case": "pattern",
+      "epl": "insert into MyWindowPAT select theString as key, longBoxed as value from SupportBean",
+      "op": "deploy",
+      "statement": "insert"
+    },
+    {
+      "case": "pattern",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longBoxed": 1,
+        "theString": "E1"
+      }
+    },
+    {
+      "case": "pattern",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longBoxed": 2,
+        "theString": "S1"
+      }
+    },
+    {
+      "case": "pattern",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longBoxed": 3,
+        "theString": "S1"
+      }
+    },
+    {
+      "case": "pattern",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longBoxed": 4,
+        "theString": "S2"
+      }
+    },
+    {
+      "case": "pattern",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longBoxed": 1,
+        "theString": "S1"
+      }
+    },
+    {
+      "case": "pattern",
+      "op": "undeploy-all"
+    },
+    {
+      "case": "ttl-delete",
+      "op": "case"
+    },
+    {
+      "at": "1970-01-01T00:00:00Z",
+      "case": "ttl-delete",
+      "op": "advance-time"
+    },
+    {
+      "case": "ttl-delete",
+      "epl": "@name('win') create window MyWindow#timetolive(current_timestamp() + longPrimitive) as SupportBean",
+      "op": "deploy",
+      "statement": "win"
+    },
+    {
+      "case": "ttl-delete",
+      "epl": "on SupportBean merge MyWindow insert select *",
+      "op": "deploy",
+      "statement": "merge"
+    },
+    {
+      "case": "ttl-delete",
+      "epl": "on SupportBean_S0 delete from MyWindow where theString = p00",
+      "op": "deploy",
+      "statement": "delete"
+    },
+    {
+      "case": "ttl-delete",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longPrimitive": 2000,
+        "theString": "E1"
+      }
+    },
+    {
+      "case": "ttl-delete",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longPrimitive": 3000,
+        "theString": "E2"
+      }
+    },
+    {
+      "case": "ttl-delete",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longPrimitive": 1000,
+        "theString": "E3"
+      }
+    },
+    {
+      "case": "ttl-delete",
+      "eventType": "SupportBean",
+      "op": "send",
+      "payload": {
+        "longPrimitive": 2000,
+        "theString": "E4"
+      }
+    },
+    {
+      "case": "ttl-delete",
+      "mode": "any",
+      "op": "snapshot",
+      "statement": "win"
+    },
+    {
+      "at": "1970-01-01T00:00:00.500Z",
+      "case": "ttl-delete",
+      "op": "advance-time"
+    },
+    {
+      "case": "ttl-delete",
+      "eventType": "SupportBean_S0",
+      "op": "send",
+      "payload": {
+        "p00": "E2"
+      }
+    },
+    {
+      "case": "ttl-delete",
+      "mode": "any",
+      "op": "snapshot",
+      "statement": "win"
+    },
+    {
+      "case": "ttl-delete",
+      "eventType": "SupportBean_S0",
+      "op": "send",
+      "payload": {
+        "p00": "E1"
+      }
+    },
+    {
+      "case": "ttl-delete",
+      "mode": "any",
+      "op": "snapshot",
+      "statement": "win"
+    },
+    {
+      "at": "1970-01-01T00:00:01Z",
+      "case": "ttl-delete",
+      "op": "advance-time"
+    },
+    {
+      "case": "ttl-delete",
+      "mode": "any",
+      "op": "snapshot",
+      "statement": "win"
+    },
+    {
+      "at": "1970-01-01T00:00:02Z",
+      "case": "ttl-delete",
+      "op": "advance-time"
+    },
+    {
+      "case": "ttl-delete",
+      "mode": "any",
+      "op": "snapshot",
+      "statement": "win"
+    },
+    {
+      "case": "ttl-delete",
+      "op": "undeploy-all"
+    }
+  ],
+  "version": "esper-parity/v1"
+}
