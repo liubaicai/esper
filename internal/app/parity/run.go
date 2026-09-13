@@ -139,8 +139,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-database-join-2" || *mode == "epl-database-join-2-diff" {
 		scenario, err = compat.LoadScenario(file)
-	} else if *mode == "epl-database-restart" || *mode == "epl-database-restart-diff" {
+	} else if *mode == "event-json-sender-getter" || *mode == "event-json-sender-getter-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "epl-database-restart" || *mode == "epl-database-restart-diff" {
+
 	} else if *mode == "epl-database-timebatch" || *mode == "epl-database-timebatch-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-doc-samples" || *mode == "dataflow-doc-samples-diff" {
@@ -473,6 +475,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplDatabaseTimeBatchJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplDatabaseTimeBatchJavaSources),
 				splitMetadata(*javaExecutions, eplDatabaseTimeBatchJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "event-json-sender-getter" || *mode == "event-json-sender-getter-diff" {
+		trace, err := runDataflowEventJsonSenderGetterScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-json-sender-getter-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eventJsonSenderGetterJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventJsonSenderGetterJavaSources),
+				splitMetadata(*javaExecutions, eventJsonSenderGetterJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
@@ -4271,6 +4289,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 }
 
 // runDifferentialMode loads the Java trace, builds canonical differential evidence, and writes it. It returns 1 when the normalized traces differ.
+
 func runDifferentialMode(stdout, stderr io.Writer, javaTracePath, evidencePath, javaCommit string, runtimeIDs, sourceFiles, executions []string, scenario compat.Scenario, goTrace compat.Trace) int {
 	return runDifferentialModeWithNormalizer(stdout, stderr, javaTracePath, evidencePath, javaCommit,
 		runtimeIDs, sourceFiles, executions, scenario, goTrace, nil)

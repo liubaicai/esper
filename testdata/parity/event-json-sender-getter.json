@@ -1,0 +1,53 @@
+{
+ "version": "esper-parity/v1",
+ "id": "event-json-sender-getter",
+ "description": "JSON event representation differential slice.",
+ "cases": [
+  {
+   "case": "json-sender-parse-and-send",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-8d0258718d883f9c5497",
+   "executionName": "EventJsonEventSenderParseAndSend"
+  },
+  {
+   "case": "json-getter-map-type",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-b36d999f7edc275dacd2",
+   "executionName": "EventJsonGetterMapType"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "json-sender-parse-and-send"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "MyEvent",
+   "payload": {
+    "p1": "abc"
+   }
+  },
+  {
+   "op": "case",
+   "case": "json-getter-map-type"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "JsonEvent",
+   "payload": {
+    "prop": {
+     "x": "y"
+    }
+   }
+  }
+ ]
+}

@@ -48,7 +48,17 @@ activity or a single coverage percentage.
 
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
-Active: Draft 4.398 ('resultbatch-borrow').
+Active: Draft 4.401 ('event-json-slice').
+
+- [x] Combined scout complete (agent_18e55d54): Java contract + Go surface + runner sketch + value canonicalization + manifest delta. Both executions deterministic (single JSON parse + send, one listener delivery each, no remove-streams/timing). Go surface mature: RegisterJSON + JSONSender(Parse/Send) + Schema.Getter + RenderJSON all exist with engine-test precedents. Key canonicalization: nested Map prop projects as kind/row wrapper (Java oracle convention, Go normalizeValue wraps esper.Event not plain maps — declare prop with nested schema or add a case normalizer).
+- [x] Contract frozen. Scenario event-json-sender-getter, 2 cases, 2 listener records/side: (0) json-sender-parse-and-send 8d0258718d883f9c5497 — @JsonSchema create json schema MyEvent(p1 string) + select *, JSONSender Parse '{"p1": "abc"}' (exact bytes with space) → SendEvent → 1 delivery {p1:"abc"}; (1) json-getter-map-type b36d999f7edc275dacd2 — create json schema JsonEvent(prop java.util.Map) + select *, sendEventJson '{"prop":{"x":"y"}}' (minimaljson compact) → 1 delivery {prop: nested {x:"y"}}; in-process: getter prop('x')=="y", prop.somefield? null. Manifest: both cases → differential-verified, dv list = [own ID]; summary dvCases 275→277, dvIds 1018→1020.
+- [ ] Writer dispatched (oracle + script + scenario + Java trace) + Go runner implementer dispatched in parallel.
+- [x] Evidence pipeline, manifest upgrade, roadmap, CHANGELOG. (Writer agent_1f472a4a Java trace 2 records deterministic; evidence passing 0 diffs; manifest dvCases 277, dvIds 1020; roadmap + CHANGELOG 4.401 supplements newest-first.)
+- [ ] Gates + independent parity review + commit.
+
+### Previous work unit (prior)
+
+Active: Draft 4.400 ('database-invalid-dispositions').
 
 - [x] Scope frozen from perf doc §4.9.3 remaining half: (a) ResultBatch borrow/reuse — the dispatch path clones the batch per listener/subscriber/sink (runtime.go:6045/6049/6052/6057); add an internal borrow path for synchronous listener dispatch when no retention is possible; (b) non-empty variable snapshot copy reduction — cloneValues per dispatch for statements with variables; share read-only views where isolation allows. The listener-holding-semantics verification is the unit's own deliverable.
 - [x] Investigation: subscriber clone provably unnecessary (newSubscriberUpdate detaches rows synchronously — subscriber.go:30-45); listeners/sink need clone-per-delivery EXCEPT the last (arrays never reused — no slice pooling, producers build fresh, all dispatch queues drained under e.mu before dispatch); non-empty variable snapshot copy EXCLUDED (written per statement during dispatch — subqueryEngineVariable injection + output-policy assignments; read-only view needs cross-cutting map refactor, deferred).

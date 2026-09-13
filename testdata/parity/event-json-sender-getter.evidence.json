@@ -1,0 +1,138 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-8d0258718d883f9c5497",
+    "java-runtime-b36d999f7edc275dacd2"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonEventSender.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonGetter.java"
+  ],
+  "javaExecutions": [
+    "EventJsonEventSenderParseAndSend",
+    "EventJsonGetterMapType"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "event-json-sender-getter",
+    "steps": [
+      {
+        "op": "case",
+        "case": "json-sender-parse-and-send"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "MyEvent",
+        "payload": {
+          "p1": "abc"
+        }
+      },
+      {
+        "op": "case",
+        "case": "json-getter-map-type"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "JsonEvent",
+        "payload": {
+          "prop": {
+            "x": "y"
+          }
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-json-sender-getter",
+    "records": [
+      {
+        "case": "json-sender-parse-and-send",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p1": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-getter-map-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prop": {
+                "fields": {
+                  "x": "y"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-json-sender-getter",
+    "records": [
+      {
+        "case": "json-sender-parse-and-send",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p1": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "json-getter-map-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prop": {
+                "fields": {
+                  "x": "y"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
