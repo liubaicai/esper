@@ -1,4 +1,4 @@
-持续将固定版本的 `/root/app/esper` Esper 9.0.0 完整移植到当前
+持续将固定版本的 linux: `/root/app/esper` or windows:`D:\Code\soc\esper` Esper 9.0.0 完整移植到当前
 `bigsoc-esper` 仓库。Java Esper 是可观测行为 oracle；Go 公共规则 API
 必须是符合 Go style 的类型安全链式 API，体验参考 Flink，不以 EPL 文本
 作为主要入口，也不机械复制 Java 类结构。

@@ -1582,7 +1582,7 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	}
 	dispatches := make([]statementDispatch, 0)
 	processedRoutes := 0
-	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
+	if err := e.processPendingRoutedEventsWithCallbacksLocked(ctx, now, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
 		e.mu.Unlock()
 		return err
 	}
@@ -3973,6 +3973,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	e.pendingPatternSubexpressionLimits = nil
 	e.pendingAuditRecords = nil
 	dispatches := make([]statementDispatch, 0)
+	var insertBoundaries []namedWindowInsertBoundary
 	// routedQueue is only ever seeded with the inbound event (routed events
 	// enter through processPendingRoutedEventsLocked), so a one-element stack
 	// buffer covers it without a heap allocation per send.
@@ -4066,6 +4067,16 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 					e.mu.Unlock()
 					return err
 				}
+				if isNamedWindowInsertTrigger(statement) {
+					boundary, boundaryErr := e.captureNamedWindowInsertBoundaryLocked(ctx, now, &variables)
+					if boundaryErr != nil {
+						e.mu.Unlock()
+						return boundaryErr
+					}
+					if !boundary.empty() {
+						insertBoundaries = append(insertBoundaries, boundary)
+					}
+				}
 				if mutationTrigger {
 					deferredTriggerDispatches = append(deferredTriggerDispatches, statementDispatch{statement: statement, batch: batch})
 				}
@@ -4081,7 +4092,37 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 			}
 		}
 		dispatches = append(dispatches, deferredTriggerDispatches...)
-		if err = e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, &unmatchedEvents, &processedRoutes); err != nil {
+		// Java dispatches the inbound event's statement outputs before draining the
+		// work queue, and drains one named-window insert boundary at a time so
+		// separate inserts into the same window never aggregate into one consumer
+		// callback (create/s0/create/s0, not create/create/s0).
+		sourceWork := engineDispatchWork{statements: dispatches}
+		dispatches = nil
+		sourceWork.variableChanges = e.takeVariableChangesLocked()
+		sourceWork.contextEvents = e.takeContextEventsLocked()
+		sourceWork.auditRecords, sourceWork.auditListeners = e.takeAuditDispatchLocked()
+		sourceWork.matchRecognizeStateLimits = append(sourceWork.matchRecognizeStateLimits, e.pendingMatchRecognizeStateLimits...)
+		sourceWork.matchRecognizeStateLimitListeners = append(sourceWork.matchRecognizeStateLimitListeners, e.matchRecognizeStateLimitListeners...)
+		e.pendingMatchRecognizeStateLimits = nil
+		sourceWork.patternSubexpressionLimits = append(sourceWork.patternSubexpressionLimits, e.pendingPatternSubexpressionLimits...)
+		sourceWork.patternSubexpressionLimitListeners = append(sourceWork.patternSubexpressionLimitListeners, e.patternSubexpressionLimitListeners...)
+		e.pendingPatternSubexpressionLimits = nil
+		sourceWork.patternRuntimeLimits = append(sourceWork.patternRuntimeLimits, e.pendingPatternRuntimeLimits...)
+		sourceWork.patternRuntimeLimitListeners = append(sourceWork.patternRuntimeLimitListeners, e.patternRuntimeLimitListeners...)
+		e.pendingPatternRuntimeLimits = nil
+		if err = e.dispatchCapturedEngineWorkLocked(ctx, sourceWork); err != nil {
+			e.mu.Unlock()
+			return err
+		}
+		for _, boundary := range insertBoundaries {
+			if err = e.dispatchCapturedEngineWorkLocked(ctx, engineDispatchWork{statements: boundary.statements, namedWindows: boundary.namedWindows}); err != nil {
+				e.mu.Unlock()
+				return err
+			}
+		}
+		e.refreshVariablesLocked()
+		variables = snapshotVariables(e.variables)
+		if err = e.processPendingRoutedEventsWithCallbacksLocked(ctx, now, variables, &dispatches, &processedEvents, &unmatchedEvents, &processedRoutes); err != nil {
 			e.mu.Unlock()
 			return err
 		}
@@ -4614,7 +4655,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 		}
 	}
 	processedRoutes := 0
-	if err := e.processPendingRoutedEventsLocked(ctx, at, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
+	if err := e.processPendingRoutedEventsWithCallbacksLocked(ctx, at, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
 		e.mu.Unlock()
 		return err
 	}
@@ -4853,6 +4894,286 @@ type namedWindowConsumerDelta struct {
 	window *NamedWindow
 	delta  NamedWindowDelta
 	owner  *Statement
+}
+type engineDispatchWork struct {
+	statements                         []statementDispatch
+	namedWindows                       []namedWindowDispatch
+	unmatched                          []Event
+	unmatchedListener                  UnmatchedListener
+	variableChanges                    []VariableChangeEvent
+	contextEvents                      []contextNotification
+	auditRecords                       []AuditRecord
+	auditListeners                     []AuditListener
+	matchRecognizeStateLimits          []MatchRecognizeStateLimitEvent
+	matchRecognizeStateLimitListeners  []MatchRecognizeStateLimitListener
+	patternSubexpressionLimits         []PatternSubexpressionLimitEvent
+	patternSubexpressionLimitListeners []PatternSubexpressionLimitListener
+	patternRuntimeLimits               []PatternRuntimeSubexpressionLimitEvent
+	patternRuntimeLimitListeners       []PatternRuntimeSubexpressionLimitListener
+}
+
+// enginePendingDispatchState isolates callback-visible work while a detached
+// dispatch batch runs without e.mu. Saved front work is restored behind any
+// front work produced by the callback; saved back work remains ahead of nested
+// back work, matching the Java work-queue boundary.
+type enginePendingDispatchState struct {
+	statements                  []statementDispatch
+	directNamedWindowDispatches []statementDispatch
+	namedWindowDispatches       []namedWindowDispatch
+	namedWindowConsumerDeltas   []namedWindowConsumerDelta
+	frontRoutedEvents           []routedEvent
+	backRoutedEvents            []routedEvent
+	variableChanges             []VariableChangeEvent
+	contextEvents               []contextNotification
+	auditRecords                []AuditRecord
+	matchRecognizeStateLimits   []MatchRecognizeStateLimitEvent
+	patternSubexpressionLimits  []PatternSubexpressionLimitEvent
+	patternRuntimeLimits        []PatternRuntimeSubexpressionLimitEvent
+}
+
+func (e *Engine) takeEnginePendingDispatchStateLocked() enginePendingDispatchState {
+	if e == nil {
+		return enginePendingDispatchState{}
+	}
+	state := enginePendingDispatchState{
+		statements:                  append([]statementDispatch(nil), e.pendingStatementDispatches...),
+		directNamedWindowDispatches: append([]statementDispatch(nil), e.pendingDirectNamedWindowDispatches...),
+		namedWindowDispatches:       append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...),
+		namedWindowConsumerDeltas:   cloneNamedWindowConsumerDeltas(e.pendingNamedWindowConsumerDeltas),
+		frontRoutedEvents:           append([]routedEvent(nil), e.pendingFrontRoutedEvents...),
+		backRoutedEvents:            append([]routedEvent(nil), e.pendingRoutedEvents...),
+		variableChanges:             append([]VariableChangeEvent(nil), e.pendingVariableChanges...),
+		contextEvents:               append([]contextNotification(nil), e.pendingContextEvents...),
+		auditRecords:                append([]AuditRecord(nil), e.pendingAuditRecords...),
+		matchRecognizeStateLimits:   append([]MatchRecognizeStateLimitEvent(nil), e.pendingMatchRecognizeStateLimits...),
+		patternSubexpressionLimits:  append([]PatternSubexpressionLimitEvent(nil), e.pendingPatternSubexpressionLimits...),
+		patternRuntimeLimits:        append([]PatternRuntimeSubexpressionLimitEvent(nil), e.pendingPatternRuntimeLimits...),
+	}
+	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
+	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	e.pendingFrontRoutedEvents = nil
+	e.pendingRoutedEvents = nil
+	e.pendingVariableChanges = nil
+	e.pendingContextEvents = nil
+	e.pendingAuditRecords = nil
+	e.pendingMatchRecognizeStateLimits = nil
+	e.pendingPatternSubexpressionLimits = nil
+	e.pendingPatternRuntimeLimits = nil
+	return state
+}
+
+func (e *Engine) restoreEnginePendingDispatchStateLocked(state enginePendingDispatchState) {
+	if e == nil {
+		return
+	}
+	e.pendingStatementDispatches = append(state.statements, e.pendingStatementDispatches...)
+	e.pendingDirectNamedWindowDispatches = append(state.directNamedWindowDispatches, e.pendingDirectNamedWindowDispatches...)
+	e.pendingNamedWindowDispatches = append(state.namedWindowDispatches, e.pendingNamedWindowDispatches...)
+	e.pendingNamedWindowConsumerDeltas = append(state.namedWindowConsumerDeltas, e.pendingNamedWindowConsumerDeltas...)
+	e.pendingFrontRoutedEvents = mergeRoutedQueues(e.pendingFrontRoutedEvents, state.frontRoutedEvents)
+	e.pendingRoutedEvents = mergeRoutedQueues(state.backRoutedEvents, e.pendingRoutedEvents)
+	e.pendingVariableChanges = append(state.variableChanges, e.pendingVariableChanges...)
+	e.pendingContextEvents = append(state.contextEvents, e.pendingContextEvents...)
+	e.pendingAuditRecords = append(state.auditRecords, e.pendingAuditRecords...)
+	e.pendingMatchRecognizeStateLimits = append(state.matchRecognizeStateLimits, e.pendingMatchRecognizeStateLimits...)
+	e.pendingPatternSubexpressionLimits = append(state.patternSubexpressionLimits, e.pendingPatternSubexpressionLimits...)
+	e.pendingPatternRuntimeLimits = append(state.patternRuntimeLimits, e.pendingPatternRuntimeLimits...)
+}
+
+// dispatchCapturedEngineWorkLocked runs one detached callback boundary. The
+// caller must hold e.mu; nested sends and listeners therefore see an isolated
+// pending state and cannot overwrite the outer route queues.
+func (e *Engine) dispatchCapturedEngineWorkLocked(ctx context.Context, work engineDispatchWork) error {
+	if e == nil {
+		return nil
+	}
+	pending := e.takeEnginePendingDispatchStateLocked()
+	e.mu.Unlock()
+	dispatchErr := e.dispatchEngineWork(ctx, work)
+	e.mu.Lock()
+	e.restoreEnginePendingDispatchStateLocked(pending)
+	return dispatchErr
+}
+
+// takeEngineDispatchWorkLocked detaches every callback payload accumulated by
+// one engine transaction. The caller must clear or isolate routed queues before
+// unlocking: callbacks may re-enter the engine and must not overwrite the
+// outer transaction's pending work.
+func (e *Engine) takeEngineDispatchWorkLocked(dispatches *[]statementDispatch, unmatchedEvents *[]Event) engineDispatchWork {
+	var work engineDispatchWork
+	if dispatches != nil {
+		work.statements = append(work.statements, (*dispatches)...)
+		*dispatches = nil
+	}
+	if e == nil {
+		return work
+	}
+	work.statements = append(work.statements, e.pendingStatementDispatches...)
+	work.namedWindows = append(work.namedWindows, e.pendingNamedWindowDispatches...)
+	if unmatchedEvents != nil {
+		work.unmatched = append(work.unmatched, (*unmatchedEvents)...)
+		*unmatchedEvents = nil
+	}
+	work.unmatchedListener = e.unmatchedListener
+	work.variableChanges = e.takeVariableChangesLocked()
+	work.contextEvents = e.takeContextEventsLocked()
+	work.auditRecords, work.auditListeners = e.takeAuditDispatchLocked()
+	work.matchRecognizeStateLimits = append(work.matchRecognizeStateLimits, e.pendingMatchRecognizeStateLimits...)
+	work.matchRecognizeStateLimitListeners = append(work.matchRecognizeStateLimitListeners, e.matchRecognizeStateLimitListeners...)
+	e.pendingMatchRecognizeStateLimits = nil
+	work.patternSubexpressionLimits = append(work.patternSubexpressionLimits, e.pendingPatternSubexpressionLimits...)
+	work.patternSubexpressionLimitListeners = append(work.patternSubexpressionLimitListeners, e.patternSubexpressionLimitListeners...)
+	e.pendingPatternSubexpressionLimits = nil
+	work.patternRuntimeLimits = append(work.patternRuntimeLimits, e.pendingPatternRuntimeLimits...)
+	work.patternRuntimeLimitListeners = append(work.patternRuntimeLimitListeners, e.patternRuntimeLimitListeners...)
+	e.pendingPatternRuntimeLimits = nil
+	e.pendingStatementDispatches = nil
+	e.pendingDirectNamedWindowDispatches = nil
+	e.pendingNamedWindowDispatches = nil
+	e.pendingNamedWindowConsumerDeltas = nil
+	return work
+}
+
+func (e *Engine) dispatchEngineWork(ctx context.Context, work engineDispatchWork) error {
+	if err := dispatchAuditRecords(ctx, work.auditRecords, work.auditListeners); err != nil {
+		return err
+	}
+	if work.unmatchedListener != nil {
+		for _, unmatched := range work.unmatched {
+			if err := work.unmatchedListener(ctx, unmatched); err != nil {
+				return fmt.Errorf("esper: unmatched listener for %q: %w", unmatched.TypeName(), err)
+			}
+		}
+	}
+	e.dispatchVariableChanges(work.variableChanges)
+	e.dispatchContextEvents(work.contextEvents)
+	for _, event := range work.matchRecognizeStateLimits {
+		for _, listener := range work.matchRecognizeStateLimitListeners {
+			listener.OnMatchRecognizeStateLimit(event.clone())
+		}
+	}
+	for _, event := range work.patternSubexpressionLimits {
+		for _, listener := range work.patternSubexpressionLimitListeners {
+			listener.OnPatternSubexpressionLimit(event)
+		}
+	}
+	for _, event := range work.patternRuntimeLimits {
+		for _, listener := range work.patternRuntimeLimitListeners {
+			listener.OnPatternRuntimeSubexpressionLimit(event)
+		}
+	}
+	if err := dispatchAll(ctx, work.statements); err != nil {
+		return err
+	}
+	for _, dispatch := range work.namedWindows {
+		if err := dispatch.window.dispatch(ctx, dispatch.delta); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type routedQueueBoundary struct {
+	front []routedEvent
+	back  []routedEvent
+}
+
+func (e *Engine) takeRoutedQueueBoundaryLocked() routedQueueBoundary {
+	if e == nil {
+		return routedQueueBoundary{}
+	}
+	boundary := routedQueueBoundary{
+		front: append([]routedEvent(nil), e.pendingFrontRoutedEvents...),
+		back:  append([]routedEvent(nil), e.pendingRoutedEvents...),
+	}
+	e.pendingFrontRoutedEvents = nil
+	e.pendingRoutedEvents = nil
+	return boundary
+}
+
+func mergeRoutedQueues(preferred, existing []routedEvent) []routedEvent {
+	if len(preferred) == 0 {
+		return append([]routedEvent(nil), existing...)
+	}
+	if len(existing) == 0 {
+		return append([]routedEvent(nil), preferred...)
+	}
+	merged := make([]routedEvent, 0, len(preferred)+len(existing))
+	for _, event := range preferred {
+		merged = insertRoutedEventSorted(merged, event)
+	}
+	for _, event := range existing {
+		merged = insertRoutedEventSorted(merged, event)
+	}
+	return merged
+}
+
+func (e *Engine) restoreRoutedQueueBoundaryLocked(boundary routedQueueBoundary) {
+	if e == nil {
+		return
+	}
+	nestedFront := append([]routedEvent(nil), e.pendingFrontRoutedEvents...)
+	nestedBack := append([]routedEvent(nil), e.pendingRoutedEvents...)
+	// A front route produced by a callback preempts the older outer front
+	// queue. Ordinary back routes retain FIFO order, so outer work stays first.
+	e.pendingFrontRoutedEvents = mergeRoutedQueues(nestedFront, boundary.front)
+	e.pendingRoutedEvents = mergeRoutedQueues(boundary.back, nestedBack)
+}
+
+// namedWindowInsertBoundary captures one direct named-window insert trigger's
+// listener work so it dispatches as a unit. Java processes one front-queue
+// insert at a time and drains that insert's named-window dispatch before the
+// next insert, so two inserts into the same window produce create/s0/create/s0
+// rather than one aggregated consumer callback.
+type namedWindowInsertBoundary struct {
+	statements   []statementDispatch
+	namedWindows []namedWindowDispatch
+}
+
+func (boundary namedWindowInsertBoundary) empty() bool {
+	return len(boundary.statements) == 0 && len(boundary.namedWindows) == 0
+}
+
+// isNamedWindowInsertTrigger reports whether the statement just performed a
+// direct named-window insert (plain insert-into or insert-from). Only those
+// actions queue one window delta per statement execution while the send loop
+// still runs later source statements.
+func isNamedWindowInsertTrigger(statement *Statement) bool {
+	if statement == nil {
+		return false
+	}
+	definition := statement.plan.query.trigger
+	return definition != nil && definition.target == triggerTargetNamedWindow &&
+		(definition.action == triggerInsertTable || definition.action == triggerInsertFromNamedWindow)
+}
+
+// captureNamedWindowInsertBoundaryLocked detaches the pending direct and
+// consumer work of the insert that just ran. Consumer processing may queue
+// routes; those stay on the shared route queues so front/back precedence is
+// preserved. The caller must hold e.mu.
+func (e *Engine) captureNamedWindowInsertBoundaryLocked(ctx context.Context, now time.Time, variables *map[string]Value) (namedWindowInsertBoundary, error) {
+	var boundary namedWindowInsertBoundary
+	if e == nil || variables == nil {
+		return boundary, nil
+	}
+	if len(e.pendingStatementDispatches) > 0 {
+		e.drainPendingStatementDispatchesLocked(&boundary.statements)
+	}
+	if len(e.pendingDirectNamedWindowDispatches) > 0 && len(e.pendingStatementDispatches) == 0 {
+		e.drainPendingDirectNamedWindowDispatchesLocked(&boundary.statements)
+	}
+	if len(e.pendingNamedWindowConsumerDeltas) > 0 {
+		if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, variables, &boundary.statements); err != nil {
+			return boundary, err
+		}
+	}
+	if len(e.pendingNamedWindowDispatches) > 0 {
+		boundary.namedWindows = append(boundary.namedWindows, e.pendingNamedWindowDispatches...)
+		e.pendingNamedWindowDispatches = nil
+	}
+	return boundary, nil
 }
 
 func cloneNamedWindowDelta(delta NamedWindowDelta) NamedWindowDelta {
@@ -5175,8 +5496,54 @@ func evaluatePrecedenceExpr(expr Expr, result Result, engine *Engine, variables 
 }
 
 func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.Time, variables map[string]Value, dispatches *[]statementDispatch, processedEvents *[]Event, unmatchedEvents *[]Event, processedRoutes *int) error {
+	_, err := e.processPendingRoutedEventsUntilBoundaryLocked(ctx, now, variables, dispatches, processedEvents, unmatchedEvents, processedRoutes, false)
+	return err
+}
+
+// processPendingRoutedEventsWithCallbacksLocked drains routed work using the
+// Java work-queue boundary: one front item is processed, its named-window
+// direct/consumer callbacks are detached, and callbacks run without e.mu
+// before the next front item is processed. The caller must hold e.mu.
+func (e *Engine) processPendingRoutedEventsWithCallbacksLocked(ctx context.Context, now time.Time, variables map[string]Value, dispatches *[]statementDispatch, processedEvents *[]Event, unmatchedEvents *[]Event, processedRoutes *int) error {
+	for {
+		boundary, err := e.processPendingRoutedEventsUntilBoundaryLocked(ctx, now, variables, dispatches, processedEvents, unmatchedEvents, processedRoutes, true)
+		if err != nil {
+			return err
+		}
+		if !boundary {
+			return nil
+		}
+		// Preserve the existing precedence within one Java dispatch boundary:
+		// mutation preprocessing, the direct create-window statement, then the
+		// aggregated tail-view consumers.
+		if len(e.pendingStatementDispatches) > 0 {
+			e.drainPendingStatementDispatchesLocked(dispatches)
+		}
+		if len(e.pendingDirectNamedWindowDispatches) > 0 && len(e.pendingStatementDispatches) == 0 {
+			e.drainPendingDirectNamedWindowDispatchesLocked(dispatches)
+		}
+		if len(e.pendingNamedWindowConsumerDeltas) > 0 {
+			if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, &variables, dispatches); err != nil {
+				return err
+			}
+		}
+		work := e.takeEngineDispatchWorkLocked(dispatches, unmatchedEvents)
+		queues := e.takeRoutedQueueBoundaryLocked()
+		e.mu.Unlock()
+		dispatchErr := e.dispatchEngineWork(ctx, work)
+		e.mu.Lock()
+		e.restoreRoutedQueueBoundaryLocked(queues)
+		if dispatchErr != nil {
+			return dispatchErr
+		}
+		e.refreshVariablesLocked()
+		variables = snapshotVariables(e.variables)
+	}
+}
+
+func (e *Engine) processPendingRoutedEventsUntilBoundaryLocked(ctx context.Context, now time.Time, variables map[string]Value, dispatches *[]statementDispatch, processedEvents *[]Event, unmatchedEvents *[]Event, processedRoutes *int, stopAtBoundary bool) (bool, error) {
 	if e == nil || dispatches == nil {
-		return nil
+		return false, nil
 	}
 	if processedRoutes == nil {
 		localProcessedRoutes := 0
@@ -5184,7 +5551,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 	}
 	for len(e.pendingFrontRoutedEvents) > 0 || len(e.pendingRoutedEvents) > 0 || len(e.pendingNamedWindowConsumerDeltas) > 0 || len(e.pendingDirectNamedWindowDispatches) > 0 || len(e.pendingStatementDispatches) > 0 {
 		if err := contextErr(ctx); err != nil {
-			return err
+			return false, err
 		}
 		// Statement output produced while preprocessing a mutation belongs before
 		// the direct create-window child and before any routed work.
@@ -5200,17 +5567,17 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		}
 		if len(e.pendingFrontRoutedEvents) == 0 && len(e.pendingNamedWindowConsumerDeltas) > 0 {
 			if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, &variables, dispatches); err != nil {
-				return err
+				return false, err
 			}
 			continue
 		}
 		if *processedRoutes >= maxRoutedEventsPerSend {
-			return NewError(ErrorState, fmt.Sprintf("route event limit %d exceeded", maxRoutedEventsPerSend))
+			return false, NewError(ErrorState, fmt.Sprintf("route event limit %d exceeded", maxRoutedEventsPerSend))
 		}
 		(*processedRoutes)++
-
+		fromFront := len(e.pendingFrontRoutedEvents) > 0
 		var current routedEvent
-		if len(e.pendingFrontRoutedEvents) > 0 {
+		if fromFront {
 			current = e.pendingFrontRoutedEvents[0]
 			e.pendingFrontRoutedEvents = e.pendingFrontRoutedEvents[1:]
 		} else {
@@ -5221,10 +5588,10 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 			insertUnderlying := namedWindowInsertUnderlying(current.namedWindow, current.event)
 			delta, err := current.namedWindow.insertWithVariables(ctx, now, insertUnderlying, variables)
 			if err != nil {
-				return err
+				return false, err
 			}
 			if err := e.queueNamedWindowDeltaLocked(ctx, now, current.namedWindow, delta, &variables, current.owner); err != nil {
-				return err
+				return false, err
 			}
 			continue
 		}
@@ -5242,7 +5609,6 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		sharedGeneration := e.sharedFilterIndex.candidates(current.event)
 		for _, statement := range routedOrder {
 			if idx := statement.acceptIndex; idx.prunable && acceptedNames != nil && statement.runtime.outputState == nil && !idx.mayAccept(acceptedNames) {
-				// Provable type mismatch (see the send-loop guard).
 				continue
 			}
 			if statement.sharedFilterKey != nil && statement.statelessPlan != nil && statement.statelessPlan.appliesTo(current.event) {
@@ -5254,7 +5620,7 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 			accepted := needsAccepted && statement.matchesEventFilter(current.event, now, variables)
 			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted, needsAccepted)
 			if err != nil {
-				return err
+				return false, err
 			}
 			if accepted || changed {
 				matched = true
@@ -5268,14 +5634,14 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 				break
 			}
 			if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
-				return err
+				return false, err
 			}
 			if !changed {
 				continue
 			}
 			*dispatches = append(*dispatches, statementDispatch{statement: statement, batch: batch})
 			if err := e.queueStatementRoutesLocked(statement, batch, now); err != nil {
-				return err
+				return false, err
 			}
 			if statement.plan.query.statementDrop {
 				break
@@ -5284,8 +5650,11 @@ func (e *Engine) processPendingRoutedEventsLocked(ctx context.Context, now time.
 		if unmatchedEvents != nil && !matched {
 			*unmatchedEvents = append(*unmatchedEvents, current.event)
 		}
+		if stopAtBoundary && (fromFront || len(e.pendingFrontRoutedEvents) > 0) {
+			return true, nil
+		}
 	}
-	return nil
+	return false, nil
 }
 
 func (e *Engine) applyStatementOutputAssignmentsLocked(ctx context.Context, statement *Statement, variables *map[string]Value) error {

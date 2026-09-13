@@ -2311,7 +2311,8 @@
     "internal/app/parity/infra_named_window_time_batch_views.go",
     "internal/app/parity/infra_named_window_groupwin_views.go",
     "internal/app/parity/infra_named_window_consumer_views.go",
-    "internal/app/parity/infra_named_window_bean_views.go"
+    "internal/app/parity/infra_named_window_bean_views.go",
+    "internal/app/parity/infra_named_window_insert_shape.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -2381,7 +2382,11 @@
     "java-runtime-f0a1da1fe931e132c21f",
     "java-runtime-fe6adc5803da60bf18f5",
     "java-runtime-f195548d023dfbde1aed",
-    "java-runtime-baa0bd4ca41b9b2c5f94"
+    "java-runtime-baa0bd4ca41b9b2c5f94",
+    "java-runtime-1b9f5b6ccf6b49cdba09",
+    "java-runtime-f739aa91028d27aa572f",
+    "java-runtime-9740441818d84a3ee94d",
+    "java-runtime-71402af94b27b4255ab8"
    ]
   },
   {
@@ -41382,6 +41387,65 @@
     "java-runtime-baa0bd4ca41b9b2c5f94"
    ],
    "difference": "The bean/schema named-window executions collapse to the same CreateNamedWindow/InsertIntoNamedWindow harness as the earlier slices, but the event-representation surface is pinned explicitly: the window statements are declared over bean-backed types, over a nested bean fragment projected with an expression, and over the contained-bean variant with an Avro compile rejection, and one execution inserts a subtype into a window declared over its supertype (the payload carries valOneA/valOne/val while the window property reads the most-derived override). One execution observes the insert through a fire-and-forget query result and another drives an on-trigger update, whose wave the Go engine publishes with the consumer record before the trigger statement's own record while Java publishes the trigger record first: the chain normalizes exactly that adjacent pair for that case through the repository's established Go-normalizer hook, the checked-in Go trace keeps the raw engine order, and no other record is affected — the remaining 20 records are byte-identical to the Java trace."
+  },
+  {
+   "id": "case.infra-namedwindow-views-insert-shape",
+   "javaRuntimeIds": [
+    "java-runtime-1b9f5b6ccf6b49cdba09",
+    "java-runtime-f739aa91028d27aa572f",
+    "java-runtime-9740441818d84a3ee94d",
+    "java-runtime-71402af94b27b4255ab8"
+   ],
+   "javaNames": [
+    "InfraDoubleInsertSameWindow",
+    "InfraIntersection",
+    "InfraSelectStreamDotStarInsert",
+    "InfraOnInsertPremptiveTwoWindow"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+   ],
+   "goTests": [
+    "TestRunInfraNamedWindowInsertShapeDirectReplay",
+    "TestRunInfraNamedWindowInsertShapeDiffWritesPassingEvidence",
+    "TestRunInfraNamedWindowInsertShapeDiffRejectsTraceMutations",
+    "TestRunInfraNamedWindowInsertShapeCheckedInEvidenceMatchesTraceAndReplay",
+    "TestRunInfraNamedWindowInsertShapeRejectsMalformedRawScenario",
+    "TestRunInfraNamedWindowInsertShapeRuntimeIDMappingMatchesScenario",
+    "TestNamedWindowDoubleInsertDispatchesPerInsertBoundary"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "named-window",
+    "insert-shape",
+    "front-queue-boundary",
+    "length-unique-intersection",
+    "object-array",
+    "preemptive-cascade",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-1b9f5b6ccf6b49cdba09",
+    "java-runtime-f739aa91028d27aa572f",
+    "java-runtime-9740441818d84a3ee94d",
+    "java-runtime-71402af94b27b4255ab8"
+   ],
+   "difference": "The insert-shape named-window executions pin the Java front-queue dispatch boundary: two insert-into statements feeding one keep-all window dispatch per insert (create/s0/create/s0, fixed in internal/esper/runtime.go by capturing one namedWindowInsertBoundary per direct insert trigger and dispatching the inbound statement outputs before the boundaries), the length(2)/unique(intPrimitive) intersection expiring E1/E2 as old rows under E3, the object-array stream-star insert whose undeclared c0 column the typed Go builder rejects at build time as the approved representation difference (the p0-only shape is replayed), and the TypeTrigger preemptive cascade where the WinTwo front insert lands before the OtherStream back route so s0 observes col2=9."
   }
  ],
  "mappings": [
@@ -44312,13 +44376,17 @@
   {
    "caseId": "case.infra-namedwindow-views-beans",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "caseId": "case.infra-namedwindow-views-insert-shape",
+   "capabilityId": "infra.namedwindow.views"
   }
  ],
  "summary": {
-  "inventoriedCases": 648,
-  "implementedCases": 646,
-  "differentialVerifiedCases": 271,
-  "differentialVerifiedRuntimeIds": 1012,
+  "inventoriedCases": 649,
+  "implementedCases": 647,
+  "differentialVerifiedCases": 272,
+  "differentialVerifiedRuntimeIds": 1016,
   "intentionallyDifferentCases": 23,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -44328,13 +44396,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3610,
+  "runtimeAssociationCount": 3614,
   "referencedJavaRuntimeIds": 3293,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 648,
+  "totalCases": 649,
   "totalCapabilities": 120
  }
 }

@@ -42,6 +42,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-variable and resultset-output-limit-row-limit-variable-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-filter-named-parameter and resultset-aggregate-filter-named-parameter-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-filtered-w-math-context and resultset-aggregate-filtered-w-math-context-diff")
+		fmt.Fprintln(stderr, "runner modes include infra-named-window-insert-shape and infra-named-window-insert-shape-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -173,6 +174,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWCViewScenario(file)
 	} else if *mode == "infra-named-window-bean-views" || *mode == "infra-named-window-bean-views-diff" {
 		scenario, err = loadInfraNWBVScenario(file)
+	} else if *mode == "infra-named-window-insert-shape" || *mode == "infra-named-window-insert-shape-diff" {
+		scenario, err = loadInfraNamedWindowInsertShapeScenario(file)
 	} else if *mode == "resultset-aggregate-filter-named-parameter-linear-join" || *mode == "resultset-aggregate-filter-named-parameter-linear-join-diff" {
 		scenario, err = loadResultsetAggregateFilterNamedParameterLinearJoinScenario(file)
 	} else if *mode == "resultset-aggregate-filter-named-parameter-sorted-join" || *mode == "resultset-aggregate-filter-named-parameter-sorted-join-diff" {
@@ -1027,6 +1030,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNamedWindowInsertFromJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNamedWindowInsertFromJavaSources),
 				splitMetadata(*javaExecutions, infraNamedWindowInsertFromJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-named-window-insert-shape" || *mode == "infra-named-window-insert-shape-diff" {
+		trace, err := runInfraNamedWindowInsertShapeScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-named-window-insert-shape-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNamedWindowInsertShapeJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNamedWindowInsertShapeJavaSources),
+				splitMetadata(*javaExecutions, infraNamedWindowInsertShapeJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -116,3 +116,98 @@ func TestNamedWindowStatementOutputPrecedesConsumers(t *testing.T) {
 		t.Fatalf("delete wave order = %v, want %v", order, want)
 	}
 }
+
+// TestNamedWindowDoubleInsertDispatchesPerInsertBoundary pins the Java
+// front-queue boundary for two insert-into statements feeding one keep-all
+// window (InfraNamedWindowViews ord 28 InfraDoubleInsertSameWindow): each
+// insert's window statement output and consumer callback dispatch before the
+// next insert's, so the listener order is create/s0/create/s0 rather than one
+// aggregated consumer callback.
+func TestNamedWindowDoubleInsertDispatchesPerInsertBoundary(t *testing.T) {
+	type bean struct {
+		TheString string `esper:"theString"`
+		LongBoxed int64  `esper:"longBoxed"`
+	}
+	type kv struct {
+		Key   string `esper:"key"`
+		Value int64  `esper:"value"`
+	}
+
+	env := NewEnvironment()
+	if _, err := RegisterStruct[bean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	schema, err := RegisterStruct[kv](env, "MyWindowDISM")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "MyWindowDISM", schema, NamedWindowRetention(KeepAll())); err != nil {
+		t.Fatal(err)
+	}
+	source := From[bean](env, "SupportBean")
+	createPlan, err := env.Build(FromNamedWindow(env, "MyWindowDISM").CreateNamedWindowQuery(StatementName("create")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	insertOnePlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow("MyWindowDISM",
+		SetColumn("key", Field[bean, string]("theString")),
+		SetColumn("value", Add[int64](Field[bean, int64]("longBoxed"), Literal[int64](1))),
+	).Query(StatementName("insert-one")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	insertTwoPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow("MyWindowDISM",
+		SetColumn("key", Field[bean, string]("theString")),
+		SetColumn("value", Add[int64](Field[bean, int64]("longBoxed"), Literal[int64](2))),
+	).Query(StatementName("insert-two")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	consumerPlan, err := env.Build(FromNamedWindow(env, "MyWindowDISM").Query(StatementName("s0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(ctx) }()
+	var order []string
+	subscribe := func(plan Plan, label string) {
+		t.Helper()
+		deployment, err := engine.Deploy(ctx, plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+			for _, result := range batch.New {
+				event, ok := result.Event()
+				if !ok {
+					t.Errorf("listener %q received a non-event result", label)
+					continue
+				}
+				order = append(order, label)
+				_ = event
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	deploy := func(plan Plan) {
+		t.Helper()
+		if _, err := engine.Deploy(ctx, plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	subscribe(createPlan, "create")
+	deploy(insertOnePlan)
+	deploy(insertTwoPlan)
+	subscribe(consumerPlan, "s0")
+
+	if err := engine.SendEvent(ctx, bean{TheString: "E1", LongBoxed: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"create", "s0", "create", "s0"}; !equalStrings(order, want...) {
+		t.Fatalf("double-insert boundary order = %v, want %v", order, want)
+	}
+}

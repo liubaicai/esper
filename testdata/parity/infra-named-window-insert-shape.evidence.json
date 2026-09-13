@@ -1,0 +1,501 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-1b9f5b6ccf6b49cdba09",
+    "java-runtime-f739aa91028d27aa572f",
+    "java-runtime-9740441818d84a3ee94d",
+    "java-runtime-71402af94b27b4255ab8"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowViews.java"
+  ],
+  "javaExecutions": [
+    "InfraDoubleInsertSameWindow",
+    "InfraIntersection",
+    "InfraSelectStreamDotStarInsert",
+    "InfraOnInsertPremptiveTwoWindow"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-insert-shape",
+    "steps": [
+      {
+        "op": "case",
+        "case": "double-insert-same-window"
+      },
+      {
+        "op": "deploy",
+        "case": "double-insert-same-window",
+        "statement": "create",
+        "epl": "@name('create') create window MyWindowDISM#keepall as MySimpleKeyValueMap"
+      },
+      {
+        "op": "deploy",
+        "case": "double-insert-same-window",
+        "statement": "insert-one",
+        "epl": "insert into MyWindowDISM select theString as key, longBoxed+1 as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "double-insert-same-window",
+        "statement": "insert-two",
+        "epl": "insert into MyWindowDISM select theString as key, longBoxed+2 as value from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "double-insert-same-window",
+        "statement": "s0",
+        "epl": "@name('s0') select key, value as value from MyWindowDISM"
+      },
+      {
+        "op": "send",
+        "case": "double-insert-same-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "longBoxed": 10
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "double-insert-same-window"
+      },
+      {
+        "op": "case",
+        "case": "intersection",
+        "mode": "any"
+      },
+      {
+        "op": "deploy",
+        "case": "intersection",
+        "statement": "create",
+        "epl": "create window MyWindowINT#length(2)#unique(intPrimitive) as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "intersection",
+        "statement": "insert",
+        "epl": "insert into MyWindowINT select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "intersection",
+        "statement": "s0",
+        "epl": "@name('s0') select irstream * from MyWindowINT"
+      },
+      {
+        "op": "send",
+        "case": "intersection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "intersection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "intersection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "intersection"
+      },
+      {
+        "op": "case",
+        "case": "select-stream-dot-star-insert"
+      },
+      {
+        "op": "deploy",
+        "case": "select-stream-dot-star-insert",
+        "statement": "create",
+        "epl": "@EventRepresentation('objectarray') create window MyNWWindowObjectArray#keepall (p0 int)"
+      },
+      {
+        "op": "deploy",
+        "case": "select-stream-dot-star-insert",
+        "statement": "insert",
+        "epl": "insert into MyNWWindowObjectArray select intPrimitive as p0, sb.* as c0 from SupportBean as sb"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "select-stream-dot-star-insert"
+      },
+      {
+        "op": "case",
+        "case": "on-insert-preemptive-two-window"
+      },
+      {
+        "op": "deploy",
+        "case": "on-insert-preemptive-two-window",
+        "statement": "schema",
+        "epl": "@public @buseventtype create schema TypeOne(col1 int);\n@public @buseventtype create schema TypeTwo(col2 int);\n@public @buseventtype create schema TypeTrigger(trigger int)"
+      },
+      {
+        "op": "deploy",
+        "case": "on-insert-preemptive-two-window",
+        "statement": "create",
+        "epl": "create window WinOne#keepall as TypeOne;\ncreate window WinTwo#keepall as TypeTwo"
+      },
+      {
+        "op": "deploy",
+        "case": "on-insert-preemptive-two-window",
+        "statement": "insert",
+        "epl": "@name('insert-window-one') insert into WinOne(col1) select intPrimitive from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "on-insert-preemptive-two-window",
+        "statement": "s2",
+        "epl": "@name('insert-otherstream') on TypeTrigger insert into OtherStream select col1 from WinOne"
+      },
+      {
+        "op": "deploy",
+        "case": "on-insert-preemptive-two-window",
+        "statement": "s3",
+        "epl": "@name('insert-window-two') on TypeTrigger insert into WinTwo(col2) select col1 from WinOne"
+      },
+      {
+        "op": "deploy",
+        "case": "on-insert-preemptive-two-window",
+        "statement": "s0",
+        "epl": "@name('s0') on OtherStream select col2 from WinTwo"
+      },
+      {
+        "op": "send",
+        "case": "on-insert-preemptive-two-window",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "send",
+        "case": "on-insert-preemptive-two-window",
+        "eventType": "TypeTrigger",
+        "payload": {
+          "trigger": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "on-insert-preemptive-two-window"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-insert-shape",
+    "records": [
+      {
+        "case": "double-insert-same-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "double-insert-same-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "double-insert-same-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "double-insert-same-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersection",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersection",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersection",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-insert-preemptive-two-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col2": 9
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-named-window-insert-shape",
+    "records": [
+      {
+        "case": "double-insert-same-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "double-insert-same-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "double-insert-same-window",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "double-insert-same-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key": "E1",
+              "value": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersection",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersection",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "intersection",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "on-insert-preemptive-two-window",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col2": 9
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
