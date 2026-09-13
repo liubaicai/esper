@@ -154,10 +154,13 @@ func TestStatelessFilterKeepsUserCodePredicateSemantics(t *testing.T) {
 // boundary for property reads: a schema that resolves a property through a
 // registered getter runs user code, so the statement must keep the generic
 // pipeline's evaluation behavior instead of the single-evaluation shortcut.
-// The generic pipeline evaluates the predicate twice per send (once for the
-// dispatch loop's filter result, once inside the statement's own processing);
-// the deferred single-evaluation work in docs/esper-go-performance.md section
-// 4.2 changes that count deliberately, with evidence, for all statements.
+// The generic pipeline evaluates the predicate exactly once per send: the
+// dispatch loop's filter result is handed to the statement's own processing
+// (genericFilterNodeLocked / takeDispatchFilterVerdict), so a getter — or any
+// user function — inside a filter is invoked once per event and statement,
+// matching Java's single filter-service evaluation. The count is deliberate:
+// docs/esper-go-performance.md section 4.9.2 records the eliminated duplicate
+// evaluation with differential evidence.
 func TestStatelessFilterKeepsGetterBackedPropertySemantics(t *testing.T) {
 	ctx := context.Background()
 	env := NewEnvironment()
@@ -198,8 +201,8 @@ func TestStatelessFilterKeepsGetterBackedPropertySemantics(t *testing.T) {
 	if rows != 1 {
 		t.Fatalf("rows = %d, want 1 (the getter returns the matching value)", rows)
 	}
-	if getterCalls != 2 {
-		t.Fatalf("getter invocations = %d, want the generic pipeline's 2 per send", getterCalls)
+	if getterCalls != 1 {
+		t.Fatalf("getter invocations = %d, want the single evaluation per send", getterCalls)
 	}
 }
 
@@ -236,6 +239,79 @@ func BenchmarkStatelessFilterSend(b *testing.B) {
 				b.Fatal(err)
 			}
 			event := statelessFilterEvent{Category: test.value, Value: 1}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for range b.N {
+				if err := engine.SendEvent(ctx, event); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkGenericFilterSend measures non-fast-path statements: a
+// getter-backed property keeps the statement on the generic pipeline (the
+// stateless plan refuses getter-backed reads), and a data window keeps even a
+// pure predicate on the generic pipeline. Both shapes used to evaluate the
+// stream filter predicate twice per send — once for the dispatch loop's
+// accepted result and once inside the statement's own insert walk — so the
+// numbers also track the eliminated duplicate evaluation.
+func BenchmarkGenericFilterSend(b *testing.B) {
+	for _, test := range []struct {
+		name     string
+		window   bool
+		getter   bool
+		category string
+	}{
+		{name: "getter-accepted", getter: true, category: "keep"},
+		{name: "getter-rejected", getter: true, category: "drop"},
+		{name: "window-accepted", window: true, category: "keep"},
+		{name: "window-rejected", window: true, category: "drop"},
+	} {
+		b.Run(test.name, func(b *testing.B) {
+			env := NewEnvironment()
+			register := func(name string) error {
+				if test.getter {
+					_, err := RegisterStruct[statelessFilterEvent](env, name,
+						WithPropertyGetter("category", reflect.TypeOf(""), func(any) (Value, error) {
+							return Present(test.category), nil
+						}))
+					return err
+				}
+				_, err := RegisterStruct[statelessFilterEvent](env, name)
+				return err
+			}
+			eventType := "GenericFilterGetterEvent"
+			if !test.getter {
+				eventType = "GenericFilterWindowEvent"
+			}
+			if err := register(eventType); err != nil {
+				b.Fatal(err)
+			}
+			stream := From[statelessFilterEvent](env, eventType).
+				Filter(Equal[string](
+					Field[statelessFilterEvent, string]("category"),
+					Literal("keep"),
+				))
+			if test.window {
+				stream = stream.Window(LengthWindow(8))
+			}
+			plan, err := env.Build(stream.Query(StatementName("generic-filter")))
+			if err != nil {
+				b.Fatal(err)
+			}
+			engine := NewEngine(env)
+			ctx := context.Background()
+			deployment, err := engine.Deploy(ctx, plan)
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer func() { _ = deployment.Undeploy(ctx) }()
+			if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, _ ResultBatch) error { return nil }); err != nil {
+				b.Fatal(err)
+			}
+			event := statelessFilterEvent{Category: test.category, Value: 1}
 			b.ReportAllocs()
 			b.ResetTimer()
 			for range b.N {

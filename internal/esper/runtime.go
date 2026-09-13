@@ -1685,7 +1685,12 @@ type Statement struct {
 	// filters; statelessPlanResolved records that the plan was computed.
 	statelessPlan         *statelessExecutionPlan
 	statelessPlanResolved bool
-	sharedFilterKey       *sharedFilterKey
+	// genericFilterNode is the resolved reusable input filter node for the
+	// generic pipeline's dispatch-verdict reuse (see genericFilterNodeLocked);
+	// nil means the statement shape keeps the duplicate evaluation.
+	genericFilterNode         *streamNode
+	genericFilterNodeResolved bool
+	sharedFilterKey           *sharedFilterKey
 }
 
 func (s *Statement) ID() string {
@@ -3391,7 +3396,7 @@ func (e *Engine) seedNamedWindowRowRecogLocked(ctx context.Context, statement *S
 	}
 	statement.runtime.ctx = ctx
 	for _, event := range events {
-		if _, _, err := statement.runtime.process(statement.plan, event, e.clock.Now(), statement.runtime.variables); err != nil {
+		if _, _, err := statement.runtime.process(statement.plan, event, e.clock.Now(), statement.runtime.variables, streamFilterVerdict{}); err != nil {
 			return err
 		}
 	}
@@ -3453,7 +3458,7 @@ func (e *Engine) seedNamedWindowConsumerLocked(ctx context.Context, statement *S
 		}
 		statement.runtime.ctx = ctx
 		for _, event := range events {
-			if _, _, err := statement.runtime.process(statement.plan, event, now, statement.runtime.variables); err != nil {
+			if _, _, err := statement.runtime.process(statement.plan, event, now, statement.runtime.variables, streamFilterVerdict{}); err != nil {
 				return err
 			}
 			if trackPrior {
@@ -4028,8 +4033,14 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 					continue
 				}
 			}
+			// The filter evaluation below is the dispatch loop's single
+			// evaluation of the statement's input filter; when statement
+			// metrics are configured its elapsed time joins the accepted-event
+			// sample so the metric keeps covering the statement's whole
+			// filter workload.
+			filterElapsed := e.beginStatementFilterElapsedLocked()
 			accepted := statement.matchesEventFilter(current, now, variables)
-			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted, true)
+			batch, changed, processErr := e.processStatementWithMetricsLocked(ctx, statement, now, current, variables, accepted, true, filterElapsed)
 			if processErr != nil {
 				e.mu.Unlock()
 				return processErr
@@ -5617,8 +5628,11 @@ func (e *Engine) processPendingRoutedEventsUntilBoundaryLocked(ctx context.Conte
 				}
 			}
 			needsAccepted := unmatchedEvents != nil || e.statementMetrics != nil || len(statement.plan.query.statementMetadata.auditCategories) > 0
+			// See the send loop: with statement metrics configured the
+			// dispatch-loop filter evaluation is timed into the sample.
+			filterElapsed := e.beginStatementFilterElapsedLocked()
 			accepted := needsAccepted && statement.matchesEventFilter(current.event, now, variables)
-			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted, needsAccepted)
+			batch, changed, err := e.processStatementWithMetricsLocked(ctx, statement, now, current.event, variables, accepted, needsAccepted, filterElapsed)
 			if err != nil {
 				return false, err
 			}
@@ -6158,7 +6172,12 @@ type statementRuntime struct {
 	// value) for the third event against the first event. Old-stream snapshots
 	// are reconstructed from the prefix ending at the leaving event, avoiding
 	// a per-event copy of the entire history.
-	priorArrival             []Event
+	priorArrival []Event
+	// dispatchFilterVerdict holds the dispatch loop's filter result for the
+	// pipeline walk currently in flight (statementRuntime.process scopes it);
+	// consumed once by the matching filter node in insert and always zero
+	// outside that walk.
+	dispatchFilterVerdict    streamFilterVerdict
 	partitions               map[string]*statementRuntime
 	partitionContextName     string
 	partitionKey             string
@@ -7481,7 +7500,7 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			}
 			return batch, !batch.empty() || batch.forced, nil
 		}
-		batch, changed, err := partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
+		batch, changed, err := partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables), streamFilterVerdict{})
 		if changed && queryIteratorOnlyMethodSources(s.plan.query) {
 			// Esper keeps triggerless historical/method-only statements
 			// iterator-only: the cycle refreshed the retained state for the
@@ -7524,7 +7543,17 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		}
 		return batch, !batch.empty() || batch.forced, nil
 	}
-	batch, changed, err = s.runtime.process(s.plan, event, now, variables)
+	// Single filter evaluation: when the dispatch loop already computed the
+	// filter result for this event (acceptedKnown) and the statement shape
+	// lets that result stand in for the pipeline's own evaluation, hand it to
+	// the runtime so the predicate is not evaluated a second time.
+	dispatchVerdict := streamFilterVerdict{}
+	if acceptedKnown {
+		if node := s.genericFilterNodeLocked(); node != nil {
+			dispatchVerdict = streamFilterVerdict{node: node, accepted: accepted}
+		}
+	}
+	batch, changed, err = s.runtime.process(s.plan, event, now, variables, dispatchVerdict)
 	if err != nil {
 		return ResultBatch{}, false, err
 	}
@@ -7667,6 +7696,134 @@ func statementAcceptsEvent(query Query, event Event) bool {
 		input = query.rowRecog.input
 	}
 	return sourceNodeAcceptsEvent(query.env, input, event)
+}
+
+// streamFilterVerdict carries the dispatch loop's already-computed filter
+// result for one statement's single input filter node into the generic
+// pipeline. Java evaluates an event's stream filter exactly once in the
+// filter service; without the verdict the generic insert walk evaluates the
+// same predicate a second time per event and statement, doubling user-code
+// invocations and CPU for every non-fast-path statement. The verdict is
+// authored only when genericFilterNodeLocked proved that the dispatch-loop
+// evaluation and the pipeline evaluation observe identical inputs. A zero
+// node means "no verdict", so the value needs no heap allocation.
+type streamFilterVerdict struct {
+	node     *streamNode
+	accepted bool
+}
+
+// genericFilterNodeLocked resolves and caches the statement's reusable filter
+// node: the one stream filter node whose dispatch-loop verdict is
+// authoritative for the generic pipeline, or nil when the statement shape
+// keeps the duplicate evaluation. The walk depends only on the immutable
+// query, so it is resolved once per statement lifetime, mirroring
+// statelessPlanLocked. The caller must hold s.mu (Statement.process does).
+func (s *Statement) genericFilterNodeLocked() *streamNode {
+	if s.genericFilterNodeResolved {
+		return s.genericFilterNode
+	}
+	s.genericFilterNodeResolved = true
+	s.genericFilterNode = genericFilterReuseNode(s.plan.query)
+	return s.genericFilterNode
+}
+
+// genericFilterReuseNode reports the query's unique stream filter node when
+// the dispatch loop's filter result is provably the pipeline's own result,
+// and nil otherwise. The proof is structural:
+//
+//   - The statement must dispatch through the plain single-chain pipeline
+//     (Statement.process calling statementRuntime.process): joins, patterns,
+//     triggers, update streams and contexts evaluate filters per source,
+//     per partition or outside the chain, so the single dispatch bool cannot
+//     replace their per-node results.
+//   - Above the filter node only pass-through view kinds may appear.
+//     streamContained, historical and method sources make matchesEventFilter
+//     decide by event type alone, so no predicate verdict exists at all.
+//   - Below the filter node only plain pass-through sources may appear. A
+//     window, derived or contained node below the filter would feed the
+//     pipeline evaluation a different candidate stream, populated history or
+//     eviction old-stream than the dispatch evaluation saw, so their verdicts
+//     could legitimately diverge.
+//   - The predicate must not contain subqueries (the dispatch evaluation runs
+//     before the subquery registry accepts the event and without the registry
+//     attached to the variable scope, so both its state and scope differ from
+//     the pipeline evaluation) and must not be a multi-slot membership
+//     predicate (its slot count is only knowable by evaluating it).
+func genericFilterReuseNode(query Query) *streamNode {
+	if query.join != nil || query.pattern != nil || query.trigger != nil ||
+		query.updateStream != nil || query.contextName != "" || query.sourceLess {
+		return nil
+	}
+	input := query.input
+	if query.aggregate != nil {
+		input = query.aggregate.input
+	}
+	if query.rowRecog != nil {
+		input = query.rowRecog.input
+	}
+	if input == nil {
+		return nil
+	}
+	var filterNode *streamNode
+	aboveFilter := true
+	for node := input; node != nil; node = node.input {
+		switch node.kind {
+		case streamFilter:
+			if filterNode != nil {
+				// A second filter node's verdict is not covered by the
+				// dispatch loop's single evaluation.
+				return nil
+			}
+			filterNode = node
+			aboveFilter = false
+		case streamWindow, streamDerived:
+			if !aboveFilter {
+				// Below the filter these produce their own delta rows and
+				// history; the dispatch evaluation never observed them.
+				return nil
+			}
+		case streamSource, streamNamedWindow, streamTable:
+			// Pass-through kinds: above the filter they cannot occur (sources
+			// are chain bottoms), below it they deliver exactly the inbound
+			// event the dispatch loop evaluated.
+		default:
+			// Contained, pattern, historical and method sources anywhere on
+			// the chain keep the generic duplicate evaluation.
+			return nil
+		}
+	}
+	if filterNode == nil || filterNode.predicate == nil {
+		return nil
+	}
+	if exprNodeReadsDispatchDivergentState(filterNode.predicate.node()) {
+		return nil
+	}
+	return filterNode
+}
+
+// exprNodeReadsDispatchDivergentState reports whether the expression tree
+// contains a node whose dispatch-loop evaluation could differ from the
+// pipeline evaluation: subquery nodes observe pre-accept registry state and
+// an unattached registry scope at the dispatch loop, and multi-slot
+// membership nodes derive their slot count only from an actual evaluation.
+func exprNodeReadsDispatchDivergentState(node *exprNode) bool {
+	if node == nil {
+		return false
+	}
+	if node.subquery != nil || node.multiMatch != nil {
+		return true
+	}
+	for _, child := range node.children {
+		if exprNodeReadsDispatchDivergentState(child) {
+			return true
+		}
+	}
+	for _, argument := range node.expressionArguments {
+		if exprNodeReadsDispatchDivergentState(argument) {
+			return true
+		}
+	}
+	return exprNodeReadsDispatchDivergentState(node.expressionBody)
 }
 
 // matchesEventFilter reports whether an active statement's input filter
@@ -7907,7 +8064,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 					// Array tag (match-until/repeat): route every captured
 					// event, mirroring Esper's EventBean[] match entries.
 					for _, tagged := range match.tagValues[tag] {
-						batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables)
+						batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables, streamFilterVerdict{})
 						if processErr != nil {
 							return ResultBatch{}, false, processErr
 						}
@@ -7918,7 +8075,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 					continue
 				}
 				if tagged, ok := match.tags[tag]; ok {
-					batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables)
+					batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables, streamFilterVerdict{})
 					if processErr != nil {
 						return ResultBatch{}, false, processErr
 					}
@@ -8042,7 +8199,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
 				partitionChanged = !batch.empty() || batch.forced
 			} else {
-				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
+				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables), streamFilterVerdict{})
 			}
 			if err != nil {
 				return ResultBatch{}, false, err
@@ -8568,7 +8725,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 			for _, tag := range patternTagOrder(definition.startPattern) {
 				if len(match.tagValues[tag]) > 1 {
 					for _, tagged := range match.tagValues[tag] {
-						batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables)
+						batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables, streamFilterVerdict{})
 						if processErr != nil {
 							return ResultBatch{}, false
 						}
@@ -8579,7 +8736,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 					continue
 				}
 				if tagged, ok := match.tags[tag]; ok {
-					batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables)
+					batch, partitionChanged, processErr := partition.process(s.plan, tagged, now, partitionVariables, streamFilterVerdict{})
 					if processErr != nil {
 						return ResultBatch{}, false
 					}
@@ -8807,7 +8964,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
 				partitionChanged = !batch.empty() || batch.forced
 			} else {
-				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
+				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables), streamFilterVerdict{})
 			}
 			if err != nil {
 				return ResultBatch{}, false, err
@@ -9104,7 +9261,7 @@ func (s *Statement) processContextFanOut(definition ContextDefinition, event Eve
 			batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
 			partitionChanged = !batch.empty() || batch.forced
 		} else {
-			batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables))
+			batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables), streamFilterVerdict{})
 		}
 		if err != nil {
 			return ResultBatch{}, false, err
@@ -9181,7 +9338,12 @@ func (s *Statement) allocateContextPartitionID(key string) int {
 	return id
 }
 
-func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
+func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variables map[string]Value, dispatchFilterVerdict streamFilterVerdict) (ResultBatch, bool, error) {
+	// The dispatch verdict is scoped to exactly this pipeline walk: cleared on
+	// return so it can never leak into a later walk on the same runtime, such
+	// as a named-window delta replay or a seeded named-window consumer.
+	r.dispatchFilterVerdict = dispatchFilterVerdict
+	defer func() { r.dispatchFilterVerdict = streamFilterVerdict{} }()
 	r.variables = variablesWithEngine(variables, r.engine)
 	r.variables = r.withContextVariables(r.variables)
 	r.variables = r.withContextProperties(r.variables)
@@ -14459,6 +14621,18 @@ func equalEventPair(left, right eventPair) bool {
 	return sameEvent(left.left, right.left) && sameEvent(left.right, right.right)
 }
 
+// takeDispatchFilterVerdict returns the dispatch loop's already-computed
+// result when it was authored for exactly this filter node, consuming it so a
+// later walk on the same runtime can never reuse a stale verdict.
+func (r *statementRuntime) takeDispatchFilterVerdict(node *streamNode) (bool, bool) {
+	if r == nil || node == nil || r.dispatchFilterVerdict.node != node {
+		return false, false
+	}
+	verdict := r.dispatchFilterVerdict.accepted
+	r.dispatchFilterVerdict = streamFilterVerdict{}
+	return verdict, true
+}
+
 func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) (eventDelta, error) {
 	if node == nil {
 		return eventDelta{}, fmt.Errorf("esper: runtime encountered nil stream node")
@@ -14542,24 +14716,40 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
 			hadInput:        inputDelta.hadInput,
 		}
+		// Single filter evaluation: the dispatch loop's verdict replaces the
+		// duplicate predicate evaluation for this node when
+		// genericFilterReuseNode proved both evaluations observe the same
+		// inputs (same event candidate, same variable scope, empty history).
+		// Verdict true still means exactly one slot, matching what
+		// predicateMatchSlots returns for an accepted single-boolean
+		// predicate; eviction old-stream candidates below always keep their
+		// own evaluation because the dispatch loop never saw those events.
+		verdict, knownVerdict := r.takeDispatchFilterVerdict(node)
 		for _, candidate := range inputDelta.newEvents {
-			evalContext := EvalContext{
-				Event:                candidate,
-				OuterEvent:           candidate,
-				ContainedParentEvent: containedParentEvent(candidate),
-				Engine:               r.engine,
-				History:              historyForEvent(inputDelta, candidate),
-				Now:                  now,
-				Variables:            r.variables,
+			slots := 0
+			if knownVerdict {
+				if verdict {
+					slots = 1
+				}
+			} else {
+				evalContext := EvalContext{
+					Event:                candidate,
+					OuterEvent:           candidate,
+					ContainedParentEvent: containedParentEvent(candidate),
+					Engine:               r.engine,
+					History:              historyForEvent(inputDelta, candidate),
+					Now:                  now,
+					Variables:            r.variables,
+				}
+				// Membership predicates with slice-valued candidates deliver one
+				// pipeline copy per matching candidate slot (Java's per-element
+				// IN delivery); every other predicate is a single boolean slot.
+				// Boundary: honored on this primary stream-filter insertion path
+				// only — pattern guards, split-stream branches and named-window/
+				// context creation filters still evaluate memberships as single
+				// booleans until a verified scenario requires per-slot there too.
+				slots = predicateMatchSlots(node.predicate, evalContext)
 			}
-			// Membership predicates with slice-valued candidates deliver one
-			// pipeline copy per matching candidate slot (Java's per-element
-			// IN delivery); every other predicate is a single boolean slot.
-			// Boundary: honored on this primary stream-filter insertion path
-			// only — pattern guards, split-stream branches and named-window/
-			// context creation filters still evaluate memberships as single
-			// booleans until a verified scenario requires per-slot there too.
-			slots := predicateMatchSlots(node.predicate, evalContext)
 			for range slots {
 				filtered.newEvents = append(filtered.newEvents, candidate)
 			}

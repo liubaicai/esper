@@ -159,7 +159,7 @@ func (r *statementRuntime) insertPatternSource(node *streamNode, event Event, no
 		return eventDelta{}, err
 	}
 	patternRuntime.runtime.ctx = r.ctx
-	batch, _, err := patternRuntime.runtime.process(patternRuntime.plan, event, now, r.variables)
+	batch, _, err := patternRuntime.runtime.process(patternRuntime.plan, event, now, r.variables, streamFilterVerdict{})
 	if err != nil {
 		return eventDelta{}, err
 	}

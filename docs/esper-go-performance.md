@@ -359,18 +359,15 @@ byte-identical。完整增量重写（§4.9.1 另一半：事件级 delta 组合
   未匹配行、method/table/unidirectional join、trigger lineage 与 evaluate-once 语义都必须逐项钉定；
   需要 before/after delta 等价性证据，以及能显示候选 tuple 数下降的基准。
 
-#### 4.9.2 过滤结果仍被求值两次（§4.2 的优先级提升）
+#### 4.9.2 过滤结果双重求值（已实施：合格单链通用路径）
 
-- 现状：`Engine.send` 先计算 `accepted := statement.matchesEventFilter(...)`（`runtime.go:3939`；
-  routed 分发在 `runtime.go:5115-5117`，仅当存在 unmatched 监听器、指标或审计类别时才计算），
-  随后 `processStatementWithMetricsLocked` 进入 `Statement.process`，通用路径在 `runtime.go:6907`
-  起再次装配变量并执行插入/过滤判定。当前只有 stateless 快路径
-  （`stateless.go:221` `processStatelessEvent`）在 `acceptedKnown` 时复用派发循环的结果。
-- profile：`sourceNodeMatchesEventFilter` 与 `makeBinaryBool.func1` 占据显著 CPU。
-- 结论：按实际影响应为本轮第 2 优先级——它同时增加 CPU、闭包调用与临时对象分配，收益覆盖全部
-  非快速路径语句（普通语句、带 getter 的语句、Join、pattern、context 等）。
-- 目标与风险：见 §4.2（把过滤结果作为派发循环的唯一产物向下传递；语句指标采样窗口、审计
-  `accepted` 取值以及用户函数/脚本调用次数的可观测性必须保持）。
+已落地（Draft 4.397）：派发循环的过滤裁决经 `streamFilterVerdict` 值类型传递给
+`statementRuntime.process`，合格单链语句（非 context/trigger/update-stream/join/
+pattern、恰好一个 streamFilter 节点、仅直通源、谓词无子查询/multiMatch）的 insert
+streamFilter 分支跳过重复谓词求值。排除形状（joins/patterns/contexts/triggers/
+update-streams/多 filter 节点/filter 下方 window 或 derived/含子查询/multi-slot）
+保持双重求值，待逐形状证据后扩展；`acceptedKnown=false` 的 routed 派发无裁决，
+insert 自行求值一次（不变）。
 
 #### 4.9.3 变量上下文与 ResultBatch 的分配削减
 
@@ -447,8 +444,9 @@ byte-identical。完整增量重写（§4.9.1 另一半：事件级 delta 组合
 
 - **增量 Join / Join 条件索引（§4.9.1）**：现有实现需要维护重复键、过期、outer join、method/table
   source、trigger lineage 和确定性输出顺序；在完成两流等值 inner join 的 Java/Go 差分场景前不改动。
-- **通用单次谓词求值（§4.9.2）**：stateless 纯表达式快路径已经复用派发结果；普通路径同时覆盖 multi-slot
-  IN、旧流、窗口、context、partition 和用户函数，继续保持二次求值直到具备逐形态证据。
+- **通用单次谓词求值（§4.9.2）**：已部分落地——stateless 纯表达式快路径与合格单链通用路径
+  （非 context/join/pattern/trigger/update-stream、谓词无子查询/multiMatch）均复用派发结果；
+  joins（逐源裁决）、patterns、contexts、multi-slot IN 等形状仍双重求值，待逐形态证据后扩展。
 - **ResultBatch 借用/复用（§4.9.3）**：监听器、subscriber、sink、replay 和异步 threading 可能持有 batch
   引用，需先验证所有持有语义后再减少 clone。
 - **Named Window/Table 位置索引增量维护（§4.9.5）**：hash 排序和空索引重建已优化；删除、压缩、unique

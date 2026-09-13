@@ -573,6 +573,70 @@ type statementMetricSample struct {
 	cpu    time.Duration
 }
 
+// statementMetricElapsed carries the dispatch loop's measured stream-filter
+// evaluation so the per-statement sample covers the statement's whole
+// per-event work. With the unified single filter evaluation the predicate
+// runs in the dispatch loop, and Java's statement metrics account the
+// filter-stage workload (where-clause user functions) to the statement, so
+// the elapsed filter time is merged into the accepted-event sample.
+type statementMetricElapsed struct {
+	active      bool
+	wall        time.Time
+	cpu         time.Duration
+	stopped     bool
+	elapsedWall time.Duration
+	elapsedCPU  time.Duration
+}
+
+// beginStatementFilterElapsedLocked starts the dispatch-loop filter timing.
+// It stays inactive when the engine has no statement metrics configured, so
+// deployments without metrics pay no extra clock reads.
+func (e *Engine) beginStatementFilterElapsedLocked() statementMetricElapsed {
+	if e == nil || e.statementMetrics == nil {
+		return statementMetricElapsed{}
+	}
+	return statementMetricElapsed{active: true, wall: time.Now(), cpu: statementMetricsCPUTime()}
+}
+
+// stop freezes the measured filter-evaluation window at the current instant.
+// Later resolve() calls observe the fixed window, so the metric accounting can
+// add it to a sample that starts after the freeze without double-counting the
+// statement's process time.
+func (s *statementMetricElapsed) stop() {
+	if !s.active || s.stopped {
+		return
+	}
+	s.stopped = true
+	s.elapsedWall = time.Since(s.wall)
+	s.elapsedCPU = statementMetricsCPUTime() - s.cpu
+	if s.elapsedWall < 0 {
+		s.elapsedWall = 0
+	}
+	if s.elapsedCPU < 0 {
+		s.elapsedCPU = 0
+	}
+}
+
+// resolve reports the measured filter-evaluation time; measured is false when
+// the timing was never started. After stop() the frozen window is returned.
+func (s statementMetricElapsed) resolve() (measured bool, cpu time.Duration, wall time.Duration) {
+	if !s.active {
+		return false, 0, 0
+	}
+	if s.stopped {
+		return true, s.elapsedCPU, s.elapsedWall
+	}
+	cpu = statementMetricsCPUTime() - s.cpu
+	wall = time.Since(s.wall)
+	if cpu < 0 {
+		cpu = 0
+	}
+	if wall < 0 {
+		wall = 0
+	}
+	return true, cpu, wall
+}
+
 func (e *Engine) startStatementMetricSampleLocked(statement *Statement) statementMetricSample {
 	entry := e.statementMetricEntryLocked(statement)
 	if entry == nil || !entry.enabled {
@@ -641,7 +705,7 @@ func statementHasMetricOutputConsumer(statement *Statement) bool {
 	return len(statement.listeners) > 0 || statement.subscriber != nil || statement.plan.query.sink != nil
 }
 
-func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statement *Statement, now time.Time, event Event, variables map[string]Value, accepted bool, acceptedKnown bool) (batch ResultBatch, changed bool, err error) {
+func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statement *Statement, now time.Time, event Event, variables map[string]Value, accepted bool, acceptedKnown bool, filterElapsed statementMetricElapsed) (batch ResultBatch, changed bool, err error) {
 	if statement == nil {
 		return ResultBatch{}, false, nil
 	}
@@ -659,6 +723,10 @@ func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statemen
 		// configuration, which keeps the accounting identical.
 		return statement.process(ctx, now, event, variables, false, false)
 	}
+	// Freeze the dispatch-loop filter window before the sample opens so the
+	// merged accounting is filter + process (the filter measurement must not
+	// span the statement's process run).
+	filterElapsed.stop()
 	sample := statementMetricSample{}
 	if accepted {
 		sample = e.startStatementMetricSampleLocked(statement)
@@ -668,12 +736,42 @@ func (e *Engine) processStatementWithMetricsLocked(ctx context.Context, statemen
 		e.auditStatementProcessLocked(statement, event, now, accepted, batch, changed)
 	}
 	if err == nil && accepted {
-		e.finishStatementMetricSampleLocked(statement, sample, 1)
+		e.finishStatementMetricSampleElapsedLocked(statement, sample, 1, filterElapsed)
 	}
 	if err == nil && changed {
 		e.recordStatementMetricOutputLocked(statement, batch)
 	}
 	return batch, changed, err
+}
+
+// finishStatementMetricSampleElapsedLocked commits one accepted event's
+// sample, adding the frozen dispatch-loop filter-evaluation window to the
+// measured process time. The filter window was frozen before the sample
+// opened, so the two windows never overlap.
+func (e *Engine) finishStatementMetricSampleElapsedLocked(statement *Statement, sample statementMetricSample, input int, elapsed statementMetricElapsed) {
+	if !sample.active || input <= 0 {
+		return
+	}
+	entry := e.statementMetricEntryLocked(statement)
+	if entry == nil || !entry.enabled {
+		return
+	}
+	cpu := statementMetricsCPUTime() - sample.cpu
+	wall := time.Since(sample.wall)
+	if measured, elapsedCPU, elapsedWall := elapsed.resolve(); measured {
+		cpu += elapsedCPU
+		wall += elapsedWall
+	}
+	if cpu < 0 {
+		cpu = 0
+	}
+	if wall < 0 {
+		wall = 0
+	}
+	entry.metric.cpuTime += cpu
+	entry.metric.wallTime += wall
+	entry.metric.numInput += uint64(input)
+	entry.metric.active = true
 }
 
 func (e *Engine) processNamedWindowWithMetricsLocked(ctx context.Context, statement *Statement, now time.Time, window *NamedWindow, delta NamedWindowDelta, variables map[string]Value) (ResultBatch, bool, error) {

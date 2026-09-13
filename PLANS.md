@@ -48,6 +48,20 @@ activity or a single coverage percentage.
 
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.397 ('unified-single-filter-eval').
+
+- Scope frozen from perf doc §4.9.2 (priority 2): the generic statement path re-evaluates the filter per event even though Engine.send's dispatch loop already computed `accepted` — extending the dispatch-verdict reuse from the stateless fast path to eligible generic single-chain statements (plain, getter-bearing, window-above-filter); joins/patterns/contexts/triggers/update-streams and divergent-shapes keep duplicate evaluation per the structural eligibility proof. Metrics sampling windows, audit accepted values, and user function/script call counts must be preserved.
+- [x] Investigation: map the dispatch/filter call graph (Engine.send → matchesEventFilter → processStatementWithMetricsLocked → Statement.process → filter re-eval; file:line), identify what must flow down (accepted + variables assembly), and what observability must be preserved.
+- [ ] Implementation + equivalence pins (the full differential corpus is the net; metrics/audit in-process asserts).
+- [ ] Benchmark showing the eliminated duplicate evaluation per perf doc requirements.
+- [x] Gates: go build/vet/gofmt clean; internal/esper, internal/app/parity, internal/compat all green; make check green; git diff --check clean.
+- [x] Independent parity review: agent_661cc0b9 round-1 OVERALL FAIL with one P2 (metrics cpuTime/wallTime double-counted the process window — resolve() measured lazily after process returned, so the merged total was filter + 2×process) + P3 doc/checkpoint nits. P2 fixed pre-commit: statementMetricElapsed gained stop()/stopped fields freezing the filter window before the sample opens; resolve() returns the frozen window; the factually wrong "windows never overlap" comment corrected. P3s fixed: PLANS duplicate header removed, scope bullet corrected to the landed eligible-single-chain scope, perf doc §4.9.2 rewritten as landed-for-eligible-shapes and §6 remaining-item updated (joins/patterns/contexts/multi-slot still double-eval pending per-shape evidence).
+- [x] Commit and push (single semantic commit with all checkpoint edits folded in).
+
+### Previous work unit (prior)
+
+### Previous work unit (prior)
+
 Active: Draft 4.396 ('incremental-join-index').
 
 - [x] Scope frozen from perf doc §4.9.1 (priority 1): statementRuntime.insertJoin/updateJoin recomputes the FULL join tuple set twice per event (before/after diff, O(prod|sides|) per event). This unit implements the lower-risk half: per-side equi/IN join-condition indexes so the composition looks up candidate rows instead of full-scanning the opposite side, preserving EXACT output semantics (ordering, old/new, lineage, outer-join unmatched rows). The full incremental-join rewrite (§4.9.1's other half) stays deferred.
