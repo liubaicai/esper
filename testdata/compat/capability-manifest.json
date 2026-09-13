@@ -31064,9 +31064,9 @@
     "TestRunEplDatabaseJoinDiffRejectsTraceMutations"
    ],
    "remaining": [
-    "EPLDatabaseTimeBatch / TimeBatchOM / TimeBatchCompile historical+time_batch join snapshot and iterator evidence",
-    "EPLDatabaseMySQLDatabaseConnection connection-pool and transaction semantics",
-    "EPLDatabaseInvalidBothHistorical / InvalidPropertyEvent / InvalidSubviews typed compile diagnostics",
+    "EPLDatabaseTimeBatchOM / TimeBatchCompile SODA/eplToModel compile surface (intentionally-different)",
+    "EPLDatabaseMySQLDatabaseConnection connection-pool and transaction semantics (raw JDBC, no Esper observables)",
+    "EPLDatabaseInvalidSQL MySQL-version-specific 1064 diagnostic (intentionally-different)",
     "full Java differential trace for the remaining EPLDatabaseJoin executions"
    ],
    "verification": [
@@ -31074,7 +31074,7 @@
     "implemented",
     "differential-verified"
    ],
-   "difference": "Go implements the covered EPLDatabaseJoin executions with typed fluent historical joins: parameterized historical rows persist with per-trigger lineage and pair only with the triggering event (2HistoricalStar/Inner keepall iterator parity), unrestricted triggerless SQL sides remain per-trigger lookup snapshots (3Stream parity), and pattern-driven historical polling evaluates an unrestricted SQL side once per completed timer match (WithPattern parity). SimpleJoin/StreamNames/PropertyResolution/JoinIndexNullType and the invalid historical self-reference boundary are covered by fake database/sql provider tests. RestartStatement has a separate 100-cycle Go/Java output-parity replay with an in-process undeployed-send guard, but it does not prove MySQL/JDBC connection acquisition, release, or pool-exhaustion semantics and remains implemented rather than differential-verified. TimeBatch, MySQL database connection and the remaining invalid compile variants are still open."
+   "difference": "Go implements the covered EPLDatabaseJoin executions with typed fluent historical joins: parameterized historical rows persist with per-trigger lineage and pair only with the triggering event (2HistoricalStar/Inner keepall iterator parity), unrestricted triggerless SQL sides remain per-trigger lookup snapshots (3Stream parity), and pattern-driven historical polling evaluates an unrestricted SQL side once per completed timer match (WithPattern parity). SimpleJoin/StreamNames/PropertyResolution/JoinIndexNullType and the invalid historical self-reference boundary are covered by fake database/sql provider tests. RestartStatement has a separate 100-cycle Go/Java output-parity replay with an in-process undeployed-send guard, but it does not prove MySQL/JDBC connection acquisition, release, or pool-exhaustion semantics and remains implemented rather than differential-verified. TimeBatch, MySQL database connection and the remaining invalid compile variants are still open. Draft 4.400 formalizes the invalid-family dispositions and pins the two documented divergences with engine tests: EPLDatabaseInvalidBothHistorical (circular historical substitution) is structurally unexpressible in the typed provider API (providers are independent functions with no shared SQL-text cycle — engine-pinned by TestDatabaseHistoricalMutualReferenceIndependentPolls showing independent per-trigger polls); EPLDatabaseInvalidPropertyEvent / InvalidPropertyHistorical / Invalid1Stream parameter resolution failures resolve as Missing and produce zero rows at runtime rather than compile diagnostics (engine-pinned by TestDatabaseJoinInvalidBoundaryMatchesJava); EPLDatabaseInvalidSubviews' views-on-historical rejection is a documented divergence — the Go builder accepts a window on a historical stream and the statement functions (engine-pinned by TestDatabaseHistoricalViewAccepted); EPLDatabaseInvalidSQL's MySQL 1064 text is intentionally-different (server-version-specific diagnostic)."
   },
   {
    "id": "case.resultset-row-per-group-simple",
