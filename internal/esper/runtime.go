@@ -18,7 +18,14 @@ const maxRoutedEventsPerSend = 1024
 // unixEpoch is the virtual clock's default start instant.
 var unixEpoch = time.Unix(0, 0).UTC()
 
-// Listener receives one deterministic new/old-stream batch.
+// Listener receives one deterministic new/old-stream batch. A listener may
+// retain the delivered batch: the engine never reuses or mutates its slice
+// arrays after dispatch. Within one dispatch, all but the last consumer
+// receive a private clone, so in-place slice mutation of a delivered batch is
+// invisible to the statement's other consumers; mutating a borrowed (last)
+// batch affects only that dead dispatch copy. As before, Result values share
+// their underlying event/row pointers across consumers, so deep mutation
+// through them remains visible everywhere.
 type Listener func(context.Context, ResultBatch) error
 
 // UnmatchedListener receives an event that did not match any active
@@ -88,6 +95,9 @@ func (l *replayListener) finish(ctx context.Context, replay ResultBatch) error {
 
 // Sink is the chain endpoint for asynchronous integration adapters. The
 // default Engine path still invokes it synchronously for Esper-like ordering.
+// Sinks follow the Listener retention/mutation contract: the delivered batch
+// may be retained, and the sink — as the last dispatch consumer — receives
+// the borrowed batch whose in-place slice mutation stays private to it.
 type Sink interface {
 	Write(context.Context, ResultBatch) error
 }
@@ -5999,6 +6009,9 @@ func dispatchAll(ctx context.Context, dispatches []statementDispatch) error {
 
 func (s *Statement) dispatch(ctx context.Context, batch ResultBatch) error {
 	if s != nil && s.engine != nil && s.engine.outboundPool != nil {
+		// Async outbound threading keeps its own clone: the task outlives this
+		// call, so the borrowed batch must not alias arrays the synchronous
+		// world still references in pending dispatch snapshots or routes.
 		outboundContext := context.WithoutCancel(ctx)
 		cloned := batch.clone()
 		_, err := s.engine.outboundPool.submit(outboundContext, func(taskContext context.Context) error {
@@ -6041,20 +6054,50 @@ func (s *Statement) dispatchSync(ctx context.Context, batch ResultBatch) error {
 	subscriber := s.subscriber
 	sink := s.plan.query.sink
 	s.mu.RUnlock()
+	// Dispatch borrow contract (perf doc §4.9.3). The batch handed to this
+	// call is exclusive: producers build fresh New/Old arrays (or clone
+	// retained pending output state before emission) and drain every pending
+	// queue before dispatchAll runs, and the engine never reuses or mutates
+	// batch arrays afterwards, so a consumer may retain the delivered batch
+	// for as long as it needs. To keep one consumer's in-place slice mutation
+	// from leaking into another consumer's view, every delivery except the
+	// last receives a private batch.clone() and only the final consumer
+	// borrows the dispatch batch. Clones are taken lazily per delivery, which
+	// stays correct because no earlier consumer ever holds the original: the
+	// array cannot change before the borrowing consumer receives it.
+	//
+	// The subscriber is exempt from cloning entirely: newSubscriberUpdate
+	// detaches the rows into its own SubscriberRow slices synchronously,
+	// before any listener runs, so it never observes or retains batch slices.
+	// Fire-and-forget pending-dispatch snapshots copy the batch by struct
+	// before any dispatch and restore only on pre-dispatch failure, so a
+	// delivered batch is dispatched at most once and listener mutation of a
+	// borrowed slice can never re-enter a later dispatch.
 	if subscriber != nil {
-		if failure, failed := invokeSubscriber(ctx, subscriber, newSubscriberUpdate(s, batch.clone())); failed {
+		if failure, failed := invokeSubscriber(ctx, subscriber, newSubscriberUpdate(s, batch)); failed {
 			if s.engine != nil {
 				s.engine.reportSubscriberError(ctx, failure)
 			}
 		}
 	}
-	for _, listener := range listeners {
-		if err := listener(ctx, batch.clone()); err != nil {
+	// The sink is the last delivery, so it always borrows; without a sink the
+	// last listener borrows. When the rstream swap above applied, the borrowed
+	// slices are already the remove projection's own fresh arrays.
+	borrowIndex := len(listeners)
+	if sink == nil && len(listeners) > 0 {
+		borrowIndex = len(listeners) - 1
+	}
+	for index, listener := range listeners {
+		delivery := batch
+		if index != borrowIndex {
+			delivery = batch.clone()
+		}
+		if err := listener(ctx, delivery); err != nil {
 			return fmt.Errorf("esper: listener for %q: %w", s.name, err)
 		}
 	}
 	if sink != nil {
-		if err := sink.Write(ctx, batch.clone()); err != nil {
+		if err := sink.Write(ctx, batch); err != nil {
 			return fmt.Errorf("esper: sink for %q: %w", s.name, err)
 		}
 	}

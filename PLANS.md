@@ -48,6 +48,17 @@ activity or a single coverage percentage.
 
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.398 ('resultbatch-borrow').
+
+- [x] Scope frozen from perf doc §4.9.3 remaining half: (a) ResultBatch borrow/reuse — the dispatch path clones the batch per listener/subscriber/sink (runtime.go:6045/6049/6052/6057); add an internal borrow path for synchronous listener dispatch when no retention is possible; (b) non-empty variable snapshot copy reduction — cloneValues per dispatch for statements with variables; share read-only views where isolation allows. The listener-holding-semantics verification is the unit's own deliverable.
+- [x] Investigation: subscriber clone provably unnecessary (newSubscriberUpdate detaches rows synchronously — subscriber.go:30-45); listeners/sink need clone-per-delivery EXCEPT the last (arrays never reused — no slice pooling, producers build fresh, all dispatch queues drained under e.mu before dispatch); non-empty variable snapshot copy EXCLUDED (written per statement during dispatch — subqueryEngineVariable injection + output-policy assignments; read-only view needs cross-cutting map refactor, deferred).
+- [x] Implementation: last-consumer-borrows in dispatchSync (runtime.go:6057-6096) — subscriber un-cloned, listener i clones unless last, sink borrows; single-listener dispatch zero clones; retention contract documented on Listener/Sink/async-pool-clone/replay-clone (all kept). No public API change.
+- [x] Equivalence pins: dispatch_borrow_test.go (multi-listener in-place mutation isolation with retained slice header, single-listener borrow retention, subscriber detached from mutating borrower, sink isolation + retention, SubscribeWithReplay with send-during-replay under mutating callback, second-send cleanliness); -race green on Threading/Outbound/Replay/Subscriber/Dispatch; full corpus green (internal/esper 57s, internal/app/parity 195s, internal/compat ok).
+- [x] Benchmark: accepted 9→8 allocs · 1584→1536 B; GenericFilter accepted 19→18; DispatchBorrowListeners 1/2/4 listeners 7/8/10 allocs (each additional listener +1 instead of +2); single-listener borrow zero dispatch clones.
+- [ ] Gates + independent parity review + commit.
+
+### Previous work unit (prior)
+
 Active: Draft 4.397 ('unified-single-filter-eval').
 
 - Scope frozen from perf doc §4.9.2 (priority 2): the generic statement path re-evaluates the filter per event even though Engine.send's dispatch loop already computed `accepted` — extending the dispatch-verdict reuse from the stateless fast path to eligible generic single-chain statements (plain, getter-bearing, window-above-filter); joins/patterns/contexts/triggers/update-streams and divergent-shapes keep duplicate evaluation per the structural eligibility proof. Metrics sampling windows, audit accepted values, and user function/script call counts must be preserved.

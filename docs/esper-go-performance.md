@@ -372,8 +372,12 @@ insert 自行求值一次（不变）。
 #### 4.9.3 变量上下文与 ResultBatch 的分配削减
 
 状态：大部分实施（§2.4）。发送入口空变量快照与纯谓词语句的变量装配跳过已落地；监听器快照缓存与
-字面量预装箱消除派发侧每批次分配；accepted/rejected 基准降至 8/4 allocs。仍保留：非空变量快照
-复制（隔离语义）、ResultBatch 借用/复用与监听器 `batch.clone()`——待单独验证监听器持有语义。
+字面量预装箱消除派发侧每批次分配；accepted/rejected 基准降至 8/4 allocs。ResultBatch 借用/复用已实施（Draft 4.398：dispatchSync 末消费者借用——订阅者经
+newSubscriberUpdate 同步脱离行、listener i 除末位外私有浅 clone、sink 恒借用；
+持有契约记录于 Listener/Sink/async-pool-clone/replay-clone；fire-and-forget
+快照仅预派发失败时恢复，批至多派发一次）。仍保留：非空变量快照复制（隔离
+语义——快照在派发期间被写入：subqueryEngineVariable 注入 + output-policy
+赋值，只读视图需跨切面 map 重构）。
 
 - 变量上下文：发送路径每轮执行 `cloneValues(e.variables)`（`runtime.go:3898`）→
   `statementVariables(...)` → `variablesWithEngineLockState(...)`（`runtime.go:6907` 起、
