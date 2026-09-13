@@ -784,3 +784,163 @@ func TestDatabaseJoinInvalidBoundaryMatchesJava(t *testing.T) {
 		t.Fatalf("self-referencing historical produced %d rows", invoked)
 	}
 }
+
+// TestDatabaseHistoricalMutualReferenceIndependentPolls pins that two
+// historical sides whose parameter expressions read each other's SQL columns
+// poll independently per trigger event (Go has no SQL-text cycle to detect:
+// the providers are independent functions, mirroring the typed-builder
+// boundary for EPLDatabaseInvalidBothHistorical's "Circular dependency"
+// compile diagnostic which is structurally unexpressible).
+func TestDatabaseHistoricalMutualReferenceIndependentPolls(t *testing.T) {
+	env := NewEnvironment()
+	dbJoinRegisterSupportBean(t, env)
+	myVarSchema, err := NewMapSchema("HistMutualMyVarChar", []FieldSpec{FieldDef("myvarchar", reflect.TypeOf(""))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	myCharSchema, err := NewMapSchema("HistMutualMyChar", []FieldSpec{FieldDef("mychar", reflect.TypeOf(""))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	db := dbJoinOpenDB(t)
+	defer db.Close()
+	dbJoinSetHandler(func(statement string, args []any) (dbJoinSQLResult, error) {
+		cols := []string{"myvarchar"}
+		if strings.Contains(statement, "mychar") {
+			cols = []string{"mychar"}
+		}
+		result := dbJoinSQLResult{columns: cols}
+		if len(args) == 0 {
+			return result, nil
+		}
+		key, ok := dbJoinToInt64(args[0])
+		if !ok {
+			return result, nil
+		}
+		for _, row := range dbJoinMyTestTable {
+			if row.mybigint == key {
+				if cols[0] == "myvarchar" {
+					result.rows = append(result.rows, []driver.Value{row.myvarchar})
+				} else {
+					result.rows = append(result.rows, []driver.Value{row.mychar})
+				}
+				break
+			}
+		}
+		return result, nil
+	})
+	providerOne, err := NewSQLHistoricalProvider(db, myVarSchema,
+		"select myvarchar from mytesttable where ? = mybigint",
+		func(request HistoricalRequest) any { return request.Trigger.Get("intPrimitive").Any() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	providerTwo, err := NewSQLHistoricalProvider(db, myCharSchema,
+		"select mychar from mytesttable where ? = mybigint",
+		func(request HistoricalRequest) any { return request.Trigger.Get("intPrimitive").Any() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	h1 := FromHistoricalOn[map[string]any](env, "s1", "SupportBean", myVarSchema, providerOne)
+	h2 := FromHistoricalOn[map[string]any](env, "s2", "SupportBean", myCharSchema, providerTwo)
+	query := JoinMany(
+		JoinSource(From[dbJoinSupportBean](env, "SupportBean").Window(KeepAll())),
+		JoinSource(h1),
+		JoinSource(h2),
+	).Select(
+		SelectFrom(0, "theString", Field[dbJoinSupportBean, string]("theString")),
+		SelectFrom(1, "myvarchar", Field[map[string]any, string]("myvarchar")),
+		SelectFrom(2, "mychar", Field[map[string]any, string]("mychar")),
+	).Query(StatementName("s0-mutual-ref"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	invoked := 0
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		invoked += len(batch.New)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(context.Background(), "SupportBean", dbJoinSupportBean{TheString: "B", IntPrimitive: 6}); err != nil {
+		t.Fatal(err)
+	}
+	if invoked != 1 {
+		t.Fatalf("mutual-reference historical produced %d rows, want 1", invoked)
+	}
+}
+
+// TestDatabaseHistoricalViewAccepted pins the documented divergence from
+// EPLDatabaseInvalidSubviews: Java rejects views onto historical data at
+// compile time ("Historical data joins do not allow views onto the data"),
+// while the Go builder accepts a window on a historical stream and the
+// statement functions (the window retains polled rows).
+func TestDatabaseHistoricalViewAccepted(t *testing.T) {
+	env := NewEnvironment()
+	dbJoinRegisterSupportBean(t, env)
+	db := dbJoinOpenDB(t)
+	defer db.Close()
+	dbJoinSetHandler(func(statement string, args []any) (dbJoinSQLResult, error) {
+		cols := []string{"myvarchar"}
+		result := dbJoinSQLResult{columns: cols}
+		if len(args) == 0 {
+			return result, nil
+		}
+		key, ok := dbJoinToInt64(args[0])
+		if !ok {
+			return result, nil
+		}
+		for _, row := range dbJoinMyTestTable {
+			if row.mybigint == key {
+				result.rows = append(result.rows, []driver.Value{row.myvarchar})
+				break
+			}
+		}
+		return result, nil
+	})
+	schema, err := NewMapSchema("HistViewMyVarChar", []FieldSpec{FieldDef("myvarchar", reflect.TypeOf(""))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	provider, err := NewSQLHistoricalProvider(db, schema,
+		"select myvarchar from mytesttable where ? = mybigint",
+		func(request HistoricalRequest) any { return request.Trigger.Get("intPrimitive").Any() })
+	if err != nil {
+		t.Fatal(err)
+	}
+	hist := FromHistoricalOn[map[string]any](env, "MyDBWithRetain", "SupportBean", schema, provider)
+	query := JoinMany(
+		JoinSource(From[dbJoinSupportBean](env, "SupportBean")),
+		JoinSource(hist.Window(TimeWindow(30 * time.Second))),
+	).Select(
+		SelectFrom(1, "myvarchar", Field[map[string]any, string]("myvarchar")),
+	).Query(StatementName("s0-historical-view"))
+	plan, err := env.Build(query)
+	if err != nil {
+		t.Fatalf("historical view rejected: %v", err)
+	}
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deployment.Undeploy(context.Background())
+	if err := engine.Send(context.Background(), "SupportBean", dbJoinSupportBean{TheString: "A", IntPrimitive: 10}); err != nil {
+		t.Fatal(err)
+	}
+	// The windowed historical row persists (30 s virtual window from epoch).
+	snapshot, err := deployment.Statements()[0].Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snapshot.Results()) != 1 {
+		t.Fatalf("historical view snapshot = %d rows, want 1", len(snapshot.Results()))
+	}
+}
