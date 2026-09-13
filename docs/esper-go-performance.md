@@ -324,6 +324,24 @@ priority/drop 屏障、unmatched 记账不变（同序遍历、逐语句跳过�
 
 #### 4.9.1 增量 Join：每次事件重算全量 Join 结果（最高优先级）
 
+#### 4.9.1.1 等值连接索引（§4.9.1 的低风险半部，Draft 4.396 已实施）
+
+`joinInnerKeyedTuplesIndexed`（internal/esper/join_index.go）：组合期惰性构建的
+per-level 哈希索引（桶为升序行位置切片）替代对侧全扫；键编码
+`joinIndexKeyValue` 与 `EqualValues` 判等语义逐值对齐（数值跨 int/uint/float/
+json.Number 归一、±0 统一、其余 DeepEqual 兼容深编码），OR-alternative 联合
+去重升序；不 viable 形状（method/table/historical/pattern/derived、
+unidirectional、N 流外连接、链式外边、乘积 < 4 的小窗口）回落原扫描；
+条件层面的回退规则（plan 期逐层判定）：混合 OR（等值 + 非等值/不可提取分支）
+与绑定不同源对的 OR 组在对应层级整体回退，非相邻/跨层级等值形状按层级健全
+索引（无有效 plan 的层级全扫、probe 源全部已绑定的层级探查）——任一分支
+不可索引即整条件非必要条件，绝不漏配。输出序保持嵌套循环字典序（桶内插入序）。等值 500×500：3,537 ms ·
+897 MB · 1.00M allocs → 11.4 ms · 2.9 MB · 20,384 allocs（~310x）；三流 100³：
+23,774 ms · 7.68 GB → 59.9 ms · 9.5 MB（~397x）；复合 200×200 ~62x；IN 选择性
+~97x；IN 对抗性热值 ~1.4x。数字为单机采样（GOMAXPROCS=48 档），绝对值随环境浮动（复采 16-18 ms，alloc/MB 轮廓字节匹配）——以倍率与 alloc 轮廓为准。等价性：随机化属性测试 vs 旧实现参考
+（inner/四外连接/链式 × 17 条件场景 × 40 轮）字节级一致 + 全部差分 join 链
+byte-identical。完整增量重写（§4.9.1 另一半：事件级 delta 组合）仍延后。
+
 - 现状：`statementRuntime.insertJoin`（`runtime.go:12344`）转发到 `updateJoin`（`runtime.go:12349`）。
   事件驱动的单次 update 在更新窗口侧状态**之前**先算 `before := joinKeyedTuples(...)`
   （`runtime.go:12373`），更新后再算 `after := joinKeyedTuples(...)`（`runtime.go:12554`），

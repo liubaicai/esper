@@ -48,6 +48,17 @@ activity or a single coverage percentage.
 
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.396 ('incremental-join-index').
+
+- [x] Scope frozen from perf doc §4.9.1 (priority 1): statementRuntime.insertJoin/updateJoin recomputes the FULL join tuple set twice per event (before/after diff, O(prod|sides|) per event). This unit implements the lower-risk half: per-side equi/IN join-condition indexes so the composition looks up candidate rows instead of full-scanning the opposite side, preserving EXACT output semantics (ordering, old/new, lineage, outer-join unmatched rows). The full incremental-join rewrite (§4.9.1's other half) stays deferred.
+- [x] Investigation: composition call graph mapped (insertJoin/updateJoin -> joinKeyedTuples -> visit(0) Cartesian / 2-stream outer / chained per-edge; joinConditionsMatch -> EqualValues oracle); index-eligible = pure equi/IN on regular event windows; exclusions per perf doc.
+- [x] Implementation + equivalence pins: join_index.go (key encoding EqualValues-faithful incl. -0/json.Number/DeepEqual fallback; OR mixed-branch nil-return; plan-time drop-whole-condition rule with level-validity gating) + hooks (inner, 2-stream outer, chained inner); equivalence via 17-scenario randomized property test vs copied legacy reference + full differential corpus (internal/esper, internal/app/parity, internal/compat all green ×3); -race green on indexed shapes (pre-existing TestDatabaseJoinPerfNoCache -race panic documented as not-this-unit).
+- [x] Benchmark: equi 500×500 ~310x, composite ~62x, IN selective ~97x, 3-stream ~397x, chained ~46x, hot-value IN ~1.4x; perf doc §4.9.1.1 records numbers + measurement-environment note (reviewer P3).
+- [x] Gates + independent parity review: reviewer agent_d01c2e17 round-1 FAIL caught 2 P1 soundness holes (OR mixed-branch extraction; plan dead-alternatives) — fixed with proof-by-revert pins; round-2 re-check OVERALL PASS (both fixes verified sound end-to-end; engagement assertions prevent reference-vs-reference; performance-neutral on unaffected shapes).
+- [ ] Commit and push (single semantic commit with all checkpoint edits folded in).
+
+### Previous work unit (prior)
+
 Active: Draft 4.395 ('infra-named-window-final-views').
 
 - [x] Contract frozen from parallel read-only scouts `FinalNWJava` (java-oracle-scout) and `FinalNWGo` (scout): fixed Java source `InfraNamedWindowViews.java`, commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; final slice S13 covers ord 46 `InfraInvalid` (`java-runtime-c4bdf3c2b96b8fc08eaf`), ord 47 `InfraNamedWindowInvalidAlreadyExists` (`java-runtime-2bea74c29c162eed65e9`), ord 48 `InfraNamedWindowInvalidConsumerDataWindow` (`java-runtime-06948675706a1d4ee9a7`), ord 52 `InfraPattern` (`java-runtime-476271957d6ffdb3a878`), ord 57 `InfraNamedWindowTimeToLiveDelete` (`java-runtime-3c2f3a2696127c04b2a6`); static `java-030c8e6d456d680e8745`.

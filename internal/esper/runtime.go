@@ -14010,18 +14010,52 @@ func joinKeyedTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 	if len(sources) == 2 && definition.kind != JoinInner {
 		result := make([]joinKeyedTuple, 0)
 		matchedRight := make(map[int]bool)
+		// Work-unit incremental-join-index: the equi/IN side index replaces
+		// only the inner matching loop below. Candidate positions arrive in
+		// ascending row order (the legacy scan order) and every candidate is
+		// re-checked with the identical lineage-plus-conditions predicate, so
+		// tuple order, old/new classification and the null-padding logic that
+		// follows are unchanged. Method/table/historical/pattern sources,
+		// unidirectional joins and tiny windows keep the reference scan.
+		var rightSideIndex *joinLevelEquiIndex
+		var outerProbeTuple []Event
+		if joinIndexSourcesEligible(sources) && !joinDefinitionHasUnidirectional(definition) &&
+			len(state.sides[0])*len(state.sides[1]) >= joinEquiIndexMinWork {
+			if plan := joinKeyPlanForBuildSource(conditions, 1); !plan.empty() {
+				outerProbeTuple = make([]Event, 2)
+				rightSideIndex = buildJoinLevelEquiIndex(plan, 1, state.sides[1], outerProbeTuple, now, runtime.variables)
+			}
+		}
 		for _, left := range state.sides[0] {
 			matched := false
-			for rightIndex, right := range state.sides[1] {
-				storedTuple := []storedEvent{left, right}
-				if !joinStoredTupleMatchesLineage(storedTuple) {
-					continue
+			if rightSideIndex != nil {
+				outerProbeTuple[0] = left.event
+				for _, rightPosition := range rightSideIndex.probe(outerProbeTuple, now, runtime.variables) {
+					right := state.sides[1][rightPosition]
+					storedTuple := []storedEvent{left, right}
+					if !joinStoredTupleMatchesLineage(storedTuple) {
+						continue
+					}
+					tuple := []Event{left.event, right.event}
+					if joinConditionsMatch(conditions, tuple, now, runtime) {
+						matched = true
+						matchedRight[rightPosition] = true
+						result = append(result, joinKeyedTuple{events: tuple, key: joinStoredTupleLineageKey(storedTuple)})
+					}
 				}
-				tuple := []Event{left.event, right.event}
-				if joinConditionsMatch(conditions, tuple, now, runtime) {
-					matched = true
-					matchedRight[rightIndex] = true
-					result = append(result, joinKeyedTuple{events: tuple, key: joinStoredTupleLineageKey(storedTuple)})
+				outerProbeTuple[0] = Event{}
+			} else {
+				for rightSlot, right := range state.sides[1] {
+					storedTuple := []storedEvent{left, right}
+					if !joinStoredTupleMatchesLineage(storedTuple) {
+						continue
+					}
+					tuple := []Event{left.event, right.event}
+					if joinConditionsMatch(conditions, tuple, now, runtime) {
+						matched = true
+						matchedRight[rightSlot] = true
+						result = append(result, joinKeyedTuple{events: tuple, key: joinStoredTupleLineageKey(storedTuple)})
+					}
 				}
 			}
 			if !matched && (definition.kind == JoinLeftOuter || definition.kind == JoinFullOuter) {
@@ -14046,6 +14080,15 @@ func joinKeyedTuples(definition *joinDefinition, state *joinRuntimeState, now ti
 		if len(side) == 0 {
 			return nil
 		}
+	}
+	// Work-unit incremental-join-index: when the composition conditions carry
+	// extractable equi/IN keys over regular event streams, each level probes a
+	// per-composition hash index over the opposite side instead of scanning
+	// every row pair. The probe is a candidate filter only; the leaf applies
+	// the exact legacy lineage-plus-joinConditionsMatch predicate and emits
+	// candidates in the same ascending row order as this nested loop.
+	if indexed, ok := joinInnerKeyedTuplesIndexed(definition, state, conditions, now, runtime); ok {
+		return indexed
 	}
 	result := make([]joinKeyedTuple, 0)
 	current := make([]Event, 0, len(sources))
@@ -14086,6 +14129,12 @@ func joinChainedKeyedTuples(definition *joinDefinition, state *joinRuntimeState,
 	if definition == nil || state == nil || len(definition.edges) != len(state.sides)-1 || len(state.sides) < 2 {
 		return nil
 	}
+	// Work-unit incremental-join-index: regular event sources on an explicit
+	// left-deep chain may index each inner edge's right side per composition.
+	// Outer edges and every excluded source kind keep the reference scan
+	// because their unmatched-row bookkeeping (placeholders, matched flags,
+	// lineage-bound rows) is coupled to the complete pass over the right side.
+	chainIndexingAllowed := joinIndexSourcesEligible(joinDefinitionSources(definition)) && !joinDefinitionHasUnidirectional(definition)
 	rows := make([]chainedJoinTuple, 0, len(state.sides[0]))
 	for _, stored := range state.sides[0] {
 		rows = append(rows, chainedJoinTuple{events: []Event{stored.event}, stored: []storedEvent{stored}})
@@ -14094,6 +14143,14 @@ func joinChainedKeyedTuples(definition *joinDefinition, state *joinRuntimeState,
 		rightSide := state.sides[edgeIndex+1]
 		matchedRight := make([]bool, len(rightSide))
 		next := make([]chainedJoinTuple, 0)
+		var edgeSideIndex *joinLevelEquiIndex
+		var edgeProbeTuple []Event
+		if chainIndexingAllowed && edge.kind == JoinInner && len(rows)*len(rightSide) >= joinEquiIndexMinWork {
+			if plan := joinKeyPlanForBuildSource(edge.conditions, edgeIndex+1); !plan.empty() {
+				edgeProbeTuple = make([]Event, len(state.sides))
+				edgeSideIndex = buildJoinLevelEquiIndex(plan, edgeIndex+1, rightSide, edgeProbeTuple, now, runtime.variables)
+			}
+		}
 		for _, left := range rows {
 			if edge.kind != JoinInner && !joinChainedEdgeAnchored(edge, edgeIndex, left.events) {
 				// The edge cannot be evaluated against this partial tuple: none
@@ -14107,15 +14164,33 @@ func joinChainedKeyedTuples(definition *joinDefinition, state *joinRuntimeState,
 				continue
 			}
 			matchedLeft := false
-			for rightIndex, right := range rightSide {
-				events := append(append([]Event(nil), left.events...), right.event)
-				stored := append(append([]storedEvent(nil), left.stored...), right)
-				if !joinStoredTupleMatchesLineageWithMissing(stored) || !joinConditionsMatch(edge.conditions, events, now, runtime) {
-					continue
+			if edgeSideIndex != nil {
+				copy(edgeProbeTuple, left.events)
+				for _, rightPosition := range edgeSideIndex.probe(edgeProbeTuple, now, runtime.variables) {
+					right := rightSide[rightPosition]
+					events := append(append([]Event(nil), left.events...), right.event)
+					stored := append(append([]storedEvent(nil), left.stored...), right)
+					if !joinStoredTupleMatchesLineageWithMissing(stored) || !joinConditionsMatch(edge.conditions, events, now, runtime) {
+						continue
+					}
+					matchedLeft = true
+					matchedRight[rightPosition] = true
+					next = append(next, chainedJoinTuple{events: events, stored: stored})
 				}
-				matchedLeft = true
-				matchedRight[rightIndex] = true
-				next = append(next, chainedJoinTuple{events: events, stored: stored})
+				for clear := 0; clear < len(left.events); clear++ {
+					edgeProbeTuple[clear] = Event{}
+				}
+			} else {
+				for rightSlot, right := range rightSide {
+					events := append(append([]Event(nil), left.events...), right.event)
+					stored := append(append([]storedEvent(nil), left.stored...), right)
+					if !joinStoredTupleMatchesLineageWithMissing(stored) || !joinConditionsMatch(edge.conditions, events, now, runtime) {
+						continue
+					}
+					matchedLeft = true
+					matchedRight[rightSlot] = true
+					next = append(next, chainedJoinTuple{events: events, stored: stored})
+				}
 			}
 			if !matchedLeft && (edge.kind == JoinLeftOuter || edge.kind == JoinFullOuter) && joinStoredTupleHasAnchor(left.stored) {
 				events := append(append([]Event(nil), left.events...), Event{})
