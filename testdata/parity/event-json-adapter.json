@@ -1,0 +1,97 @@
+{
+ "version": "esper-parity/v1",
+ "id": "event-json-adapter",
+ "description": "JSON adapter differential slice: insert-into, string-transform schema, doc sample.",
+ "cases": [
+  {
+   "case": "adapter-insert-into",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-706d2a2f6bdd3f522457",
+   "executionName": "EventJsonAdapterInsertInto"
+  },
+  {
+   "case": "adapter-create-schema-w-string-transform",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-30ad022c4b1542e493e3",
+   "executionName": "EventJsonAdapterCreateSchemaWStringTransform"
+  },
+  {
+   "case": "adapter-doc-sample",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-39d9f1a890a50fb92d53",
+   "executionName": "EventJsonAdapterDocSample"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "adapter-insert-into"
+  },
+  {
+   "op": "deploy",
+   "statement": "producer"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "eventType": "LocalEvent",
+   "payload": {
+    "point": {
+     "x": 7,
+     "y": 14
+    },
+    "mydate": "2002-05-01T08:00:01.999"
+   }
+  },
+  {
+   "op": "case",
+   "case": "adapter-create-schema-w-string-transform"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "statement": "s1"
+  },
+  {
+   "op": "send",
+   "eventType": "JsonEvent",
+   "payload": {
+    "point": "7,14",
+    "mydate": "2002-05-01T08:00:01.999"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "JsonEvent",
+   "payload": {
+    "point": null,
+    "mydate": null
+   }
+  },
+  {
+   "op": "case",
+   "case": "adapter-doc-sample"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "JsonEvent",
+   "payload": {
+    "myDate": "22-09-2018"
+   }
+  }
+ ]
+}

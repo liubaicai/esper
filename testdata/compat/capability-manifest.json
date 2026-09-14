@@ -5971,20 +5971,21 @@
    "javaRuntimeIds": [
     "java-runtime-706d2a2f6bdd3f522457",
     "java-runtime-30ad022c4b1542e493e3",
-    "java-runtime-39d9f1a890a50fb92d53",
-    "java-runtime-e949fd77aef3bbc74c60"
+    "java-runtime-39d9f1a890a50fb92d53"
    ],
    "javaNames": [
     "EventJsonAdapterInsertInto",
     "EventJsonAdapterCreateSchemaWStringTransform",
-    "EventJsonAdapterInvalid",
     "EventJsonAdapterDocSample"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonAdapter.java"
    ],
    "goTests": [
-    "TestJSONFieldAdapterRoundTripAndSchemaValidation"
+    "TestJSONFieldAdapterRoundTripAndSchemaValidation",
+    "TestRunEventJsonAdapterDiffWritesPassingEvidence",
+    "TestRunEventJsonAdapterDirectReplay",
+    "TestRunEventJsonAdapterDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -5995,17 +5996,51 @@
     "write",
     "invalid"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-suite-event-json-13-13",
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/event-json-adapter.json",
+    "testdata/parity/event-json-adapter.trace.json",
+    "testdata/parity/event-json-adapter.go.trace.json",
+    "testdata/parity/event-json-adapter.evidence.json",
+    "tools/java-oracle/EventJsonAdapterScenarioOracle.java",
+    "tools/java-oracle/run-event-json-adapter.sh"
    ],
-   "difference": "Go uses explicit NewJSONFieldAdapter/NewNamedJSONFieldAdapter/WithJSONFieldAdapter registration with typed Parse/Write functions. The covered slice converts non-null JSON strings in both ParseJSON and RenderJSON, preserves null, validates adapter result types, rejects non-string input, and includes the adapter identity in Plan canonicalization. Java class loading, annotations and the full insert-into representation matrix remain open and are tracked in event.json-typed remaining items.",
+   "difference": "Go models Java's create-json-schema statements with up-front typed RegisterJSON calls (no runtime EPL schema creation), and adapter classes with typed NewJSONFieldAdapter registrations; Java class loading and annotation semantics remain an approved representation difference. The EventJsonAdapterInvalid compile diagnostics are disposed in case.event-json-adapter-invalid.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-706d2a2f6bdd3f522457",
+    "java-runtime-30ad022c4b1542e493e3",
+    "java-runtime-39d9f1a890a50fb92d53"
    ]
+  },
+  {
+   "id": "case.event-json-adapter-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-e949fd77aef3bbc74c60"
+   ],
+   "javaNames": [
+    "EventJsonAdapterInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonAdapter.java"
+   ],
+   "status": "intentionally-different",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "difference": "Compile-only executions with zero output rows: Java asserts four EPCompileException message texts tied to EPL adapter-class resolution (unresolvable name, non-adapter class, missing default constructor, parse-return-type mismatch). The typed Go surface makes the class-loader shapes unrepresentable - NewJSONFieldAdapter binds the value type statically - and the return-type mismatch is rejected at registration with ErrorInvalidRule; adapter parse failures surface the adapter's own error through a classified ErrorInvalidRule. No observable successful-query behavior exists to compare. Asserted in-process by TestJSONFieldAdapterInvalidParity.",
+   "goTests": [
+    "TestJSONFieldAdapterInvalidParity"
+   ],
+   "notes": "Split from case.event-json-adapter in Draft 4.405 (2026-09-14) when the three observable executions became differential-verified, mirroring the case.infra-namedwindow-views-invalid disposition."
   },
   {
    "id": "case.event-json-visibility",
@@ -44509,14 +44544,18 @@
   {
    "caseId": "case.infra-namedwindow-views-invalid",
    "capabilityId": "infra.namedwindow.views"
+  },
+  {
+   "capabilityId": "event.json-typed",
+   "caseId": "case.event-json-adapter-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 651,
-  "implementedCases": 649,
-  "differentialVerifiedCases": 277,
-  "differentialVerifiedRuntimeIds": 1020,
-  "intentionallyDifferentCases": 24,
+  "inventoriedCases": 652,
+  "implementedCases": 650,
+  "differentialVerifiedCases": 278,
+  "differentialVerifiedRuntimeIds": 1023,
+  "intentionallyDifferentCases": 25,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
@@ -44531,7 +44570,7 @@
   "unreferencedJavaRuntimeIds": 843,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 651,
+  "totalCases": 652,
   "totalCapabilities": 120
  }
 }

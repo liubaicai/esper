@@ -1062,7 +1062,7 @@ func newSchema(name string, kind SchemaKind, goType reflect.Type, fields []Field
 			return Schema{}, fmt.Errorf("esper: JSON field adapter for property %q has no value type", adapterName)
 		}
 		if !jsonAdapterTypesCompatible(field.Type, valueType) {
-			return Schema{}, fmt.Errorf("esper: JSON field adapter for property %q produces %s, field declares %s", canonical, valueType, field.Type)
+			return Schema{}, NewError(ErrorInvalidRule, fmt.Sprintf("JSON field adapter for property %q produces %s, field declares %s", canonical, valueType, field.Type))
 		}
 		if _, exists := jsonAdapters[canonical]; exists {
 			return Schema{}, fmt.Errorf("esper: JSON schema %q duplicates field adapter %q", name, canonical)
@@ -3622,7 +3622,7 @@ func ParseJSONWithOptions(schema Schema, data []byte, receivedAt time.Time, opti
 					}
 					parsed, parseErr := adapter.Parse(text)
 					if parseErr != nil {
-						return Event{}, fmt.Errorf("esper: JSON event %q field %q adapter parse: %w", schema.Name(), field.Name, parseErr)
+						return Event{}, WrapError(ErrorInvalidRule, "json-adapter", fmt.Errorf("JSON event %q field %q adapter parse: %w", schema.Name(), field.Name, parseErr))
 					}
 					if parsed == nil {
 						converted = nil

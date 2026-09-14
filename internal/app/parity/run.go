@@ -141,6 +141,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "event-json-sender-getter" || *mode == "event-json-sender-getter-diff" {
 		scenario, err = compat.LoadScenario(file)
+	} else if *mode == "event-json-adapter" || *mode == "event-json-adapter-diff" {
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-database-restart" || *mode == "epl-database-restart-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-database-timebatch" || *mode == "epl-database-timebatch-diff" {
@@ -491,6 +493,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eventJsonSenderGetterJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eventJsonSenderGetterJavaSources),
 				splitMetadata(*javaExecutions, eventJsonSenderGetterJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "event-json-adapter" || *mode == "event-json-adapter-diff" {
+		trace, err := runEventJsonAdapterScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "event-json-adapter-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eventJsonAdapterJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eventJsonAdapterJavaSources),
+				splitMetadata(*javaExecutions, eventJsonAdapterJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

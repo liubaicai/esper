@@ -1,0 +1,361 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-706d2a2f6bdd3f522457",
+    "java-runtime-30ad022c4b1542e493e3",
+    "java-runtime-39d9f1a890a50fb92d53"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/event/json/EventJsonAdapter.java"
+  ],
+  "javaExecutions": [
+    "EventJsonAdapterInsertInto",
+    "EventJsonAdapterCreateSchemaWStringTransform",
+    "EventJsonAdapterDocSample"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "event-json-adapter",
+    "steps": [
+      {
+        "op": "case",
+        "case": "adapter-insert-into"
+      },
+      {
+        "op": "deploy",
+        "statement": "producer"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "eventType": "LocalEvent",
+        "payload": {
+          "point": {
+            "x": 7,
+            "y": 14
+          },
+          "mydate": "2002-05-01T08:00:01.999"
+        }
+      },
+      {
+        "op": "case",
+        "case": "adapter-create-schema-w-string-transform"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "statement": "s1"
+      },
+      {
+        "op": "send",
+        "eventType": "JsonEvent",
+        "payload": {
+          "point": "7,14",
+          "mydate": "2002-05-01T08:00:01.999"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "JsonEvent",
+        "payload": {
+          "point": null,
+          "mydate": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "adapter-doc-sample"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "JsonEvent",
+        "payload": {
+          "myDate": "22-09-2018"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-json-adapter",
+    "records": [
+      {
+        "case": "adapter-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mydate": "2002-05-01T08:00:01.999",
+              "point": "7,14"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-insert-into",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "json": "{\"point\":\"7,14\",\"mydate\":\"2002-05-01T08:00:01.999\"}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-create-schema-w-string-transform",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mydate": "2002-05-01T08:00:01.999",
+              "point": "7,14"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-create-schema-w-string-transform",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "json": "{\"point\":\"7,14\",\"mydate\":\"2002-05-01T08:00:01.999\"}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-create-schema-w-string-transform",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mydate": {
+                "state": "null"
+              },
+              "point": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-create-schema-w-string-transform",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "json": "{\"point\":null,\"mydate\":null}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-doc-sample",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDate": "22-09-2018"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-doc-sample",
+        "operation": "render",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "json": "{\"hello\":{\"myDate\":\"22-09-2018\"}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "event-json-adapter",
+    "records": [
+      {
+        "case": "adapter-insert-into",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mydate": "2002-05-01T08:00:01.999",
+              "point": "7,14"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-insert-into",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "json": "{\"point\":\"7,14\",\"mydate\":\"2002-05-01T08:00:01.999\"}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-create-schema-w-string-transform",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mydate": "2002-05-01T08:00:01.999",
+              "point": "7,14"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-create-schema-w-string-transform",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "json": "{\"point\":\"7,14\",\"mydate\":\"2002-05-01T08:00:01.999\"}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-create-schema-w-string-transform",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mydate": {
+                "state": "null"
+              },
+              "point": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-create-schema-w-string-transform",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "json": "{\"point\":null,\"mydate\":null}"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-doc-sample",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myDate": "22-09-2018"
+            }
+          }
+        ]
+      },
+      {
+        "case": "adapter-doc-sample",
+        "operation": "render",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "json": "{\"hello\":{\"myDate\":\"22-09-2018\"}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

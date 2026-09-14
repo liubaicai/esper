@@ -296,6 +296,7 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.405（2026-09-14），event/json 子域第二个差分链：`event-json-adapter` 链覆盖 EventJsonAdapter 三个可观测 executions（insert-into、create-schema 串转换、doc-sample），Java/Go 各 8 条 records、0 differences；适配器两类诊断升级为 ErrorInvalidRule 分类并由进程内测试断言；manifest 拆分出 `case.event-json-adapter-invalid`（intentionally-different）。summary：652 cases、278 DV cases、1023 DV runtime IDs、25 intentionally-different。
 > 最新补充：Draft 4.404（2026-09-14），context/nested 缺口闭环 + 引擎校验：`TestContextNestedInvalidParity` 钉定 ContextNestedInvalid 两个编译期诊断；引擎新增分段上下文事件类型要求校验（`validateSegmentedContextEventType`，类型承载分段层级下列表外语句类型以 ErrorInvalidRule + Java 原文模板在 key 解析前拒绝）。manifest goTests 补记并关闭 4.402 缺口 notes；状态与 summary 计数不变。
 > 最新补充：Draft 4.403（2026-09-14），view/time-accum 覆盖缺口闭环 + 引擎修复：四个 ViewTimeAccum 缺口执行（PreviousAndPrior 两场景、Sum、GroupedWindow）+ MonthScoped（TimeAccumCalendar 首个端到端覆盖）获得真实 Java-behavior parity pin。引擎修复：prev 族访问历史对 time_accum 窗口此前恒空（提供者只处理 time-order/sorted），现按插入序窗口提供 newest-first prev 访问历史；修复前 SceneOne pin 失败、修复后通过。manifest goTests 补记并关闭 4.402 缺口 notes；状态与 summary 计数不变。
 > 最新补充：Draft 4.402（2026-09-14），go-unit 完整性修复：manifest 全量对账 `goTests` 声明与仓库实际定义的 Go 测试。补齐 4.401 event-json 链缺失的三个 run-family 测试（真实编写并通过）；`case.view-union-basic` 重指向真实 union parity 测试；删除两处从未编写的测试名并将 ViewTimeAccum previous/prior、sum、grouped-window 与 ContextNestedInvalid 登记为开放覆盖缺口（case notes）。状态与 summary 计数不变。

@@ -50543,3 +50543,178 @@ func TestRunEventJsonSenderGetterDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunEventJsonAdapterDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "event-json-adapter.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "event-json-adapter.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-json-adapter.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "event-json-adapter-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEventJsonAdapterDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-json-adapter.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "event-json-adapter",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if trace.ID != "event-json-adapter" || len(trace.Records) != 8 {
+		t.Fatalf("trace = {%s %d records}, want event-json-adapter with 8 records", trace.ID, len(trace.Records))
+	}
+	// The exact case layout: insert-into s0/s1, string-transform s0/s1 filled
+	// then s0/s1 nulled, doc-sample s0 plus the root-named render record.
+	type wantRecord struct {
+		caseName  string
+		operation string
+		statement string
+		sequence  uint64
+		fields    map[string]any
+	}
+	nullMarker := map[string]any{"state": "null"}
+	want := []wantRecord{
+		{"adapter-insert-into", "listener", "s0", 1, map[string]any{"point": "7,14", "mydate": "2002-05-01T08:00:01.999"}},
+		{"adapter-insert-into", "listener", "s1", 2, map[string]any{"json": `{"point":"7,14","mydate":"2002-05-01T08:00:01.999"}`}},
+		{"adapter-create-schema-w-string-transform", "listener", "s0", 1, map[string]any{"point": "7,14", "mydate": "2002-05-01T08:00:01.999"}},
+		{"adapter-create-schema-w-string-transform", "listener", "s1", 2, map[string]any{"json": `{"point":"7,14","mydate":"2002-05-01T08:00:01.999"}`}},
+		{"adapter-create-schema-w-string-transform", "listener", "s0", 3, map[string]any{"point": nullMarker, "mydate": nullMarker}},
+		{"adapter-create-schema-w-string-transform", "listener", "s1", 4, map[string]any{"json": `{"point":null,"mydate":null}`}},
+		{"adapter-doc-sample", "listener", "s0", 1, map[string]any{"myDate": "22-09-2018"}},
+		{"adapter-doc-sample", "render", "s0", 2, map[string]any{"json": `{"hello":{"myDate":"22-09-2018"}}`}},
+	}
+	for index, expected := range want {
+		record := trace.Records[index]
+		if record.Case != expected.caseName || record.Operation != expected.operation ||
+			record.Statement != expected.statement || record.Sequence != expected.sequence {
+			t.Fatalf("record %d = {%s %s %s seq %d}, want {%s %s %s seq %d}",
+				index, record.Case, record.Operation, record.Statement, record.Sequence,
+				expected.caseName, expected.operation, expected.statement, expected.sequence)
+		}
+		if record.Time != "1970-01-01T00:00:00Z" || len(record.New) != 1 || len(record.Old) != 0 {
+			t.Fatalf("record %d = %#v, want one epoch-time new row", index, record)
+		}
+		fields := record.New[0].Fields
+		if len(fields) != len(expected.fields) {
+			t.Fatalf("record %d fields = %#v, want %d fields", index, fields, len(expected.fields))
+		}
+		for key, value := range expected.fields {
+			if marker, ok := value.(map[string]any); ok {
+				got, isMap := fields[key].(map[string]any)
+				if !isMap || got["state"] != marker["state"] {
+					t.Fatalf("record %d field %s = %#v, want the null marker", index, key, fields[key])
+				}
+				continue
+			}
+			if fmt.Sprint(fields[key]) != fmt.Sprint(value) {
+				t.Fatalf("record %d field %s = %v, want %v", index, key, fields[key], value)
+			}
+		}
+	}
+}
+
+func TestRunEventJsonAdapterDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "insert-into-projected-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["point"] = "7,15"
+			},
+		},
+		{
+			name: "rendered-json-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["json"] = `{"point":"7,14","mydate":"2002-05-01T08:00:01.998"}`
+			},
+		},
+		{
+			name: "null-marker-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["point"] = "0,0"
+			},
+		},
+		{
+			name: "doc-sample-adapter-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[0].Fields["myDate"] = "22-09-2019"
+			},
+		},
+		{
+			name: "render-title-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].New[0].Fields["json"] = `{"root":{"myDate":"22-09-2018"}}`
+			},
+		},
+		{
+			name: "statement-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Statement = "s9"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:7]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "event-json-adapter.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "event-json-adapter.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-json-adapter.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "event-json-adapter-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
