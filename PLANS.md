@@ -120,7 +120,8 @@ Active: Draft 4.404 ('context-nested-invalid').
       records the pattern-source exemption as a documented relaxation (Java validates
       pattern-internal filter types); P3 stale frozen-contract ordering text reconciled; P3
       manifest notes scope the pattern exemption explicitly.
-- [ ] Commit + push.
+- [x] Shipped; Git owns identity. Status and summary counts unchanged (compile-diagnostic pin
+      + engine validation). The 4.402-recorded coverage gaps are now fully closed.
 
 ### Previous work unit (prior)
 
