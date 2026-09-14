@@ -23459,7 +23459,12 @@
     "TestViewExternallyTimedBatchSceneOneParity",
     "TestViewExternallyTimedBatchNoReferenceParity",
     "TestViewExternallyTimedBatchWithRefParity",
-    "TestViewExternallyTimedBatchRefWithPrevParity"
+    "TestViewExternallyTimedBatchRefWithPrevParity",
+    "TestViewTimeAccumPreviousAndPriorSceneOneParity",
+    "TestViewTimeAccumPreviousAndPriorSceneTwoParity",
+    "TestViewTimeAccumMonthScopedParity",
+    "TestViewTimeAccumSumParity",
+    "TestViewTimeAccumGroupedWindowParity"
    ],
    "tags": [
     "anchor-first-event",
@@ -23489,7 +23494,7 @@
     "inventoried",
     "implemented"
    ],
-   "notes": "go-unit list corrected 2026-09-14: dropped three never-written test names (TimeAccum previous/prior, sum, grouped-window). Java executions ViewTimeAccumPreviousAndPriorSceneOne/Two, ViewTimeAccumSum, ViewTimeAccumGroupedWindow remain implementation-covered by the TimeAccum scene tests but have no dedicated Go parity pin yet - open coverage gap."
+   "notes": "Draft 4.403 (2026-09-14) closed the go-unit coverage gaps recorded by the 4.402 reconciliation: ViewTimeAccumPreviousAndPriorSceneOne/Two (prev/prior over time_accum, incl. old-batch prior survival with null window history), ViewTimeAccumSum (running aggregate rows, empty-window null at expiry), ViewTimeAccumGroupedWindow (per-group accum deadlines, exact-order group flushes) and ViewTimeAccumMonthScoped (TimeAccumCalendar month boundary, its first end-to-end exercise) are pinned Java-behavior parity tests now. Engine fix: prev-family access over time_accum windows previously returned null/empty history - the accum window now provides newest-first prev-access history (window_previous_access.go). The 4.402-dropped phantom names were never written; the replacements above are the real pins."
   },
   {
    "id": "case.pattern-composite-select",

@@ -48,6 +48,60 @@ activity or a single coverage percentage.
 
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.403 ('view-timeaccum-remaining').
+
+- [x] Unit selected: the coverage gaps recorded by 4.402 in `case.view-timebatch-basic` notes -
+      Java ViewTimeAccum executions PreviousAndPriorSceneOne/Two, Sum, GroupedWindow (plus
+      MonthScoped coverage verification) get their Go parity pins, in the established
+      `TestViewTimeAccum*Parity` style. No status/summary changes expected unless the scout
+      upgrades a slice to a differential chain.
+- [x] Read-only scouts dispatched concurrently: Java oracle scout (agent_edd6bb41: exact
+      statement/send/assert contract for the five executions) + Go surface scout (agent_d97ec8ba:
+      fluent-API modeling, test conventions, missing-surface report).
+- [x] Java oracle scout report (agent_edd6bb41) - contract facts: all five executions deterministic
+      external-clock (virtual time mandatory, ms-exact boundary probes deadline-1/deadline);
+      SupportMarketDataBean pool get100Events: symbol S+(i%10), id id_i, price=i (double).
+      (1) PreviousAndPriorSceneOne: irstream price, prev(1,price), prior(1,price) over
+      #time_accum(10 sec); E5@20000/6@25000/7@34000 new rows carry prev/prior; expiry@44000 old
+      batch of 3 arrival-order with prev=null on every old row, prior surviving (5:null,6:5d,7:6d).
+      (2) SceneTwo adds prevtail/prevcnt(Long)/prevwindow(newest-first Object[]): new rows
+      accumulate 10/20/30; expiry old batch: prior survives, all window-history outputs null.
+      (3) MonthScoped: rstream * over #time_accum(1 month) on SupportBean; calendar boundary
+      2002-02-01T09:00 -> 2002-03-01T09:00 = epoch 1014973200000 (28-day Feb gap, NOT 30d);
+      -1ms silent probe; boundary delivers E1,E2 old-as-new batch arrival order.
+      (4) Sum: irstream sum(price) row-per-event; new=5d/old=null, new=11d/old=5d,
+      expiry new=null/old=11d (empty-window aggregate null, old carries pre-removal value).
+      (5) GroupedWindow: #groupwin(symbol)#time_accum(10 sec) irstream *; per-group deadlines
+      (new arrival reschedules own group only); exact-order old batches [E2,E12]@28000,
+      [E1,E11,E21]@31000, [E32]@39000.
+      Go-side pointer facts from the report: prior(1,x) maps to Go Prior(0,x), prev(1,x) to
+      Prev(1,x); TimeAccumCalendar(years,months,days) exists (stream.go:2035, facade 7149) with
+      ZERO test usage - MonthScoped pin would be its first end-to-end exercise; existing
+      TimeAccum pins cover Scenes One/Two/Three + RStream only.
+- [x] Contract frozen once Go surface scout (agent_d97ec8ba) reported: all engine surface present;
+      conventions verified directly from pins (Java prev(1)->Go Prev(1), prior(1)->Prior(0);
+      serial-exception rationale recorded - single-file test surface, no independent Java assets,
+      so primary implements).
+- [x] Implemented: five pins in view_time_accum_parity_test.go (SceneOne/Two prev+prior+tail+count+
+      window, MonthScoped TimeAccumCalendar(0,1,0) rstream, Sum irstream aggregate, GroupedWindow
+      per-group expiry with exact-order batches) mirroring the Java send/advanceTime/assert
+      sequences verbatim. ENGINE FIX required and applied (window_previous_access.go): accum
+      windows were admitted by windowUsesPreviousAccess but the history providers only handled
+      time-order/sorted, so prev-family outputs over accum were always null; accum now provides
+      newest-first prev-access history (Prev indexes offset from newest, PrevTail from the end,
+      PrevWindow as-is). SceneOne pin failed before the fix (prev null), passes after; the four
+      pre-existing accum scene pins stay green.
+- [x] Gates: new pins + full internal/esper package (58s) + -race on accum family + compat +
+      gofmt green. Manifest goTests registered (5 names), notes gaps closed, facts written.
+- [x] Independent parity review (agent_f37593bf): OVERALL PASS (A-E all PASS; Java fidelity verified
+      against ViewTimeAccum.java directly; engine fix soundness incl. copy-safety of reverseEvents
+      and old-row prior-before-removal ordering; discriminating-mutation check reproduced the
+      failing pin; manifest counters byte-identical). Two P3 cosmetics fixed in place: SceneTwo
+      prevcount now keyed on price like Java, stale scout checkbox ticked.
+- [ ] Commit + push.
+
+### Previous work unit (prior)
+
 Active: Draft 4.402 ('go-unit-integrity-repair').
 
 - [x] Baseline audit: manifest-wide reconciliation of every `goTests` claim against defined Go tests

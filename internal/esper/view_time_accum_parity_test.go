@@ -2,9 +2,28 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 )
+
+// deployAccumPlan deploys a built accum query with the old stream enabled and
+// subscribes the standard batch collector.
+func deployAccumPlan(t *testing.T, engine *Engine, plan Plan) (*Statement, *[]ResultBatch) {
+	t.Helper()
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	batches := new([]ResultBatch)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		*batches = append(*batches, batch)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return deployment.Statements()[0], batches
+}
 
 // TestViewTimeAccumSceneOneParity covers ViewTimeAccumSceneOne: time_accum
 // retains events until the expiry of the most recent event's deadline; the
@@ -302,5 +321,359 @@ func TestViewTimeAccumRStreamParity(t *testing.T) {
 		if got := (*batches)[0].New[i].Get("symbol").Any(); got != sym {
 			t.Fatalf("new[%d] = %v, want %s", i, got, sym)
 		}
+	}
+}
+
+// TestViewTimeAccumPreviousAndPriorSceneOneParity covers
+// ViewTimeAccumPreviousAndPriorSceneOne: prev(1, price) and prior(1, price)
+// (Go Prev(1, …) and Prior(0, …)) over time_accum(10 sec). Arriving rows carry
+// the window and stream history; the expiry old batch keeps each row's stream
+// prior (through the row itself) while window history is null for leaving rows.
+func TestViewTimeAccumPreviousAndPriorSceneOneParity(t *testing.T) {
+	env, engine := newViewMarketDataEnv(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	advanceViewTime(t, engine, 1000)
+	price := Field[viewUniqueMarketData, float64]("price")
+	source := From[viewUniqueMarketData](env, "SupportMarketDataBean").Window(TimeAccum(10 * time.Second))
+	plan, err := env.Build(Select(source,
+		Alias("price", price),
+		Alias("prevPrice", Prev[float64](1, price)),
+		Alias("priorPrice", Prior[float64](0, price)), // Java prior(1, price)
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, batches := deployAccumPlan(t, engine, plan)
+
+	assertAccumRow := func(row Result, wantPrice float64, wantPrev, wantPrior any, where string) {
+		t.Helper()
+		if got := row.Get("price").Any(); got != wantPrice {
+			t.Fatalf("%s price = %v, want %v", where, got, wantPrice)
+		}
+		check := func(name string, want any) {
+			t.Helper()
+			got := row.Get(name)
+			if want == nil {
+				if got.IsPresent() {
+					t.Fatalf("%s %s = %v, want null", where, name, got)
+				}
+				return
+			}
+			if !got.IsPresent() || got.Any() != want {
+				t.Fatalf("%s %s = %v, want %v", where, name, got, want)
+			}
+		}
+		check("prevPrice", wantPrev)
+		check("priorPrice", wantPrior)
+	}
+
+	// E5 arrives alone at t=20000: no window or stream history.
+	advanceViewTime(t, engine, 20000)
+	sendViewMarketData(t, engine, "S5", 5)
+	if len(*batches) != 1 || len((*batches)[0].New) != 1 || len((*batches)[0].Old) != 0 {
+		t.Fatalf("E5: batches = %#v", *batches)
+	}
+	assertAccumRow((*batches)[0].New[0], 5, nil, nil, "E5 new")
+
+	// E6 at t=25000: prev and prior both see E5.
+	advanceViewTime(t, engine, 25000)
+	sendViewMarketData(t, engine, "S6", 6)
+	assertAccumRow((*batches)[1].New[0], 6, 5.0, 5.0, "E6 new")
+
+	// E7 at t=34000: prev and prior both see E6.
+	advanceViewTime(t, engine, 34000)
+	sendViewMarketData(t, engine, "S7", 7)
+	assertAccumRow((*batches)[2].New[0], 7, 6.0, 6.0, "E7 new")
+
+	// The accumulation deadline of E7 expires at t=44000, ms-exact.
+	advanceViewTime(t, engine, 43999)
+	if len(*batches) != 3 {
+		t.Fatalf("t=43999 invoked listener: %#v", *batches)
+	}
+	advanceViewTime(t, engine, 44000)
+	if len(*batches) != 4 || len((*batches)[3].New) != 0 || len((*batches)[3].Old) != 3 {
+		t.Fatalf("t=44000: batch = %#v", (*batches)[3])
+	}
+	assertAccumRow((*batches)[3].Old[0], 5, nil, nil, "E5 old")
+	assertAccumRow((*batches)[3].Old[1], 6, nil, 5.0, "E6 old")
+	assertAccumRow((*batches)[3].Old[2], 7, nil, 6.0, "E7 old")
+}
+
+// TestViewTimeAccumPreviousAndPriorSceneTwoParity covers
+// ViewTimeAccumPreviousAndPriorSceneTwo: the full window-history surface
+// prevtail/prevcount/prevwindow over time_accum(10 sec). On the expiry old
+// batch only the stream prior survives; every window-history output is null.
+func TestViewTimeAccumPreviousAndPriorSceneTwoParity(t *testing.T) {
+	env, engine := newViewMarketDataEnv(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	advanceViewTime(t, engine, 1000)
+	symbol := Field[viewUniqueMarketData, string]("symbol")
+	source := From[viewUniqueMarketData](env, "SupportMarketDataBean").Window(TimeAccum(10 * time.Second))
+	priceField := Field[viewUniqueMarketData, float64]("price")
+	plan, err := env.Build(Select(source,
+		Alias("symbol", symbol),
+		Alias("price", priceField),
+		Alias("prevPrice", Prev[float64](1, priceField)),
+		Alias("priorPrice", Prior[float64](0, priceField)), // Java prior(1, price)
+		Alias("prevtailPrice", PrevTail[float64](0, priceField)),
+		Alias("prevCountPrice", PrevCount[float64](priceField)), // Java prevcount(price)
+		Alias("prevWindowPrice", PrevWindow[float64](priceField)),
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, batches := deployAccumPlan(t, engine, plan)
+
+	assertAccumRow := func(row Result, wantPrice float64, wantPrev, wantPrior, wantTail, wantCount, wantWindow any, where string) {
+		t.Helper()
+		if got := row.Get("price").Any(); got != wantPrice {
+			t.Fatalf("%s price = %v, want %v", where, got, wantPrice)
+		}
+		check := func(name string, want any, equal func(got, want any) bool) {
+			t.Helper()
+			got := row.Get(name)
+			if want == nil {
+				if got.IsPresent() {
+					t.Fatalf("%s %s = %v, want null", where, name, got)
+				}
+				return
+			}
+			if !got.IsPresent() || (equal != nil && !equal(got.Any(), want)) {
+				t.Fatalf("%s %s = %v, want %v", where, name, got, want)
+			}
+		}
+		check("prevPrice", wantPrev, nil)
+		check("priorPrice", wantPrior, nil)
+		check("prevtailPrice", wantTail, nil)
+		check("prevCountPrice", wantCount, nil)
+		check("prevWindowPrice", wantWindow, func(got, want any) bool {
+			return reflect.DeepEqual(got, want)
+		})
+	}
+
+	// E1 arrives alone at t=1000.
+	sendViewMarketData(t, engine, "S1", 10)
+	if len(*batches) != 1 || len((*batches)[0].New) != 1 {
+		t.Fatalf("E1: batches = %#v", *batches)
+	}
+	assertAccumRow((*batches)[0].New[0], 10, nil, nil, 10.0, int64(1), []float64{10}, "E1 new")
+
+	// E2 at t=5000: prevwindow is newest-first [20 10].
+	advanceViewTime(t, engine, 5000)
+	sendViewMarketData(t, engine, "S1", 20)
+	assertAccumRow((*batches)[1].New[0], 20, 10.0, 10.0, 10.0, int64(2), []float64{20, 10}, "E2 new")
+
+	// E3 at t=10000: the third accumulates; tail stays at the oldest row.
+	advanceViewTime(t, engine, 10000)
+	sendViewMarketData(t, engine, "S2", 30)
+	assertAccumRow((*batches)[2].New[0], 30, 20.0, 20.0, 10.0, int64(3), []float64{30, 20, 10}, "E3 new")
+
+	// The ungrouped accum flushes the whole window at t=20000 (E3 + 10 sec).
+	advanceViewTime(t, engine, 19999)
+	if len(*batches) != 3 {
+		t.Fatalf("t=19999 invoked listener: %#v", *batches)
+	}
+	advanceViewTime(t, engine, 20000)
+	if len(*batches) != 4 || len((*batches)[3].New) != 0 || len((*batches)[3].Old) != 3 {
+		t.Fatalf("t=20000: batch = %#v", (*batches)[3])
+	}
+	assertAccumRow((*batches)[3].Old[0], 10, nil, nil, nil, nil, nil, "E1 old")
+	assertAccumRow((*batches)[3].Old[1], 20, nil, 10.0, nil, nil, nil, "E2 old")
+	assertAccumRow((*batches)[3].Old[2], 30, nil, 20.0, nil, nil, nil, "E3 old")
+}
+
+// TestViewTimeAccumMonthScopedParity covers ViewTimeAccumMonthScoped:
+// time_accum(1 month) expires at the exact calendar-month boundary
+// (2002-02-01T09:00 + 1 month = 2002-03-01T09:00, a 28-day Feb gap), silent
+// one millisecond before the boundary.
+func TestViewTimeAccumMonthScopedParity(t *testing.T) {
+	env, initial := newViewUnionEnv(t)
+	if err := initial.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env, WithStartTime(mustParseViewTimeWin(t, "2002-02-01T09:00:00.000")))
+	defer func() { _ = engine.Close(context.Background()) }()
+	statement, batches := deployViewTimeWinBeanRStream(t, env, engine, TimeAccumCalendar(0, 1, 0), "s0")
+	send := func(theString string, at string) {
+		t.Helper()
+		if err := engine.AdvanceTime(context.Background(), mustParseViewTimeWin(t, at)); err != nil {
+			t.Fatal(err)
+		}
+		sendViewUnionBean(t, engine, viewUnionBean{TheString: theString})
+	}
+	send("E1", "2002-02-01T09:00:00.000")
+	send("E2", "2002-02-01T09:00:00.000")
+
+	boundary := mustParseViewTimeWin(t, "2002-03-01T09:00:00.000")
+	if err := engine.AdvanceTime(context.Background(), boundary.Add(-time.Millisecond)); err != nil {
+		t.Fatal(err)
+	}
+	if len(*batches) != 0 {
+		t.Fatalf("pre-boundary output = %#v", *batches)
+	}
+	if err := engine.AdvanceTime(context.Background(), boundary); err != nil {
+		t.Fatal(err)
+	}
+	if got := viewTimeWinRStreamStrings(batches); !reflect.DeepEqual(got, []string{"E1", "E2"}) {
+		t.Fatalf("March 1 rstream = %v, want [E1 E2]", got)
+	}
+	if snapshot, err := statement.Snapshot(context.Background()); err != nil || len(snapshot.Results()) != 0 {
+		t.Fatalf("final snapshot = %v, err = %v", snapshot.Results(), err)
+	}
+}
+
+// TestViewTimeAccumSumParity covers ViewTimeAccumSum: ungrouped sum(price)
+// over time_accum(10 sec) reports the running aggregate per arrival (old
+// carries the pre-insert value) and the empty-window null aggregate at expiry
+// (old carries the pre-removal value).
+func TestViewTimeAccumSumParity(t *testing.T) {
+	env, engine := newViewMarketDataEnv(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	advanceViewTime(t, engine, 1000)
+	price := Field[viewUniqueMarketData, float64]("price")
+	source := From[viewUniqueMarketData](env, "SupportMarketDataBean").Window(TimeAccum(10 * time.Second))
+	plan, err := env.Build(source.Aggregate(
+		Alias("sumPrice", Sum[float64](price)),
+	).Query(StatementName("s0"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, batches := deployAccumPlan(t, engine, plan)
+
+	assertSumRow := func(row Result, wantSum any, where string) {
+		t.Helper()
+		got := row.Get("sumPrice")
+		if wantSum == nil {
+			if got.IsPresent() {
+				t.Fatalf("%s sumPrice = %v, want null", where, got)
+			}
+			return
+		}
+		if !got.IsPresent() || got.Any() != wantSum {
+			t.Fatalf("%s sumPrice = %v, want %v", where, got, wantSum)
+		}
+	}
+
+	advanceViewTime(t, engine, 20000)
+	sendViewMarketData(t, engine, "S5", 5)
+	if len(*batches) != 1 || len((*batches)[0].New) != 1 || len((*batches)[0].Old) != 1 {
+		t.Fatalf("E5: batches = %#v", *batches)
+	}
+	assertSumRow((*batches)[0].New[0], 5.0, "E5 new")
+	assertSumRow((*batches)[0].Old[0], nil, "E5 old")
+
+	advanceViewTime(t, engine, 25000)
+	sendViewMarketData(t, engine, "S6", 6)
+	assertSumRow((*batches)[1].New[0], 11.0, "E6 new")
+	assertSumRow((*batches)[1].Old[0], 5.0, "E6 old")
+
+	// E6's accum deadline expires at t=35000; the aggregate empties to null.
+	advanceViewTime(t, engine, 34999)
+	if len(*batches) != 2 {
+		t.Fatalf("t=34999 invoked listener: %#v", *batches)
+	}
+	advanceViewTime(t, engine, 35000)
+	if len(*batches) != 3 || len((*batches)[2].New) != 1 || len((*batches)[2].Old) != 1 {
+		t.Fatalf("t=35000: batch = %#v", (*batches)[2])
+	}
+	assertSumRow((*batches)[2].New[0], nil, "expiry new")
+	assertSumRow((*batches)[2].Old[0], 11.0, "expiry old")
+}
+
+// TestViewTimeAccumGroupedWindowParity covers ViewTimeAccumGroupedWindow:
+// groupwin(symbol) gives each group an independent accum deadline; a new
+// event reschedules only its own group, and each group's expiry flushes its
+// accumulated events as one old batch in arrival order.
+func TestViewTimeAccumGroupedWindowParity(t *testing.T) {
+	env, engine := newViewMarketDataEnv(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	advanceViewTime(t, engine, 1000)
+	key := Field[viewUniqueMarketData, string]("symbol")
+	source := From[viewUniqueMarketData](env, "SupportMarketDataBean").Window(GroupWindow(key, TimeAccum(10*time.Second)))
+	_, batches := deployViewMarketData(t, env, engine, source, "s0")
+
+	// events[1]=S1/p1, [2]=S2/p2, [11]=S1/p11, [12]=S2/p12, [21]=S1/p21,
+	// [32]=S2/p32 from the shared get100Events pool (price = index).
+	type event struct {
+		symbol string
+		price  float64
+	}
+	sendAt := func(millis int64, event event) {
+		t.Helper()
+		advanceViewTime(t, engine, millis)
+		sendViewMarketData(t, engine, event.symbol, event.price)
+	}
+	assertNew := func(index int, want event, where string) {
+		t.Helper()
+		batch := (*batches)[index]
+		if len(batch.New) != 1 || len(batch.Old) != 0 {
+			t.Fatalf("%s: batch = %#v", where, batch)
+		}
+		if got := batch.New[0].Get("symbol").Any(); got != want.symbol {
+			t.Fatalf("%s new symbol = %v, want %s", where, got, want.symbol)
+		}
+		if got := batch.New[0].Get("price").Any(); got != want.price {
+			t.Fatalf("%s new price = %v, want %v", where, got, want.price)
+		}
+	}
+	assertOldBatch := func(index int, want []event, where string) {
+		t.Helper()
+		batch := (*batches)[index]
+		if len(batch.New) != 0 || len(batch.Old) != len(want) {
+			t.Fatalf("%s: batch = %#v, want %d old rows", where, batch, len(want))
+		}
+		for i, row := range batch.Old {
+			if got := row.Get("symbol").Any(); got != want[i].symbol {
+				t.Fatalf("%s old[%d] symbol = %v, want %s", where, i, got, want[i].symbol)
+			}
+			if got := row.Get("price").Any(); got != want[i].price {
+				t.Fatalf("%s old[%d] price = %v, want %v", where, i, got, want[i].price)
+			}
+		}
+	}
+
+	sendAt(11000, event{"S1", 1})
+	assertNew(0, event{"S1", 1}, "E1")
+	sendAt(12000, event{"S2", 2})
+	assertNew(1, event{"S2", 2}, "E2")
+	sendAt(15000, event{"S1", 11})
+	assertNew(2, event{"S1", 11}, "E11")
+	sendAt(18000, event{"S2", 12})
+	assertNew(3, event{"S2", 12}, "E12")
+	sendAt(21000, event{"S1", 21})
+	assertNew(4, event{"S1", 21}, "E21")
+
+	// S2's deadline (E12 at 18000) expires its two rows at t=28000; S1 keeps
+	// accumulating past its earlier individual deadlines.
+	advanceViewTime(t, engine, 27999)
+	if len(*batches) != 5 {
+		t.Fatalf("t=27999 invoked listener: %#v", *batches)
+	}
+	advanceViewTime(t, engine, 28000)
+	assertOldBatch(5, []event{{"S2", 2}, {"S2", 12}}, "S2 expiry")
+
+	// E32 re-arms only the S2 group.
+	sendAt(29000, event{"S2", 32})
+	assertNew(6, event{"S2", 32}, "E32")
+
+	// S1's deadline (E21 at 21000) flushes all three S1 rows at t=31000.
+	advanceViewTime(t, engine, 31000)
+	assertOldBatch(7, []event{{"S1", 1}, {"S1", 11}, {"S1", 21}}, "S1 expiry")
+
+	// E32 expires on its own deadline at t=39000.
+	advanceViewTime(t, engine, 38999)
+	if len(*batches) != 8 {
+		t.Fatalf("t=38999 invoked listener: %#v", *batches)
+	}
+	advanceViewTime(t, engine, 39000)
+	assertOldBatch(8, []event{{"S2", 32}}, "S2 second expiry")
+
+	advanceViewTime(t, engine, 50000)
+	if len(*batches) != 9 {
+		t.Fatalf("t=50000 invoked listener: %#v", *batches)
 	}
 }

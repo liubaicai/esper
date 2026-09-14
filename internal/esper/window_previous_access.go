@@ -23,6 +23,20 @@ func windowPreviousAccessByEvent(spec WindowSpec, state *windowRuntimeState) map
 	switch spec.(type) {
 	case TimeOrderWindowSpec, SortedWindowSpec:
 		return windowHistoryByEvent(spec, state)
+	case TimeAccumWindowSpec:
+		// Accum is an ordinary insertion-ordered window, so its prev-access
+		// history is newest-first: prev(0) addresses the current event and
+		// prevtail(0) the oldest retained row.
+		history := windowHistoryByEvent(spec, state)
+		if history == nil {
+			return nil
+		}
+		result := make(map[string][]Event, len(history))
+		for identity, events := range history {
+			reverseEvents(events)
+			result[identity] = events
+		}
+		return result
 	default:
 		return nil
 	}
@@ -44,6 +58,10 @@ func windowPreviousAccessHistoryForEvent(spec WindowSpec, state *windowRuntimeSt
 	switch spec.(type) {
 	case TimeOrderWindowSpec, SortedWindowSpec:
 		return windowHistory(spec, state)
+	case TimeAccumWindowSpec:
+		history := windowHistory(spec, state)
+		reverseEvents(history)
+		return history
 	default:
 		return nil
 	}
