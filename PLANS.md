@@ -116,7 +116,8 @@ Active: Draft 4.405 ('event-json-adapter').
       byte-identical traces end-to-end; mechanically recounted every summary counter). P2 fixed:
       the manifest-referenced standalone `event-json-adapter.go.trace.json` is now generated and
       byte-identical to the evidence's embedded Go trace.
-- [ ] Commit + push.
+- [x] Shipped; Git owns identity. event/json subdomain now has two differential chains; DV
+      counters advanced to 278 cases / 1023 runtime IDs.
 
 ### Previous work unit (prior)
 
