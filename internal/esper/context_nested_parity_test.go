@@ -2,7 +2,9 @@ package esper
 
 import (
 	"context"
+	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -462,6 +464,109 @@ func TestContextNestedNestingFilterCorrectnessParity(t *testing.T) {
 			if _, ok := descriptor.Property("hash"); !ok {
 				t.Fatalf("category-hash descriptor has no hash property: %#v", descriptor.Properties())
 			}
+		}
+	})
+}
+
+type contextNestedInvalidS0 struct {
+	TheString    string `esper:"theString"`
+	IntPrimitive int    `esper:"intPrimitive"`
+	ID           int    `esper:"id"`
+}
+
+// TestContextNestedInvalidParity covers ContextNestedInvalid: a context name
+// reused within a nested composition is rejected, and a statement bound to a
+// context with a segmented level must filter on one of the event types the
+// segmented level lists. Java asserts the compile-diagnostics by EPL message
+// text; Go classifies the same rejections through ErrorCode with the
+// segmented requirement carrying the Java-verbatim template.
+func TestContextNestedInvalidParity(t *testing.T) {
+	t.Run("duplicate sub-context name", func(t *testing.T) {
+		// Java rejects a repeated sub-context name inside one create-context
+		// declaration; the Go composition API registers every level as a
+		// named context, so the same mistake surfaces as a registration
+		// duplicate of the nested context name.
+		env, _ := newContextNestedParityEnvironment(t)
+		outer, err := NewKeyContext("Outer", Field[contextNestedParityBean, string]("theString"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.RegisterContext(outer.Name(), outer.Keys()...); err != nil {
+			t.Fatal(err)
+		}
+		inner, err := NewKeyContext("Inner", Field[contextNestedParityBean, int]("intPrimitive"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := CreateNestedContext(env, "Nested", "Outer", inner); err != nil {
+			t.Fatal(err)
+		}
+		_, err = CreateNestedContext(env, "Nested", "Outer", inner)
+		if !errors.Is(err, ErrorDependency) {
+			t.Fatalf("duplicate nested context = %v, want %s", err, ErrorDependency)
+		}
+		var dup *DuplicateModuleObjectError
+		if !errors.As(err, &dup) || dup.Kind != DeploymentResourceContext || dup.Name != "Nested" {
+			t.Fatalf("duplicate nested context = %v, want a context duplicate of Nested", err)
+		}
+	})
+
+	t.Run("segmented event-type requirement", func(t *testing.T) {
+		env, _ := newContextNestedParityEnvironment(t)
+		if _, err := RegisterStruct[contextNestedInvalidS0](env, "InvalidS0"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := CreateKeyContextByStreams(env, "PartCtx",
+			KeyContextStream{Type: "NestedBean", Keys: []Expr{Field[contextNestedParityBean, string]("theString")}},
+		); err != nil {
+			t.Fatal(err)
+		}
+		// A statement whose type is not listed by the segmented context is
+		// rejected even though the partition key field resolves on it.
+		_, err := env.Build(From[contextNestedInvalidS0](env, "InvalidS0").Query(StatementName("s0"), WithContext("PartCtx")))
+		if !errors.Is(err, ErrorInvalidRule) {
+			t.Fatalf("unlisted statement type = %v, want %s", err, ErrorInvalidRule)
+		}
+		if !strings.Contains(err.Error(), "requires that any of the event types that are listed in the segmented context also appear in any of the filter expressions of the statement") ||
+			!strings.Contains(err.Error(), `type "InvalidS0" is not one of the types listed`) {
+			t.Fatalf("unlisted statement type message = %v", err)
+		}
+		// Control: the listed type compiles.
+		if _, err := env.Build(From[contextNestedParityBean](env, "NestedBean").Query(StatementName("s1"), WithContext("PartCtx"))); err != nil {
+			t.Fatalf("listed statement type rejected: %v", err)
+		}
+	})
+
+	t.Run("segmented level in a nested context", func(t *testing.T) {
+		// Java pins the requirement against a nested context; the message
+		// carries the top-level context name at any nesting depth.
+		env, _ := newContextNestedParityEnvironment(t)
+		if _, err := RegisterStruct[contextNestedInvalidS0](env, "InvalidS0"); err != nil {
+			t.Fatal(err)
+		}
+		outer, err := CreateKeyContextByStreams(env, "SegByString",
+			KeyContextStream{Type: "NestedBean", Keys: []Expr{Field[contextNestedParityBean, string]("theString")}},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		inner, err := NewKeyContext("SegByInt", Field[contextNestedParityBean, int]("intPrimitive"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := CreateNestedContext(env, "Nested", outer.Name(), inner); err != nil {
+			t.Fatal(err)
+		}
+		_, err = env.Build(From[contextNestedInvalidS0](env, "InvalidS0").Query(StatementName("s0"), WithContext("Nested")))
+		if !errors.Is(err, ErrorInvalidRule) {
+			t.Fatalf("unlisted statement type = %v, want %s", err, ErrorInvalidRule)
+		}
+		if !strings.Contains(err.Error(), `segmented context "Nested" requires`) ||
+			!strings.Contains(err.Error(), `type "InvalidS0" is not one of the types listed`) {
+			t.Fatalf("nested message = %v, want the top-level context name", err)
+		}
+		if _, err := env.Build(From[contextNestedParityBean](env, "NestedBean").Query(StatementName("s1"), WithContext("Nested"))); err != nil {
+			t.Fatalf("listed statement type rejected: %v", err)
 		}
 	})
 }

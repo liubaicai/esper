@@ -48,6 +48,82 @@ activity or a single coverage percentage.
 
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.404 ('context-nested-invalid').
+
+- [x] Unit selected: the `ContextNestedInvalid` coverage gap recorded against
+      `case.inventory.context-nested` since the 4.402 reconciliation. Java execution pins two
+      compile-time diagnostics: (1) duplicate sub-context name within one nested declaration
+      ("Context by name 'EightToNine' has already been declared within nested context 'ABC' [");
+      (2) a statement over a nested context with a segmented (partitioned) child must filter on one
+      of the segmented child's event types ("Segmented context 'ABC' requires that any of the event
+      types ... 'SupportBean_S0' is not one of the types listed ["). Expected outcome: Go-side
+      validation pins in the established invalid-diagnostic style (ErrorCode classification at the
+      Build/register boundary per the infra-namedwindow-views-invalid precedent), plus manifest
+      notes/goTests closure for the invalid execution.
+- [x] Read-only scouts dispatched concurrently: Java contract scout (agent_9eb7ff68: exception
+      phases, exact message templates, engine enforcement sites, boundary semantics) + Go surface
+      scout (agent_13da681f: nested-context declaration API, invalid-diagnostic classification
+      precedent, whether the Go engine detects either shape today).
+- [x] Go surface scout report (agent_13da681f): Go API = NewKeyContext (partition-by equivalent,
+      context.go:183) + CreateNestedContext (1794) + WithContext query option; nested composition is
+      ONE child per level (child name overwritten at 826) so Java's same-level duplicate-child shape
+      is not directly expressible; temporal nesting rejected (795) so the Java crontab+segmented
+      composition needs a non-temporal stand-in for the segmented check. Registration duplicate
+      exists -> ErrorDependency/DuplicateModuleObjectError with Java deploy-precondition message
+      (registerContextDefinition:1823), pinned verbatim only in
+      TestClientDeployPrecondDupContextMatchesEsper; the nested-specific duplicate assertion
+      (context_nested_initiated_parity_test.go:60-62) is UNCLASSIFIED (bare err==nil check).
+      Segmented-filter requirement NOT enforced: plan.go validateContext only checks key-expression
+      resolution; the category twin validateCategoryContextEventType (plan.go:2044) carries the
+      Java-verbatim 'requires that any of the event types' text and is the in-repo precedent.
+      Recommended: TestContextNestedInvalidParity (restoring the dropped name) in
+      context_nested_parity_test.go with subtests duplicate-name (ErrorDependency + Kind/Name) and
+      segmented event-type (ErrorInvalidRule + strings.Contains of the Java-verbatim template).
+- [x] Java contract scout report (agent_9eb7ff68) + contract FROZEN. Diagnostic 1: compile of the
+      create-context statement itself; namesUsed set seeded with the top-level name, sibling
+      duplicates rejected at any depth, SAME sub-name at different nesting levels allowed, message
+      'Context by name X has already been declared within nested context ABC'. Diagnostic 2:
+      compile of the statement against the path; enforced by keyed AND hash controllers at any
+      nesting level (initterm no-op); filters = top streams + pattern filters + subquery streams,
+      named-window consumers exempt, empty filters pass, create-window exempt; pass if any filter
+      type is/subtypes any controller item type; message names the TOP-level context and the first
+      non-matching filter type. Both EPCompileException, fully deterministic.
+      Go mapping frozen: (1) the composition API registers levels as named contexts, so the
+      duplicate-child shape surfaces as the registration duplicate -> classify
+      ErrorDependency/DuplicateModuleObjectError(Kind, Name) - message text stays approved-
+      difference; (2) add plan.go validateSegmentedContextEventType beside the category twin:
+      for context trees containing a segmented level with type-bearing streamKeys
+      (NewKeyContextByStreams form; single-type constructors carry no listable types and are
+      skipped), a plain statement whose source type matches no listed type (reflect assignable
+      both ways, per the category twin) is rejected ErrorInvalidRule with the Java-verbatim
+      template naming the TOP context and the source schema name; named-window/pattern sources
+      exempt; wired AFTER validateContext so key-resolution errors keep precedence; joins
+      untouched (existing documented looser relaxation). Test = TestContextNestedInvalidParity
+      in context_nested_parity_test.go: duplicate-name classification + top-level PartCtx invalid
+      (statement from a compatible-field but different Go type) + nested variant + positive
+      controls. Allowed files: plan.go + context_nested_parity_test.go + manifest notes; forbidden:
+      other context semantics.
+- [x] Implemented: plan.go `validateSegmentedContextEventType` (walks the context tree for
+      type-bearing segmented levels; named-window/pattern sources exempt; Java-verbatim message
+      naming top context + source schema name; wired BEFORE key validation on the plain path so
+      the type mismatch is the diagnosable condition for unlisted types; joins untouched) +
+      `TestContextNestedInvalidParity` with three subtests (duplicate-name classification,
+      top-level PartCtx invalid + control, nested variant + control).
+- [x] Gates: context family + full internal/esper package (58s) + -race + compat + gofmt +
+      `git diff --check` green; no package regressions from the reordering.
+- [x] Manifest `case.inventory.context-nested` goTests registered, notes gap closed, difference
+      text records the classification approved difference.
+- [x] Independent parity review (agent_7755a4fa): OVERALL PASS (A-E all PASS; per-level enforcement
+      matches Java's per-controller validation incl. no cross-level type aggregation; placement
+      matches Java's error precedence; all existing ByStreams users verified unaffected; full
+      parity package also run by reviewer - 182s green). Fixes applied: P2 plan.go comment now
+      records the pattern-source exemption as a documented relaxation (Java validates
+      pattern-internal filter types); P3 stale frozen-contract ordering text reconciled; P3
+      manifest notes scope the pattern exemption explicitly.
+- [ ] Commit + push.
+
+### Previous work unit (prior)
+
 Active: Draft 4.403 ('view-timeaccum-remaining').
 
 - [x] Unit selected: the coverage gaps recorded by 4.402 in `case.view-timebatch-basic` notes -

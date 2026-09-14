@@ -752,6 +752,11 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 				}
 				return Plan{}, WrapError(ErrorInvalidRule, fmt.Sprintf("context source %d", index), err)
 			}
+		} else if err := e.validateSegmentedContextEventType(definition, query.input); err != nil {
+			// The event-type requirement precedes key resolution: a type the
+			// segmented context does not list has no keys to resolve, and the
+			// type mismatch is the diagnosable condition.
+			return Plan{}, WrapError(ErrorInvalidRule, "context", err)
 		} else if err := e.validateContext(definition, query.input); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "context", err)
 		}
@@ -2070,6 +2075,54 @@ func (e *Environment) validateCategoryContextEventType(definition ContextDefinit
 		}
 	}
 	return fmt.Errorf("category context %q requires that any of the event types that are listed in the category context also appear in any of the filter expressions of the statement", definition.name)
+}
+
+// validateSegmentedContextEventType mirrors the keyed/hash controller
+// statement validation: a statement bound to a context tree with a segmented
+// level must filter on one of the event types that the level lists, so every
+// partition assignment has a defined key source. Only type-bearing levels
+// (the multi-stream segmented constructor) carry a listable type set; the
+// single-type key/hash constructors record no event types and are skipped.
+// Named-window consumers have no filter of their own and pass, matching the
+// Java statement-spec analyzer; pattern sources also pass, which is a
+// documented relaxation - Java validates pattern-internal filter types while
+// the Go plan model does not expose them here.
+func (e *Environment) validateSegmentedContextEventType(definition ContextDefinition, node *streamNode) error {
+	source, err := sourceNode(node)
+	if err != nil {
+		return nil
+	}
+	if source.kind == streamNamedWindow || source.kind == streamPattern {
+		return nil
+	}
+	schema, err := e.sourceSchema(source)
+	if err != nil {
+		return nil
+	}
+	if !schema.valid() || schema.GoType() == nil || schema.GoType() == typeOf[any]() {
+		return nil
+	}
+	for level := &definition; level != nil; level = level.parent {
+		if level.kind != ContextKeySegmented && level.kind != ContextHashSegmented || len(level.streamKeys) == 0 {
+			continue
+		}
+		matched := false
+		for typeName := range level.streamKeys {
+			listed, ok := e.Schema(typeName)
+			if !ok {
+				continue
+			}
+			listedType := listed.GoType()
+			if listedType == schema.GoType() || listedType.AssignableTo(schema.GoType()) || schema.GoType().AssignableTo(listedType) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return fmt.Errorf("segmented context %q requires that any of the event types that are listed in the segmented context also appear in any of the filter expressions of the statement, type %q is not one of the types listed", definition.name, schema.Name())
+		}
+	}
+	return nil
 }
 
 func collectExpressionFieldSourceTypes(node *exprNode, types map[reflect.Type]struct{}) {

@@ -29618,7 +29618,8 @@
    ],
    "goTests": [
     "TestContextNestedSingleEventTriggerParity",
-    "TestContextNestedNestingFilterCorrectnessParity"
+    "TestContextNestedNestingFilterCorrectnessParity",
+    "TestContextNestedInvalidParity"
    ],
    "remaining": [
     "temporal outer/child nested contexts (TemporalOverCategoryOverPartition, TemporalFixedOverHash, CategoryOverTemporalOverlapping, FixedTemporalOverPartitioned, PartitionedOverFixedTemporal, TemporalOverlapOverPartition)",
@@ -29627,8 +29628,8 @@
     "multi-props/init-term/end-event nested combinations",
     "full Java differential trace for the covered ContextNested executions"
    ],
-   "difference": "Go covers non-temporal nested contexts with CreateNestedContext over key/category/hash children: three-level key partition isolation with context property paths, category-over-key/hash routing, nested selectors, duplicate child-name rejection, and keyed-parent over initiated-terminated child termination (PartitionedOverPatternInitiated includes its termination event in aggregate state). Temporal, remaining initiated/pattern and iterator-targeted nested lifecycles remain open.",
-   "notes": "go-unit list corrected 2026-09-14: dropped the never-written TestContextNestedInvalidParity. Java execution ContextNestedInvalid has no dedicated Go parity pin yet - open coverage gap."
+   "difference": "Go covers non-temporal nested contexts with CreateNestedContext over key/category/hash children: three-level key partition isolation with context property paths, category-over-key/hash routing, nested selectors, duplicate child-name rejection (registration duplicate classified ErrorDependency/DuplicateModuleObjectError; Java's declaration-scoped message text remains an approved difference of the level-by-level composition API), and keyed-parent over initiated-terminated child termination (PartitionedOverPatternInitiated includes its termination event in aggregate state). Temporal, remaining initiated/pattern and iterator-targeted nested lifecycles remain open.",
+   "notes": "Draft 4.404 (2026-09-14) closed the go-unit coverage gap recorded by the 4.402 reconciliation: TestContextNestedInvalidParity pins Java ContextNestedInvalid. Duplicate sub-context names within a nested composition are rejected at the registration boundary (ErrorDependency, DeploymentResourceContext, exact name). The segmented event-type requirement is now enforced in Go (plan.go validateSegmentedContextEventType): a plain statement bound to a context tree with a type-bearing segmented level (NewKeyContextByStreams streamKeys) must source a listed type, rejected ErrorInvalidRule with the Java-verbatim template naming the top-level context and the source type, ahead of key resolution; named-window consumers pass (Java-analyzer faithful); pattern sources also pass as a documented relaxation - Java validates pattern-internal filter types; single-type key/hash constructors carry no listable types and stay unenforced; joins keep their documented looser relaxation; positive controls compile for listed types. Approved differences: the Java scene's crontab-over-segmented composition uses a segmented+key stand-in (temporal nesting remains in remaining), and message text is classified rather than reproduced."
   },
   {
    "id": "case.inventory.resultset-output-limit-aggregate-grouped",
