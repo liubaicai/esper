@@ -48,8 +48,37 @@ activity or a single coverage percentage.
 
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
-Active: Draft 4.401 ('event-json-slice').
+Active: Draft 4.402 ('go-unit-integrity-repair').
 
+- [x] Baseline audit: manifest-wide reconciliation of every `goTests` claim against defined Go tests
+      (full-repo `func Test...` scan). Found and repaired: (1) 4.401 event-json cases claimed three
+      `TestRunEventJsonSenderGetter*` run-family tests that never existed - written for real in
+      `internal/app/parity/run_test.go` (evidence-diff passing, direct replay with full-layout pins
+      including the kind/row wrapper decode shape, and 5 discriminating trace mutations all rejected:
+      sender payload drift, nested-map drift, wrapper-stripped, statement drift, record-count short).
+      (2) `case.view-union-basic` claimed the nonexistent `TestViewUnionLengthUniqueMatchesEsper` -
+      repointed to the real `TestViewUnionFirstUniqueAndFirstLengthParity` /
+      `TestViewUnionNamedWindowFirstUniqueAndFirstLengthParity` pins that mirror Java
+      ViewUnionFirstUniqueAndFirstLength. (3) `case.view-timebatch-basic` and
+      `case.inventory.context-nested` claimed never-written tests - dropped, with the true coverage
+      gaps recorded in case notes (ViewTimeAccumPreviousAndPrior scenes, ViewTimeAccumSum,
+      ViewTimeAccumGroupedWindow, ContextNestedInvalid) as schedulable follow-up.
+- [x] Full-repo audit now clean except three benign informational entries (mode reference and two
+      existing test-file paths under `case-epl-as-keyword-backtick-behavioral`,
+      `case.infra-nwtable-faf-join-matrix`, `case.epl-insert-into-istream-func`).
+- [x] Baseline regression found by the full parity gate and repaired: d013b965a's event-json insertion
+      deleted the `epl-database-restart` scenario-loader line in run.go (all four restart family tests
+      failed with `unsupported scenario version ""`); loader restored, no other empty mode branches.
+- [x] Gates green: internal/app/parity 188s, internal/esper 60s, internal/compat, go build/vet,
+      gofmt (incl. pre-existing `database_join_class_parity_test.go` whitespace), `git diff --check`.
+
+### Previous work unit (prior)
+
+Shipped: Draft 4.401 ('event-json-slice') landed with d013b965a; Git owns identity. Two
+EventJson executions differential-verified (277 DV cases, 1020 DV runtime IDs). Post-landing audit
+found the unit's manifest goUnit claims were never backed by tests; repaired in 4.402 above.
+
+Prior Draft 4.401 record (superseded):
 - [x] Combined scout complete (agent_18e55d54): Java contract + Go surface + runner sketch + value canonicalization + manifest delta. Both executions deterministic (single JSON parse + send, one listener delivery each, no remove-streams/timing). Go surface mature: RegisterJSON + JSONSender(Parse/Send) + Schema.Getter + RenderJSON all exist with engine-test precedents. Key canonicalization: nested Map prop projects as kind/row wrapper (Java oracle convention, Go normalizeValue wraps esper.Event not plain maps — declare prop with nested schema or add a case normalizer).
 - [x] Contract frozen. Scenario event-json-sender-getter, 2 cases, 2 listener records/side: (0) json-sender-parse-and-send 8d0258718d883f9c5497 — @JsonSchema create json schema MyEvent(p1 string) + select *, JSONSender Parse '{"p1": "abc"}' (exact bytes with space) → SendEvent → 1 delivery {p1:"abc"}; (1) json-getter-map-type b36d999f7edc275dacd2 — create json schema JsonEvent(prop java.util.Map) + select *, sendEventJson '{"prop":{"x":"y"}}' (minimaljson compact) → 1 delivery {prop: nested {x:"y"}}; in-process: getter prop('x')=="y", prop.somefield? null. Manifest: both cases → differential-verified, dv list = [own ID]; summary dvCases 275→277, dvIds 1018→1020.
 - [ ] Writer dispatched (oracle + script + scenario + Java trace) + Go runner implementer dispatched in parallel.

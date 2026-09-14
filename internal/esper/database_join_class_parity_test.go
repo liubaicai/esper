@@ -918,7 +918,7 @@ func TestDatabaseHistoricalViewAccepted(t *testing.T) {
 	hist := FromHistoricalOn[map[string]any](env, "MyDBWithRetain", "SupportBean", schema, provider)
 	query := JoinMany(
 		JoinSource(From[dbJoinSupportBean](env, "SupportBean")),
-		JoinSource(hist.Window(TimeWindow(30 * time.Second))),
+		JoinSource(hist.Window(TimeWindow(30*time.Second))),
 	).Select(
 		SelectFrom(1, "myvarchar", Field[map[string]any, string]("myvarchar")),
 	).Query(StatementName("s0-historical-view"))

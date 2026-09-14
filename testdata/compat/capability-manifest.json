@@ -23442,9 +23442,6 @@
     "TestViewTimeAccumSceneTwoParity",
     "TestViewTimeAccumSceneThreeParity",
     "TestViewTimeAccumRStreamParity",
-    "TestViewTimeAccumPreviousPriorParity",
-    "TestViewTimeAccumSumParity",
-    "TestViewTimeAccumGroupedWindowParity",
     "TestViewTimeLengthBatchSceneOneParity",
     "TestViewTimeLengthBatchSceneTwoParity",
     "TestViewTimeLengthBatchForceOutputParity",
@@ -23491,7 +23488,8 @@
    "verification": [
     "inventoried",
     "implemented"
-   ]
+   ],
+   "notes": "go-unit list corrected 2026-09-14: dropped three never-written test names (TimeAccum previous/prior, sum, grouped-window). Java executions ViewTimeAccumPreviousAndPriorSceneOne/Two, ViewTimeAccumSum, ViewTimeAccumGroupedWindow remain implementation-covered by the TimeAccum scene tests but have no dedicated Go parity pin yet - open coverage gap."
   },
   {
    "id": "case.pattern-composite-select",
@@ -24790,7 +24788,8 @@
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewUnion.java"
    ],
    "goTests": [
-    "TestViewUnionLengthUniqueMatchesEsper"
+    "TestViewUnionFirstUniqueAndFirstLengthParity",
+    "TestViewUnionNamedWindowFirstUniqueAndFirstLengthParity"
    ],
    "tags": [
     "correctness",
@@ -24801,7 +24800,8 @@
    "verification": [
     "inventoried",
     "implemented"
-   ]
+   ],
+   "notes": "go-unit list corrected 2026-09-14: the previously recorded TestViewUnionLengthUniqueMatchesEsper never existed; the case is covered by the firstunique+firstlength union parity tests (flat and named-window variants) that mirror Java ViewUnionFirstUniqueAndFirstLength."
   },
   {
    "id": "case.view-group-basic",
@@ -29613,8 +29613,7 @@
    ],
    "goTests": [
     "TestContextNestedSingleEventTriggerParity",
-    "TestContextNestedNestingFilterCorrectnessParity",
-    "TestContextNestedInvalidParity"
+    "TestContextNestedNestingFilterCorrectnessParity"
    ],
    "remaining": [
     "temporal outer/child nested contexts (TemporalOverCategoryOverPartition, TemporalFixedOverHash, CategoryOverTemporalOverlapping, FixedTemporalOverPartitioned, PartitionedOverFixedTemporal, TemporalOverlapOverPartition)",
@@ -29623,7 +29622,8 @@
     "multi-props/init-term/end-event nested combinations",
     "full Java differential trace for the covered ContextNested executions"
    ],
-   "difference": "Go covers non-temporal nested contexts with CreateNestedContext over key/category/hash children: three-level key partition isolation with context property paths, category-over-key/hash routing, nested selectors, duplicate child-name rejection, and keyed-parent over initiated-terminated child termination (PartitionedOverPatternInitiated includes its termination event in aggregate state). Temporal, remaining initiated/pattern and iterator-targeted nested lifecycles remain open."
+   "difference": "Go covers non-temporal nested contexts with CreateNestedContext over key/category/hash children: three-level key partition isolation with context property paths, category-over-key/hash routing, nested selectors, duplicate child-name rejection, and keyed-parent over initiated-terminated child termination (PartitionedOverPatternInitiated includes its termination event in aggregate state). Temporal, remaining initiated/pattern and iterator-targeted nested lifecycles remain open.",
+   "notes": "go-unit list corrected 2026-09-14: dropped the never-written TestContextNestedInvalidParity. Java execution ContextNestedInvalid has no dedicated Go parity pin yet - open coverage gap."
   },
   {
    "id": "case.inventory.resultset-output-limit-aggregate-grouped",

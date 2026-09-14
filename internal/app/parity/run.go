@@ -142,7 +142,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	} else if *mode == "event-json-sender-getter" || *mode == "event-json-sender-getter-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-database-restart" || *mode == "epl-database-restart-diff" {
-
+		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-database-timebatch" || *mode == "epl-database-timebatch-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "dataflow-doc-samples" || *mode == "dataflow-doc-samples-diff" {

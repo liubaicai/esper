@@ -50396,3 +50396,150 @@ func infraNWSCheckJavaMetadata(javaCommit string, runtimeIDs, sourceFiles, execu
 	}
 	return nil
 }
+
+func TestRunEventJsonSenderGetterDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "event-json-sender-getter.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "event-json-sender-getter.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-json-sender-getter.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "event-json-sender-getter-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEventJsonSenderGetterDirectReplay(t *testing.T) {
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-json-sender-getter.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "event-json-sender-getter",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if trace.ID != "event-json-sender-getter" || len(trace.Records) != 2 {
+		t.Fatalf("trace = {%s %d records}, want event-json-sender-getter with 2 records", trace.ID, len(trace.Records))
+	}
+	// One listener delivery per case, epoch time, case-local sequence 1.
+	for index, record := range trace.Records {
+		if record.Operation != "listener" || record.Statement != "s0" || record.Sequence != 1 ||
+			record.Time != "1970-01-01T00:00:00Z" || len(record.New) != 1 || len(record.Old) != 0 {
+			t.Fatalf("record %d = %#v, want one listener delivery on s0 at sequence 1", index, record)
+		}
+	}
+	if trace.Records[0].Case != "json-sender-parse-and-send" {
+		t.Fatalf("record 0 case = %s", trace.Records[0].Case)
+	}
+	// The parse/send delivery carries the byte-exact parsed payload as the
+	// single declared field.
+	fields := trace.Records[0].New[0].Fields
+	if len(fields) != 1 || fmt.Sprint(fields["p1"]) != "abc" {
+		t.Fatalf("sender fields = %#v, want {p1: abc}", fields)
+	}
+	// The nested-Map delivery projects prop as the Java oracle's kind/row
+	// EventBean wrapper around the exact nested map.
+	if trace.Records[1].Case != "json-getter-map-type" {
+		t.Fatalf("record 1 case = %s", trace.Records[1].Case)
+	}
+	fields = trace.Records[1].New[0].Fields
+	if len(fields) != 1 {
+		t.Fatalf("getter fields = %#v, want the single prop field", fields)
+	}
+	wrapper, ok := fields["prop"].(map[string]any)
+	inner, _ := wrapper["fields"].(map[string]any)
+	if !ok || wrapper["kind"] != "row" || len(inner) != 1 || fmt.Sprint(inner["x"]) != "y" {
+		t.Fatalf("getter prop = %#v, want the kind/row wrapper of {x: y}", fields["prop"])
+	}
+}
+
+func TestRunEventJsonSenderGetterDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "sender-payload-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].New[0].Fields["p1"] = "ABC"
+			},
+		},
+		{
+			name: "getter-nested-map-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["prop"] = compat.ResultRecord{
+					Kind: "row", Fields: map[string]any{"x": "z"},
+				}
+			},
+		},
+		{
+			name: "getter-wrapper-stripped",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["prop"] = map[string]any{"x": "y"}
+			},
+		},
+		{
+			name: "statement-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Statement = "s1"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:1]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "event-json-sender-getter.evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "event-json-sender-getter.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "event-json-sender-getter.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "event-json-sender-getter-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed", test.name)
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
