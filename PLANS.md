@@ -98,7 +98,7 @@ Active: Draft 4.403 ('view-timeaccum-remaining').
       and old-row prior-before-removal ordering; discriminating-mutation check reproduced the
       failing pin; manifest counters byte-identical). Two P3 cosmetics fixed in place: SceneTwo
       prevcount now keyed on price like Java, stale scout checkbox ticked.
-- [ ] Commit + push.
+- [x] Shipped; Git owns identity. Status and summary counts unchanged (go-unit unit).
 
 ### Previous work unit (prior)
 
