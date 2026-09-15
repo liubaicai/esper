@@ -612,6 +612,50 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.421 ('view-timewin-scenes-differential').
+
+- Unit: `case.view-timewindow-scenes` (implemented-not-DV, runtime IDs
+      java-runtime-25dfb49811c974a34e5d / java-runtime-a8007c80ae5756bb4ddb) upgraded to
+      differential-verified by EXTENDING the `view-time-win` chain with the two scene cases
+      (inserted at the front, matching Java execution order 0/1). The chain evidence metadata
+      grows to 17 runtime IDs; the manifest case lists the same chain evidence files. Closes the
+      capability `view.basic-windows` remaining entry.
+- [x] Contract fully in-context from this session: both executions read from ViewTimeWin.java
+      during 4.420 (SceneOne: advance 0 deploy, sends E1/E2/E3, quiet 10999, old [E1]@11000,
+      old [E2]@12000, E4/E5, old [E3]@13000, old [E4,E5]@22000 with 12 iterator checkpoints;
+      SceneTwo: advance 1000 deploy, E1..E4@1000, E5@2000, group expiry old [E1..E4]@11000,
+      6 iterator checkpoints, no listener assertions but listener records captured). Go surface =
+      this session's own view_time_win runner; the only deltas are two scenario cases, two runner
+      arms sharing one identical construction (`#time(10 sec)` irstream * + WithOldStream), and
+      two oracle buildEPL arms. SERIAL IMPLEMENTATION documented: no independent task exists —
+      the oracle delta is a two-arm edit tightly coupled with the scenario/runner change, and the
+      asset-writer lane would have no safe parallel scope.
+- [x] Scenario + runner + oracle arms implemented; Java trace regenerated (103 records, scene-one
+      21 / scene-two 12); Go replay matches; differential evidence status passing / 0 differences.
+      One tooling hiccup: the first trace run raced the oracle buildEPL edit and left a duplicated
+      line in the switch — deduplicated and re-run clean. No engine change needed.
+- [x] Mutation family: six existing indices shifted +33 (scene block prepended at the front);
+      four new scene mutations added (scene-one expiry old row, scene-one post-expiry snapshot,
+      scene-two group-expiry row, scene-two record lost) — all ten reject with status different.
+- [x] Manifest: case.view-timewindow-scenes → differential-verified (chain evidence files, goTests
+      +2, notes, 2 DV runtime IDs); capability view.basic-windows DV list 29→31 (31/31 javaRefs DV-covered; ViewTimeWin-scope
+      remaining cleared, other suite entries untouched — review P2 reword); summary → 292 DV cases /
+      1076 DV runtime IDs. Facts recorded (CHANGELOG + roadmap newest-first, Draft 4.421).
+- [x] Gates: make check exit 0 (after one caught-and-repaired collateral: the +33 index shift
+      used replace-all and touched two IDENTICAL mutation snippets in the output-after-events and
+      infra-named-window-on-update families — both reverted to their original indices and their
+      families re-run green; gofmt clean; git diff --check clean).
+- [x] Independent parity review (agent ParityReview): OVERALL PASS, areas 1-6 all PASS, zero
+      engine change confirmed. Fixes applied: (P1) sum-expiry mutation append base corrected
+      Records[9]→Records[42] (stale reference from the shift; guard integrity unaffected but the
+      mutation now tests the documented scenario); (P2) remaining-clearing claims reworded to
+      ViewTimeWin-scope (capability still holds 4 unrelated suite entries) in CHANGELOG/roadmap/PLANS;
+      (P3) bookkeeping corrected — the oracle delta vs HEAD is strictly the two buildEPL arms.
+      Gates re-run after fixes: make check exit 0, gofmt clean, git diff --check clean. Shipped;
+      Git owns identity — Draft 4.421 committed and pushed (case.view-timewindow-scenes DV;
+      manifest 292 DV cases / 1076 DV runtime IDs; view.basic-windows javaRefs 31/31 DV-covered).
+
+## Current work unit
 Active: Draft 4.420 ('view-time-win-differential').
 
 - Unit: `case.inventory.view-time-win` (implemented-not-DV, 15 runtime IDs, ords 2-16 of
@@ -681,7 +725,9 @@ Active: Draft 4.420 ('view-time-win-differential').
       selections and counts having-referenced bare properties (no current chain exercises either
       shape) — noted in case notes + PLANS for the next ungrouped-aggregate unit. (3) P3 probe
       wording (three probes, two shapes) and probes archived under tools/java-oracle/probes/ with a
-      README. (4) P3 variable-stmt transcription deviation: disclosed, no action.
+      README. (4) P3 variable-stmt transcription deviation: disclosed, no action. 4.421 review P3: the oracle
+      delta vs HEAD is strictly the two buildEPL arms (the javadoc 2002-02/03 date was already at
+      HEAD — earlier claim of a date fix in this unit was imprecise, corrected here).
 - [x] Manifest: case.inventory.view-time-win → differential-verified (evidence list, goTests +2,
       difference closing line rewritten, Draft 4.420 notes with both fixes, 15 DV runtime IDs);
       capability view.basic-windows DV runtime IDs 14→29, remaining drops "ViewTimeWin suite" and

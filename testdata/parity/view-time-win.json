@@ -1,8 +1,10 @@
 {
  "version": "esper-parity/v1",
  "id": "view-time-win",
- "description": "All fifteen implemented ViewTimeWin executions (ords 2-16) replayed per pinned module under the virtual clock: plain sliding #time expiry lifecycles with listener and iterator observation (just-select-star), windowed sum aggregates ungrouped/grouped/filtered over 30 ms windows with the quiet 35 s expiry, calendar-month rstream expiry (Feb/Mar 2002 quiet-at-minus-1ms boundary), the prev family over a sliding 1 s window, prepared-statement and variable window durations deployed twice (4 s vs 3 s) with rstream expiry at 4 s and 3 s, seven verbatim time-period spellings each equal to 30000 s observed across the 29999 s quiet boundary and the 30000 s expiry, and four flip-timer variants including calendar-month boundaries at epoch and 2002 start times. ord 12 splits into seven per-spec cases because the module resets advanceTime(0) per iteration and the Go clock never moves backwards.",
+ "description": "All seventeen ViewTimeWin executions replayed per pinned module under the virtual clock: scene-one and scene-two plain #time(10 sec) expiry lifecycles with listener old rows and iterator checkpoints (group expiry of E1..E4 at 11000 in scene-two), plus the fifteen executions of case.inventory.view-time-win: plain sliding expiry (just-select-star), windowed sum aggregates ungrouped/grouped/filtered over 30 ms windows with the quiet 35 s expiry, calendar-month rstream expiry (Feb/Mar 2002 quiet-at-minus-1ms boundary), the prev family over a sliding 1 s window, prepared-statement and variable window durations deployed twice (4 s vs 3 s) with rstream expiry at 4 s and 3 s, seven verbatim time-period spellings each equal to 30000 s, and four flip-timer variants including calendar-month boundaries at epoch and 2002 start times. ord 12 splits into seven per-spec cases because the module resets advanceTime(0) per iteration and the Go clock never moves backwards.",
  "javaRuntimes": [
+  "java-runtime-25dfb49811c974a34e5d",
+  "java-runtime-a8007c80ae5756bb4ddb",
   "java-runtime-63f096fecc7fa8382cd1",
   "java-runtime-9b1ddabf0088cb326211",
   "java-runtime-6edb156e4a10bcba9784",
@@ -20,6 +22,14 @@
   "java-runtime-c9c0f3b2ebd23aedce50"
  ],
  "cases": [
+  {
+   "case": "scene-one",
+   "runtimeId": "java-runtime-25dfb49811c974a34e5d"
+  },
+  {
+   "case": "scene-two",
+   "runtimeId": "java-runtime-a8007c80ae5756bb4ddb"
+  },
   {
    "case": "just-select-star",
    "runtimeId": "java-runtime-63f096fecc7fa8382cd1"
@@ -106,6 +116,226 @@
   }
  ],
  "steps": [
+  {
+   "op": "case",
+   "case": "scene-one"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.999Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:12Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:13Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:22Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "scene-two"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.999Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
   {
    "op": "case",
    "case": "just-select-star"

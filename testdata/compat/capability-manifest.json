@@ -4273,8 +4273,7 @@
     "ViewLengthWinWPropertyDetail",
     "ViewFirstTime suite",
     "ViewTimeBatch suite",
-    "ViewParameterizedByContext suite",
-    "ViewTimeWindowSceneOne/SceneTwo differential coverage (implemented, case.view-timewindow-scenes)"
+    "ViewParameterizedByContext suite"
    ],
    "verification": [
     "inventoried",
@@ -4310,7 +4309,9 @@
     "java-runtime-2deb887a05147a8dc59c",
     "java-runtime-d563c454a45f40bcc404",
     "java-runtime-cc6e1ac37196bc5ae5e8",
-    "java-runtime-c9c0f3b2ebd23aedce50"
+    "java-runtime-c9c0f3b2ebd23aedce50",
+    "java-runtime-25dfb49811c974a34e5d",
+    "java-runtime-a8007c80ae5756bb4ddb"
    ]
   },
   {
@@ -23386,7 +23387,9 @@
    ],
    "goTests": [
     "TestViewTimeWindowSceneOneMatchesEsper",
-    "TestViewTimeWindowSceneTwoMatchesEsper"
+    "TestViewTimeWindowSceneTwoMatchesEsper",
+    "internal/app/parity/run_test.go:TestRunViewTimeWinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewTimeWinDiffRejectsTraceMutations"
    ],
    "tags": [
     "correctness",
@@ -23395,18 +23398,28 @@
     "virtual-clock",
     "expiry",
     "iterator",
-    "batch-expiry"
+    "batch-expiry",
+    "differential"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-runtime-inventory",
-    "go-unit"
+    "testdata/parity/view-time-win.json",
+    "testdata/parity/view-time-win.trace.json",
+    "testdata/parity/view-time-win.evidence.json",
+    "tools/java-oracle/ViewTimeWinScenarioOracle.java",
+    "tools/java-oracle/run-view-time-win.sh"
    ],
    "difference": "",
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-25dfb49811c974a34e5d",
+    "java-runtime-a8007c80ae5756bb4ddb"
+   ],
+   "notes": "Draft 4.421: the two scene executions joined the view-time-win chain as its first two cases (Java execution order), extending the chain to 23 cases / 103 records / 0 differences. scene-one pins the ten-second expiry lifecycle with per-event new rows, old rows [E1]/[E2]/[E3] at 11000/12000/13000, the two-row old batch [E4,E5] at 22000, and twelve iterator checkpoints; scene-two pins the group expiry of E1..E4 at 11000 with E5 retained until 12000 and six iterator checkpoints. No engine change was needed: the sliding-window core verified in 4.420 carries both."
   },
   {
    "id": "case.view-timebatch-basic",
@@ -45558,8 +45571,8 @@
  "summary": {
   "inventoriedCases": 666,
   "implementedCases": 664,
-  "differentialVerifiedCases": 291,
-  "differentialVerifiedRuntimeIds": 1074,
+  "differentialVerifiedCases": 292,
+  "differentialVerifiedRuntimeIds": 1076,
   "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,

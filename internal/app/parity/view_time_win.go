@@ -36,6 +36,8 @@ type viewTimeWinMarket struct {
 
 var (
 	viewTimeWinJavaRuntimeIDs = []string{
+		"java-runtime-25dfb49811c974a34e5d", // SceneOne
+		"java-runtime-a8007c80ae5756bb4ddb", // SceneTwo
 		"java-runtime-63f096fecc7fa8382cd1", // JustSelectStar
 		"java-runtime-9b1ddabf0088cb326211", // Sum
 		"java-runtime-6edb156e4a10bcba9784", // SumGroupBy
@@ -53,6 +55,8 @@ var (
 		"java-runtime-c9c0f3b2ebd23aedce50", // FlipTimer{2002-05-01, "1 months 50 milliseconds", ...}
 	}
 	viewTimeWinJavaExecutions = []string{
+		"ViewTimeWindowSceneOne",
+		"ViewTimeWindowSceneTwo",
 		"ViewTimeJustSelectStar",
 		"ViewTimeSum",
 		"ViewTimeSumGroupBy",
@@ -72,6 +76,7 @@ var (
 )
 
 var viewTimeWinCaseOrder = []string{
+	"scene-one", "scene-two",
 	"just-select-star", "sum", "sum-group-by", "sum-w-filter", "month-scoped",
 	"w-prev", "prepared-stmt", "variable-stmt", "time-period",
 	"variable-time-period", "time-period-params-1", "time-period-params-2",
@@ -157,6 +162,14 @@ func runViewTimeWinCase(ctx context.Context, scenario compat.Scenario, caseName 
 	symbol := esper.Field[viewTimeWinMarket, string]("symbol")
 	var deployments []viewTimeWinPlannedDeployment
 	switch caseName {
+	case "scene-one", "scene-two":
+		entry, buildErr := build("s0", nil, esper.From[viewTimeWinBean](env, "SupportBean").
+			Window(esper.TimeWindow(10*time.Second)).
+			Query(esper.StatementName("s0"), esper.WithOldStream()))
+		if buildErr != nil {
+			return compat.Trace{}, buildErr
+		}
+		deployments = append(deployments, entry)
 	case "just-select-star":
 		entry, buildErr := build("s0", nil, esper.FromAny(env, "SupportMarketDataBean").
 			Window(esper.TimeWindow(time.Second)).

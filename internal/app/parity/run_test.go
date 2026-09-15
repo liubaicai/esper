@@ -15263,27 +15263,51 @@ func TestRunViewTimeWinDiffRejectsTraceMutations(t *testing.T) {
 				// Java posts nothing for a removal-only batch when the
 				// ungrouped select anchors bare columns; the row must stay
 				// gone rather than shift the whole case.
-				trace.Records[9].New = append(trace.Records[9].New, compat.ResultRecord{
+				trace.Records[42].New = append(trace.Records[42].New, compat.ResultRecord{
 					Kind: "row", Fields: map[string]any{"mySum": nil, "symbol": "DELL", "volume": 40000},
 				})
 			},
 		},
 		{
+			name: "scene-one-expiry-old-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].Old[0].Fields["theString"] = "WRONG"
+			},
+		},
+		{
+			name: "scene-one-post-expiry-snapshot-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[0].Fields["theString"] = "WRONG"
+			},
+		},
+		{
+			name: "scene-two-group-expiry-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[30].Old[3].Fields["theString"] = "WRONG"
+			},
+		},
+		{
+			name: "scene-two-record-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[27].New = nil
+			},
+		},
+		{
 			name: "w-prev-tail-oldest-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[29].New[0].Fields["prevtail"] = "E5"
+				trace.Records[62].New[0].Fields["prevtail"] = "E5"
 			},
 		},
 		{
 			name: "w-prev-expiry-prev-non-null",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[30].Old[0].Fields["prevCountSym"] = 3
+				trace.Records[63].Old[0].Fields["prevCountSym"] = 3
 			},
 		},
 		{
 			name: "month-scoped-calendar-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[23].New[0].Fields["theString"] = "WRONG"
+				trace.Records[56].New[0].Fields["theString"] = "WRONG"
 			},
 		},
 		{
@@ -15291,13 +15315,13 @@ func TestRunViewTimeWinDiffRejectsTraceMutations(t *testing.T) {
 			mutate: func(trace *compat.Trace) {
 				// Same-instant scheduled deliveries leave the engine
 				// second-deployed first (s1 before s0 at the 5000 advance).
-				trace.Records[33], trace.Records[34] = trace.Records[34], trace.Records[33]
+				trace.Records[66], trace.Records[67] = trace.Records[67], trace.Records[66]
 			},
 		},
 		{
 			name: "params-expiry-boundary-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[45].Old[0].Fields["theString"] = "WRONG"
+				trace.Records[78].Old[0].Fields["theString"] = "WRONG"
 			},
 		},
 	}

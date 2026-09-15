@@ -331,6 +331,8 @@ public class ViewTimeWinScenarioOracle {
     /** Verbatim transcriptions of the pinned ViewTimeWin modules. */
     private static String buildEPL(String caseName) {
         return switch (caseName) {
+            case "scene-one", "scene-two" ->
+                "@Name('s0') select irstream * from SupportBean#time(10 sec)";
             case "just-select-star" ->
                 "@name('s0') select irstream * from SupportMarketDataBean#time(1 sec)";
             case "sum" ->
