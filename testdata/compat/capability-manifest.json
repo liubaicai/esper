@@ -4272,9 +4272,9 @@
    "remaining": [
     "ViewLengthWinWPropertyDetail",
     "ViewFirstTime suite",
-    "ViewTimeWin suite",
     "ViewTimeBatch suite",
-    "ViewParameterizedByContext suite"
+    "ViewParameterizedByContext suite",
+    "ViewTimeWindowSceneOne/SceneTwo differential coverage (implemented, case.view-timewindow-scenes)"
    ],
    "verification": [
     "inventoried",
@@ -4295,7 +4295,22 @@
     "java-runtime-ba0287f83e55f5fd2454",
     "java-runtime-5956f7d158bda2623d70",
     "java-runtime-d22e3122427d1dd8ceb0",
-    "java-runtime-03b48f31fe26fedf4d4b"
+    "java-runtime-03b48f31fe26fedf4d4b",
+    "java-runtime-63f096fecc7fa8382cd1",
+    "java-runtime-9b1ddabf0088cb326211",
+    "java-runtime-6edb156e4a10bcba9784",
+    "java-runtime-9239909fee9398909be1",
+    "java-runtime-71fe6ccae381fc1a0843",
+    "java-runtime-aa228ddbee38aa48a796",
+    "java-runtime-fc4ed4ace0c09a9154da",
+    "java-runtime-323ea34bd1e1c38e3895",
+    "java-runtime-87e95838609b5cc88869",
+    "java-runtime-469f129b7fa2da1d0b14",
+    "java-runtime-19a1a7c856e9567f7aac",
+    "java-runtime-2deb887a05147a8dc59c",
+    "java-runtime-d563c454a45f40bcc404",
+    "java-runtime-cc6e1ac37196bc5ae5e8",
+    "java-runtime-c9c0f3b2ebd23aedce50"
    ]
   },
   {
@@ -30640,16 +30655,18 @@
     "flip-timer",
     "time-period"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-runtime-inventory",
-    "java-source",
-    "java-junit",
-    "go-unit"
+    "testdata/parity/view-time-win.json",
+    "testdata/parity/view-time-win.trace.json",
+    "testdata/parity/view-time-win.evidence.json",
+    "tools/java-oracle/ViewTimeWinScenarioOracle.java",
+    "tools/java-oracle/run-view-time-win.sh"
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ],
    "goTests": [
     "TestViewTimeWinJustSelectStarParity",
@@ -30663,9 +30680,29 @@
     "TestViewTimeWinTimePeriodParity",
     "TestViewTimeWinVariableTimePeriodParity",
     "TestViewTimeWinTimePeriodParamsParity",
-    "TestViewTimeWinFlipTimerParity"
+    "TestViewTimeWinFlipTimerParity",
+    "internal/app/parity/run_test.go:TestRunViewTimeWinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewTimeWinDiffRejectsTraceMutations"
    ],
-   "difference": "Go implements the Java ViewTimeWin executions with the typed TimeWindow builder, extended with calendar periods (TimeWindowCalendar(years, months, days, duration)) and expression-sized durations (TimeWindowExpr/TimeWindowSeconds/Milliseconds/Minutes for variables and deployment substitution parameters). Calendar periods use Java's month-add semantics (time(1 month) from Feb 1 expires Mar 1 exactly), with an optional millisecond remainder (1 months 10 ms). Expression-sized durations are snapshotted at deployment time using the statement's bound variables/parameters, mirroring Esper's view-creation evaluation, and survive the engine's empty-window state cleanup. Coverage: istream/rstream expiry and iterator order, ungrouped/grouped/filtered sum aggregates, prev/prevtail/prevcount/prevwindow access, prepared-statement and variable window sizes in seconds/milliseconds/minutes, compound time-period spellings resolved to equivalent Go durations, and the four flip-timer variants including calendar-month boundaries at large start times. Java's textual interval parsing (e.g. '8.33333333333333333333 hours') is expressed in Go as the exact equivalent time.Duration; Java TestSuiteView 27/27 passes at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c. These executions are implemented but not yet differential-verified."
+   "difference": "Go implements the Java ViewTimeWin executions with the typed TimeWindow builder, extended with calendar periods (TimeWindowCalendar(years, months, days, duration)) and expression-sized durations (TimeWindowExpr/TimeWindowSeconds/Milliseconds/Minutes for variables and deployment substitution parameters). Calendar periods use Java's month-add semantics (time(1 month) from Feb 1 expires Mar 1 exactly), with an optional millisecond remainder (1 months 10 ms). Expression-sized durations are snapshotted at deployment time using the statement's bound variables/parameters, mirroring Esper's view-creation evaluation, and survive the engine's empty-window state cleanup. Coverage: istream/rstream expiry and iterator order, ungrouped/grouped/filtered sum aggregates, prev/prevtail/prevcount/prevwindow access, prepared-statement and variable window sizes in seconds/milliseconds/minutes, compound time-period spellings resolved to equivalent Go durations, and the four flip-timer variants including calendar-month boundaries at large start times. Java's textual interval parsing (e.g. '8.33333333333333333333 hours') is expressed in Go as the exact equivalent time.Duration; Java TestSuiteView 27/27 passes at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c. Differential-verified by the view-time-win chain (Draft 4.420): 21 per-spec cases (ord 12 splits into seven cases because tryTimeWindow resets advanceTime(0) per iteration while the Go clock never moves backwards; all seven share one runtime ID), 70 Java/Go records, 0 differences.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-63f096fecc7fa8382cd1",
+    "java-runtime-9b1ddabf0088cb326211",
+    "java-runtime-6edb156e4a10bcba9784",
+    "java-runtime-9239909fee9398909be1",
+    "java-runtime-71fe6ccae381fc1a0843",
+    "java-runtime-aa228ddbee38aa48a796",
+    "java-runtime-fc4ed4ace0c09a9154da",
+    "java-runtime-323ea34bd1e1c38e3895",
+    "java-runtime-87e95838609b5cc88869",
+    "java-runtime-469f129b7fa2da1d0b14",
+    "java-runtime-19a1a7c856e9567f7aac",
+    "java-runtime-2deb887a05147a8dc59c",
+    "java-runtime-d563c454a45f40bcc404",
+    "java-runtime-cc6e1ac37196bc5ae5e8",
+    "java-runtime-c9c0f3b2ebd23aedce50"
+   ],
+   "notes": "Draft 4.420: 70 records, 0 differences. Parity-driven shared-core fixes: (1) ungrouped aggregate removal-only batches (pure time expiry) post a new row only when the select is fully aggregated — a mixed select with bare columns projects nothing (Java ViewTimeSum delivers no update at the 35 s expiry while EPLInsertInto fully-aggregated min/max does); (2) same-instant scheduled expiries dispatch statements last-deployed-first (reverse within equal priority groups; event-driven dispatch keeps registration order), pinned by the prepared-stmt/variable-stmt/time-period/variable-time-period 5000 ms twin deliveries and three JDK probes in tools/java-oracle/probes/ (view expiry and pattern timer:at shapes). Recorded narrow gap for the next unit touching ungrouped aggregates: aggregateDefinitionHasBareSelections keys on the select list while Java nonAggregatedPropsSelect also (a) ignores constant-only bare selections and (b) counts bare properties referenced by the having clause; neither shape exists in any current chain."
   },
   {
    "id": "case.inventory.context-key-segmented-w-init-term-prioritized",
@@ -45521,8 +45558,8 @@
  "summary": {
   "inventoriedCases": 666,
   "implementedCases": 664,
-  "differentialVerifiedCases": 290,
-  "differentialVerifiedRuntimeIds": 1059,
+  "differentialVerifiedCases": 291,
+  "differentialVerifiedRuntimeIds": 1074,
   "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,

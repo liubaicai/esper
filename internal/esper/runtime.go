@@ -4661,7 +4661,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 			}
 		}
 	}
-	for _, statement := range statements {
+	for _, statement := range reverseStatementGroups(statements) {
 		batch, changed, expireErr := e.expireStatementWithMetricsLocked(statement, at, variables)
 		if expireErr != nil {
 			e.mu.Unlock()
@@ -4836,6 +4836,32 @@ func (e *Engine) dispatchStatementsLocked() []*Statement {
 	})
 	e.dispatchOrder = statements
 	return statements
+}
+
+// reverseStatementGroups returns the statements processed last-deployed-first
+// within every equal-priority group. Java's schedule service orders
+// same-instant callbacks by slot-descending statement order, so timer-driven
+// deliveries leave the engine in reverse deployment order while event-driven
+// dispatch keeps registration order (DispatchService FIFO over
+// processScheduleHandles output).
+func reverseStatementGroups(statements []*Statement) []*Statement {
+	out := make([]*Statement, 0, len(statements))
+	for start := 0; start < len(statements); {
+		end := start + 1
+		for end < len(statements) {
+			left := statements[start].plan.query
+			right := statements[end].plan.query
+			if left.statementPriority != right.statementPriority || left.statementDrop != right.statementDrop {
+				break
+			}
+			end++
+		}
+		for i := end - 1; i >= start; i-- {
+			out = append(out, statements[i])
+		}
+		start = end
+	}
+	return out
 }
 
 func (e *Engine) Close(ctx context.Context) error {
@@ -19464,13 +19490,17 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		// semantics: a delete posts only the leaving row, never a re-emitted
 		// current row.
 		emitNew = false
-	} else if len(definition.groupBy) == 0 && len(delta.oldEvents) > 0 {
+	} else if len(definition.groupBy) == 0 && len(delta.oldEvents) > 0 && !aggregateDefinitionHasBareSelections(definition) {
 		// Ungrouped aggregate result sets post the current row whenever a
 		// removal changes the aggregate state, including pure time-expiry
 		// batches with no incoming event (Java EPLInsertInto ungrouped
 		// min/max over a time window asserts an update at the expiry
-		// boundary). Grouped istream result sets keep the suppress-pure-expiry
-		// contract exercised by the grouped time-window differential scenario.
+		// boundary) — but only when the select is fully aggregated. A mixed
+		// select anchors bare columns to the arriving event, so a removal
+		// batch has nothing to project (Java ViewTimeSum delivers no update
+		// at its 35 s expiry). Grouped istream result sets keep the
+		// suppress-pure-expiry contract exercised by the grouped time-window
+		// differential scenario.
 		emitNew = true
 	}
 	affected := make([]string, 0)
@@ -20105,6 +20135,24 @@ func aggregateDefinitionHasNoAggregates(definition *aggregateDefinition) bool {
 		return false
 	}
 	return true
+}
+
+// aggregateDefinitionHasBareSelections reports whether the select list
+// contains a non-aggregated expression next to aggregate columns (a bare
+// property column such as `symbol` beside `sum(price)`). Such columns anchor
+// to the arriving event, so Java's ungrouped aggregate processor produces no
+// row for a removal-only update; only fully-aggregated selects re-post their
+// current state on pure expiry.
+func aggregateDefinitionHasBareSelections(definition *aggregateDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	for _, selection := range definition.selections {
+		if !expressionNodeContainsAggregate(selection.Expr.node()) {
+			return true
+		}
+	}
+	return false
 }
 
 // unaggregatedJoinBatch implements the UNAGGREGATED_UNGROUPED/HANDTHROUGH

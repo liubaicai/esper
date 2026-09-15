@@ -1,0 +1,1124 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-time-win",
+ "description": "All fifteen implemented ViewTimeWin executions (ords 2-16) replayed per pinned module under the virtual clock: plain sliding #time expiry lifecycles with listener and iterator observation (just-select-star), windowed sum aggregates ungrouped/grouped/filtered over 30 ms windows with the quiet 35 s expiry, calendar-month rstream expiry (Feb/Mar 2002 quiet-at-minus-1ms boundary), the prev family over a sliding 1 s window, prepared-statement and variable window durations deployed twice (4 s vs 3 s) with rstream expiry at 4 s and 3 s, seven verbatim time-period spellings each equal to 30000 s observed across the 29999 s quiet boundary and the 30000 s expiry, and four flip-timer variants including calendar-month boundaries at epoch and 2002 start times. ord 12 splits into seven per-spec cases because the module resets advanceTime(0) per iteration and the Go clock never moves backwards.",
+ "javaRuntimes": [
+  "java-runtime-63f096fecc7fa8382cd1",
+  "java-runtime-9b1ddabf0088cb326211",
+  "java-runtime-6edb156e4a10bcba9784",
+  "java-runtime-9239909fee9398909be1",
+  "java-runtime-71fe6ccae381fc1a0843",
+  "java-runtime-aa228ddbee38aa48a796",
+  "java-runtime-fc4ed4ace0c09a9154da",
+  "java-runtime-323ea34bd1e1c38e3895",
+  "java-runtime-87e95838609b5cc88869",
+  "java-runtime-469f129b7fa2da1d0b14",
+  "java-runtime-19a1a7c856e9567f7aac",
+  "java-runtime-2deb887a05147a8dc59c",
+  "java-runtime-d563c454a45f40bcc404",
+  "java-runtime-cc6e1ac37196bc5ae5e8",
+  "java-runtime-c9c0f3b2ebd23aedce50"
+ ],
+ "cases": [
+  {
+   "case": "just-select-star",
+   "runtimeId": "java-runtime-63f096fecc7fa8382cd1"
+  },
+  {
+   "case": "sum",
+   "runtimeId": "java-runtime-9b1ddabf0088cb326211"
+  },
+  {
+   "case": "sum-group-by",
+   "runtimeId": "java-runtime-6edb156e4a10bcba9784"
+  },
+  {
+   "case": "sum-w-filter",
+   "runtimeId": "java-runtime-9239909fee9398909be1"
+  },
+  {
+   "case": "month-scoped",
+   "runtimeId": "java-runtime-71fe6ccae381fc1a0843"
+  },
+  {
+   "case": "w-prev",
+   "runtimeId": "java-runtime-aa228ddbee38aa48a796"
+  },
+  {
+   "case": "prepared-stmt",
+   "runtimeId": "java-runtime-fc4ed4ace0c09a9154da"
+  },
+  {
+   "case": "variable-stmt",
+   "runtimeId": "java-runtime-323ea34bd1e1c38e3895"
+  },
+  {
+   "case": "time-period",
+   "runtimeId": "java-runtime-87e95838609b5cc88869"
+  },
+  {
+   "case": "variable-time-period",
+   "runtimeId": "java-runtime-469f129b7fa2da1d0b14"
+  },
+  {
+   "case": "time-period-params-1",
+   "runtimeId": "java-runtime-19a1a7c856e9567f7aac"
+  },
+  {
+   "case": "time-period-params-2",
+   "runtimeId": "java-runtime-19a1a7c856e9567f7aac"
+  },
+  {
+   "case": "time-period-params-3",
+   "runtimeId": "java-runtime-19a1a7c856e9567f7aac"
+  },
+  {
+   "case": "time-period-params-4",
+   "runtimeId": "java-runtime-19a1a7c856e9567f7aac"
+  },
+  {
+   "case": "time-period-params-5",
+   "runtimeId": "java-runtime-19a1a7c856e9567f7aac"
+  },
+  {
+   "case": "time-period-params-6",
+   "runtimeId": "java-runtime-19a1a7c856e9567f7aac"
+  },
+  {
+   "case": "time-period-params-7",
+   "runtimeId": "java-runtime-19a1a7c856e9567f7aac"
+  },
+  {
+   "case": "flip-timer-1s",
+   "runtimeId": "java-runtime-2deb887a05147a8dc59c"
+  },
+  {
+   "case": "flip-timer-10s-large-start",
+   "runtimeId": "java-runtime-d563c454a45f40bcc404"
+  },
+  {
+   "case": "flip-timer-months-ms-epoch",
+   "runtimeId": "java-runtime-cc6e1ac37196bc5ae5e8"
+  },
+  {
+   "case": "flip-timer-months-ms-2002",
+   "runtimeId": "java-runtime-c9c0f3b2ebd23aedce50"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "just-select-star"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.500Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.600Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.500Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.600Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E3",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "sum"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "volume": 10000,
+    "price": 51
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 20000,
+    "price": 52
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "volume": 40000,
+    "price": 45
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:35Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 30000,
+    "price": 70
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "volume": 10000,
+    "price": 20
+   }
+  },
+  {
+   "op": "case",
+   "case": "sum-group-by"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "volume": 10000,
+    "price": 51
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 30000,
+    "price": 70
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "volume": 20000,
+    "price": 52
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 30000,
+    "price": 70
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:35Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "volume": 10000,
+    "price": 90
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 30000,
+    "price": 120
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "DELL",
+    "volume": 20000,
+    "price": 90
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 30000,
+    "price": 120
+   }
+  },
+  {
+   "op": "case",
+   "case": "sum-w-filter"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 20000,
+    "price": 52
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 20000,
+    "price": 100
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:35Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 20000,
+    "price": 252
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "IBM",
+    "volume": 20000,
+    "price": 100
+   }
+  },
+  {
+   "op": "case",
+   "case": "month-scoped"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-02-01T09:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-02-15T09:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-01T08:59:59.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-01T09:00:00Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-15T08:59:59.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-15T09:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "w-prev"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.500Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E3",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.200Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E4",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E5",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.600Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E6",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "prepared-stmt"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s1"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05Z"
+  },
+  {
+   "op": "case",
+   "case": "variable-stmt"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "set-variable",
+   "name": "TIME_WIN_ONE",
+   "payload": {
+    "type": "int",
+    "value": 3
+   }
+  },
+  {
+   "op": "deployed",
+   "statement": "s1"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05Z"
+  },
+  {
+   "op": "case",
+   "case": "time-period"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s1"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05Z"
+  },
+  {
+   "op": "case",
+   "case": "variable-time-period"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "set-variable",
+   "name": "TIME_WIN_TWO",
+   "payload": {
+    "type": "double",
+    "value": 0.05
+   }
+  },
+  {
+   "op": "deployed",
+   "statement": "s1"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05Z"
+  },
+  {
+   "op": "case",
+   "case": "time-period-params-1"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:19:59Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:20:00Z"
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "time-period-params-2"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:19:59Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:20:00Z"
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "time-period-params-3"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:19:59Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:20:00Z"
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "time-period-params-4"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:19:59Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:20:00Z"
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "time-period-params-5"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:19:59Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:20:00Z"
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "time-period-params-6"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:19:59Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:20:00Z"
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "time-period-params-7"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:19:59Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T08:20:00Z"
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "flip-timer-1s"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.999Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "flip-timer-10s-large-start"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-02T10:17:36.789Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-02T10:17:46.788Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-02T10:17:46.789Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "flip-timer-months-ms-epoch"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-02-01T00:00:00.009Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-02-01T00:00:00.010Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "flip-timer-months-ms-2002"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T00:00:01.999Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-06-01T00:00:02.048Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-06-01T00:00:02.049Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  }
+ ]
+}

@@ -612,6 +612,90 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.420 ('view-time-win-differential').
+
+- Unit: `case.inventory.view-time-win` (implemented-not-DV, 15 runtime IDs, ords 2-16 of
+      `ViewTimeWin.java`) upgraded to differential-verified via new chain `view-time-win`.
+      21 cases (ord 12 time-period-params splits into 7 per-spec cases because Go clock cannot
+      move backwards and Java's tryTimeWindow resets advanceTime(0) per iteration; all seven
+      cases share runtime ID java-runtime-19a1a7c856e9567f7aac): just-select-star (63f096fecc7fa8382cd1),
+      sum (9b1ddabf0088cb326211), sum-group-by (6edb156e4a10bcba9784), sum-w-filter (9239909fee9398909be1),
+      month-scoped (71fe6ccae381fc1a0843), w-prev (aa228ddbee38aa48a796), prepared-stmt (fc4ed4ace0c09a9154da),
+      variable-stmt (323ea34bd1e1c38e3895), time-period (87e95838609b5cc88869),
+      variable-time-period (469f129b7fa2da1d0b14), time-period-params-1..7, flip-timer-1s
+      (2deb887a05147a8dc59c), flip-timer-10s-large-start (d563c454a45f40bcc404),
+      flip-timer-months-ms-epoch (cc6e1ac37196bc5ae5e8), flip-timer-months-ms-2002 (c9c0f3b2ebd23aedce50).
+- [x] Read-only N+1 scouts completed during 4.419 review (agents NextJavaContract
+      agent_6dfa40ec / NextGoSurface agent_b4a2f809); contract frozen from their report plus the
+      primary's full read of ViewTimeWin.java and the existing Go unit tests
+      (internal/esper/view_time_win_parity_test.go pins every construction: TimeWindow /
+      TimeWindowCalendar(0,1,0,remainder) / TimeWindowSeconds|Milliseconds|Minutes with
+      Parameter/VariableRef / DeployWithParameters / RegisterVariable+SetVariable /
+      WithRemoveStreamOnly / WithStartTime). All 15 executions are virtual-time; scenarios use
+      advance-time (RFC3339Nano UTC), set-variable (TIME_WIN_ONE int 4->3, TIME_WIN_TWO double
+      4000->0.05), deployed (s0/s1), undeploy (time-period-params per-spec cycles), send, snapshot.
+      Known-unknowns the replay must settle: sum-family old-only rows at the 35 s expiry
+      (Java asserts only the subsequent new rows), w-prev old-row prev columns at 1.6 s expiry
+      (expected all null via the oldHistoryByEvent nil path), w-prev E6 row's full accessor
+      vector (Java asserts symbol only), ord 8/9/11 deploy-time duration snapshot semantics.
+- [x] DELEGATION: scenario + runner + run.go wiring + run-family tests written by the primary
+      agent; Java oracle `tools/java-oracle/ViewTimeWinScenarioOracle.java` + run script
+      `tools/java-oracle/run-view-time-win.sh` assigned to parity-asset writer (agent
+      OracleAssets) after the scenario freezes. File sets fully disjoint; central facts
+      (manifest/roadmap/CHANGELOG/PLANS), traces, evidence, validation, review, commit stay
+      with the primary agent.
+- [x] Scenario JSON (testdata/parity/view-time-win.json, 21 cases / 194 steps) + runner
+      (internal/app/parity/view_time_win.go) + run.go wiring + Usage hint + run_test family
+      (TestRunViewTimeWinDiffWritesPassingEvidence + TestRunViewTimeWinDiffRejectsTraceMutations,
+      6 mutations). All written by the primary agent.
+- [x] Java oracle assets (agent OracleAssets: ViewTimeWinScenarioOracle.java + run-view-time-win.sh;
+      javac-checked against prebuilt pinned classes; asset writer verified the substitution-parameter
+      option API, config.getCommon().addVariable, EPVariableService.setVariableValue(null,name,v),
+      and the verbatim no-space "@name('s0')select" concatenation in variable-time-period).
+- [x] Differential replay: Java trace generated (exit 0, pinned commit verified; 70 records
+      6/5/8/4/2/7/3/3/3/3/2x7/3x4). First diff = 166 differences → exposed TWO engine gaps, both
+      fixed and re-diffed to status passing / 0 differences:
+      (1) aggregateBatch emitNew: pure removal-only batches (time expiry, no new events) posted a
+      new row for ANY ungrouped aggregate — Java posts it only for fully-aggregated selects
+      (EPLInsertInto minD/maxD at 61 s) while mixed bare-column selects deliver nothing
+      (ViewTimeSum at 35 s). New predicate aggregateDefinitionHasBareSelections gates the branch.
+      (2) same-instant scheduled expiries dispatch LAST-deployed-first (JDK probes OrderProbe/
+      OrderProbe2/OrderProbe3: second-deployed statement's batch arrives first regardless of
+      statement name, for BOTH view expiry and pattern timer:at callbacks; DispatchService FIFO +
+      schedule slot ordering). Engine.advanceTime's expire loop now iterates
+      reverseStatementGroups (reverse within equal priority/drop groups); event-driven dispatch
+      (dispatchStatementsLocked) keeps registration order.
+      REGRESSION CAUGHT BY make check and repaired: TestClientRuntimeTimerRouteDefersUntilSibling-
+      ListenersParity pinned [first, second, routed] — the [first, second] prefix was authored
+      against Go's old insertion-order dispatch, NOT against Java (the Java ClientRuntimeListenerRoute
+      source is event-driven and pins no timer sibling order; JDK probe OrderProbe3 shows timer:at
+      statements also fire second-deployed-first). Corrected the test to [second, first, routed]
+      with a comment; the load-bearing route-deferral property (routed after BOTH siblings) is
+      unchanged and still pinned.
+- [x] Independent parity review (agent ParityReview): OVERALL PASS, areas A-F all PASS.
+      Fixes applied and re-verified: (1) P2 month-scoped scenario instants were hand-guessed epoch
+      values landing in Jun/Jul — replaced with the module's true Feb/Mar 2002 instants so the
+      quiet-at-minus-1ms boundary genuinely replays; Java trace regenerated, Go replay re-diffed to
+      passing / 0 differences (70 records). (2) P2 recorded narrow gap: aggregateDefinitionHasBareSelections
+      keys on the select list while Java nonAggregatedPropsSelect also ignores constant-only bare
+      selections and counts having-referenced bare properties (no current chain exercises either
+      shape) — noted in case notes + PLANS for the next ungrouped-aggregate unit. (3) P3 probe
+      wording (three probes, two shapes) and probes archived under tools/java-oracle/probes/ with a
+      README. (4) P3 variable-stmt transcription deviation: disclosed, no action.
+- [x] Manifest: case.inventory.view-time-win → differential-verified (evidence list, goTests +2,
+      difference closing line rewritten, Draft 4.420 notes with both fixes, 15 DV runtime IDs);
+      capability view.basic-windows DV runtime IDs 14→29, remaining drops "ViewTimeWin suite" and
+      records the SceneOne/SceneTwo differential remainder (case.view-timewindow-scenes, implemented);
+      summary → 291 DV cases / 1074 DV runtime IDs (associations/referenced unchanged: the 15 IDs
+      were already associated by the case). Facts recorded (CHANGELOG + roadmap newest-first,
+      Draft 4.420).
+- [x] Reviewer re-check (same agent): CONFIRM PASS, all fixes verified, gates re-run clean
+      (make check exit 0, gofmt clean, git diff --check clean). Stale oracle javadoc date
+      corrected at commit time. Shipped; Git owns identity — Draft 4.420 committed and pushed as
+      the semantic work-unit commit (chain view-time-win; manifest 291 DV cases / 1074 DV runtime
+      IDs).
+
+## Current work unit
 Active: Draft 4.419 ('view-length-batch-closure').
 
 - Unit: `ViewLengthBatch.java` ordinals 5 `ViewLengthBatchNormal{runType=VIEW}`

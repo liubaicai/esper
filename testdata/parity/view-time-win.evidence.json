@@ -1,0 +1,3631 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-63f096fecc7fa8382cd1",
+    "java-runtime-9b1ddabf0088cb326211",
+    "java-runtime-6edb156e4a10bcba9784",
+    "java-runtime-9239909fee9398909be1",
+    "java-runtime-71fe6ccae381fc1a0843",
+    "java-runtime-aa228ddbee38aa48a796",
+    "java-runtime-fc4ed4ace0c09a9154da",
+    "java-runtime-323ea34bd1e1c38e3895",
+    "java-runtime-87e95838609b5cc88869",
+    "java-runtime-469f129b7fa2da1d0b14",
+    "java-runtime-19a1a7c856e9567f7aac",
+    "java-runtime-2deb887a05147a8dc59c",
+    "java-runtime-d563c454a45f40bcc404",
+    "java-runtime-cc6e1ac37196bc5ae5e8",
+    "java-runtime-c9c0f3b2ebd23aedce50"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeWin.java"
+  ],
+  "javaExecutions": [
+    "ViewTimeJustSelectStar",
+    "ViewTimeSum",
+    "ViewTimeSumGroupBy",
+    "ViewTimeSumWFilter",
+    "ViewTimeWindowMonthScoped",
+    "ViewTimeWindowWPrev",
+    "ViewTimeWindowPreparedStmt",
+    "ViewTimeWindowVariableStmt",
+    "ViewTimeWindowTimePeriod",
+    "ViewTimeWindowVariableTimePeriodStmt",
+    "ViewTimeWindowTimePeriodParams",
+    "ViewTimeWindowFlipTimer{startTime=0, size='1', flipTime=1000}",
+    "ViewTimeWindowFlipTimer{startTime=123456789, size='10', flipTime=123466789}",
+    "ViewTimeWindowFlipTimer{startTime=0, size='1 months 10 milliseconds', flipTime=2678400010}",
+    "ViewTimeWindowFlipTimer{startTime=1020211201999, size='1 months 50 milliseconds', flipTime=1022889602049}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "view-time-win",
+    "steps": [
+      {
+        "op": "case",
+        "case": "just-select-star"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.600Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.500Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.600Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E3",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "sum"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 10000,
+          "price": 51
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 20000,
+          "price": 52
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 40000,
+          "price": 45
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:35Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 30000,
+          "price": 70
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 10000,
+          "price": 20
+        }
+      },
+      {
+        "op": "case",
+        "case": "sum-group-by"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 10000,
+          "price": 51
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 30000,
+          "price": 70
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 20000,
+          "price": 52
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 30000,
+          "price": 70
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:35Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 10000,
+          "price": 90
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 30000,
+          "price": 120
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 20000,
+          "price": 90
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 30000,
+          "price": 120
+        }
+      },
+      {
+        "op": "case",
+        "case": "sum-w-filter"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 20000,
+          "price": 52
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 20000,
+          "price": 100
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:35Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 20000,
+          "price": 252
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 20000,
+          "price": 100
+        }
+      },
+      {
+        "op": "case",
+        "case": "month-scoped"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-02-01T09:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-02-15T09:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-03-01T08:59:59.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-03-01T09:00:00Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-03-15T08:59:59.999Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-03-15T09:00:00Z"
+      },
+      {
+        "op": "case",
+        "case": "w-prev"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.500Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E3",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.200Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E4",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E5",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01.600Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E6",
+          "volume": 0,
+          "price": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "prepared-stmt"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s1"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "case",
+        "case": "variable-stmt"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "set-variable",
+        "name": "TIME_WIN_ONE",
+        "payload": {
+          "type": "int",
+          "value": 3
+        }
+      },
+      {
+        "op": "deployed",
+        "statement": "s1"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "case",
+        "case": "time-period"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s1"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "case",
+        "case": "variable-time-period"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "set-variable",
+        "name": "TIME_WIN_TWO",
+        "payload": {
+          "type": "double",
+          "value": 0.05
+        }
+      },
+      {
+        "op": "deployed",
+        "statement": "s1"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:03Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:04Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:05Z"
+      },
+      {
+        "op": "case",
+        "case": "time-period-params-1"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:19:59Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:20:00Z"
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "time-period-params-2"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:19:59Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:20:00Z"
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "time-period-params-3"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:19:59Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:20:00Z"
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "time-period-params-4"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:19:59Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:20:00Z"
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "time-period-params-5"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:19:59Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:20:00Z"
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "time-period-params-6"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:19:59Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:20:00Z"
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "time-period-params-7"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:19:59Z"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T08:20:00Z"
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "flip-timer-1s"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00.999Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "flip-timer-10s-large-start"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-02T10:17:36.789Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-02T10:17:46.788Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-02T10:17:46.789Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "flip-timer-months-ms-epoch"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-02-01T00:00:00.009Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-02-01T00:00:00.010Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "case",
+        "case": "flip-timer-months-ms-2002"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-05-01T00:00:01.999Z"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-06-01T00:00:02.048Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "advance-time",
+        "at": "2002-06-01T00:00:02.049Z"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-time-win",
+    "records": [
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E1",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00.600Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E2",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E1",
+              "volume": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E2",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.500Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E1",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:01.600Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E2",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E3",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 51,
+              "symbol": "DELL",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 103,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 148,
+              "symbol": "DELL",
+              "volume": 40000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 70,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 90,
+              "symbol": "DELL",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 51,
+              "symbol": "DELL",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 70,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 103,
+              "symbol": "DELL",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 140,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 90,
+              "symbol": "DELL",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 120,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 180,
+              "symbol": "DELL",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 240,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-w-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 52,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-w-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 152,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-w-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 252,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-w-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 352,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-03-15T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": 1,
+              "prevWindowSym": [
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E1",
+              "prevCountSym": 2,
+              "prevWindowSym": [
+                "E2",
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E2",
+              "prevCountSym": 3,
+              "prevWindowSym": [
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:01.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E3",
+              "prevCountSym": 4,
+              "prevWindowSym": [
+                "E4",
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:01.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E4",
+              "prevCountSym": 5,
+              "prevWindowSym": [
+                "E5",
+                "E4",
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:01.600Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": {
+                "state": "null"
+              },
+              "prevWindowSym": {
+                "state": "null"
+              },
+              "prevtail": {
+                "state": "null"
+              },
+              "symbol": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": {
+                "state": "null"
+              },
+              "prevWindowSym": {
+                "state": "null"
+              },
+              "prevtail": {
+                "state": "null"
+              },
+              "symbol": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": {
+                "state": "null"
+              },
+              "prevWindowSym": {
+                "state": "null"
+              },
+              "prevtail": {
+                "state": "null"
+              },
+              "symbol": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:01.600Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E5",
+              "prevCountSym": 3,
+              "prevWindowSym": [
+                "E6",
+                "E5",
+                "E4"
+              ],
+              "prevtail": "E4",
+              "symbol": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "prepared-stmt",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "prepared-stmt",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "prepared-stmt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-stmt",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-stmt",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-stmt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-time-period",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-time-period",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-time-period",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-3",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-3",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-4",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-4",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-5",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-5",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-6",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-6",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-7",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-7",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-1s",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-1s",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-1s",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "flip-timer-10s-large-start",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-02T10:17:36.789Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-10s-large-start",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-10s-large-start",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "flip-timer-months-ms-epoch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-months-ms-epoch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-months-ms-epoch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "flip-timer-months-ms-2002",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:01.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-months-ms-2002",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-months-ms-2002",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "view-time-win",
+    "records": [
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E1",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00.600Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E2",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E1",
+              "volume": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E2",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:01.500Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E1",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:01.600Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E2",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "just-select-star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "price": 0,
+              "symbol": "E3",
+              "volume": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 51,
+              "symbol": "DELL",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 103,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 148,
+              "symbol": "DELL",
+              "volume": 40000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 70,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 90,
+              "symbol": "DELL",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 51,
+              "symbol": "DELL",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 70,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 103,
+              "symbol": "DELL",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 140,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 90,
+              "symbol": "DELL",
+              "volume": 10000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 120,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 180,
+              "symbol": "DELL",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 240,
+              "symbol": "IBM",
+              "volume": 30000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-w-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 52,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-w-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 152,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-w-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 252,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "sum-w-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:35Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mySum": 352,
+              "symbol": "IBM",
+              "volume": 20000
+            }
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-03-01T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "month-scoped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "2002-03-15T09:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": 1,
+              "prevWindowSym": [
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E1",
+              "prevCountSym": 2,
+              "prevWindowSym": [
+                "E2",
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00.500Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E2",
+              "prevCountSym": 3,
+              "prevWindowSym": [
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:01.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E3",
+              "prevCountSym": 4,
+              "prevWindowSym": [
+                "E4",
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:01.200Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E4",
+              "prevCountSym": 5,
+              "prevWindowSym": [
+                "E5",
+                "E4",
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "prevtail": "E1",
+              "symbol": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:01.600Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": {
+                "state": "null"
+              },
+              "prevWindowSym": {
+                "state": "null"
+              },
+              "prevtail": {
+                "state": "null"
+              },
+              "symbol": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": {
+                "state": "null"
+              },
+              "prevWindowSym": {
+                "state": "null"
+              },
+              "prevtail": {
+                "state": "null"
+              },
+              "symbol": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": {
+                "state": "null"
+              },
+              "prevWindowSym": {
+                "state": "null"
+              },
+              "prevtail": {
+                "state": "null"
+              },
+              "symbol": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:01.600Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prev1": "E5",
+              "prevCountSym": 3,
+              "prevWindowSym": [
+                "E6",
+                "E5",
+                "E4"
+              ],
+              "prevtail": "E4",
+              "symbol": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "prepared-stmt",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "prepared-stmt",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "prepared-stmt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-stmt",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-stmt",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-stmt",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-time-period",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:04Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-time-period",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-time-period",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:05Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-1",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-2",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-3",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-3",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-4",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-4",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-5",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-5",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-6",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-6",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-7",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "time-period-params-7",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T08:20:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-1s",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-1s",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-1s",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "flip-timer-10s-large-start",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-02T10:17:36.789Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-10s-large-start",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-10s-large-start",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "flip-timer-months-ms-epoch",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-months-ms-epoch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-months-ms-epoch",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "flip-timer-months-ms-2002",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "2002-05-01T00:00:01.999Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-months-ms-2002",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "flip-timer-months-ms-2002",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

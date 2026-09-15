@@ -231,8 +231,14 @@ func TestClientRuntimeTimerRouteDefersUntilSiblingListenersParity(t *testing.T) 
 	if err := engine.AdvanceTime(context.Background(), origin.Add(time.Second)); err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(order, []string{"first", "second", "routed"}) {
-		t.Fatalf("timer route order = %#v, want [first second routed]", order)
+	// Java's schedule service delivers same-instant callbacks
+	// second-deployed-first (JDK probe: two timer:at statements fire psecond
+	// before pfirst; the same holds for view expiry callbacks), so the
+	// second statement's listener observes the tick before the first. The
+	// pinned route-deferral property is unaffected: the routed event waits
+	// until both sibling listeners have processed the tick.
+	if !reflect.DeepEqual(order, []string{"second", "first", "routed"}) {
+		t.Fatalf("timer route order = %#v, want [second first routed]", order)
 	}
 }
 
