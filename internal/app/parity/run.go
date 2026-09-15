@@ -34,6 +34,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-row-per-event and resultset-querytype-row-per-event-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-by and resultset-querytype-local-group-by-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-ungrouped and resultset-querytype-local-group-ungrouped-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-extended and resultset-querytype-local-group-extended-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-aggregate-grouped-having and resultset-querytype-aggregate-grouped-having-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-orderby-aggregate-grouped and resultset-orderby-aggregate-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-context-grouped and resultset-output-limit-row-limit-context-grouped-diff")
@@ -246,6 +247,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetQueryTypeLocalGroupByScenario(file)
 	} else if *mode == "resultset-querytype-local-group-ungrouped" || *mode == "resultset-querytype-local-group-ungrouped-diff" {
 		scenario, err = loadResultSetQueryTypeLocalGroupUngroupedScenario(file)
+	} else if *mode == "resultset-querytype-local-group-extended" || *mode == "resultset-querytype-local-group-extended-diff" {
+		scenario, err = loadResultSetQueryTypeLocalGroupExtendedScenario(file)
 	} else if *mode == "resultset-output-limit-row-limit-context-grouped" || *mode == "resultset-output-limit-row-limit-context-grouped-diff" {
 		scenario, err = loadResultsetOutputLimitRowLimitContextGroupedScenario(file)
 	} else if *mode == "resultset-output-limit-row-limit" || *mode == "resultset-output-limit-row-limit-diff" {
@@ -3781,6 +3784,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeLocalGroupUngroupedJavaRuntimeIDs()),
 				splitMetadata(*javaSourceFiles, resultSetQueryTypeLocalGroupUngroupedJavaSources),
 				splitMetadata(*javaExecutions, resultSetQueryTypeLocalGroupUngroupedJavaExecutions()), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-querytype-local-group-extended" || *mode == "resultset-querytype-local-group-extended-diff" {
+		trace, err := runResultSetQueryTypeLocalGroupExtendedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-local-group-extended-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeLocalGroupExtendedJavaRuntimeIDs()),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeLocalGroupExtendedJavaSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeLocalGroupExtendedJavaExecutions()), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

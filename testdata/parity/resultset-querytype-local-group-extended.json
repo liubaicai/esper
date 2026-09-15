@@ -1,0 +1,55 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-local-group-extended",
+  "description": "ResultSetQueryTypeLocalGroupBy ordinals 8-9: ungrouped local aggregation over a unidirectional join and over multi-level window access.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java",
+  "javaRuntimes": [
+    "java-runtime-a1b494ebb2cb69d4c90a",
+    "java-runtime-344d65c309eddd141cc5"
+  ],
+  "javaNames": [
+    "ResultSetLocalUngroupedUnidirectionalJoin",
+    "ResultSetLocalUngroupedThreeLevelWTop"
+  ],
+  "javaStaticIds": [
+    "java-d4c45f0591f6b53f8f74",
+    "java-3e936d8e8328dbd8a2ed"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "ungrouped-unidirectional-join",
+      "ordinal": 8,
+      "runtimeId": "java-runtime-a1b494ebb2cb69d4c90a",
+      "executionName": "ResultSetLocalUngroupedUnidirectionalJoin",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select theString, sum(intPrimitive, group_by:theString) as c0 from SupportBean#keepall, SupportBean_S0 unidirectional"
+    },
+    {
+      "case": "ungrouped-three-level-wtop",
+      "ordinal": 9,
+      "runtimeId": "java-runtime-344d65c309eddd141cc5",
+      "executionName": "ResultSetLocalUngroupedThreeLevelWTop",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@Name('s0') select sum(longPrimitive, group_by:theString) as c0,count(*, group_by:theString) as c1,window(*, group_by:theString) as c2,sum(longPrimitive, group_by:intPrimitive) as c3,count(*, group_by:intPrimitive) as c4,window(*, group_by:intPrimitive) as c5,sum(longPrimitive, group_by:(theString, intPrimitive)) as c6,count(*, group_by:(theString, intPrimitive)) as c7,window(*, group_by:(theString, intPrimitive)) as c8,sum(longPrimitive) as c9 from SupportBean#length(4)"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "ungrouped-unidirectional-join"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 30, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 40, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1}},
+    {"op": "case", "case": "ungrouped-three-level-wtop"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 100}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10, "longPrimitive": 101}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 20, "longPrimitive": 102}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 103}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 104}}
+  ]
+}
