@@ -5,7 +5,10 @@
     "java-runtime-1dfe34a06e794032b5f6",
     "java-runtime-8a05b3435dcc1ad1f414",
     "java-runtime-c33f49e879157f89fb62",
+    "java-runtime-c5e8204a0ec635e5ded3",
     "java-runtime-2aa18c37135a5c99514b",
+    "java-runtime-0be8c1b9dd6f114b3919",
+    "java-runtime-3566968f29b3c05f40ee",
     "java-runtime-4fe38de65dec8bcdf586",
     "java-runtime-0e551e1e4b7e85c94b37",
     "java-runtime-77aeed87d8b7920a1bcf"
@@ -17,7 +20,10 @@
     "ResultSetQueryTypeHavingWildcardSelect",
     "ResultSetQueryTypeStatementOM",
     "ResultSetQueryTypeStatement",
+    "ResultSetQueryTypeStatementJoin",
     "ResultSetQueryTypeSumHavingNoAggregatedProp",
+    "ResultSetQueryTypeNoAggregationJoinHaving",
+    "ResultSetQueryTypeNoAggregationJoinWhere",
     "ResultSetQueryTypeSubstreamSelectHaving",
     "ResultSetQueryTypeHavingSum",
     "ResultSetQueryTypeHavingSumIStream"
@@ -84,6 +90,279 @@
         "payload": {
           "symbol": "DELL",
           "price": 12
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-statement-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanString",
+        "payload": {
+          "theString": "DELL"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 5
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 8
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 6
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "price": 12
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-noagg-join-having"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 10,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 18.7,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 18.5,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 16,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 12,
+          "volume": -1
+        }
+      },
+      {
+        "op": "case",
+        "case": "having-noagg-join-where"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 10,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 18.7,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 20,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 18.5,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM2",
+          "price": 16,
+          "volume": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "SYM1",
+          "price": 12,
+          "volume": -1
         }
       },
       {
@@ -375,10 +654,288 @@
         ]
       },
       {
+        "case": "having-statement-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 7.5,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 9.5,
+              "price": 8,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 8.8,
+              "price": 6,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 10.2,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
         "case": "having-sum-noagg-prop",
         "operation": "deployed",
         "statement": "s0",
         "sequence": 0
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 20,
+              "bPrice": 10,
+              "spread": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 20,
+              "bPrice": 10,
+              "spread": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 20,
+              "spread": 1.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 16,
+              "spread": 2.5
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 20,
+              "spread": 1.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 12,
+              "bPrice": 16,
+              "spread": 4
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 16,
+              "spread": 2.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 20,
+              "bPrice": 10,
+              "spread": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 20,
+              "bPrice": 10,
+              "spread": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 20,
+              "spread": 1.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 16,
+              "spread": 2.5
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 20,
+              "spread": 1.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 12,
+              "bPrice": 16,
+              "spread": 4
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 16,
+              "spread": 2.5
+            }
+          }
+        ]
       },
       {
         "case": "having-wildcard-select",
@@ -607,10 +1164,288 @@
         ]
       },
       {
+        "case": "having-statement-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 7.5,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 9.5,
+              "price": 8,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 8.8,
+              "price": 6,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-statement-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgPrice": 10.2,
+              "price": 5,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
         "case": "having-sum-noagg-prop",
         "operation": "deployed",
         "statement": "s0",
         "sequence": 0
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 20,
+              "bPrice": 10,
+              "spread": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 20,
+              "bPrice": 10,
+              "spread": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 20,
+              "spread": 1.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 16,
+              "spread": 2.5
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 20,
+              "spread": 1.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-having",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 12,
+              "bPrice": 16,
+              "spread": 4
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 16,
+              "spread": 2.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 20,
+              "bPrice": 10,
+              "spread": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 20,
+              "bPrice": 10,
+              "spread": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 20,
+              "spread": 1.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 16,
+              "spread": 2.5
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 20,
+              "spread": 1.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "having-noagg-join-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 12,
+              "bPrice": 16,
+              "spread": 4
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "aPrice": 18.5,
+              "bPrice": 16,
+              "spread": 2.5
+            }
+          }
+        ]
       },
       {
         "case": "having-wildcard-select",

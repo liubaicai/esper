@@ -37,16 +37,22 @@ type havingSupportBean struct {
 
 // Order matches the pinned executions() registration order (inventory).
 // The three join-family executions (StatementJoin, NoAggregationJoinHaving,
-// NoAggregationJoinWhere) stay unregistered: Go join-aggregate old/new
-// classification on sliding length(1) windows diverges from Java (the
-// 4.241 remaining note); they enter the scenario once that engine gap
-// closes.
+// NoAggregationJoinWhere) replay their pinned send sequences: StatementJoin
+// seeds one DELL SupportBeanString before the seven market sends, and the
+// NoAggregationJoin twins replay one SYM1/SYM2 spread sequence whose EPL
+// differs only in the having/where keyword placement of the spread
+// predicate. Java routes the no-aggregate join twins through the
+// UNAGGREGATED_UNGROUPED result-set shape (row per joined tuple, having
+// gated), which the engine mirrors since 4.417.
 var (
 	resultsetQueryTypeHavingJavaRuntimeIDs = []string{
 		"java-runtime-1dfe34a06e794032b5f6", // HavingWildcardSelect
 		"java-runtime-8a05b3435dcc1ad1f414", // StatementOM (object-model twin)
 		"java-runtime-c33f49e879157f89fb62", // Statement (text model)
+		"java-runtime-c5e8204a0ec635e5ded3", // StatementJoin
 		"java-runtime-2aa18c37135a5c99514b", // SumHavingNoAggregatedProp
+		"java-runtime-0be8c1b9dd6f114b3919", // NoAggregationJoinHaving
+		"java-runtime-3566968f29b3c05f40ee", // NoAggregationJoinWhere
 		"java-runtime-4fe38de65dec8bcdf586", // SubstreamSelectHaving
 		"java-runtime-0e551e1e4b7e85c94b37", // HavingSum
 		"java-runtime-77aeed87d8b7920a1bcf", // HavingSumIStream
@@ -55,7 +61,10 @@ var (
 		"ResultSetQueryTypeHavingWildcardSelect",
 		"ResultSetQueryTypeStatementOM",
 		"ResultSetQueryTypeStatement",
+		"ResultSetQueryTypeStatementJoin",
 		"ResultSetQueryTypeSumHavingNoAggregatedProp",
+		"ResultSetQueryTypeNoAggregationJoinHaving",
+		"ResultSetQueryTypeNoAggregationJoinWhere",
 		"ResultSetQueryTypeSubstreamSelectHaving",
 		"ResultSetQueryTypeHavingSum",
 		"ResultSetQueryTypeHavingSumIStream",
@@ -72,7 +81,10 @@ func runResultSetQueryTypeHavingScenario(ctx context.Context, scenario compat.Sc
 	// identical replay groups and so does this runner.
 	for _, caseName := range []string{
 		"having-statement", "having-statement",
+		"having-statement-join",
 		"having-sum-noagg-prop",
+		"having-noagg-join-having",
+		"having-noagg-join-where",
 		"having-wildcard-select",
 		"having-substream-insert",
 		"having-unbounded-sum",

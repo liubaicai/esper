@@ -19215,6 +19215,75 @@ func TestRunResultSetQueryTypeHavingDiffRejectsTraceMutations(t *testing.T) {
 				trace.Records[0].Time = "1970-01-01T00:00:01Z"
 			},
 		},
+		{
+			name: "join-seeded-old-row-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					r := trace.Records[i]
+					if r.Case == "having-statement-join" && len(r.Old) > 0 {
+						r.Old[0].Fields["avgPrice"] = 1.0
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "join-seeded-new-delivery-lost",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "having-statement-join" && trace.Records[i].New != nil {
+						trace.Records[i].New = nil
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "spread-having-old-row-lost",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "having-noagg-join-having" && len(trace.Records[i].Old) > 0 {
+						trace.Records[i].Old = nil
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "spread-having-new-spread-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					r := trace.Records[i]
+					if r.Case == "having-noagg-join-having" && r.New != nil {
+						r.New[0].Fields["spread"] = 99.0
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "spread-where-mirror-old-row-lost",
+			mutate: func(trace *compat.Trace) {
+				for i := range trace.Records {
+					if trace.Records[i].Case == "having-noagg-join-where" && len(trace.Records[i].Old) > 0 {
+						trace.Records[i].Old = nil
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "spread-where-final-new-drift",
+			mutate: func(trace *compat.Trace) {
+				for i := len(trace.Records) - 1; i >= 0; i-- {
+					r := &trace.Records[i]
+					if r.Case == "having-noagg-join-where" && r.New != nil {
+						r.New[0].Fields["spread"] = 0.5
+						return
+					}
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

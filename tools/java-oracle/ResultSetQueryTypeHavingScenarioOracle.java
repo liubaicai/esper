@@ -25,7 +25,7 @@ import java.util.TreeSet;
 /**
  * Java oracle for ResultSetQueryTypeHaving avg-HAVING family scenarios.
  *
- * Covers the seven currently registered executions of ResultSetQueryTypeHaving (the StatementJoin and NoAggregationJoin having/where twins remain dormant branches pending the Go join-aggregate old/new classification fix; their buildEPL cases are present but not referenced by any fixture case). * (two entries, one semantic scenario: the text-model and object-model
+ * Covers all ten registered executions of ResultSetQueryTypeHaving (two entries, one semantic scenario: the text-model and object-model
  * runtime twins are behaviorally identical, so the oracle replays the same
  * EPL once per entry exactly like the variables-onset-set onset-array-at-index
  * dual-runtime case) compiles

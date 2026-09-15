@@ -612,6 +612,83 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.417 ('querytype-having-join').
+
+- Unit: `ResultSetQueryTypeHaving.java` ordinals 3 `ResultSetQueryTypeStatementJoin`
+      (`java-runtime-c5e8204a0ec635e5ded3`), 5 `ResultSetQueryTypeNoAggregationJoinHaving`
+      (`java-runtime-0be8c1b9dd6f114b3919`) and 6 `ResultSetQueryTypeNoAggregationJoinWhere`
+      (`java-runtime-3566968f29b3c05f40ee`) activating the dormant branches of the EXISTING
+      `resultset-query-type-having` chain (runner cases, oracle buildEPL gates and run script were
+      already drafted; no new chain assets needed). Scouts dispatched in parallel (Java contract
+      `Explore-1` task agent-1901186cf5d7469a; Go surface `Explore-2` task agent-3b7ff970b2e74d8c).
+      Primary-agent pre-derivation from the Java source: ord 3 is an irstream join aggregate
+      (`avg(price)` over the join output, row-per-event) with having on the NON-aggregated `price`
+      vs the aggregate, delivering new {5,7.5}/{8,9.5}/{6,8.8} and old {5,10.2}; ords 5/6 are a
+      NO-AGGREGATION join (plain projections, length(1) windows both sides) with having/where on
+      `max-min >= 1.4`, delivering new {20,10,10}, old {20,10,10}, new {18.5,20,1.5},
+      old+new {18.5,20,1.5 / 18.5,16,2.5}, old+new {18.5,16,2.5 / 12,16,4}.
+- [x] Scenario `testdata/parity/resultset-query-type-having.json` extended with the three case
+      step blocks (SBS DELL seed + 7 DELL sends for ord 3; the 11-send SYM1/SYM2 spread sequence
+      with pinned volume=-1 for ords 5/6), `cases[]` reordered to the Go runner emission order
+      (records compare index-by-index, so Java oracle and Go runner must walk the same case order),
+      `javaRuntimes` extended, description updated. Runner case list/runtime IDs/executions already
+      covered the ten executions.
+- [x] **ENGINE FIX (shared core, `internal/esper/runtime.go`): unaggregated-ungrouped join result
+      shape.** The first differential replay exposed the 4.241-documented gap as REAL: Go routed
+      no-aggregate joins through the ungrouped-aggregate state machine, producing spurious
+      new(20,10,10) on the b-side slide, a stale old row on the following send, a missing final
+      delivery, and (where variant) null-prior mirrored old rows on every first emission. Java
+      routes this shape to HANDTHROUGH/UNAGGREGATED_UNGROUPED (ResultSetProcessorFactoryFactory
+      branch 1). Fix: `aggregateBatch` now detects `definition.join != nil && len(groupBy) == 0 &&
+      aggregateDefinitionHasNoAggregates(definition)` and delegates to the new
+      `unaggregatedJoinBatch` — one new row per joined new tuple, one old row per leaving tuple,
+      each having-gated per tuple (where already filters both tuple streams at entry). No
+      aggregate state participates. Debug-traced the joinDelta→aggregateBatch flow with a
+      throwaway instrumented test (removed) before fixing; post-fix both twins deliver Java's
+      exact 5-delivery vector.
+- [x] Java oracle trace regenerated (28 records, all ten executions; the oracle javadoc's stale
+      dormant-branch sentence corrected); Go trace regenerated; differential
+      `-mode resultset-query-type-having-diff` reports status `passing` / 0 differences across
+      28 records and 10 runtime IDs; evidence rewritten.
+- [x] Test families: 6 new trace mutations in `run_test.go`
+      (join-seeded-old-row-drift, join-seeded-new-delivery-lost, spread-having-old-row-lost,
+      spread-having-new-spread-drift, spread-where-mirror-old-row-lost, spread-where-final-new-drift)
+      all rejected — note the value-type trap: `r := trace.Records[i]` copies the struct, so slice
+      mutations must assign through `trace.Records[i]`; map edits propagate. Engine regression
+      `TestUnaggregatedJoinRowPerTuple` (`internal/esper/resultset_having_join_unaggregated_parity_test.go`)
+      pins the both-twins 5-delivery contract. Full esper + parity + compat + app suites green;
+      all evidence-replay tests (every chain's runner vs evidence) green — the engine change
+      regresses nothing.
+- [x] Manifest/roadmap/CHANGELOG facts: case `case.resultset-query-type-having` expanded
+      7→10 javaRuntimeIds/javaNames/differentialVerifiedRuntimeIds; capability
+      `resultset.aggregate-having` remaining note about the join twins REMOVED, goRefs extended
+      with the new engine test, dvids extended; summary counters recomputed: 663 cases /
+      661 implemented / 289 DV cases / 1055 DV runtime IDs / 3651 associations
+      (referenced 3308, unreferenced 828).
+- [x] **Independent parity review COMPLETE: OVERALL PASS, 2 P2 doc fixes, 2 P3 observations.**
+      The reviewer (fresh read-only agent, task agent-4f259ac3ab2a4a28) verified areas A-F,
+      re-derived the Java assert vectors from ResultSetQueryTypeHaving.java, confirmed the engine
+      fix against ResultSetProcessorFactoryFactory branch 1 and
+      ResultSetProcessorUtil.processJoinResultCodegen (including having applied to OLDDATA and
+      old-before-new emission order), re-ran the differential (passing / 0 differences), the 13
+      mutations (all rejected), the new engine test, and the all-chain evidence replay.
+      - **P2-1 FIXED:** roadmap Draft 4.241 entry lacked the 4.417 closure annotation — added
+        the "(该缺口已于 Draft 4.417 …修复并登记)" parenthetical.
+      - **P2-2 FIXED:** CHANGELOG Draft 4.255 entry lacked the same annotation — added.
+      - P3-1 (recorded, not fixed): `unaggregatedJoinBatch` sets outputInserted/Removed from the
+        pre-having raw delta counts; with an output-limit configured, Java's simple-processor
+        condition counts post-having rows. Consistent with existing aggregateBatch behavior and
+        unexercised here (no output limit on the pinned executions); a candidate note for a
+        future output-limit × unaggregated-join work unit.
+      - P3-2 (recorded): forced/snapshot batches on unaggregated joins produce an empty batch;
+        Java HANDTHROUGH behaves the same — unexercised territory, no divergence.
+- [x] Final gates GREEN: `make check` exit 0 (gofmt clean, vet green, full test suite green),
+      `git diff --check` clean. The chain's `resultset-query-type-having.go.trace.json` is now
+      tracked (sibling chains commit their Go traces; this file existed on disk but was never
+      committed).
+- [ ] Semantic commit and push to `master` (Git owns identity; no hash write-back).
+
+## Current work unit
 Active: Draft 4.416 ('orderby-rowperevent-iterator').
 
 - Unit: `ResultSetOrderByRowPerEvent.java` ordinal 0 `ResultSetIteratorAggregateRowPerEvent`

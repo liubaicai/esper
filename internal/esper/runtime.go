@@ -19386,6 +19386,16 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		delta.newEvents = filterAggregateEvents(delta.newEvents, definition.where, now, r.variables, r.engine)
 		delta.oldEvents = filterAggregateEvents(delta.oldEvents, definition.where, now, r.variables, r.engine)
 	}
+	// Java routes join statements whose select and having clauses contain no
+	// aggregate functions and no group-by to ResultSetProcessorType.HANDTHROUGH
+	// or UNAGGREGATED_UNGROUPED (ResultSetProcessorFactoryFactory branch 1):
+	// every new joined tuple projects one new row and every leaving tuple one
+	// old row, each gated per tuple by the having clause. No aggregation
+	// state participates, so the aggregate state machine's null-prior pairing
+	// and previous-row re-emission must never run for this shape.
+	if definition.join != nil && len(definition.groupBy) == 0 && aggregateDefinitionHasNoAggregates(definition) {
+		return r.unaggregatedJoinBatch(delta, plan, definition, now)
+	}
 	if r.aggregateState == nil {
 		r.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
 	}
@@ -20027,6 +20037,89 @@ func implicitAggregateGroupBy(input *streamNode) []Expr {
 		return append([]Expr(nil), grouped.effectiveKeys()...)
 	}
 	return nil
+}
+
+// aggregateDefinitionHasNoAggregates reports whether neither the selections
+// nor the having clause contain an aggregate expression. Such statements
+// never reach an aggregation processor in Java: the result-set factory picks
+// HANDTHROUGH or UNAGGREGATED_UNGROUPED and processes rows tuple by tuple.
+func aggregateDefinitionHasNoAggregates(definition *aggregateDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	for _, selection := range definition.selections {
+		if expressionNodeContainsAggregate(selection.Expr.node()) {
+			return false
+		}
+	}
+	if definition.having != nil && expressionNodeContainsAggregate(definition.having.node()) {
+		return false
+	}
+	return true
+}
+
+// unaggregatedJoinBatch implements the UNAGGREGATED_UNGROUPED/HANDTHROUGH
+// result shape for join statements without aggregate functions: each new
+// joined tuple projects one new row and each leaving tuple one old row, both
+// gated per tuple by the having clause (ResultSetProcessorUtil
+// processJoinResultCodegen: selectNewEvents over newData, selectOldEvents
+// over oldData). The where clause has already filtered new and old tuples,
+// mirroring Java's join-level filter expressions.
+func (r *statementRuntime) unaggregatedJoinBatch(delta eventDelta, plan Plan, definition *aggregateDefinition, now time.Time) (ResultBatch, error) {
+	batch := ResultBatch{Time: now, forced: delta.forced}
+	batch.outputCountsSet = true
+	batch.outputInserted = int64(len(delta.newEvents))
+	batch.outputRemoved = int64(len(delta.oldEvents))
+	tupleVisible := func(event Event) bool {
+		if definition.having == nil {
+			return true
+		}
+		value := definition.having.eval(EvalContext{
+			Event:      event,
+			JoinEvents: joinTupleEvents(event),
+			OuterEvent: event,
+			Engine:     r.engine,
+			Now:        now,
+			Variables:  r.variables,
+		})
+		matched, ok := boolValue(value)
+		return ok && matched
+	}
+	tupleValues := func(event Event) []Value {
+		tuple := joinTupleEvents(event)
+		values := make([]Value, len(definition.selections))
+		for index, selection := range definition.selections {
+			values[index] = selection.Expr.eval(EvalContext{
+				Event:      event,
+				JoinEvents: tuple,
+				OuterEvent: event,
+				Engine:     r.engine,
+				Now:        now,
+				Variables:  r.variables,
+			})
+		}
+		return values
+	}
+	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream {
+		for _, leaving := range delta.oldEvents {
+			if !tupleVisible(leaving) {
+				continue
+			}
+			batch.Old = append(batch.Old, resultRow(newRow(plan.resultSchema, tupleValues(leaving))))
+		}
+	}
+	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream {
+		for _, current := range delta.newEvents {
+			if !tupleVisible(current) {
+				continue
+			}
+			batch.New = append(batch.New, resultRow(newRow(plan.resultSchema, tupleValues(current))))
+		}
+	}
+	if !batch.empty() {
+		batch.Sequence = r.seq.Add(1)
+	}
+	return batch, nil
 }
 
 func (r *statementRuntime) aggregateBatchSafely(delta eventDelta, plan Plan, now time.Time) (batch ResultBatch, err error) {
