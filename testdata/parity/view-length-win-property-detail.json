@@ -1,0 +1,108 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-length-win-property-detail",
+ "description": "ViewLengthWinWPropertyDetail replayed per pinned module: a length(3) window over SupportBeanComplexProps projecting mapped('keyOne') as a, indexed[1] as b, nested.nestedNested.nestedNestedValue as c, mapProperty and arrayProperty[0], gated by the three-property where clause. The default bean (indexed [1,2]) is admitted; the resend with indexed[1] set to Integer.MIN_VALUE is filtered out; the resend with indexed[1] back at 2 is admitted. Two listener records, no snapshots.",
+ "javaRuntimes": [
+  "java-runtime-9b050d42ae8cdfd3fa0d"
+ ],
+ "cases": [
+  {
+   "case": "w-property-detail",
+   "runtimeId": "java-runtime-9b050d42ae8cdfd3fa0d"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "w-property-detail"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanComplexProps",
+   "payload": {
+    "mapped": {
+     "keyOne": "valueOne",
+     "keyTwo": "valueTwo"
+    },
+    "indexed": [
+     1,
+     2
+    ],
+    "nested": {
+     "nestedNested": {
+      "nestedNestedValue": "nestedNestedValue"
+     }
+    },
+    "mapProperty": {
+     "xOne": "yOne",
+     "xTwo": "yTwo"
+    },
+    "arrayProperty": [
+     10,
+     20,
+     30
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanComplexProps",
+   "payload": {
+    "mapped": {
+     "keyOne": "valueOne",
+     "keyTwo": "valueTwo"
+    },
+    "indexed": [
+     1,
+     -2147483648
+    ],
+    "nested": {
+     "nestedNested": {
+      "nestedNestedValue": "nestedNestedValue"
+     }
+    },
+    "mapProperty": {
+     "xOne": "yOne",
+     "xTwo": "yTwo"
+    },
+    "arrayProperty": [
+     10,
+     20,
+     30
+    ]
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanComplexProps",
+   "payload": {
+    "mapped": {
+     "keyOne": "valueOne",
+     "keyTwo": "valueTwo"
+    },
+    "indexed": [
+     1,
+     2
+    ],
+    "nested": {
+     "nestedNested": {
+      "nestedNestedValue": "nestedNestedValue"
+     }
+    },
+    "mapProperty": {
+     "xOne": "yOne",
+     "xTwo": "yTwo"
+    },
+    "arrayProperty": [
+     10,
+     20,
+     30
+    ]
+   }
+  }
+ ]
+}

@@ -612,6 +612,44 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.423 ('view-lengthwin-property-detail').
+
+- Unit: ViewLengthWinWPropertyDetail (ord 2 of ViewLengthWin.java,
+      java-runtime-9b050d42ae8cdfd3fa0d — UNREFERENCED in the manifest, so this unit registers a
+      NEW case `case.view-lengthwin-property-detail`, born differential-verified) via NEW chain
+      `view-length-win-property-detail` (single case `w-property-detail`).
+- [x] Java contract read in full: `select mapped('keyOne') as a, indexed[1] as b,
+      nested.nestedNested.nestedNestedValue as c, mapProperty, arrayProperty[0] from
+      SupportBeanComplexProps#length(3) where mapped('keyOne')='valueOne' and indexed[1]=2 and
+      nested.nestedNested.nestedNestedValue='nestedNestedValue'`; three sends (default bean
+      admitted; setIndexed(1,MIN_VALUE) resend filtered out; setIndexed(1,2) resend admitted);
+      two listener records, no snapshots. Go surface confirmed: root-level paths via
+      `esper.Property[T](esper.EventValue[esper.Event](), "mapped('keyOne')")` (event-map-core
+      precedent), map fields normalize as objects on both sides (Go normalizeValue map[string]any
+      passthrough + JSON object marshal; EventMapCore oracle Map branch). Go struct fields:
+      mapped/indexed/nested/mapProperty/arrayProperty. SERIAL IMPLEMENTATION documented: oracle is
+      a one-case clone of the ViewFirstTimeScenarioOracle pattern, contract fully in-context, no
+      independent parallel scope.
+- [x] Scenario + runner + wiring + tests; oracle/script via asset writer; diff to zero
+      (oracle needed two repair rounds: nested declared as java.util.Map resolved as a MAPPED
+      property and rejected dot navigation — remodeled as keyed-accessor POJO fragments; clock was
+      wall-clock with no advance steps — pinned to epoch; map normalization switched to bare sorted
+      objects).
+- [x] Manifest: NEW case case.view-lengthwin-property-detail registered born-DV (inserted after
+      case.view-lengthwindow-iterator-prevprior; capability mapping entry added; view.basic-windows
+      remaining minus ViewLengthWinWPropertyDetail, DV list 34→35); summary totalCases/inventoried
+      667, implemented 665, DV cases 294, DV runtime IDs 1080, associations 3657→3658, referenced
+      3311→3312, unreferenced 825→824. Docs recorded (CHANGELOG + roadmap newest-first,
+      Draft 4.423).
+- [x] Independent parity review (agent ParityReview): OVERALL PASS, areas 1-7 all PASS, no
+      P0/P1/P2. P3s noted: []any mirror looser than Java int[] (integral-only payloads pinned);
+      hardcoded single-case list consistent with the serial pattern. Gates re-verified (make check
+      exit 0, gofmt clean, git diff --check clean). Shipped; Git owns identity — Draft 4.423
+      committed and pushed (new case case.view-lengthwin-property-detail born DV; manifest 294 DV
+      cases / 1080 DV runtime IDs / associations 3658; view.basic-windows remaining now
+      ViewTimeBatch suite + ViewParameterizedByContext suite).
+
+## Current work unit
 Active: Draft 4.422 ('view-first-time-differential').
 
 - Unit: the ViewFirstTime suite slice of `case.view-timebatch-basic` (38-runtime-ID mega case,

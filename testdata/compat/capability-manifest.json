@@ -4270,7 +4270,6 @@
    "phase": 2,
    "status": "implemented",
    "remaining": [
-    "ViewLengthWinWPropertyDetail",
     "ViewTimeBatch suite",
     "ViewParameterizedByContext suite"
    ],
@@ -4313,7 +4312,8 @@
     "java-runtime-a8007c80ae5756bb4ddb",
     "java-runtime-9733dfdbee02d899bb23",
     "java-runtime-b1061971825b14664ff2",
-    "java-runtime-ac89ffce844dc00114f7"
+    "java-runtime-ac89ffce844dc00114f7",
+    "java-runtime-9b050d42ae8cdfd3fa0d"
    ]
   },
   {
@@ -23259,6 +23259,50 @@
    "verification": [
     "inventoried",
     "implemented"
+   ]
+  },
+  {
+   "id": "case.view-lengthwin-property-detail",
+   "javaRuntimeIds": [
+    "java-runtime-9b050d42ae8cdfd3fa0d"
+   ],
+   "javaNames": [
+    "ViewLengthWinWPropertyDetail"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLengthWin.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewLengthWinPropertyDetailDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewLengthWinPropertyDetailDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "view",
+    "length-window",
+    "mapped-property",
+    "indexed-property",
+    "nested-fragment",
+    "array-property",
+    "where-gate",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/view-length-win-property-detail.json",
+    "testdata/parity/view-length-win-property-detail.trace.json",
+    "testdata/parity/view-length-win-property-detail.evidence.json",
+    "tools/java-oracle/ViewLengthWinPropertyDetailScenarioOracle.java",
+    "tools/java-oracle/run-view-length-win-property-detail.sh"
+   ],
+   "notes": "Draft 4.423: 2 records, 0 differences, zero engine change. The five projections (mapped('keyOne'), indexed[1], nested.nestedNested.nestedNestedValue fragment navigation, mapProperty, arrayProperty[0]) and the three-property where gate are expressed with root-level Property[T](EventValue[Event](), path) accessors over a registered struct whose mapped/nested/mapProperty fields are maps; the oracle mirrors the pinned bean with keyed getMapped(String)/getIndexed(int) overloads and local nested POJOs (a java.util.Map nested member would resolve as a MAPPED property and reject the dot access). The indexed[1]=Integer.MIN_VALUE resend is filtered out; the restored resend is admitted. Java/Go normalize map columns as bare sorted-key objects.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9b050d42ae8cdfd3fa0d"
    ]
   },
   {
@@ -45581,13 +45625,17 @@
   {
    "capabilityId": "resultset.aggregate-local-group",
    "caseId": "case.resultset-querytype-local-group-invalid"
+  },
+  {
+   "capabilityId": "view.basic-windows",
+   "caseId": "case.view-lengthwin-property-detail"
   }
  ],
  "summary": {
-  "inventoriedCases": 666,
-  "implementedCases": 664,
-  "differentialVerifiedCases": 293,
-  "differentialVerifiedRuntimeIds": 1079,
+  "inventoriedCases": 667,
+  "implementedCases": 665,
+  "differentialVerifiedCases": 294,
+  "differentialVerifiedRuntimeIds": 1080,
   "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -45597,13 +45645,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3657,
-  "referencedJavaRuntimeIds": 3311,
+  "runtimeAssociationCount": 3658,
+  "referencedJavaRuntimeIds": 3312,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 825,
+  "unreferencedJavaRuntimeIds": 824,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 666,
+  "totalCases": 667,
   "totalCapabilities": 120
  }
 }

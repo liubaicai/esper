@@ -57,6 +57,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include infra-named-window-insert-shape and infra-named-window-insert-shape-diff")
 		fmt.Fprintln(stderr, "runner modes include view-time-win and view-time-win-diff")
 		fmt.Fprintln(stderr, "runner modes include view-first-time and view-first-time-diff")
+		fmt.Fprintln(stderr, "runner modes include view-length-win-property-detail and view-length-win-property-detail-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-named-window-final-views and infra-named-window-final-views-diff")
 		flags.PrintDefaults()
 	}
@@ -3512,6 +3513,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNwTableFafJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNwTableFafJoinJavaSources),
 				splitMetadata(*javaExecutions, infraNwTableFafJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "view-length-win-property-detail" || *mode == "view-length-win-property-detail-diff" {
+		trace, err := runViewLengthWinPropertyDetailScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-length-win-property-detail-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewLengthWinPropertyDetailJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewLengthWinPropertyDetailJavaSources),
+				splitMetadata(*javaExecutions, viewLengthWinPropertyDetailJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
