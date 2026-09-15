@@ -1,0 +1,143 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-querytype-local-group-closure",
+ "description": "ResultSetQueryTypeLocalGroupBy ordinals 22/25 (file closure): grouped on-select over a named window with a statement-wide group_by:() sum, and ungrouped additional aggregates (countever/concatstring/sc/leaving/rate/nth) over local group keys.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java",
+ "javaRuntimes": [
+  "java-runtime-efa4ac181b956105b4bb",
+  "java-runtime-27dff810bb25f959acbc"
+ ],
+ "javaNames": [
+  "ResultSetLocalGroupedOnSelect",
+  "ResultSetLocalUngroupedAggAdditionalAndPlugin"
+ ],
+ "javaStaticIds": [
+  "java-13f0da7834ee65870fb0"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "local-group-on-select",
+   "ordinal": 22,
+   "runtimeId": "java-runtime-efa4ac181b956105b4bb",
+   "executionName": "ResultSetLocalGroupedOnSelect",
+   "observation": "listener",
+   "iteratorSnapshots": 0,
+   "epl": "create window MyWindow#keepall as SupportBean;\ninsert into MyWindow select * from SupportBean;\n@name('s0') on SupportBean_S0 select theString, sum(intPrimitive) as c0, sum(intPrimitive, group_by:()) as c1 from MyWindow group by theString;\n"
+  },
+  {
+   "case": "local-group-agg-additional-plugin",
+   "ordinal": 25,
+   "runtimeId": "java-runtime-27dff810bb25f959acbc",
+   "executionName": "ResultSetLocalUngroupedAggAdditionalAndPlugin",
+   "observation": "listener",
+   "iteratorSnapshots": 0,
+   "epl": "@name('s0') select intPrimitive, countever(*, intPrimitive>0, group_by:(theString)) as c0, countever(*, intPrimitive>0, group_by:()) as c1, countever(*, group_by:(theString)) as c2, countever(*, group_by:()) as c3, concatstring(Integer.toString(intPrimitive), group_by:(theString)) as c4, concatstring(Integer.toString(intPrimitive), group_by:()) as c5, sc(intPrimitive, group_by:(theString)) as c6, sc(intPrimitive, group_by:()) as c7, leaving(group_by:(theString)) as c8, leaving(group_by:()) as c9, rate(3, group_by:(theString)) as c10, rate(3, group_by:()) as c11, nth(intPrimitive, 1, group_by:(theString)) as c12, nth(intPrimitive, 1, group_by:()) as c13 from SupportBean as sb\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "local-group-on-select"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 30
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 40
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 50
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 60
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "local-group-agg-additional-plugin"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": -1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 30
+   }
+  }
+ ]
+}

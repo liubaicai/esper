@@ -5033,11 +5033,11 @@ func (e *Environment) validateAggregate(definition *aggregateDefinition) error {
 	if definition.grouping != aggregateGroupingPlain {
 		for _, selection := range definition.selections {
 			if expressionTreeContainsLocalGroup(selection.Expr) {
-				return NewError(ErrorInvalidRule, "dimensional grouping cannot be combined with local group-by aggregate parameters")
+				return NewError(ErrorInvalidRule, "Roll-up and group-by parameters cannot be combined")
 			}
 		}
 		if expressionTreeContainsLocalGroup(definition.having) {
-			return NewError(ErrorInvalidRule, "dimensional grouping cannot be combined with local group-by aggregate parameters")
+			return NewError(ErrorInvalidRule, "Roll-up and group-by parameters cannot be combined")
 		}
 	}
 	for _, key := range definition.groupBy {

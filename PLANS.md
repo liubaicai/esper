@@ -612,6 +612,113 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.418 ('local-group-closure').
+
+- Unit: `ResultSetQueryTypeLocalGroupBy.java` ordinals 15 `ResultSetLocalPlanning`,
+      16 `ResultSetLocalInvalid`, 22 `ResultSetLocalGroupedOnSelect` and 25
+      `ResultSetLocalUngroupedAggAdditionalAndPlugin` — the LAST four uncovered executions of the
+      file (capability `resultset.aggregate-local-group` remaining list), closing it completely.
+      Planning/Invalid are compile/plan-surface executions (assertNoPlan hooks; tryInvalidCompile
+      exact messages across table/into-table/match-recognize/subquery/rollup/UDF faces);
+      GroupedOnSelect is named-window + on-select over grouped rows with a statement-wide
+      `group_by:()` sum (E1 40/150-style vectors); AggAdditionalAndPlugin replays
+      countever/concatstring/sc(plugin)/leaving/rate/nth with local group keys.
+      Scouts dispatched in parallel (Java contract; Go surface) — contract freezes on return.
+- [x] Java/Go scouts (Java contract + Go surface, parallel Explore agents); CONTRACT FROZEN:
+      - Runtime IDs (inventory): ord15 `java-runtime-2bfd4b56f7d902e336ab` (Planning),
+        ord16 `java-runtime-05aad621b7c43863ff93` (Invalid),
+        ord22 `java-runtime-efa4ac181b956105b4bb` (GroupedOnSelect),
+        ord25 `java-runtime-27dff810bb25f959acbc` (UngroupedAggAdditionalAndPlugin).
+      - ord 15 → **intentionally-different**: compile-time plan-forge introspection via @Hook
+        INTERNAL_AGGLOCALLEVEL (SupportAggLevelPlanHook); no observable event-stream behavior;
+        no Go plan-hook API (precedent: case.expr-filter-optimizable-value-limited-disqualify,
+        roadmap "JVM 内部 query-plan hook 不要求逐项 parity"). Go compile-surface equivalence
+        pinned in-process.
+      - ord 16 → **intentionally-different**: of the 10 Java tryInvalidCompile rejections only
+        the rollup+local-group face exists in Go (plan.go:5036, different wording); the other
+        faces are structurally absent from the typed API (table columns are typed declarations,
+        no named-parameter string parsing, match-recognize measures unvalidated for group_by).
+        Engine test pins the Go rollup rejection; shared-core writer aligns its wording to
+        Java's exact "Roll-up and group-by parameters cannot be combined " for future parity.
+      - ord 22 → **differential-verified target**: GAP = plain grouped on-select over a named
+        window does not exist (only the rollup variant, which would emit extra overall-level
+        rows). Shared core adds a plain grouped on-select face. CRITICAL SEMANTIC: Java's
+        `sum(intPrimitive, group_by:())` inside the grouped on-select is STATEMENT-WIDE over all
+        taken rows (c1=150 = sum of all five events, identical on every group row) — the zero-key
+        LocalGroupBy scope must bind the trigger's full taken-row set, NOT the current group's
+        rows. Vectors: {E1,40,150},{E2,70,150},{E3,40,150} then E1/60 → {E1,100,210},{E2,70,210},
+        {E3,40,210} (any-order; oracle renders canonical theString order like 4.410).
+      - ord 25 → **differential-verified target**: all surfaces exist —
+        FilterAggregate(CountEver, pred)/Leaving/Rate/Nth + LocalGroupBy precedents
+        (resultset_aggregate_filter_named_parameter.go), concatstring as a stateful
+        PluginAggregate (space-joined non-null strings), sc() via the
+        AggregateMultiMethod/PluginAggregateMultiRef precedent
+        (internal/esper/aggregate_multi_plugin_test.go:88). Java vectors: 4 deliveries, c0..c13
+        with c6/c7 = insertion-ordered scalar collections ([10]/[10,20]/[10,20,-1]/[10,20,-1,30]
+        statement-wide; per-theString groups c6).
+      - Chain: new `resultset-querytype-local-group-closure` (2 differential cases: on-select +
+        agg-additional-plugin); ords 15/16 registered as two intentionally-different case
+        entries (no trace, like case.event-json-adapter-invalid).
+- [x] Scenario + runner wiring + test family: `testdata/parity/resultset-querytype-local-group-closure.json`
+      (2 cases / 13 steps) + runner `internal/app/parity/resultset_querytype_local_group_closure.go`
+      + the three `run.go` wiring points + the six-test family in `run_test.go` (15 trace mutations
+      and 15 raw-scenario mutations, all rejected). Loader hardening found during mutation testing:
+      payload objects are now strict-field validated (extra keys rejected), mirroring the
+      row-remove loader.
+- [x] Java oracle + run script by the parity-asset writer (agent asset-writer; only its two
+      authorized files touched) and the authoritative trace regenerated: 6 records, both
+      executions' vectors byte-matched the Java asserts (asset writer validated with a
+      failure-retaining listener harness before sign-off). Differential
+      `-mode resultset-querytype-local-group-closure-diff` reports status `passing` / 0
+      differences across 6 records and 2 runtime IDs; evidence + Go trace checked in.
+- [x] Shared core (core-writer agent, agent-9364690bf2a74037): new public API
+      `TriggerStream.SelectFromNamedWindowGroupBy(window, predicate, keys, selections...)`
+      (trigger.go; plain grouped on-select, detail level only — rollup behavior untouched);
+      statement-wide `group_by:()` scope inside grouped on-select via `AllGroup: matched...`
+      binding in `groupedSelectNamedWindowResult` (zero-key LocalGroupBy evaluates over ALL taken
+      rows — c1=150/210 — while plain aggregates stay per-group); rollup+LocalGroupBy now rejected
+      at validation with Java's exact sentence "Roll-up and group-by parameters cannot be combined"
+      (trigger.go on-select form + plan.go:5036/5040 wording aligned); engine tests
+      `TestOnSelectGroupedNamedWindow` + `TestRollupLocalGroupRejected`. Facade needed no
+      regeneration (TriggerStream is a type alias). Full esper suite + all-chain evidence replay
+      green after the core change.
+      Runner-side representation discovery: the runtime's plugin-state replay is DELTA-based
+      (Leave over previous scope, Enter over the new scope), so sc()/concatstring mirrors use
+      per-column plugin instances with symmetric Leave (the unbounded stream never retires
+      events, preserving the Java ever-collection observable); sharing one plugin node across
+      differently-scoped LocalGroupBy wrappers corrupts state (caught by the first replay).
+- [x] Manifest/roadmap/CHANGELOG facts: new DV case `case.resultset-querytype-local-group-closure`
+      (ordinals 22/25) + two intentionally-different cases `...-planning` (ord 15, plan-hook
+      introspection, no Go face by design) and `...-invalid` (ord 16, one Go face with Java-exact
+      wording pinned, nine faces structurally absent from the typed API); capability
+      `resultset.aggregate-local-group` remaining EMPTIED (all four prior remaining items closed),
+      goRefs extended, dvids extended; mappings added. Summary counters recomputed: 666 cases /
+      664 implemented / 290 DV cases / 27 intentionally-different / 1057 DV runtime IDs / 3655
+      associations (referenced 3309, unreferenced 827 — three of the four runtime IDs were already
+      associated by the legacy umbrella case; only the planning ID was new). This closes
+      ResultSetQueryTypeLocalGroupBy.java completely: 28 executions covered (17 differential
+      cases' runtimes DV + the two new DV runtimes + planning/invalid intentionally-different +
+      prior engine-level parity tests).
+- [x] **Independent parity review COMPLETE: OVERALL PASS, 0 P0/P1, 1 P2 observation, 1 P3.**
+      The reviewer (fresh read-only agent, task agent-282bafcc6791423c) verified areas A-F,
+      re-derived both executions' vectors from the Java source, confirmed the engine change
+      semantics (detail-level-only condition, AllGroup statement-wide binding, Java-exact
+      rejection sentence — noting Java's harness trailing-space expectation at :198 is a
+      Java-side quirk and the engine sentence is the correct alignment target), re-ran the
+      differential (passing / 0 differences) and regenerated the Java trace
+      (DiffTraces-level identity), ran the full test family (6 tests / 30 mutation subtests)
+      and the engine tests, and recomputed every manifest counter from content.
+      - P2 recorded (not a defect in the pinned trace): the typed plugin-mirror Leave removes
+        one matching entry per call to satisfy the delta replay protocol; a FUTURE scenario
+        pinning a retiring data window over sc()/concatstring() must first verify the strict
+        ever (leave no-op) accessor semantics. Observation added to the case notes.
+      - P3 (no action): Java's trailing-space expectation quirk; Go aligns to the engine
+        sentence.
+- [x] Final gates GREEN: `make check` exit 0 (gofmt clean, vet green, full test suite green),
+      `git diff --check` clean.
+- [ ] Semantic commit and push to `master` (Git owns identity; no hash write-back).
+
+## Current work unit
 Active: Draft 4.417 ('querytype-having-join').
 
 - Unit: `ResultSetQueryTypeHaving.java` ordinals 3 `ResultSetQueryTypeStatementJoin`

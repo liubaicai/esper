@@ -317,7 +317,10 @@ type triggerDefinition struct {
 	contextPartitionKey string
 	// groupByKeys/groupByRollup carry the grouped on-select form: the
 	// trigger evaluates the named-window snapshot once per rollup level and
-	// emits one row per first-seen group (SelectFromNamedWindowRollup).
+	// emits one row per first-seen group (SelectFromNamedWindowRollup). A
+	// definition with groupByKeys but without groupByRollup is the plain
+	// grouped on-select (SelectFromNamedWindowGroupBy) and emits only the
+	// detail-level rows.
 	groupByKeys   []Expr
 	groupByRollup bool
 }
@@ -552,6 +555,19 @@ func (s TriggerStream[T]) SelectFromNamedWindowRollup(window string, predicate E
 	query := s.namedWindowTrigger(window, triggerSelectTable, predicate, nil, selections)
 	query.definition.groupByKeys = append([]Expr(nil), keys...)
 	query.definition.groupByRollup = true
+	return query
+}
+
+// SelectFromNamedWindowGroupBy reads matching named-window events once per
+// trigger and emits one row per first-seen group — the plain "on <trigger>
+// select ... from <window> group by ..." form. Unlike
+// SelectFromNamedWindowRollup it emits only the detail-level group rows, with
+// no coarser rollup levels and no overall row. A zero-key LocalGroupBy
+// selection aggregates over every taken row of the trigger (statement-wide),
+// while ordinary aggregates stay per group.
+func (s TriggerStream[T]) SelectFromNamedWindowGroupBy(window string, predicate Expression[bool], keys []Expr, selections ...Selection) TriggerQuery {
+	query := s.namedWindowTrigger(window, triggerSelectTable, predicate, nil, selections)
+	query.definition.groupByKeys = append([]Expr(nil), keys...)
 	return query
 }
 
@@ -1425,6 +1441,15 @@ func (e *Environment) validateNamedWindowTrigger(definition *triggerDefinition) 
 		// Grouped on-select binds plain field expressions to the named
 		// window schema (the queried side), while target-scoped expressions
 		// keep resolving against the trigger input.
+		if definition.groupByRollup {
+			// Java: AggregationServiceFactoryFactory rejects local group-by
+			// parameters under dimensional (rollup) grouping.
+			for _, selection := range definition.selections {
+				if expressionTreeContainsLocalGroup(selection.Expr) {
+					return NewError(ErrorInvalidRule, "Roll-up and group-by parameters cannot be combined")
+				}
+			}
+		}
 		windowInput := &streamNode{kind: streamNamedWindow, moduleName: definition.moduleName, sourceName: definition.table}
 		bindable := func(expression Expr) error {
 			inputErr := e.validateExprFields(definition.input, expression)
@@ -2022,13 +2047,21 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 
 // groupedSelectNamedWindowResult evaluates the grouped on-select form over
 // the matched named-window snapshot: one row per first-seen group per rollup
-// level, detail level first and the overall level last. Group keys resolve
-// through the groupingValues overrides, so plain Field projections read the
-// group's key value at present levels and null at coarser levels — the same
-// contract the live aggregate pipeline implements via aggregateGroupContext.
+// level, detail level first and the overall level last. A plain grouped
+// definition (groupByKeys without groupByRollup) emits only the detail level,
+// one row per group. Group keys resolve through the groupingValues overrides,
+// so plain Field projections read the group's key value at present levels and
+// null at coarser levels — the same contract the live aggregate pipeline
+// implements via aggregateGroupContext.
 func groupedSelectNamedWindowResult(definition *triggerDefinition, engine *Engine, trigger Event, now time.Time, variables map[string]Value, matched []Event, resultSchema Schema, result ResultBatch) ResultBatch {
 	keys := definition.groupByKeys
 	levels := rollupKeyLevels(len(keys))
+	if !definition.groupByRollup {
+		// Plain grouped on-select: only the detail level — one row per
+		// group, Java's plain "group by" semantics without coarser or
+		// overall rollup levels.
+		levels = levels[:1]
+	}
 	for _, level := range levels {
 		presentKeys := make(map[string]struct{}, len(level))
 		for _, keyIndex := range level {
@@ -2063,8 +2096,12 @@ func groupedSelectNamedWindowResult(definition *triggerDefinition, engine *Engin
 			// The representative row scope serves both expression families:
 			// plain fields read the group key through groupingValues and any
 			// other field from the representative row; aggregate inputs
-			// iterate every group row through groupEventContext.
-			evaluation := EvalContext{Engine: engine, Event: grp.events[0], Group: grp.events, Now: now, Variables: variables, aggregateEvaluation: true}
+			// iterate every group row through groupEventContext. AllGroup
+			// carries the statement-level scope of every taken row so a
+			// zero-key LocalGroupBy aggregates statement-wide (Java's
+			// group_by:() over all taken rows) while ordinary aggregates stay
+			// bound to the current group through Group.
+			evaluation := EvalContext{Engine: engine, Event: grp.events[0], Group: grp.events, AllGroup: append([]Event(nil), matched...), Now: now, Variables: variables, aggregateEvaluation: true}
 			evaluation.groupingValues = make(map[string]Value, len(keys))
 			evaluation.groupingPresent = make(map[string]bool, len(keys))
 			for keyIndex, keyExpr := range keys {

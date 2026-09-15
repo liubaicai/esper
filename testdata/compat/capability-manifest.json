@@ -970,21 +970,22 @@
     "internal/app/parity/resultset_querytype_local_group_keys.go",
     "internal/app/parity/resultset_querytype_local_group_solution_pattern.go",
     "internal/esper/value.go",
-    "internal/app/parity/run_test.go"
+    "internal/app/parity/run_test.go",
+    "internal/app/parity/resultset_querytype_local_group_closure.go",
+    "internal/esper/trigger_on_select_grouped_test.go"
    ],
    "phase": 3,
    "status": "implemented",
-   "remaining": [
-    "plan-inspection hook and invalid-rule diagnostics",
-    "grouped on-select surface and plugin aggregates"
-   ],
+   "remaining": [],
    "verification": [
     "inventoried",
     "implemented",
     "differential-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-87b3bcfdf164bc939fe5"
+    "java-runtime-87b3bcfdf164bc939fe5",
+    "java-runtime-efa4ac181b956105b4bb",
+    "java-runtime-27dff810bb25f959acbc"
    ]
   },
   {
@@ -42406,6 +42407,103 @@
     "intentionally-different"
    ],
    "difference": "Compile/deploy-only executions with zero output rows: Java asserts EPCompileException and deploy-precondition message texts tied to EPL text (groupwin child views, missing view, unknown window, duplicate create, consumer data window, on-demand versus continuous query phase split, nested property resolution); the typed Go builder rejects the expressible subset at Build or registration boundaries classified through ErrorCode, asserted in-process by TestInfraNWViewsInvalidParity. No observable successful-query behavior exists to compare."
+  },
+  {
+   "id": "case.resultset-querytype-local-group-closure",
+   "javaRuntimeIds": [
+    "java-runtime-efa4ac181b956105b4bb",
+    "java-runtime-27dff810bb25f959acbc"
+   ],
+   "javaNames": [
+    "ResultSetLocalGroupedOnSelect",
+    "ResultSetLocalUngroupedAggAdditionalAndPlugin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupClosureDiffWritesPassingEvidence",
+    "internal/esper/trigger_on_select_grouped_test.go:TestOnSelectGroupedNamedWindow"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "local-group",
+    "named-window",
+    "on-select",
+    "plugin-aggregate",
+    "countever",
+    "leaving",
+    "rate",
+    "nth",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-local-group-closure.json",
+    "testdata/parity/resultset-querytype-local-group-closure.trace.json",
+    "testdata/parity/resultset-querytype-local-group-closure.evidence.json"
+   ],
+   "notes": [
+    "ResultSetQueryTypeLocalGroupBy ordinals 22/25 close the file. Ordinal 22: keep-all named window fed by insert-into, observed by a plain grouped on-select; sum(intPrimitive, group_by:()) is statement-wide over all taken rows (150 then 210 on every group row) via the trigger AllGroup binding added in 4.418. Ordinal 25: ungrouped row-per-event aggregate with countever(*, filter)/countever(*) and leaving/rate/nth under per-key and statement-wide local groups; c10/c11 rate(3) stays null at engine time zero on both sides.",
+    "Registered representation choices: concatstring and sc() are mirrored as stateful typed plugin aggregates (the Java suite registers them as configuration plug-ins; sc's multi-function accessor is an insertion-ordered ever scalar collection reproduced through the same replay-protocol state shape); leaving() reads the row leaving flag through the typed plugin surface. Grouped on-select deliveries render canonical theString order (Java assertion is any-order).",
+    "Recorded observation (4.418 review): the typed plugin-mirror state implements Leave as one matching-entry removal per call to satisfy the runtime's delta replay protocol. The pinned unbounded stream never retires events, so the observable is the Java ever-collection; a future scenario pinning a retiring data window over sc()/concatstring() should first verify the strict ever (leave no-op) accessor semantics against the mirror."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-efa4ac181b956105b4bb",
+    "java-runtime-27dff810bb25f959acbc"
+   ]
+  },
+  {
+   "id": "case.resultset-querytype-local-group-planning",
+   "javaRuntimeIds": [
+    "java-runtime-2bfd4b56f7d902e336ab"
+   ],
+   "javaNames": [
+    "ResultSetLocalPlanning"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "status": "intentionally-different",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "difference": "Compile-time plan-forge introspection only: the execution compiles four statements (env.compile, no deploy, no events) under @Hook(HookType.INTERNAL_AGGLOCALLEVEL) and asserts the AggregationLocalGroupByPlanForge shape - no plan hook fired when every local group_by parameter is covered by the statement group-by, column/level counts for shared plans, and one shared access-state factory. Go has no plan-hook API and the typed surface pins local-group plan shapes through engine-level behavior instead; the four equivalents build successfully (pinned by the local-group behavioral chains). No observable event-stream behavior exists to compare.",
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupClosureRuntimeIDMappingMatchesScenario"
+   ],
+   "notes": "Registered alongside the closure unit; mirrors the expr-filter-optimizable plan-hook approved-difference precedent."
+  },
+  {
+   "id": "case.resultset-querytype-local-group-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-05aad621b7c43863ff93"
+   ],
+   "javaNames": [
+    "ResultSetLocalInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "status": "intentionally-different",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "difference": "Compile-rejection diagnostics. Of the ten Java tryInvalidCompile probes, Go exposes one face directly: rollup combined with local group-by parameters is rejected with Java's exact sentence 'Roll-up and group-by parameters cannot be combined' (pinned by TestRollupLocalGroupRejected, wording aligned in 4.418). The remaining faces are structurally absent from the typed API by construction: create-table columns are typed declarations (no free-form column expression to reject), into-table classification has no local-group shape, match-recognize measures accept no group_by parameters, subqueries cannot express their own local group-by through the typed builders, and named parameters are first-class wrapper arguments rather than parsed strings (no did-you-mean surface). No observable successful-query behavior exists to compare.",
+   "goTests": [
+    "internal/esper/trigger_on_select_grouped_test.go:TestRollupLocalGroupRejected"
+   ],
+   "notes": "Registered alongside the closure unit; the into-table/match-recognize rejection surfaces remain candidates if those subdomains gain the corresponding typed faces."
   }
  ],
  "mappings": [
@@ -45396,14 +45494,26 @@
   {
    "capabilityId": "event.json-typed",
    "caseId": "case.event-json-adapter-invalid"
+  },
+  {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-closure"
+  },
+  {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-planning"
+  },
+  {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 663,
-  "implementedCases": 661,
-  "differentialVerifiedCases": 289,
-  "differentialVerifiedRuntimeIds": 1055,
-  "intentionallyDifferentCases": 25,
+  "inventoriedCases": 666,
+  "implementedCases": 664,
+  "differentialVerifiedCases": 290,
+  "differentialVerifiedRuntimeIds": 1057,
+  "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
@@ -45412,13 +45522,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3651,
-  "referencedJavaRuntimeIds": 3308,
+  "runtimeAssociationCount": 3655,
+  "referencedJavaRuntimeIds": 3309,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 828,
+  "unreferencedJavaRuntimeIds": 827,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 663,
+  "totalCases": 666,
   "totalCapabilities": 120
  }
 }
