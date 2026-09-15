@@ -4816,7 +4816,8 @@
     "internal/app/parity/resultset_orderby_join.go",
     "internal/app/parity/resultset_orderby_multi_delivery.go",
     "internal/app/parity/resultset_orderby_self_join.go",
-    "internal/app/parity/orderby_rowperevent_agg.go"
+    "internal/app/parity/orderby_rowperevent_agg.go",
+    "internal/app/parity/orderby_rowperevent_agg_join.go"
    ],
    "phase": 2,
    "status": "differential-verified",
@@ -39837,6 +39838,79 @@
     "Engine fix (shared core): Go had no nested `max(agg)` - only Avg implemented Esper's historical-prefix nested-aggregate evaluation, while Max/Min routed through `aggregateExtreme`, which clears `Group` per event, so the inner aggregate saw no events and returned null. `aggregateExtreme` now mirrors the nested-Avg branch (iterate EverGroup when the inner expression is an aggregate and evaluate it over each cumulative prefix, keeping the extreme). Pinned by `TestNestedMaxOfSumHistoricalPrefix`, which fails with `<nil>` on the overlay-stripped version. Ordinal 3's order key `volume*sum(price)` mixes the event's own field with the running sum; the sends all carry volume 0L so the key collapses to 0.0 and `symbol` decides."
    ]
   },
+  {
+   "id": "case.resultset-orderby-rowperevent-agg-join",
+   "javaRuntimeIds": [
+    "java-runtime-3864ed6701fd9371d2d6",
+    "java-runtime-eb2d5eb23ce35ef9d935",
+    "java-runtime-73a76f426926d18792f2"
+   ],
+   "javaNames": [
+    "ResultSetRowPerEventJoinOrderFunction",
+    "ResultSetRowPerEventJoinMax",
+    "ResultSetAggHaving"
+   ],
+   "javaStaticIds": [
+    "java-bb2fc1b5fb51cb943021",
+    "java-7c35d3dcefb677a20097",
+    "java-9c135512047209da35dd"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByRowPerEvent.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventAggJoinDirectReplay",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventAggJoinDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventAggJoinDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventAggJoinCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventAggJoinRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventAggJoinRuntimeIDMappingMatchesScenario",
+    "internal/esper/resultset_orderby_rowperevent_parity_test.go:TestNestedMaxOfSumJoinHistoricalPrefix"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "orderby",
+    "aggregate",
+    "row-per-event",
+    "length-window",
+    "join",
+    "having",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/orderby-rowperevent-agg-join.json",
+    "testdata/parity/orderby-rowperevent-agg-join.trace.json",
+    "testdata/parity/orderby-rowperevent-agg-join.go.trace.json",
+    "testdata/parity/orderby-rowperevent-agg-join.evidence.json",
+    "tools/java-oracle/ResultSetOrderByRowPerEventAggJoinScenarioOracle.java",
+    "tools/java-oracle/run-orderby-rowperevent-agg-join.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-3864ed6701fd9371d2d6",
+    "java-runtime-eb2d5eb23ce35ef9d935",
+    "java-runtime-73a76f426926d18792f2"
+   ],
+   "notes": [
+    "ResultSetOrderByRowPerEvent ordinals 2, 9 and 10 replay one deterministic chain (3 Java/Go records, 0 differences, 3 cases / 32 steps, no virtual time) over the join SupportMarketDataBean#length(10) x SupportBeanString#length(100) on symbol=theString: ordinal 2 `select symbol, sum(price) ... output every 6 events order by volume*sum(price), symbol` creates result rows per SBS delivery (CAT x2, IBM x2, CMU x1, KGB x1) and delivers CAT,CAT,CMU,IBM,IBM,KGB with the join-output running sums 11,11,22,19,19,23 (the Java source pins only the symbol sequence; the sum values come from the Java oracle); ordinal 9 `select symbol, max(sum(price)) ... order by symbol` delivers CAT,CAT,CMU,CMU,IBM,IBM with the join-output prefix maximum 11,11,21,21,18,18 pinned by the Java assertions; ordinal 10 `select symbol, sum(price) ... having sum(price) > 0 output every 6 events order by symbol` delivers CAT,CAT,CMU,CMU,IBM,IBM with 11,11,21,21,18,18 pinned by the Java assertions.",
+    "This unit documents that the historical row-collapsing limitation of the ungrouped-join-aggregate path (recorded at resultset_orderby_rowperevent_parity_test.go) no longer applies: the join row-per-event aggregate delivers one row per join pair, and the nested max(sum(price)) plus the plain running sum evaluate per join-output prefix as of each pair's creation, exactly matching Java. Pinned at engine level by `TestNestedMaxOfSumJoinHistoricalPrefix` (deliveries [CAT 11,11], [IBM 18,18], [CMU 21,21]). The engine fix in `aggregateExtreme` (nested extreme) came with Draft 4.414; this unit required no further engine change."
+   ]
+  },
  {
    "id": "case.resultset-output-limit-row-limit-context-grouped",
    "javaRuntimeIds": [
@@ -45027,6 +45101,10 @@
    "caseId": "case.resultset-orderby-rowperevent-agg"
   },
   {
+   "capabilityId": "resultset.orderby-simple",
+   "caseId": "case.resultset-orderby-rowperevent-agg-join"
+  },
+  {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit"
   },
@@ -45240,10 +45318,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 661,
-  "implementedCases": 659,
-  "differentialVerifiedCases": 287,
-  "differentialVerifiedRuntimeIds": 1048,
+  "inventoriedCases": 662,
+  "implementedCases": 660,
+  "differentialVerifiedCases": 288,
+  "differentialVerifiedRuntimeIds": 1051,
   "intentionallyDifferentCases": 25,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -45253,13 +45331,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3644,
-  "referencedJavaRuntimeIds": 3301,
+  "runtimeAssociationCount": 3647,
+  "referencedJavaRuntimeIds": 3304,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 835,
+  "unreferencedJavaRuntimeIds": 832,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 661,
+  "totalCases": 662,
   "totalCapabilities": 120
  }
 }

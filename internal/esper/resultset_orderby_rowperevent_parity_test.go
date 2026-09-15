@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"sort"
 	"testing"
 )
@@ -334,7 +335,10 @@ func TestResultSetRowPerEventSumHavingParity(t *testing.T) {
 // which collapses the join result to 3 rows (one per symbol) instead of the
 // expected 6 row-per-event rows. This is a known limitation of the current
 // ungrouped-join-aggregate path. The test verifies join + output + order-by
-// semantics without the aggregate to avoid this issue.
+// semantics without the aggregate to avoid this issue. See
+// TestNestedMaxOfSumJoinHistoricalPrefix (below) for the probe that documents
+// the ungrouped join aggregate delivering one row per pair once the nested
+// aggregate is expressed through Max(Sum(...)).
 func TestResultSetRowPerEventJoinParity(t *testing.T) {
 	engine, env := obrNewEngine(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -501,6 +505,99 @@ func TestNestedMaxOfSumHistoricalPrefix(t *testing.T) {
 		}
 		if got := latest.Get("maxSum").Any(); got != expected[index] {
 			t.Fatalf("nested max(sum) row %d = %#v, want %v", index, got, expected[index])
+		}
+	}
+}
+
+// TestNestedMaxOfSumJoinHistoricalPrefix pins the nested max(sum(price)) on a
+// JOIN row-per-event stream (ResultSetOrderByRowPerEvent's
+// ResultSetRowPerEventJoinMax shape): each join pair delivers one row whose
+// value is the join-output prefix maximum as of that pair's creation, so the
+// deliveries arrive per SupportBeanString with the cumulative sums 11, 18, 21.
+// This also documents that the historical row-collapsing limitation of the
+// ungrouped-join-aggregate path no longer applies to this shape.
+func TestNestedMaxOfSumJoinHistoricalPrefix(t *testing.T) {
+	type joinMDB struct {
+		Symbol string  `esper:"symbol"`
+		Price  float64 `esper:"price"`
+	}
+	type joinSBS struct {
+		TheString string `esper:"theString"`
+	}
+	env := NewEnvironment()
+	if _, err := RegisterStruct[joinMDB](env, "JoinMDB"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RegisterStruct[joinSBS](env, "JoinSBS"); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(Join(
+		From[joinMDB](env, "JoinMDB").Window(LengthWindow(10)),
+		From[joinSBS](env, "JoinSBS").Window(LengthWindow(100)),
+		OnEqual(JoinField[string](0, "symbol"), JoinField[string](1, "theString")),
+	).Aggregate(
+		Alias("symbol", JoinField[string](0, "symbol")),
+		Alias("maxSum", Max[float64](Sum[float64](JoinField[float64](0, "price")))),
+	).Query(StatementName("nested-max-join")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deliveries := make([][]float64, 0, 3)
+	symbols := make([][]string, 0, 3)
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		var values []float64
+		var syms []string
+		for _, result := range batch.New {
+			if row, ok := result.Row(); ok {
+				if value, ok := row.Get("maxSum").Any().(float64); ok {
+					values = append(values, value)
+				}
+				if sym, ok := row.Get("symbol").Any().(string); ok {
+					syms = append(syms, sym)
+				}
+			}
+		}
+		deliveries = append(deliveries, values)
+		symbols = append(symbols, syms)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	sendMDB := func(symbol string, price float64) {
+		if err := engine.SendEvent(context.Background(), joinMDB{Symbol: symbol, Price: price}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendSBS := func(v string) {
+		if err := engine.SendEvent(context.Background(), joinSBS{TheString: v}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendMDB("IBM", 3)
+	sendMDB("IBM", 4)
+	sendMDB("CMU", 1)
+	sendMDB("CMU", 2)
+	sendMDB("CAT", 5)
+	sendMDB("CAT", 6)
+	sendSBS("CAT")
+	sendSBS("IBM")
+	sendSBS("CMU")
+	expectedValues := [][]float64{{11, 11}, {18, 18}, {21, 21}}
+	expectedSymbols := [][]string{{"CAT", "CAT"}, {"IBM", "IBM"}, {"CMU", "CMU"}}
+	if len(deliveries) != len(expectedValues) {
+		t.Fatalf("join deliveries = %d (%v), want %d", len(deliveries), deliveries, len(expectedValues))
+	}
+	for index, want := range expectedValues {
+		if !reflect.DeepEqual(deliveries[index], want) {
+			t.Fatalf("join delivery %d values = %#v, want %#v", index, deliveries[index], want)
+		}
+		if !reflect.DeepEqual(symbols[index], expectedSymbols[index]) {
+			t.Fatalf("join delivery %d symbols = %#v, want %#v", index, symbols[index], expectedSymbols[index])
 		}
 	}
 }
