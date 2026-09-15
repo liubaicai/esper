@@ -1,0 +1,1182 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-890001d4334d5de6c50a",
+    "java-runtime-a2b77511196632040e51",
+    "java-runtime-b6a938fde543383eb73c",
+    "java-runtime-81855e4095ee0ca7cadd",
+    "java-runtime-e1253cd2c17a180c243a"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+  ],
+  "javaExecutions": [
+    "ResultSetLocalUngroupedSameKey",
+    "ResultSetLocalGroupedSameKey",
+    "ResultSetLocalEnumMethods",
+    "ResultSetLocalMultikeyWArray",
+    "ResultSetLocalUngroupedOnlyWGroupBy"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-keys",
+    "steps": [
+      {
+        "op": "case",
+        "case": "ungrouped-same-key"
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventOne",
+        "payload": [
+          "E1",
+          "E1",
+          10
+        ]
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventOne",
+        "payload": [
+          "E1",
+          "E2",
+          11
+        ]
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventOne",
+        "payload": [
+          "E2",
+          "E1",
+          12
+        ]
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventOne",
+        "payload": [
+          "E3",
+          "E1",
+          13
+        ]
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventOne",
+        "payload": [
+          "E3",
+          "E3",
+          14
+        ]
+      },
+      {
+        "op": "case",
+        "case": "grouped-same-key"
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventTwo",
+        "payload": [
+          "E1",
+          "E1",
+          "E1",
+          10
+        ]
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventTwo",
+        "payload": [
+          "E1",
+          "E1",
+          "E2",
+          11
+        ]
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventTwo",
+        "payload": [
+          "E1",
+          "E2",
+          "E1",
+          12
+        ]
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventTwo",
+        "payload": [
+          "X",
+          "E1",
+          "E1",
+          13
+        ]
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventTwo",
+        "payload": [
+          "E1",
+          "E2",
+          "E3",
+          14
+        ]
+      },
+      {
+        "op": "case",
+        "case": "enum-methods-grouped"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "multikey-w-array"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportThreeArrayEvent",
+        "payload": {
+          "id": "E1",
+          "value": 10,
+          "intArray": [
+            1
+          ],
+          "longArray": [
+            10
+          ],
+          "doubleArray": [
+            100
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportThreeArrayEvent",
+        "payload": {
+          "id": "E2",
+          "value": 11,
+          "intArray": [
+            2
+          ],
+          "longArray": [
+            20
+          ],
+          "doubleArray": [
+            200
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportThreeArrayEvent",
+        "payload": {
+          "id": "E3",
+          "value": 12,
+          "intArray": [
+            3
+          ],
+          "longArray": [
+            10
+          ],
+          "doubleArray": [
+            300
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportThreeArrayEvent",
+        "payload": {
+          "id": "E4",
+          "value": 13,
+          "intArray": [
+            1
+          ],
+          "longArray": [
+            20
+          ],
+          "doubleArray": [
+            200
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportThreeArrayEvent",
+        "payload": {
+          "id": "E5",
+          "value": 14,
+          "intArray": [
+            1
+          ],
+          "longArray": [
+            10
+          ],
+          "doubleArray": [
+            100
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportThreeArrayEvent",
+        "payload": {
+          "id": "E6",
+          "value": 15,
+          "intArray": [
+            3
+          ],
+          "longArray": [
+            20
+          ],
+          "doubleArray": [
+            300
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportThreeArrayEvent",
+        "payload": {
+          "id": "E7",
+          "value": 16,
+          "intArray": [
+            2
+          ],
+          "longArray": [
+            20
+          ],
+          "doubleArray": [
+            200
+          ]
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-only-w-group-by"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 0
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-keys",
+    "records": [
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 12,
+              "c1": 22
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 13,
+              "c1": 35
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 27,
+              "c1": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 21,
+              "c2": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 33,
+              "c1": 12,
+              "c2": 22
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 13,
+              "c1": 34,
+              "c2": 35
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 47,
+              "c1": 26,
+              "c2": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "enum-methods-grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c2": 10,
+              "c3": 10,
+              "c4": 10,
+              "c5": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 10,
+              "c3": 10,
+              "c4": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11,
+              "c1": 11,
+              "c2": 11,
+              "c3": 11,
+              "c4": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 12,
+              "c1": 22,
+              "c2": 12,
+              "c3": 12,
+              "c4": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 23,
+              "c1": 24,
+              "c2": 24,
+              "c3": 13,
+              "c4": 46
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 37,
+              "c1": 36,
+              "c2": 24,
+              "c3": 24,
+              "c4": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 27,
+              "c1": 39,
+              "c2": 27,
+              "c3": 15,
+              "c4": 75
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 27,
+              "c1": 55,
+              "c2": 40,
+              "c3": 27,
+              "c4": 91
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-only-w-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-only-w-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-keys",
+    "records": [
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 12,
+              "c1": 22
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 13,
+              "c1": 35
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 27,
+              "c1": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 21,
+              "c2": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 33,
+              "c1": 12,
+              "c2": 22
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 13,
+              "c1": 34,
+              "c2": 35
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-same-key",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 47,
+              "c1": 26,
+              "c2": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "enum-methods-grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c1": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "c2": 10,
+              "c3": 10,
+              "c4": 10,
+              "c5": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 10,
+              "c3": 10,
+              "c4": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11,
+              "c1": 11,
+              "c2": 11,
+              "c3": 11,
+              "c4": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 12,
+              "c1": 22,
+              "c2": 12,
+              "c3": 12,
+              "c4": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 23,
+              "c1": 24,
+              "c2": 24,
+              "c3": 13,
+              "c4": 46
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 37,
+              "c1": 36,
+              "c2": 24,
+              "c3": 24,
+              "c4": 60
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 27,
+              "c1": 39,
+              "c2": 27,
+              "c3": 15,
+              "c4": 75
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-w-array",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 27,
+              "c1": 55,
+              "c2": 40,
+              "c3": 27,
+              "c4": 91
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-only-w-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-only-w-group-by",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

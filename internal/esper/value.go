@@ -3,6 +3,7 @@ package esper
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 )
 
@@ -300,6 +301,102 @@ func numericValue(v Value) (float64, bool) {
 	default:
 		return 0, false
 	}
+}
+
+// javaDoubleToLongBits mirrors Java's Double.doubleToLongBits: every NaN is
+// canonicalized to the single quiet-NaN pattern (0x7ff8000000000000) before the
+// bits are compared. math.Float64bits returns the RAW pattern, so a NaN with a
+// payload (for example 0.0/0.0, whose bits are 0xfff8000000000000) would
+// otherwise compare unequal to math.NaN() even though Java's key equality
+// treats both as the same key.
+func javaDoubleToLongBits(value float64) uint64 {
+	if math.IsNaN(value) {
+		return javaCanonicalNaNDoubleBits
+	}
+	return math.Float64bits(value)
+}
+
+// javaFloatToIntBits is the float32 counterpart and canonicalizes every NaN to
+// 0x7fc00000, matching Java's Float.floatToIntBits.
+func javaFloatToIntBits(value float32) uint32 {
+	if math.IsNaN(float64(value)) {
+		return javaCanonicalNaNFloatBits
+	}
+	return math.Float32bits(value)
+}
+
+const (
+	javaCanonicalNaNDoubleBits = 0x7ff8000000000000
+	javaCanonicalNaNFloatBits  = 0x7fc00000
+)
+
+// localGroupKeyFloatEqual compares two local-group key values with Esper's
+// floating-point key semantics and reports whether it handled the comparison.
+// Java compares a boxed Double key with Double.equals and a double[] or float[]
+// key component with Arrays.equals, i.e. by doubleToLongBits/floatToIntBits
+// (which canonicalize every NaN payload to a single bit pattern):
+// -0.0 and 0.0 are DIFFERENT keys and NaN equals NaN. Go's == and
+// reflect.DeepEqual invert both of those, so every key value that is or
+// contains a floating-point component is compared here instead. Object-array
+// key components (Java's MultiKeyArrayObject/Arrays.deepEquals) recurse so a
+// nested floating-point leaf keeps the same bit semantics.
+func localGroupKeyFloatEqual(left, right any) (bool, bool) {
+	leftValue := dereferenceValue(left)
+	rightValue := dereferenceValue(right)
+	switch typed := leftValue.(type) {
+	case float64:
+		other, ok := rightValue.(float64)
+		if !ok {
+			return false, true
+		}
+		return javaDoubleToLongBits(typed) == javaDoubleToLongBits(other), true
+	case float32:
+		other, ok := rightValue.(float32)
+		if !ok {
+			return false, true
+		}
+		return javaFloatToIntBits(typed) == javaFloatToIntBits(other), true
+	case []float64:
+		other, ok := rightValue.([]float64)
+		if !ok || len(typed) != len(other) {
+			return false, true
+		}
+		for index := range typed {
+			if javaDoubleToLongBits(typed[index]) != javaDoubleToLongBits(other[index]) {
+				return false, true
+			}
+		}
+		return true, true
+	case []float32:
+		other, ok := rightValue.([]float32)
+		if !ok || len(typed) != len(other) {
+			return false, true
+		}
+		for index := range typed {
+			if javaFloatToIntBits(typed[index]) != javaFloatToIntBits(other[index]) {
+				return false, true
+			}
+		}
+		return true, true
+	case []any:
+		other, ok := rightValue.([]any)
+		if !ok || len(typed) != len(other) {
+			return false, true
+		}
+		for index := range typed {
+			if equal, handled := localGroupKeyFloatEqual(typed[index], other[index]); handled {
+				if !equal {
+					return false, true
+				}
+				continue
+			}
+			if !reflect.DeepEqual(typed[index], other[index]) {
+				return false, true
+			}
+		}
+		return true, true
+	}
+	return false, false
 }
 
 func compareValues(left, right Value) (int, bool) {

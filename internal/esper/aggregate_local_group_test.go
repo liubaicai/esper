@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"math"
 	"reflect"
 	"testing"
 )
@@ -442,5 +443,257 @@ func TestLocalGroupByUncoveredKeyRoutesToRowPerEvent(t *testing.T) {
 	}
 	if got := read(coveredDeployment); !reflect.DeepEqual(got, []int{60}) {
 		t.Fatalf("covered local group key snapshot = %v, want the fully aggregated row [60]", got)
+	}
+}
+
+// localGroupArrayEvent mirrors the Java support bean SupportThreeArrayEvent:
+// three array-typed properties used as local group-by keys.
+type localGroupArrayEvent struct {
+	ID          string    `esper:"id"`
+	Value       int32     `esper:"value"`
+	IntArray    []int32   `esper:"intArray"`
+	LongArray   []int64   `esper:"longArray"`
+	DoubleArray []float64 `esper:"doubleArray"`
+}
+
+// TestLocalGroupByArrayKeyDeepContentEquality pins Esper's array-typed local
+// group-by key semantics: keys compare by deep CONTENT (a distinct array
+// instance with equal content shares the group), each array type keeps its own
+// level, and the multi-key tuple delegates to the same content comparison.
+func TestLocalGroupByArrayKeyDeepContentEquality(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[localGroupArrayEvent](env, "LocalGroupArrayEvent"); err != nil {
+		t.Fatal(err)
+	}
+	value := Field[localGroupArrayEvent, int32]("value")
+	intArray := Field[localGroupArrayEvent, []int32]("intArray")
+	longArray := Field[localGroupArrayEvent, []int64]("longArray")
+	doubleArray := Field[localGroupArrayEvent, []float64]("doubleArray")
+	sum := func(keys ...Expr) AggregateExpression[int32] {
+		return LocalGroupBy[int32](Sum[int32](value), keys...)
+	}
+	plan, err := env.Build(From[localGroupArrayEvent](env, "LocalGroupArrayEvent").Aggregate(
+		Alias("c0", sum(intArray)),
+		Alias("c1", sum(longArray)),
+		Alias("c2", sum(doubleArray)),
+		Alias("c3", sum(intArray, longArray, doubleArray)),
+		Alias("c4", Sum[int32](value)),
+	).Query(StatementName("local-group-array-keys")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var latest Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) > 0 {
+			latest, _ = batch.New[len(batch.New)-1].Row()
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// E4 carries fresh []int32{1} and []int64{20} instances whose CONTENT
+	// matches earlier events, so c0 joins E1/E5 and c1 joins E2/E7; c2 keeps a
+	// separate double[] level and c3 is the three-key tuple.
+	events := []localGroupArrayEvent{
+		{ID: "E1", Value: 10, IntArray: []int32{1}, LongArray: []int64{10}, DoubleArray: []float64{100}},
+		{ID: "E2", Value: 11, IntArray: []int32{2}, LongArray: []int64{20}, DoubleArray: []float64{200}},
+		{ID: "E3", Value: 12, IntArray: []int32{3}, LongArray: []int64{10}, DoubleArray: []float64{300}},
+		{ID: "E4", Value: 13, IntArray: []int32{1}, LongArray: []int64{20}, DoubleArray: []float64{200}},
+		{ID: "E5", Value: 14, IntArray: []int32{1}, LongArray: []int64{10}, DoubleArray: []float64{100}},
+		{ID: "E6", Value: 15, IntArray: []int32{3}, LongArray: []int64{20}, DoubleArray: []float64{300}},
+		{ID: "E7", Value: 16, IntArray: []int32{2}, LongArray: []int64{20}, DoubleArray: []float64{200}},
+	}
+	expected := []struct{ c0, c1, c2, c3, c4 int32 }{
+		{10, 10, 10, 10, 10},
+		{11, 11, 11, 11, 21},
+		{12, 22, 12, 12, 33},
+		{23, 24, 24, 13, 46},
+		{37, 36, 24, 24, 60},
+		{27, 39, 27, 15, 75},
+		{27, 55, 40, 27, 91},
+	}
+	for index, event := range events {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+		got := latest
+		if got.Get("c0").Any() != expected[index].c0 || got.Get("c1").Any() != expected[index].c1 ||
+			got.Get("c2").Any() != expected[index].c2 || got.Get("c3").Any() != expected[index].c3 ||
+			got.Get("c4").Any() != expected[index].c4 {
+			t.Fatalf("array-key local group row %d = %#v, want %#v", index, got.AsMap(), expected[index])
+		}
+	}
+}
+
+// TestEnumMethodsOverLocalGroupAggregate pins the readback of a local group
+// through the window(*)/window(value) accessor methods as windowed by the
+// statement `#keepall` window: firstOf() over an empty key list reads the
+// statement-wide level while a keyed list reads the current event's group, and
+// first(*) projected to a property resolves the earliest event of that level.
+func TestEnumMethodsOverLocalGroupAggregate(t *testing.T) {
+	env, engine := newLocalGroupTest(t)
+	group := Field[localGroupEvent, string]("group")
+	level := Field[localGroupEvent, int]("level")
+	plan, err := env.Build(From[localGroupEvent](env, "LocalGroupEvent").Window(KeepAll()).GroupBy(group, level).Select(
+		Alias("group", group),
+		Alias("level", level),
+		Alias("firstEventGlobal", EnumFirstOf[Event](LocalGroupBy[[]Event](WindowEvents()))),
+		Alias("firstEventKeyed", EnumFirstOf[Event](LocalGroupBy[[]Event](WindowEvents(), group))),
+		Alias("firstValueGlobal", EnumFirstOf[int](LocalGroupBy[[]int](WindowValues[int](level)))),
+		Alias("firstValueKeyed", EnumFirstOf[int](LocalGroupBy[[]int](WindowValues[int](level), group))),
+		Alias("firstLevelGlobal", NestedField[int](LocalGroupBy[Event](FirstEventValue()), "level")),
+		Alias("firstLevelKeyed", NestedField[int](LocalGroupBy[Event](FirstEventValue(), group), "level")),
+	).Query(StatementName("local-group-enum-methods")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var latest Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) > 0 {
+			latest, _ = batch.New[len(batch.New)-1].Row()
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// The third event carries a DIFFERENT level so every column discriminates:
+	// the statement-wide window keeps 10 (the first of [10,20,30]) while the
+	// keyed local group for E2 keeps 30, and the same holds for first(*).
+	events := []localGroupEvent{
+		{ID: "A", Group: "E1", Level: 10, Value: 100},
+		{ID: "B", Group: "E1", Level: 20, Value: 200},
+		{ID: "C", Group: "E2", Level: 30, Value: 300},
+	}
+	expected := []struct {
+		globalID, keyedID string
+		globalValue       int
+		keyedValue        int
+		globalLevel       int
+		keyedLevel        int
+	}{
+		{globalID: "A", keyedID: "A", globalValue: 10, keyedValue: 10, globalLevel: 10, keyedLevel: 10},
+		{globalID: "A", keyedID: "A", globalValue: 10, keyedValue: 10, globalLevel: 10, keyedLevel: 10},
+		{globalID: "A", keyedID: "C", globalValue: 10, keyedValue: 30, globalLevel: 10, keyedLevel: 30},
+	}
+	for index, event := range events {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+		want := expected[index]
+		globalEvent, ok := latest.Get("firstEventGlobal").Any().(Event)
+		if !ok {
+			t.Fatalf("enum-method row %d firstEventGlobal = %#v", index, latest.Get("firstEventGlobal").Any())
+		}
+		keyedEvent, ok := latest.Get("firstEventKeyed").Any().(Event)
+		if !ok {
+			t.Fatalf("enum-method row %d firstEventKeyed = %#v", index, latest.Get("firstEventKeyed").Any())
+		}
+		globalID, _ := globalEvent.Get("id").Any().(string)
+		keyedID, _ := keyedEvent.Get("id").Any().(string)
+		if globalID != want.globalID || keyedID != want.keyedID ||
+			latest.Get("firstValueGlobal").Any() != want.globalValue || latest.Get("firstValueKeyed").Any() != want.keyedValue ||
+			latest.Get("firstLevelGlobal").Any() != want.globalLevel || latest.Get("firstLevelKeyed").Any() != want.keyedLevel {
+			t.Fatalf("enum-method row %d = %#v, want %#v", index, latest.AsMap(), want)
+		}
+	}
+}
+
+type localGroupFloatKeyEvent struct {
+	ID         string    `esper:"id"`
+	Key        float64   `esper:"key"`
+	Array      []float64 `esper:"array"`
+	FloatKey   float32   `esper:"floatKey"`
+	FloatArray []float32 `esper:"floatArray"`
+	ObjectKey  []any     `esper:"objectKey"`
+	Value      int32     `esper:"value"`
+}
+
+// TestLocalGroupKeyFloatBitSemantics pins Esper's floating-point local group
+// key semantics: Java compares a boxed Double/Float key with Double.equals/
+// Float.equals and a double[]/float[]/Object[] key component with
+// Arrays.equals, i.e. by doubleToLongBits/floatToIntBits and
+// doubleToLongBits on the elements. Those canonicalize EVERY NaN payload to a
+// single bit pattern, so two NaNs with different payloads are the same key,
+// while -0.0 and 0.0 are different keys. Go's == and reflect.DeepEqual get both
+// of those backwards.
+func TestLocalGroupKeyFloatBitSemantics(t *testing.T) {
+	env := NewEnvironment()
+	if _, err := RegisterStruct[localGroupFloatKeyEvent](env, "LocalGroupFloatKeyEvent"); err != nil {
+		t.Fatal(err)
+	}
+	key := Field[localGroupFloatKeyEvent, float64]("key")
+	array := Field[localGroupFloatKeyEvent, []float64]("array")
+	floatKey := Field[localGroupFloatKeyEvent, float32]("floatKey")
+	floatArray := Field[localGroupFloatKeyEvent, []float32]("floatArray")
+	objectKey := Field[localGroupFloatKeyEvent, []any]("objectKey")
+	value := Field[localGroupFloatKeyEvent, int32]("value")
+	plan, err := env.Build(From[localGroupFloatKeyEvent](env, "LocalGroupFloatKeyEvent").Aggregate(
+		Alias("scalarSum", LocalGroupBy[int32](Sum[int32](value), key)),
+		Alias("arraySum", LocalGroupBy[int32](Sum[int32](value), array)),
+		Alias("floatScalarSum", LocalGroupBy[int32](Sum[int32](value), floatKey)),
+		Alias("floatArraySum", LocalGroupBy[int32](Sum[int32](value), floatArray)),
+		Alias("objectSum", LocalGroupBy[int32](Sum[int32](value), objectKey)),
+	).Query(StatementName("local-group-float-bits")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var latest Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) > 0 {
+			latest, _ = batch.New[len(batch.New)-1].Row()
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// Two distinct NaN payloads per width: Java's key comparison canonicalizes
+	// both to the same NaN key, so rows 3 and 4 must land in ONE group.
+	nanDouble := math.NaN()
+	nanDoubleOther := math.Float64frombits(0xfff8000000000000)
+	nanFloat := math.Float32frombits(0x7fc00000)
+	nanFloatOther := math.Float32frombits(0x7fc00001)
+	negativeZero := math.Copysign(0, -1)
+	events := []localGroupFloatKeyEvent{
+		{ID: "A", Key: 0, Array: []float64{0}, FloatKey: 0, FloatArray: []float32{0}, ObjectKey: []any{float64(0)}, Value: 1},
+		{ID: "B", Key: negativeZero, Array: []float64{negativeZero}, FloatKey: float32(negativeZero), FloatArray: []float32{float32(negativeZero)}, ObjectKey: []any{negativeZero}, Value: 2},
+		{ID: "C", Key: nanDouble, Array: []float64{nanDouble}, FloatKey: nanFloat, FloatArray: []float32{nanFloat}, ObjectKey: []any{nanDouble}, Value: 4},
+		{ID: "D", Key: nanDoubleOther, Array: []float64{nanDoubleOther}, FloatKey: nanFloatOther, FloatArray: []float32{nanFloatOther}, ObjectKey: []any{nanDoubleOther}, Value: 8},
+	}
+	expected := []struct{ scalar, array, floatScalar, floatArray, object int32 }{
+		{1, 1, 1, 1, 1},      // 0.0 opens a group in every key path
+		{2, 2, 2, 2, 2},      // -0.0 is a distinct key in every key path
+		{4, 4, 4, 4, 4},      // NaN opens a group in every key path
+		{12, 12, 12, 12, 12}, // a NaN with another payload is the SAME key
+	}
+	for index, event := range events {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+		columns := map[string]int32{
+			"scalarSum":      expected[index].scalar,
+			"arraySum":       expected[index].array,
+			"floatScalarSum": expected[index].floatScalar,
+			"floatArraySum":  expected[index].floatArray,
+			"objectSum":      expected[index].object,
+		}
+		for name, want := range columns {
+			if got := latest.Get(name).Any(); got != want {
+				t.Fatalf("float key row %d %s = %#v, want %d", index, name, got, want)
+			}
+		}
 	}
 }

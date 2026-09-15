@@ -3554,6 +3554,14 @@ func localGroupValueEqual(left, right Value) bool {
 	if !left.IsPresent() || !right.IsPresent() {
 		return left.State() == right.State()
 	}
+	// Esper's local-group keys are compared the way the boxed key value and the
+	// MultiKeyArray* wrappers compare them: floating-point components use
+	// doubleToLongBits semantics, so -0.0 and 0.0 are different keys and NaN is
+	// equal to NaN. Value.Equal and compareValues use Go's ==, which is the
+	// opposite for both cases, so float key values are compared first.
+	if equal, handled := localGroupKeyFloatEqual(left.data, right.data); handled {
+		return equal
+	}
 	if comparison, ok := compareValues(left, right); ok {
 		return comparison == 0
 	}

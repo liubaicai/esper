@@ -1,0 +1,339 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-local-group-keys",
+  "description": "ResultSetQueryTypeLocalGroupBy ordinals 18/19/24/26/27: local-group key representation and readback - repeated scalar keys on object-array events, local groups shared across outer groups, the empty group_by:() statement-wide level, array-typed (int[]/long[]/double[]) keys compared by deep content, and the window(*)/first(*) accessor methods resolved per local group.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java",
+  "javaRuntimes": [
+    "java-runtime-890001d4334d5de6c50a",
+    "java-runtime-a2b77511196632040e51",
+    "java-runtime-b6a938fde543383eb73c",
+    "java-runtime-81855e4095ee0ca7cadd",
+    "java-runtime-e1253cd2c17a180c243a"
+  ],
+  "javaNames": [
+    "ResultSetLocalUngroupedSameKey",
+    "ResultSetLocalGroupedSameKey",
+    "ResultSetLocalEnumMethods",
+    "ResultSetLocalMultikeyWArray",
+    "ResultSetLocalUngroupedOnlyWGroupBy"
+  ],
+  "javaStaticIds": [
+    "java-2c2e1d80b0046f88b67e",
+    "java-b0aa55f10cfa580ccd4f",
+    "java-98ac70ee0f434579c8c8",
+    "java-6f7f7c3ba440787d3117",
+    "java-e3b7ff9f0f3bf5872d7b"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "ungrouped-same-key",
+      "ordinal": 18,
+      "runtimeId": "java-runtime-890001d4334d5de6c50a",
+      "executionName": "ResultSetLocalUngroupedSameKey",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@public @buseventtype create objectarray schema MyEventOne (d1 String, d2 String, val int);\n@name('s0') select sum(val, group_by: d1) as c0, sum(val, group_by: d2) as c1 from MyEventOne"
+    },
+    {
+      "case": "grouped-same-key",
+      "ordinal": 19,
+      "runtimeId": "java-runtime-a2b77511196632040e51",
+      "executionName": "ResultSetLocalGroupedSameKey",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@public @buseventtype create objectarray schema MyEventTwo (g1 String, d1 String, d2 String, val int);\n@name('s0') select sum(val) as c0, sum(val, group_by: d1) as c1, sum(val, group_by: d2) as c2 from MyEventTwo group by g1"
+    },
+    {
+      "case": "enum-methods-grouped",
+      "ordinal": 24,
+      "runtimeId": "java-runtime-b6a938fde543383eb73c",
+      "executionName": "ResultSetLocalEnumMethods",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select window(*, group_by:()).firstOf() as c0, window(*, group_by:theString).firstOf() as c1, window(intPrimitive, group_by:()).firstOf() as c2, window(intPrimitive, group_by:theString).firstOf() as c3, first(*, group_by:()).intPrimitive as c4, first(*, group_by:theString).intPrimitive as c5  from SupportBean#keepall group by theString, intPrimitive"
+    },
+    {
+      "case": "multikey-w-array",
+      "ordinal": 26,
+      "runtimeId": "java-runtime-81855e4095ee0ca7cadd",
+      "executionName": "ResultSetLocalMultikeyWArray",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@Name('s0') select sum(value, group_by:(intArray)) as c0, sum(value, group_by:(longArray)) as c1, sum(value, group_by:(doubleArray)) as c2, sum(value, group_by:(intArray, longArray, doubleArray)) as c3, sum(value) as c4 from SupportThreeArrayEvent"
+    },
+    {
+      "case": "ungrouped-only-w-group-by",
+      "ordinal": 27,
+      "runtimeId": "java-runtime-e1253cd2c17a180c243a",
+      "executionName": "ResultSetLocalUngroupedOnlyWGroupBy",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select first(*, group_by:()).intPrimitive as c0  from SupportBean#keepall group by theString, intPrimitive"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "ungrouped-same-key"
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventOne",
+      "payload": [
+        "E1",
+        "E1",
+        10
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventOne",
+      "payload": [
+        "E1",
+        "E2",
+        11
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventOne",
+      "payload": [
+        "E2",
+        "E1",
+        12
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventOne",
+      "payload": [
+        "E3",
+        "E1",
+        13
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventOne",
+      "payload": [
+        "E3",
+        "E3",
+        14
+      ]
+    },
+    {
+      "op": "case",
+      "case": "grouped-same-key"
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventTwo",
+      "payload": [
+        "E1",
+        "E1",
+        "E1",
+        10
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventTwo",
+      "payload": [
+        "E1",
+        "E1",
+        "E2",
+        11
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventTwo",
+      "payload": [
+        "E1",
+        "E2",
+        "E1",
+        12
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventTwo",
+      "payload": [
+        "X",
+        "E1",
+        "E1",
+        13
+      ]
+    },
+    {
+      "op": "send",
+      "eventType": "MyEventTwo",
+      "payload": [
+        "E1",
+        "E2",
+        "E3",
+        14
+      ]
+    },
+    {
+      "op": "case",
+      "case": "enum-methods-grouped"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "multikey-w-array"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportThreeArrayEvent",
+      "payload": {
+        "id": "E1",
+        "value": 10,
+        "intArray": [
+          1
+        ],
+        "longArray": [
+          10
+        ],
+        "doubleArray": [
+          100
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportThreeArrayEvent",
+      "payload": {
+        "id": "E2",
+        "value": 11,
+        "intArray": [
+          2
+        ],
+        "longArray": [
+          20
+        ],
+        "doubleArray": [
+          200
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportThreeArrayEvent",
+      "payload": {
+        "id": "E3",
+        "value": 12,
+        "intArray": [
+          3
+        ],
+        "longArray": [
+          10
+        ],
+        "doubleArray": [
+          300
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportThreeArrayEvent",
+      "payload": {
+        "id": "E4",
+        "value": 13,
+        "intArray": [
+          1
+        ],
+        "longArray": [
+          20
+        ],
+        "doubleArray": [
+          200
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportThreeArrayEvent",
+      "payload": {
+        "id": "E5",
+        "value": 14,
+        "intArray": [
+          1
+        ],
+        "longArray": [
+          10
+        ],
+        "doubleArray": [
+          100
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportThreeArrayEvent",
+      "payload": {
+        "id": "E6",
+        "value": 15,
+        "intArray": [
+          3
+        ],
+        "longArray": [
+          20
+        ],
+        "doubleArray": [
+          300
+        ]
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportThreeArrayEvent",
+      "payload": {
+        "id": "E7",
+        "value": 16,
+        "intArray": [
+          2
+        ],
+        "longArray": [
+          20
+        ],
+        "doubleArray": [
+          200
+        ]
+      }
+    },
+    {
+      "op": "case",
+      "case": "ungrouped-only-w-group-by"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2,
+        "longPrimitive": 0
+      }
+    }
+  ]
+}

@@ -323,7 +323,8 @@ Active: Draft 4.411 ('resultset-querytype-local-group-context-terminated').
       the ORDER BY folding recorded as a known gap in the manifest and CHANGELOG.
 - [x] Final gates: `make check` exit 0 for the post-fix state (check-layout, vet, full
       `go test ./...`), gofmt and `git diff --check` clean.
-- [ ] Commit and push the work unit.
+- [x] Shipped; Git owns identity (the "commit and push" box was left unticked in the
+      committed checkpoint; the semantic commit was pushed to `master` before 4.412 started).
 
 - Contract (frozen read-only by agents NextJavaContract4 + NextGoSurface4): one trigger harness per
   case (`create window MyWindow#keepall as SupportBean`, `insert into MyWindow select * from
@@ -343,6 +344,267 @@ Active: Draft 4.411 ('resultset-querytype-local-group-context-terminated').
   17 + 23 form a context + `output snapshot when terminated` unit; 12 is its own small unit (TimeWindow
   expiry coinciding with the snapshot boundary plus float division); 18 + 19 + 26 (+27) are the
   fallback `local-group key representation` unit (object-array schemas, array-typed keys).
+
+## Current work unit
+Active: Draft 4.412 ('resultset-querytype-local-group-keys').
+
+- Selection: `ResultSetQueryTypeLocalGroupBy` ordinals 18 `ResultSetLocalUngroupedSameKey`
+      (`java-runtime-890001d4334d5de6c50a`, static `java-2c2e1d80b0046f88b67e`), 19
+      `ResultSetLocalGroupedSameKey` (`java-runtime-a2b77511196632040e51`, static
+      `java-b0aa55f10cfa580ccd4f`), 24 `ResultSetLocalEnumMethods` (grouped=true;
+      `java-runtime-b6a938fde543383eb73c`, static `java-98ac70ee0f434579c8c8`), 26
+      `ResultSetLocalMultikeyWArray` (`java-runtime-81855e4095ee0ca7cadd`, static
+      `java-6f7f7c3ba440787d3117`) and 27 `ResultSetLocalUngroupedOnlyWGroupBy`
+      (`java-runtime-e1253cd2c17a180c243a`, static `java-e3b7ff9f0f3bf5872d7b`). Five executions
+      from one source file sharing one observable semantic: how local-group keys are represented
+      (repeated scalar keys, object-array event keys, array-typed keys, the empty `group_by:()`
+      global level) and how the local level is read back through the `window(...)`/`first(...)`
+      accessor methods. Ordinal 12 `ResultSetLocalGroupedSolutionPattern` stays out of this unit:
+      it is the only remaining execution of the file that needs virtual time plus a
+      boundary snapshot plus double division, i.e. a different semantics cluster; it is the
+      prefetched N+1 candidate.
+- Java contract FROZEN (read-only scout, agent `Explore-1@_auto_01a0a411-c0de-71a6-bd59-630a3187c842`,
+      full report in the message log): pinned commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`
+      verified by `git -C /root/app/esper rev-parse HEAD`; every execution attaches the listener
+      AFTER `compileDeploy`, uses a single `s0` statement, `assertPropsNew`/`assertEqualsNew` only
+      (no iterators), no virtual time and no old-stream delivery.
+      - ord 18: `@public @buseventtype create objectarray schema MyEventOne (d1 String, d2 String,
+        val int);` + `@name('s0') select sum(val, group_by: d1) as c0, sum(val, group_by: d2) as c1
+        from MyEventOne` (two statements in one path). Five object-array sends; per-send `c0,c1` =
+        `{10,10}/{21,11}/{12,22}/{13,35}/{27,14}`. Local groups are keyed per aggregate and shared
+        across the whole statement.
+      - ord 19: `... schema MyEventTwo (g1 String, d1 String, d2 String, val int)` +
+        `select sum(val) as c0, sum(val, group_by: d1) as c1, sum(val, group_by: d2) as c2 from
+        MyEventTwo group by g1`. Five sends; `c0` is the outer `g1` level (row 4 `g1="X"` restarts at
+        13), `c1`/`c2` accumulate ACROSS outer groups (row 4 `c1=34`, `c2=35`; row 5 `c1=26`, `c2=14`).
+      - ord 24: `select window(*, group_by:()).firstOf() as c0, window(*, group_by:theString).firstOf()
+        as c1, window(intPrimitive, group_by:()).firstOf() as c2, window(intPrimitive,
+        group_by:theString).firstOf() as c3, first(*, group_by:()).intPrimitive as c4, first(*,
+        group_by:theString).intPrimitive as c5 from SupportBean#keepall group by theString,
+        intPrimitive`. One send `SupportBean("E1",10)`; `c0`/`c1` are the SENT EVENT IDENTITY
+        (rendered by the trace convention as a row/kind object), `c2`/`c3` are `Integer` 10,
+        `c4`/`c5` are int 10.
+      - ord 26: `@Name('s0') select sum(value, group_by:(intArray)) as c0, sum(value,
+        group_by:(longArray)) as c1, sum(value, group_by:(doubleArray)) as c2, sum(value,
+        group_by:(intArray, longArray, doubleArray)) as c3, sum(value) as c4 from
+        SupportThreeArrayEvent`. Support class `SupportThreeArrayEvent(id string, value int,
+        intArray int[], longArray long[], doubleArray double[])`. Seven sends; expected c0..c4
+        `{10,10,10,10,10}/{11,11,11,11,21}/{12,22,12,12,33}/{23,24,24,13,46}/{37,36,24,24,60}/
+        {27,39,27,15,75}/{27,55,40,27,91}`. Java wraps array keys in `MultiKeyArray*` whose
+        `equals`/`hashCode` delegate to `java.util.Arrays.*` => DEEP CONTENT equality, type
+        participates in the key, and `doubleArray` compares bitwise (`-0.0 != 0.0`, `NaN == NaN`).
+      - ord 27: `select first(*, group_by:()).intPrimitive as c0  from SupportBean#keepall group by
+        theString, intPrimitive` (double space before `from` is real). Two sends
+        `SupportBean("E1",1)`/`("E2",2)`; both deliver `c0 == 1` (the global empty-key local level
+        keeps the first event ever even though the outer group changes).
+- Go surface FROZEN (read-only scout `Explore-2@…`; every needed builder already exists, so the
+      expected `internal/esper` change is ZERO and the unit is parity-asset + runner only):
+      `NewObjectArraySchema` + `env.RegisterSchema` (`internal/esper/schema.go:637`, precedent
+      `internal/app/parity/infra_named_window_insert_from.go:523`), object-array sends via
+      `engine.SendObjectArray(ctx, eventType, []any{...})` with an ordered payload converter
+      (precedents `event_bean_property_fragment.go:525`, `infra_nwtable_faf_join.go:153`),
+      `LocalGroupBy[T](aggregate, keys...)` (`internal/esper/expr.go:3451`), `Sum[T]`,
+      `FirstEventValue()` (`expr.go:4460`) for `first(*)`, `WindowEvents()`/`WindowValues[T]`
+      (`expr.go:5711`) for the scalar/event `window(...)` accessors and `EnumFirstOf[T]`
+      (`internal/esper/enum_expr.go:853`) for `.firstOf()`; the empty `group_by:()` level maps to
+      `LocalGroupBy` with zero keys, which the implementation routes to the statement-wide scope
+      (`expr.go:3469-3481`) and is already pinned by the 4.409/4.411 chains.
+- Frozen file ownership for this unit (declared before either write lane starts):
+      primary agent owns `internal/app/parity/resultset_querytype_local_group_keys.go`,
+      `internal/app/parity/run.go`, `internal/app/parity/run_test.go`,
+      `testdata/parity/resultset-querytype-local-group-keys*.json`,
+      `testdata/compat/capability-manifest.json`, `docs/esper-go-port-roadmap.md`, `CHANGELOG.md`
+      and the `internal/esper` regression test (only if replay proves an engine gap);
+      the parity-asset writer owns ONLY `tools/java-oracle/ResultSetQueryTypeLocalGroupKeysScenarioOracle.java`
+      and `tools/java-oracle/run-resultset-querytype-local-group-keys.sh`. The two file sets are
+      disjoint, so the asset lane runs in parallel with the primary lane after this freeze.
+- Baseline gate: GREEN before any write - `make check` on the clean `master` worktree exited 0
+      (check-layout, vet, full `go test ./...`; `internal/app/parity` 192s, `internal/esper` 57s).
+- [x] Unit selected and contract frozen (above).
+- [x] Read-only Java contract scout dispatched and reported (agent Explore-1).
+- [x] Read-only Go surface scout dispatched and reported (agent Explore-2); its verdict (all five
+      shapes expressible today, zero `internal/esper` change required, array keys compare by deep
+      content via `compareValues`/`reflect.DeepEqual`) was reconciled against the primary agent's
+      direct code reading and held. It flagged the `EnumFirstOf`-over-`LocalGroupBy` combination as
+      the only untested pairing and array-key equality as untested as a local-group key; both are
+      now pinned by focused engine tests (below).
+- [x] Implemented (primary lane): scenario `testdata/parity/resultset-querytype-local-group-keys.json`
+      (5 cases / 25 steps, EPLs byte-pinned to the Java source), runner
+      `internal/app/parity/resultset_querytype_local_group_keys.go` (strict loader with per-step
+      compact-JSON payload pins, per-case replay, object-array sends via `SendObjectArray`,
+      `SupportThreeArrayEvent` struct sends, `FromAny`+`Field[any,T]` over the object-array schemas),
+      and the three `run.go` wiring points (usage hint, loader dispatch, runner dispatch).
+      No `internal/esper` production change was needed.
+- [x] Direct replay verified before the Java trace existed: 20/20 records with the Java-expected
+      values, including E4's distinct `int[]{1}` joining E1's group (23/24/24/13/46), the "X"
+      outer-group restart (13 with c1=34, c2=35), the statement-wide `group_by:()` level, and the
+      `EnumFirstOf`-over-`LocalGroupBy` columns.
+- [x] Focused engine regression tests added in `internal/esper/aggregate_local_group_test.go`:
+      `TestLocalGroupByArrayKeyDeepContentEquality` (deep content equality, per-type levels, the
+      three-key tuple, and the unbounded plain sum) and `TestEnumMethodsOverLocalGroupAggregate`
+      (window(*)/window(value) readback through `firstOf()` for the empty and keyed levels plus
+      `first(*)` projected to a property). Both green; the two semantic categories the scout
+      flagged as untested are now pinned.
+- [x] Six-test run family appended in `internal/app/parity/run_test.go` (direct replay, passing
+      evidence, 13 trace mutations, checked-in evidence consistency, 17 raw-scenario mutations,
+      runtime-id mapping). Trace-free subset green before the Java trace existed.
+- [x] Java oracle + run script delivered by the parity-asset writer (agent general-purpose-1; only
+      its two authorized files touched) - `tools/java-oracle/ResultSetQueryTypeLocalGroupKeysScenarioOracle.java`
+      and `tools/java-oracle/run-resultset-querytype-local-group-keys.sh`.
+- [x] Authoritative Java trace regenerated by the primary agent; Go diff zero differences;
+      checked-in `.go.trace.json` and evidence written. The oracle ran on the first attempt
+      (`BUILD SUCCESS`, script echoes `javaCommit=9e1b9f1cc9117fea4bf33ab043762c045d73839c java=17`),
+      the checked-in Java trace is md5 `db3136436f574323e1aa4ad97e5cdab2` (20 records, envelope
+      `java: 17.0.20`), and every record value was independently re-checked against the Java
+      assertions by the primary agent. `-mode resultset-querytype-local-group-keys-diff` reported
+      status `passing` / 0 differences, and the full six-test family is green including the 13 trace
+      mutations and 17 raw-scenario mutations.
+- [x] Manifest/roadmap/CHANGELOG facts updated: 659 cases / 657 implemented / 285 DV cases /
+      1045 DV runtime IDs / 3641 associations (referenced 3299 and unreferenced 837 unchanged
+      because the five runtime IDs were already referenced by the `case.aggregate-local-group`
+      umbrella); capability `resultset.aggregate-local-group` goRefs extended and its stale
+      `remaining` phrase (row-remove/context are done; array keys are now done) narrowed to the
+      genuinely open items; the umbrella `difference` text loses the array-multikey-keys gap.
+- [x] Full local gates GREEN after every edit: `make check` exit 0 (check-layout including the
+      generated-facade/API-drift comparison, `go vet ./...`, full `go test ./...`; parity 188s,
+      internal/esper 55s). gofmt clean and `git diff --check` clean.
+- [x] Independent parity review (`Explore-1`, read-only): OVERALL PASS, no P0/P1; areas A-G all
+      PASS. The reviewer independently re-derived the ordinal/runtime/static id mappings from the
+      inventory and static manifest, re-derived every expected value from the Java assertions,
+      re-ran the diff (passing, 0 differences), regenerated the Java trace byte-for-byte
+      (md5 `db3136436f574323e1aa4ad97e5cdab2`, `cmp` identical), verified every raw-scenario needle
+      occurs in the checked-in scenario, and recomputed every summary counter from the file
+      contents. Findings and their disposition:
+      - **P2-1 (real divergence) FIXED in-unit.** Local-group floating-point keys diverged: Go's
+        `compareValues`/`reflect.DeepEqual` use `==` (`-0.0 == 0.0`, `NaN != NaN`) while Java's key
+        semantics are `Double.equals`/`Arrays.equals(double[])`/`MultiKeyArrayDouble`, i.e.
+        `doubleToLongBits` (`-0.0 != 0.0`, `NaN == NaN`). Verified against the Java sources
+        (`MultiKeyArrayDouble.equals` -> `Arrays.equals`; `StmtClassForgeableMultiKey` -> boxed
+        `.equals`/`Arrays.equals` for array components). Added `localGroupKeyFloatEqual` (value.go)
+        and wired it into `localGroupValueEqual` ahead of `compareValues`; it handles float scalars,
+        `[]float64`/`[]float32` and object-array components recursively and leaves every non-float
+        key path untouched. Pinned by `TestLocalGroupKeyFloatBitSemantics`, which FAILS before the
+        fix with `scalarSum = 3` and passes after (`-0.0` opens its own group; two `NaN` values share
+        one). No existing chain uses a floating-point local-group key (checked), the checked-in Go
+        trace is byte-identical after the fix (md5 `5f28073be66fb2bb6ee0565957b2bcf8`), the diff is
+        still passing / 0 differences, and the full corpus is green.
+      - **P3-1 FIXED:** the case runner no longer silently drops empty listener callbacks - it counts
+        invocations and empty deliveries and fails the replay if any callback is empty or the
+        callback count drifts from the pinned per-case `records` count, matching the Java oracle,
+        which errors on an unexpected callback. The per-case record count now lives once in the case
+        spec and is reused by the runner and its trace validator.
+      - **P3-2 FIXED:** `TestEnumMethodsOverLocalGroupAggregate`'s third event was changed to
+        `level=30` so the keyed scalar/level columns discriminate (keyed 30 vs statement-wide 10)
+        instead of all four columns reading 10.
+      - **P3-3 FIXED:** the manifest edit was redone as targeted text replacements after reverting;
+        the six pre-existing `case.resultset-querytype-local-group-*` objects keep their original
+        indentation (zero reindent lines in the diff).
+      - **P3-4 FIXED:** the umbrella `case.aggregate-local-group` difference no longer lists
+        joins/context/tables as open (ord 8 and ords 17/23 are already differential-verified) and
+        now names the fixed float-key bit semantics.
+- [x] Post-fix re-validation: `-mode resultset-querytype-local-group-keys-diff` passing / 0
+      differences; the Go trace is byte-identical to the pre-fix checked-in trace; the full six-test
+      family green; the three engine regressions green; `make check` re-run to green after the
+      production change; race re-run on the affected packages (internal/esper, parity keys family,
+      compat) green.
+- [x] Prose corrected where the fix invalidated it (roadmap + CHANGELOG said "zero internal/esper
+      production change"; both now describe the shared-core float-key fix, its Java justification and
+      its regression), and the manifest case notes/goTests were updated to match.
+- [x] Re-confirm the fixes with an independent read-only reviewer. Delegation note: the platform
+      facility does not expose a follow-up/resume channel for a completed subagent in this
+      environment (`SendMessage` reports "Not in a team"), so the fix confirmation could not be
+      routed back to the original reviewer (`Explore-1`, agent-c45c7919cc6d4087). Instead a fresh
+      read-only reviewer was started with the complete fix list and the original findings inline, so
+      no context was lost: same work unit, same diff, new read-only reviewer.
+- [x] Confirmation review returned (fresh read-only reviewer `Explore-1`, agent-e1015fc0a2ba4893):
+      P2-1, P3-1, P3-2 and P3-3 CONFIRMED, one REJECT and four follow-up P3s. It independently
+      re-derived the Java side (`MultiKeyPlanner.planMultiKey` uses the boxed key unwrapped for a
+      single non-array key and `MultiKeyArrayDouble`/`getEqualsExpression` for array components, so
+      the key semantics are bit-exact both ways; JDK 17 `Double.equals(-0.0,0.0)=false`,
+      `Double.equals(NaN,NaN)=true`, `Arrays.equals` bit-based), reproduced the pre-fix failure on a
+      `/tmp` overlay copy (`scalarSum = 3`) without touching the tree, and re-ran the diff, the two
+      trace loaders, the parity family, `internal/esper`, the manifest validator and `go vet`.
+      Findings and disposition:
+      - **REJECT (docs) FIXED:** the CHANGELOG entry still opened with "零引擎改动" while the same
+        line documented the engine fix. Rewritten to "含共享核心浮点键语义修复".
+      - **P3 (real, fixed in code):** raw `math.Float64bits`/`Float32bits` is NOT Java's
+        `doubleToLongBits`/`floatToIntBits`, which canonicalize every NaN payload to one bit pattern
+        (`0.0/0.0` is `0xfff8000000000000`, `math.NaN()` is `0x7ff8000000000000`, and Java treats
+        them as the SAME key). Added `javaDoubleToLongBits`/`javaFloatToIntBits` canonicalizers and
+        used them for all four float comparisons, so the code now literally implements
+        `doubleToLongBits` and the prose is exact. Proved load-bearing with a read-only
+        `go test -overlay` run against a `/tmp` copy: without canonicalization the extended test
+        fails at `float key row 3 scalarSum = 8, want 12`. The regression now covers all five key
+        paths (float64 scalar, float32 scalar, `[]float64`, `[]float32`, `[]any`) and two distinct
+        NaN payloads per width.
+      - **P3 FIXED:** the umbrella `case.aggregate-local-group` difference now also names the
+        still-open grouped on-select surface (ordinal 22), matching the capability `remaining`.
+      - **P3 FIXED:** the capability `resultset.aggregate-local-group` goRefs now lists
+        `internal/esper/value.go`, where the fix actually lives.
+      - **Observation corrected:** the reviewer found that a float local-group KEY does exist in the
+        test corpus (`internal/esper/aggregate_test.go:716`, `LocalGroupBy[float64](Sum[float64](price),
+        price)` with exact 2.0/4.0 values). It passes unchanged, which is positive evidence the fix
+        does not disturb ordinary float keys. The earlier "no existing float key (checked)" note in
+        this checkpoint was imprecise; the accurate statement is: no parity chain uses a float key,
+        and the one engine test that does is unaffected and unmodified.
+- [x] Post-confirmation re-validation (all after the final code change): `make check` exit 0,
+      `-mode ...-diff` passing / 0 differences with the Go trace still byte-identical (md5
+      `5f28073be66fb2bb6ee0565957b2bcf8`), the six-test family green, the three engine regressions
+      green (`-race` re-run too), the manifest validator green, `git diff --check` clean, and the
+      manifest diff back to zero reindentation lines (99 insertions / 10 deletions).
+- [ ] Commit and push the work unit.
+
+- N+1 contract PREFETCHED (read-only, frozen; no 4.413 writes started while 4.412 is under review):
+      ordinal 12 `ResultSetLocalGroupedSolutionPattern`, runtime `java-runtime-ae96db5ed464e562e6d7`,
+      static `java-13f0da7834ee65870fb0` (the Java contract scout `Explore-2` warns that this hex is
+      also the per-source-file id echoed on every inventory line, so the per-execution static id must
+      not be conflated with it). One statement
+      `@name('s0') select theString, count(*) / count(*, group_by:()) as pct from SupportBean#time(30 sec) group by theString output snapshot every 10 seconds`,
+      `advanceTime(0)` before deploy, then 6 sends at t=0 (A,B,C,B,B,C), 6 at t=10s (A,B,B,B,B,A) and
+      6 at t=20s (C,A,A,A,B,A); exactly ONE callback per advance (3 rows, new-only, any-order) at
+      10s/20s/30s and no callback for any send, so 3 records / 9 rows total. Asserted pct values in
+      Java `Double.toString` spelling: {A 0.16666666666666666, B 0.5, C 0.3333333333333333},
+      {A 0.25, B 0.5833333333333334, C 0.3333333333333333}, {A 0.5, B 0.4166666666666667,
+      C 0.08333333333333333}. The t=30s boundary is INCLUSIVE expiry (Java's
+      `expireBeforeTimestamp = current - delta + 1`), which is what makes the third denominator 12.
+      Critical Go typing fact from the Go surface scout (`Explore-3`): Esper's default is FLOATING
+      division (`MathArithTypeEnum.DivideDouble`), so Go must spell the column
+      `esper.Divide[float64](esper.Cast[int64,float64](esper.CountAll()), esper.Cast[int64,float64](esper.LocalGroupBy[int64](esper.CountAll())))`
+      - `Divide[int64]` would truncate to 0/1. The fraction rendering is already canonicalized by
+      `CanonicalTrace`/`normalizeTraceNumbers` (precedent `case.resultset-aggregate-filtered` pins
+      `0.3333333333333333`). Snapshot row order is NOT a contract (Java HashMap order), so the chain
+      must canonicalize ascending by `theString` the way
+      `resultSetQueryTypeLocalGroupGroupedCanonicalRows` does. A new chain
+      (`resultset-querytype-local-group-solution-pattern`) is required; extending the committed
+      grouped chain would invalidate its pinned trace/evidence. No `internal/esper` change expected.
+
+- Periodic read-only audit (the runbook asks for one about every ten work units; the last was the
+      4.402 integrity audit, so 4.403..4.412 trigger it). Findings, all read-only:
+      1. **Manifest goTests integrity: CLEAN.** A full-repo scan of every `goTests` claim (3473
+         claims) resolved each path-qualified entry against the named file and a real `func <Name>(`
+         definition: zero missing files and zero missing functions. 2949 claims use the older bare
+         test-name form (no path prefix) and one known-benign entry names a runner mode
+         (`case-epl-as-keyword-backtick-behavioral` -> `internal/app/parity/run.go:epl-as-keyword-backtick-diff`);
+         both are the same benign informational shapes the 4.402 audit recorded, i.e. no regression.
+      2. **Facade/API drift: CLEAN.** `check-layout.sh` regenerates the facade from `internal/esper`
+         and compares the public and internal API dumps on every `make check`; both green after this
+         unit, which added no exported symbol (test-only edits in `internal/esper`).
+      3. **Summary derivability: CLEAN.** The manifest's own validator recomputes every counter from
+         the case and capability contents and passed; the roadmap/CHANGELOG numbers for 4.412 are
+         copies of that validated summary, not hand-computed.
+      4. **Earlier-capability regression risk: CLEAN so far.** The full `go test ./...` corpus
+         (including the whole parity suite) is green after the change, and this unit modified no
+         production semantic surface, so no earlier capability could have been perturbed.
+         Remaining audit dimensions (race/stress/Docker/benchmark at a milestone boundary) are run
+         below for the affected packages; the full-suite race/stress and Docker gates stay with the
+         subdomain milestone close, which is not reached here (ordinals 12/15/16/22/25 of this Java
+         file are still open).
+      5. **Observation, not a claim (recorded so it is not silently forgotten).** The P2 fix covers
+         local-group keys only. Keyed *context* partition keys use a different mechanism (a rendered
+         string scope, `state.go:722-751`), so the same double-bit question may or may not apply
+         there; no chain exercises `-0.0`/`NaN` context keys, and this unit makes no claim either
+         way. Worth a read-only check the next time the keyed-context surface is touched, rather than
+         a speculative change now.
 
 ### Previous work unit (prior)
 
@@ -603,6 +865,30 @@ Active: Draft 4.392 ('infra-named-window-bean-views') - chain, evidence and docs
 
 
 ## Delegation checkpoint (recent)
+
+Draft 4.412 unit:
+- Delegation gate satisfied before implementation: two read-only scouts ran concurrently on the
+  platform agent facility - `Explore-1` (Java contract scout; byte-exact contract for ordinals
+  18/19/24/26/27 including the pinned commit, the exact EPL concatenations, the send vectors, the
+  per-send expectations and the array-key comparison mechanism) and `Explore-2` (Go surface scout;
+  per-execution "expressible today / needs new surface / engine risk" verdict, the builders to use,
+  the wiring points, the test-family convention and the manifest/capability wiring). Both reported
+  before any write; no serial fallback was used.
+- Second lane: after the contract and file ownership were frozen, one parity-asset writer
+  (`general-purpose-1`) ran concurrently with the primary lane on a disjoint file set. It wrote ONLY
+  `tools/java-oracle/ResultSetQueryTypeLocalGroupKeysScenarioOracle.java` and
+  `tools/java-oracle/run-resultset-querytype-local-group-keys.sh`; the primary agent owned the
+  scenario, runner, run.go/run_test.go, the `internal/esper` regressions, the manifest, the roadmap,
+  the CHANGELOG and PLANS.md. `git status` confirmed the asset writer touched nothing else.
+- The asset writer did not run builds/tests (per the rules); the primary agent compiled and ran the
+  Java oracle, which succeeded on the first attempt and produced the authoritative 20-record trace.
+- Post-validation: parity reviewer `Explore-1` (read-only) started, concurrently with the N+1
+  read-only scouts `Explore-2` (Java contract for ordinal 12 `ResultSetLocalGroupedSolutionPattern`)
+  and `Explore-3` (Go surface for the same execution). No N+1 writes were started while the review
+  was outstanding.
+- Engine write ownership: no `internal/esper` production file was modified by this unit, so the
+  single-writer rule was never in contention; the only `internal/esper` edits are two additive tests
+  in `aggregate_local_group_test.go` owned solely by the primary agent.
 
 Draft 4.381 unit:
 - Delegation gate: three read-only scouts dispatched in parallel before implementation — `JavaContractViewsSlice` (java-oracle-scout; byte-exact contract for ordinals 1/39/40/41/42), `GoSurfaceViewsSlice` (scout; Go typed-API coverage plus engine-gap risk for the same shapes) and `ViewsFileInventory` (scout; per-execution inventory and slice plan for the remaining 53 executions = the prefetched N+1 read-only unit). Shared-core semantics stay single-writer with the primary; the asset writer is dispatched only after contract freeze.

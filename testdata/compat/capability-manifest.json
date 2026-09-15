@@ -967,14 +967,15 @@
     "internal/app/parity/resultset_querytype_local_group_ungrouped_agg.go",
     "internal/app/parity/resultset_querytype_local_group_row_remove.go",
     "internal/app/parity/resultset_querytype_local_group_context_terminated.go",
+    "internal/app/parity/resultset_querytype_local_group_keys.go",
+    "internal/esper/value.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 3,
    "status": "implemented",
    "remaining": [
-    "additional local access/enumeration combinations, multikey array keys and plugin aggregates",
-    "row-remove, context/join/FAF/table combinations",
-    "complete planning and invalid-rule parity"
+    "solution-pattern division over a time window, plan-inspection hook and invalid-rule diagnostics",
+    "grouped on-select surface and plugin aggregates"
    ],
    "verification": [
     "inventoried",
@@ -14462,7 +14463,7 @@
     "java-baseline",
     "go-unit"
    ],
-   "difference": "Go now covers statement-scope local group-by filtering across ungrouped and multi-key outer-grouped streams, multi-key accumulation, local WindowValues access, current-event selection, Named Window row removal/recomputation, null-safe key matching and aggregate-key rejection. Java also covers array multikey keys, joins/context/tables, plugins, planning hooks and complete invalid/trace behavior; those remain open.",
+   "difference": "Go now covers statement-scope local group-by filtering across ungrouped and multi-key outer-grouped streams, multi-key accumulation, local WindowValues access, current-event selection, Named Window row removal/recomputation, null-safe key matching, aggregate-key rejection, object-array event keys, deep-content array-typed keys (int[]/long[]/double[] and their tuple, compared bitwise for floating-point components) and the window(*)/first(*) accessor readback of every local level. Java also covers the solution-pattern division, the grouped on-select surface, plugins, planning hooks and complete invalid/trace behavior; those remain open.",
    "verification": [
     "inventoried",
     "implemented"
@@ -39619,6 +39620,90 @@
    ]
   },
   {
+   "id": "case.resultset-querytype-local-group-by-keys",
+   "javaRuntimeIds": [
+    "java-runtime-890001d4334d5de6c50a",
+    "java-runtime-a2b77511196632040e51",
+    "java-runtime-b6a938fde543383eb73c",
+    "java-runtime-81855e4095ee0ca7cadd",
+    "java-runtime-e1253cd2c17a180c243a"
+   ],
+   "javaNames": [
+    "ResultSetLocalUngroupedSameKey",
+    "ResultSetLocalGroupedSameKey",
+    "ResultSetLocalEnumMethods",
+    "ResultSetLocalMultikeyWArray",
+    "ResultSetLocalUngroupedOnlyWGroupBy"
+   ],
+   "javaStaticIds": [
+    "java-2c2e1d80b0046f88b67e",
+    "java-b0aa55f10cfa580ccd4f",
+    "java-98ac70ee0f434579c8c8",
+    "java-6f7f7c3ba440787d3117",
+    "java-e3b7ff9f0f3bf5872d7b"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupKeysDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupKeysDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupKeysDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupKeysCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupKeysRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupKeysRuntimeIDMappingMatchesScenario",
+    "internal/esper/aggregate_local_group_test.go:TestLocalGroupByArrayKeyDeepContentEquality",
+    "internal/esper/aggregate_local_group_test.go:TestLocalGroupKeyFloatBitSemantics",
+    "internal/esper/aggregate_local_group_test.go:TestEnumMethodsOverLocalGroupAggregate"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "local-group-by",
+    "aggregate",
+    "objectarray",
+    "multikey-w-array",
+    "window",
+    "enumeration",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-local-group-keys.json",
+    "testdata/parity/resultset-querytype-local-group-keys.trace.json",
+    "testdata/parity/resultset-querytype-local-group-keys.go.trace.json",
+    "testdata/parity/resultset-querytype-local-group-keys.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeLocalGroupKeysScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-local-group-keys.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-890001d4334d5de6c50a",
+    "java-runtime-a2b77511196632040e51",
+    "java-runtime-b6a938fde543383eb73c",
+    "java-runtime-81855e4095ee0ca7cadd",
+    "java-runtime-e1253cd2c17a180c243a"
+   ],
+   "notes": [
+    "ResultSetQueryTypeLocalGroupBy ordinals 18/19/24/26/27 replay one deterministic chain (20 Java/Go records, 0 differences) with one fresh runtime per case: ungrouped-same-key pins two single-expression local groups over an object-array schema ({10,10} {21,11} {12,22} {13,35} {27,14}), grouped-same-key pins the outer `group by g1` level together with two local groups whose state is SHARED across outer groups (the `X` row delivers {13,34,35} and the closing row {47,26,14}), enum-methods-grouped pins window(*)/window(intPrimitive) read back through firstOf() plus first(*) projected to intPrimitive for the statement-wide (`group_by:()`) and keyed local levels, multikey-w-array pins int[]/long[]/double[] keys plus their three-key tuple over the unbounded statement (E4's distinct int[]{1} instance joins E1/E5: {23,24,24,13,46}; E5 {37,36,24,24,60}; E6 {27,39,27,15,75}; E7 {27,55,40,27,91}), and ungrouped-only-w-group-by pins first(*, group_by:()) staying on the first event ever (c0 = 1 for both sends, though the outer (theString,intPrimitive) group changes).",
+    "Key-representation semantics pinned by this chain and by three focused Go regressions: local-group keys compare by deep CONTENT for array-typed keys (Esper wraps them in Arrays.equals-based MultiKeyArray instances), each key type keeps its own level, and the three-key tuple delegates to the same content comparison (`TestLocalGroupByArrayKeyDeepContentEquality`); floating-point key components use Java's bit semantics (`Double.doubleToLongBits`/`Float.floatToIntBits`/`Arrays.equals`, which also canonicalize every NaN payload), so -0.0 and 0.0 are distinct keys and any two NaNs are the same key, which `localGroupKeyFloatEqual` plus the `javaDoubleToLongBits`/`javaFloatToIntBits` canonicalizers implement for the float64/float32 scalar and the float/object-array key paths (`TestLocalGroupKeyFloatBitSemantics` pins the 0.0/-0.0 split and two distinct NaN payloads sharing one group across all five paths); the empty key list means the statement-wide level while a keyed list selects the current event's group, and the window(*)/window(value) accessors plus first(*) project through `EnumFirstOf`/`NestedField` over a `LocalGroupBy` aggregate (`TestEnumMethodsOverLocalGroupAggregate`). The only `internal/esper` production change is that float bit-semantics key comparison; every other shape was already expressible with `RegisterObjectArray`/`FromAny`+`Field[any,T]`, `RegisterStruct`, `LocalGroupBy`, `WindowEvents`/`WindowValues`, `EnumFirstOf`, `FirstEventValue` and `NestedField`."
+   ]
+  },
+ {
    "id": "case.resultset-output-limit-row-limit-context-grouped",
    "javaRuntimeIds": [
     "java-runtime-0a4f187046b734b5dc9a",
@@ -44796,6 +44881,10 @@
    "caseId": "case.resultset-querytype-local-group-by-context-terminated"
   },
   {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-by-keys"
+  },
+  {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit"
   },
@@ -45009,10 +45098,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 658,
-  "implementedCases": 656,
-  "differentialVerifiedCases": 284,
-  "differentialVerifiedRuntimeIds": 1040,
+  "inventoriedCases": 659,
+  "implementedCases": 657,
+  "differentialVerifiedCases": 285,
+  "differentialVerifiedRuntimeIds": 1045,
   "intentionallyDifferentCases": 25,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -45022,13 +45111,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3636,
+  "runtimeAssociationCount": 3641,
   "referencedJavaRuntimeIds": 3299,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 837,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 658,
+  "totalCases": 659,
   "totalCapabilities": 120
  }
 }
