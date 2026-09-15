@@ -296,6 +296,7 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.409（2026-09-15），resultset 本地分组 ungrouped-agg 差分链：新增 `case.resultset-querytype-local-group-by-ungrouped-agg`（ResultSetQueryTypeLocalGroupBy ords 0/1/2/7：四档 ungrouped 局部和、SQL 统计列、事件值局部聚合、局部组 HAVING），Java/Go 各 14 条 records、0 differences，21 个 scenario 步骤，零引擎改动。summary：656 cases、282 DV cases、1036 DV runtime IDs。
 > 最新补充：Draft 4.408（2026-09-15），resultset 本地分组 grouped 差分链：新增 `case.resultset-querytype-local-group-by-grouped`（ResultSetQueryTypeLocalGroupBy ords 10/11/14：length(4) 逐事件十列、snapshot-every 双边界多层级和/计数/window 列），Java/Go 各 9 条 records、0 differences，26 个 scenario 步骤，零引擎改动。summary：655 cases、281 DV cases、1032 DV runtime IDs。
 > 最新补充：Draft 4.407（2026-09-15），resultset 本地分组 extended 差分链：新增 `case.resultset-querytype-local-group-by-extended`（ResultSetQueryTypeLocalGroupBy ords 8-9：unidirectional join 局部和、length(4) 三层 window/count/sum 列），Java/Go 各 7 条 records、0 differences，13 个 scenario 步骤，零引擎改动。summary：654 cases、280 DV cases、1029 DV runtime IDs。
 > 最新补充：Draft 4.406（2026-09-15），resultset 本地分组 ungrouped 差分链：新增 `case.resultset-querytype-local-group-by-ungrouped`（ResultSetQueryTypeLocalGroupBy ords 3-6：iter 迭代快照、SODA 文本/模型孪生、列名渲染），Java/Go 各 13 条 records、0 differences，20 个 scenario 步骤，零引擎改动，零核心改动。summary：653 cases、279 DV cases、1027 DV runtime IDs、25 intentionally-different。

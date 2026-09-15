@@ -1,0 +1,87 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-local-group-ungrouped-agg",
+  "description": "ResultSetQueryTypeLocalGroupBy ordinals 0/1/2/7: ungrouped local-group sums, SQL-standard aggregate selections, event-valued local aggregates and local-group HAVING.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java",
+  "javaRuntimes": [
+    "java-runtime-a40ad8ec1c03959b5f33",
+    "java-runtime-6bec44d03e954b1cd52c",
+    "java-runtime-9ad9539a7e8f5581b192",
+    "java-runtime-1dc3599a7c07036be603"
+  ],
+  "javaNames": [
+    "ResultSetLocalUngroupedSumSimple",
+    "ResultSetLocalUngroupedAggSQLStandard",
+    "ResultSetLocalUngroupedAggEvent",
+    "ResultSetLocalUngroupedHaving"
+  ],
+  "javaStaticIds": [
+    "java-3feeb6f7d6769e71aad1",
+    "java-d2a1aaee0aaf06dee915",
+    "java-79a9c055e0f90284c89e",
+    "java-ee7ae61064ad0a2279ed"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "ungrouped-sum-simple",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-a40ad8ec1c03959b5f33",
+      "executionName": "ResultSetLocalUngroupedSumSimple",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@Name('s0') select sum(longPrimitive, group_by:(theString, intPrimitive)) as c0, sum(longPrimitive, group_by:(theString)) as c1, sum(longPrimitive, group_by:(intPrimitive)) as c2, sum(longPrimitive) as c3 from SupportBean"
+    },
+    {
+      "case": "ungrouped-agg-sql-standard",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-6bec44d03e954b1cd52c",
+      "executionName": "ResultSetLocalUngroupedAggSQLStandard",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select intPrimitive as c0, sum(intPrimitive, group_by:()) as sum0, sum(intPrimitive, group_by:(theString)) as sum1,avedev(intPrimitive, group_by:(theString)) as avedev0,avg(intPrimitive, group_by:(theString)) as avg0,max(intPrimitive, group_by:(theString)) as max0,fmax(intPrimitive, intPrimitive>0, group_by:(theString)) as fmax0,min(intPrimitive, group_by:(theString)) as min0,fmin(intPrimitive, intPrimitive>0, group_by:(theString)) as fmin0,maxever(intPrimitive, group_by:(theString)) as maxever0,fmaxever(intPrimitive, intPrimitive>0, group_by:(theString)) as fmaxever0,minever(intPrimitive, group_by:(theString)) as minever0,fminever(intPrimitive, intPrimitive>0, group_by:(theString)) as fminever0,median(intPrimitive, group_by:(theString)) as median0,Math.round(coalesce(stddev(intPrimitive, group_by:(theString)), 0)) as stddev0 from SupportBean#keepall"
+    },
+    {
+      "case": "ungrouped-agg-event",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-9ad9539a7e8f5581b192",
+      "executionName": "ResultSetLocalUngroupedAggEvent",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select intPrimitive as c0, first(sb, group_by:(theString)) as first0, first(sb, group_by:()) as first1, last(sb, group_by:(theString)) as last0, last(sb, group_by:()) as last1, window(sb, group_by:(theString)) as window0, window(sb, group_by:()) as window1, maxby(intPrimitive, group_by:(theString)) as maxby0, maxby(intPrimitive, group_by:()) as maxby1, minby(intPrimitive, group_by:(theString)) as minby0, minby(intPrimitive, group_by:()) as minby1, sorted(intPrimitive, group_by:(theString)) as sorted0, sorted(intPrimitive, group_by:()) as sorted1, maxbyever(intPrimitive, group_by:(theString)) as maxbyever0, maxbyever(intPrimitive, group_by:()) as maxbyever1, minbyever(intPrimitive, group_by:(theString)) as minbyever0, minbyever(intPrimitive, group_by:()) as minbyever1, firstever(sb, group_by:(theString)) as firstever0, firstever(sb, group_by:()) as firstever1, lastever(sb, group_by:(theString)) as lastever0, lastever(sb, group_by:()) as lastever1 from SupportBean#length(3) as sb"
+    },
+    {
+      "case": "ungrouped-having",
+      "ordinal": 7,
+      "runtimeId": "java-runtime-1dc3599a7c07036be603",
+      "executionName": "ResultSetLocalUngroupedHaving",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select * from SupportBean having sum(intPrimitive, group_by:theString) > 100"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "ungrouped-sum-simple"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1, "longPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2, "longPrimitive": 11}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 2, "longPrimitive": 12}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1, "longPrimitive": 13}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 1, "longPrimitive": 14}},
+    {"op": "case", "case": "ungrouped-agg-sql-standard"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 30, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 40, "longPrimitive": 0}},
+    {"op": "case", "case": "ungrouped-agg-event"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 15, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 16, "longPrimitive": 0}},
+    {"op": "case", "case": "ungrouped-having"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 95, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10, "longPrimitive": 0}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 0}}
+  ]
+}
