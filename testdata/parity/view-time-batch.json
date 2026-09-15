@@ -1,0 +1,642 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-time-batch",
+ "description": "Eight deterministic ViewTimeBatch executions replayed per pinned module under the virtual clock: scene-one time_batch(1 sec) irstream wildcard lifecycle with the 2500/3500 (new+old) /4500 (old-only) /6500/8500 anchors and quiet 2499/5500; ten-sec and multirow time_batch(10 sec) with partial-batch iterator checkpoints, the 10999 quiet tick and the 11000/21000/31000/41000 anchor pairs; multi-batch consecutive full batches; start-eager-force-update scene-two and twin time_batch(1, START_EAGER,FORCE_UPDATE) schedules whose empty boundary flushes deliver nothing observable; month-scoped time_batch(1 month) with minus-one-millisecond quiet ticks at the calendar boundaries; and no-ref-point time_batch(10 minutes) with the deadline at deploy-anchored 600000. Excluded from the chain: ViewTimeBatchLonger (unseeded Random schedule, not deterministically replayable) and ViewTimeBatchRefPoint (reference-point argument has no Go API).",
+ "javaRuntimes": [
+  "java-runtime-5a110975a6ab7750e433",
+  "java-runtime-77fc0819a391d361a0c8",
+  "java-runtime-cb1e1193f3ace6152a25",
+  "java-runtime-1a1b45f9c756465a0191",
+  "java-runtime-736d2f58158461c2c777",
+  "java-runtime-9ae5cbb72669d84a7f7f",
+  "java-runtime-a3c81710a21ac12db682",
+  "java-runtime-5e01b6f92f8d8bc5851e"
+ ],
+ "cases": [
+  {
+   "case": "scene-one",
+   "runtimeId": "java-runtime-5a110975a6ab7750e433"
+  },
+  {
+   "case": "ten-sec",
+   "runtimeId": "java-runtime-77fc0819a391d361a0c8"
+  },
+  {
+   "case": "start-eager-force-update-scene-two",
+   "runtimeId": "java-runtime-cb1e1193f3ace6152a25"
+  },
+  {
+   "case": "month-scoped",
+   "runtimeId": "java-runtime-1a1b45f9c756465a0191"
+  },
+  {
+   "case": "start-eager-force-update",
+   "runtimeId": "java-runtime-736d2f58158461c2c777"
+  },
+  {
+   "case": "multirow",
+   "runtimeId": "java-runtime-9ae5cbb72669d84a7f7f"
+  },
+  {
+   "case": "multi-batch",
+   "runtimeId": "java-runtime-a3c81710a21ac12db682"
+  },
+  {
+   "case": "no-ref-point",
+   "runtimeId": "java-runtime-5e01b6f92f8d8bc5851e"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "scene-one"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.500Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.500Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.700Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.499Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.500Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E4"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.600Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E5"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03.500Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04.500Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05.500Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E6"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:06.500Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E7"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:08.500Z"
+  },
+  {
+   "op": "case",
+   "case": "ten-sec"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:21Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:31Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:41Z"
+  },
+  {
+   "op": "case",
+   "case": "start-eager-force-update-scene-two"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.700Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.900Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05Z"
+  },
+  {
+   "op": "case",
+   "case": "month-scoped"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-02-01T09:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-01T08:59:59.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-01T09:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-04-01T08:59:59.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-04-01T09:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T09:00:00Z"
+  },
+  {
+   "op": "case",
+   "case": "start-eager-force-update"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:05.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:06Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:07Z"
+  },
+  {
+   "op": "case",
+   "case": "multirow"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:21Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:31Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:41Z"
+  },
+  {
+   "op": "case",
+   "case": "multi-batch"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:21Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E6",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:31Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E7",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E8",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:41Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:51Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:01:01Z"
+  },
+  {
+   "op": "case",
+   "case": "no-ref-point"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": null,
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:09:59.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:10:00Z"
+  }
+ ]
+}

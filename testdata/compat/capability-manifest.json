@@ -4270,7 +4270,6 @@
    "phase": 2,
    "status": "implemented",
    "remaining": [
-    "ViewTimeBatch suite",
     "ViewParameterizedByContext suite"
    ],
    "verification": [
@@ -4313,7 +4312,15 @@
     "java-runtime-9733dfdbee02d899bb23",
     "java-runtime-b1061971825b14664ff2",
     "java-runtime-ac89ffce844dc00114f7",
-    "java-runtime-9b050d42ae8cdfd3fa0d"
+    "java-runtime-9b050d42ae8cdfd3fa0d",
+    "java-runtime-5a110975a6ab7750e433",
+    "java-runtime-77fc0819a391d361a0c8",
+    "java-runtime-cb1e1193f3ace6152a25",
+    "java-runtime-1a1b45f9c756465a0191",
+    "java-runtime-736d2f58158461c2c777",
+    "java-runtime-9ae5cbb72669d84a7f7f",
+    "java-runtime-a3c81710a21ac12db682",
+    "java-runtime-5e01b6f92f8d8bc5851e"
    ]
   },
   {
@@ -23628,11 +23635,81 @@
     "implemented",
     "differential-verified"
    ],
-   "notes": "Draft 4.422: PARTIAL differential upgrade — the three ViewFirstTime executions (firsttime(1 month) calendar anchor with E2 admitted at deadline-minus-1ms and E3 at the deadline tick never admitted; firsttime(10 sec) c0/c1 projection with deadline retention; firsttime(1 sec) irstream wildcard with SILENT deadline expiry) are differential-verified via the view-first-time chain (3 cases, 13 records, 0 differences, zero engine change). The remaining 35 executions of this mega case stay implemented-not-DV under their own suites (time-batch, time-accum, time-length-batch, ext-timed families).",
+   "notes": "Draft 4.424: PARTIAL differential upgrade — 5 of the 6 ViewTimeBatch executions (SceneOne/10Sec/Multirow/MultiBatch/NoRefPoint) are differential-verified via the view-time-batch chain (case.view-timebatch-suite carries the chain); ViewTimeBatchLonger stays implemented-not-DV (unseeded Random schedule). The remaining executions of this mega case (time-accum, time-length-batch, ext-timed families) keep their own dispositions; the DV list carries both the three ViewFirstTime executions (differential-verified via case.view-first-time, Draft 4.422) and the five deterministic ViewTimeBatch executions (Draft 4.424).",
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-9733dfdbee02d899bb23",
+    "java-runtime-ac89ffce844dc00114f7",
     "java-runtime-b1061971825b14664ff2",
-    "java-runtime-ac89ffce844dc00114f7"
+    "java-runtime-9733dfdbee02d899bb23",
+    "java-runtime-5a110975a6ab7750e433",
+    "java-runtime-77fc0819a391d361a0c8",
+    "java-runtime-9ae5cbb72669d84a7f7f",
+    "java-runtime-a3c81710a21ac12db682",
+    "java-runtime-5e01b6f92f8d8bc5851e"
+   ]
+  },
+  {
+   "id": "case.view-timebatch-suite",
+   "javaRuntimeIds": [
+    "java-runtime-5a110975a6ab7750e433",
+    "java-runtime-77fc0819a391d361a0c8",
+    "java-runtime-cb1e1193f3ace6152a25",
+    "java-runtime-1a1b45f9c756465a0191",
+    "java-runtime-736d2f58158461c2c777",
+    "java-runtime-9ae5cbb72669d84a7f7f",
+    "java-runtime-a3c81710a21ac12db682",
+    "java-runtime-5e01b6f92f8d8bc5851e"
+   ],
+   "javaNames": [
+    "ViewTimeBatchSceneOne",
+    "ViewTimeBatch10Sec",
+    "ViewTimeBatchStartEagerForceUpdateSceneTwo",
+    "ViewTimeBatchMonthScoped",
+    "ViewTimeBatchStartEagerForceUpdate",
+    "ViewTimeBatchMultirow",
+    "ViewTimeBatchMultiBatch",
+    "ViewTimeBatchNoRefPoint"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewTimeBatch.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewTimeBatchDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewTimeBatchDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "correctness",
+    "view",
+    "time-batch",
+    "batch-flush",
+    "start-eager",
+    "force-update",
+    "calendar-period",
+    "virtual-clock",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/view-time-batch.json",
+    "testdata/parity/view-time-batch.trace.json",
+    "testdata/parity/view-time-batch.evidence.json",
+    "tools/java-oracle/ViewTimeBatchScenarioOracle.java",
+    "tools/java-oracle/run-view-time-batch.sh"
+   ],
+   "notes": "Draft 4.424: 8 deterministic executions of ViewTimeBatch.java in one chain (35 records, 0 differences, zero engine change) — time_batch anchors with quiet minus-one-millisecond ticks, new/old pairs across consecutive 10 s anchors, START_EAGER/FORCE_UPDATE hints whose empty boundary flushes deliver nothing observable on either side, calendar-month batching, and the deploy-anchored 600000 deadline with a bare null-theString bean. Excluded: ViewTimeBatchLonger (unseeded java.util.Random schedule, not deterministically replayable; stays implemented-not-DV under case.view-timebatch-basic) and ViewTimeBatchRefPoint (7d3c38fa4d2477a0be87, time_batch reference-point argument has no Go API yet — open coverage gap).",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5a110975a6ab7750e433",
+    "java-runtime-77fc0819a391d361a0c8",
+    "java-runtime-cb1e1193f3ace6152a25",
+    "java-runtime-1a1b45f9c756465a0191",
+    "java-runtime-736d2f58158461c2c777",
+    "java-runtime-9ae5cbb72669d84a7f7f",
+    "java-runtime-a3c81710a21ac12db682",
+    "java-runtime-5e01b6f92f8d8bc5851e"
    ]
   },
   {
@@ -45629,13 +45706,17 @@
   {
    "capabilityId": "view.basic-windows",
    "caseId": "case.view-lengthwin-property-detail"
+  },
+  {
+   "capabilityId": "view.basic-windows",
+   "caseId": "case.view-timebatch-suite"
   }
  ],
  "summary": {
-  "inventoriedCases": 667,
-  "implementedCases": 665,
-  "differentialVerifiedCases": 294,
-  "differentialVerifiedRuntimeIds": 1080,
+  "inventoriedCases": 668,
+  "implementedCases": 666,
+  "differentialVerifiedCases": 295,
+  "differentialVerifiedRuntimeIds": 1088,
   "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -45645,13 +45726,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3658,
-  "referencedJavaRuntimeIds": 3312,
+  "runtimeAssociationCount": 3666,
+  "referencedJavaRuntimeIds": 3315,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 824,
+  "unreferencedJavaRuntimeIds": 821,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 667,
+  "totalCases": 668,
   "totalCapabilities": 120
  }
 }

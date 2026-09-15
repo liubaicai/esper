@@ -612,6 +612,46 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.424 ('view-time-batch-suite').
+
+- Unit: ViewTimeBatch suite differential slice — NEW chain `view-time-batch` (8 cases) covering
+      ViewTimeBatch.java ords 0-4/6-8: SceneOne (5a110975a6ab7750e433), 10Sec (77fc0819a391d361a0c8),
+      StartEagerForceUpdateSceneTwo (cb1e1193f3ace6152a25), MonthScoped (1a1b45f9c756465a0191),
+      StartEagerForceUpdate (736d2f58158461c2c777), Multirow (9ae5cbb72669d84a7f7f),
+      MultiBatch (a3c81710a21ac12db682), NoRefPoint (5e01b6f92f8d8bc5851e).
+      Five of the eight are already associated with case.view-timebatch-basic (partial DV upgrade
+      +5); the three StartEager/MonthScoped/RefPoint-family IDs are unreferenced — the three
+      StartEager/MonthScoped ones join the NEW born-DV case `case.view-timebatch-suite`.
+      EXCLUDED with dispositions: ViewTimeBatchRefPoint (7d3c38fa4d2477a0be87 — time_batch
+      reference-point argument has no Go API; noted as an open gap) and ViewTimeBatchLonger
+      (28a898700ff4cba95f14 — unseeded java.util.Random schedule, not deterministically replayable;
+      stays implemented-not-DV under the basic case).
+- [x] Java contract read in full (ViewTimeBatch.java, 10 executions); Go surface confirmed:
+      TimeBatch/TimeBatchCalendar/TimeBatchForce(duration, forceUpdate, startEager) cover every
+      included execution; FORCE_UPDATE empty flushes produce no listener records on either side
+      (hasNew/hasOld guard). SERIAL IMPLEMENTATION documented: oracle is a clone of the
+      ViewFirstTime/ViewTimeWin oracle pattern (single deployment per case), contract fully
+      in-context, no independent parallel scope.
+- [ ] Scenario + runner + wiring + tests; oracle/script via asset writer; diff to zero.
+- [x] Manifest: NEW case case.view-timebatch-suite born-DV with 8 IDs (inserted after
+      case.view-timebatch-basic; capability mapping entry added); case.view-timebatch-basic partial
+      DV +5 of its 6 ViewTimeBatch IDs (Longer excluded); capability remaining minus ViewTimeBatch
+      suite, DV list +8. Summary: cases 668, implemented 666, DV cases 295, DV runtime IDs 1088, associations 3666,
+      referenced 3315, unreferenced 821. CORRECTION after review (agent ParityReview P1): my first
+      manifest edit REPLACED case.view-timebatch-basic's differentialVerifiedRuntimeIds (which
+      carried the three ViewFirstTime IDs from Draft 4.422) instead of extending it, silently
+      un-DVing ViewFirstTimeSimple/SceneOne/SceneTwo manifest-wide; the compat validator caught the
+      resulting count drop (1085 vs 1088) and the reviewer traced the cause. Fixed by restoring the
+      three IDs alongside the five ViewTimeBatch ones; the "umbrella case" rationale first recorded
+      here was wrong.
+- [x] Reviewer re-check (same agent): CONFIRM PASS — DV-set delta vs HEAD now +8/−0 (1080→1088,
+      zero coverage loss), summary internally consistent, docs corrected, gates re-run green.
+      Shipped; Git owns identity — Draft 4.424 committed and pushed (chain view-time-batch; new
+      case case.view-timebatch-suite born DV; case.view-timebatch-basic partial DV; manifest 295 DV
+      cases / 1088 DV runtime IDs; capability view.basic-windows remaining =
+      ViewParameterizedByContext suite only).
+
+## Current work unit
 Active: Draft 4.423 ('view-lengthwin-property-detail').
 
 - Unit: ViewLengthWinWPropertyDetail (ord 2 of ViewLengthWin.java,
