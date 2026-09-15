@@ -612,6 +612,101 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.419 ('view-length-batch-closure').
+
+- Unit: `ViewLengthBatch.java` ordinals 5 `ViewLengthBatchNormal{runType=VIEW}`
+      (`java-runtime-d22e3122427d1dd8ceb0`) and 6 `ViewLengthBatchPrev`
+      (`java-runtime-03b48f31fe26fedf4d4b`) — the two executions deferred since Draft 4.242
+      ("Prev 和 Normal{VIEW} 因 prev-on-batch 评估分歧暂登记 remaining"), closing the file.
+      Pre-derivation from the Java source (ViewLengthBatch.java:195-224, 284-356):
+      - ord 5: `select irstream *, prev(1,symbol) prev1, prevtail(0,symbol) prevTail0,
+        prevtail(1,symbol) prevTail1, prevcount(symbol) prevCountSym, prevwindow(symbol)
+        prevWindowSym from SupportMarketDataBean#length_batch(3)`; sends E1,E2,E3 (map events
+        symbol only); batch release delivers 3 rows: {E1,null,[E1],[E2],3L,[E3,E2,E1]},
+        {E2,"E1",[E1],[E2],3L,win}, {E3,"E2",[E1],[E2],3L,win} — prevTail oldest-first
+        ascending, prevWindow newest-first, prevCount 3L, no old rows.
+      - ord 6 (VIEW variant): `select irstream theString, prev(1,theString) as prevString
+        from SupportBean#length_batch(3)`; E1/E2/E3 → new rows {E1,null},{E2,"E1"},{E3,"E2"}
+        no old; E4/E5/E6 → new {E4},{E5},{E6} + old {E1},{E2},{E3} (projected retiring rows);
+        E7/E8/E9 → new {E7},{E8},{E9} + old {E4},{E5},{E6}; iterator checkpoints between
+        (after E1 [[E1]]; after E2 [[E1],[E2]]; after E3 []; after E5 [[E4],[E5]]; after E6 []).
+      Known engine gap: prev-on-batch evaluation divergence (4.242 deferral note) — scouts to
+      pin exactly where Go's prev/prevtail/prevwindow/prevcount diverge over #length_batch.
+      Scouts dispatched in parallel (Java contract; Go surface) — contract freezes on return.
+- [x] Java/Go scouts (parallel Explore agents); CONTRACT FROZEN with corrections:
+      - ORDINAL CORRECTION: ord 5 = ViewLengthBatchNormal{runType=VIEW}
+        (`java-runtime-d22e3122427d1dd8ceb0`), ord 6 = ViewLengthBatchPrev
+        (`java-runtime-03b48f31fe26fedf4d4b`); both staticId `java-15a175599615ad531fa0`.
+      - ord 6 prev vectors: rows {E1,null,"E1","E2",3L,[E3,E2,E1]}, {E2,"E1",...},
+        {E3,"E2",...} — prev(1) per-row anchored (prefix semantics CORRECT in Go);
+        prevtail = SCALARS (prevtail(0)=oldest batch row E1, prevtail(1)=E2 for EVERY row);
+        prevcount = whole-batch 3L for every row; prevwindow = newest-first full batch for
+        every row. ROOT CAUSE of the 4.242 deferral: Go anchors prevtail/prevcount/prevwindow
+        to the per-row batch prefix (runtime.go:14867-14875 historyByEvent = newEvents[:i+1]);
+        Java anchors them to the FULL flushed batch (IStreamRelativeAccess lastNewData). Fix:
+        whole-batch history for prevtail/prevcount/prevwindow on batch flushes; plain prev
+        keeps prefix semantics; all prev accessors return null on old-data evaluation for
+        batch windows (Java IStreamRelativeAccess rebuilt per flush).
+      - ord 6 row-shape gap: Java `select irstream *` rows carry symbol+price+volume+feed +
+        the five accessors; the dormant Go branch projects only six aliases — add
+        price/volume/feed aliases.
+      - ord 5 (normal-view) schedule mirrors the existing normal-namedwindow nine-send +
+        snapshot schedule; old rows at E6/E9 flushes carry prevString=null.
+      - Oracle buildEPL gates for both cases already exist; NO oracle/script changes needed.
+        IMPLEMENTATION SERIAL by primary agent — documented reason: the only independent
+        task (Java oracle assets) requires zero changes; scenario activation, runner
+        activation and the engine fix are one tightly-coupled semantic unit (prev-on-batch).
+- [x] Engine fix (prev-on-batch) implemented SERIALLY by the primary agent (documented reason above;
+      no oracle/script changes needed, both buildEPL gates pre-existed). Engine: batch flush block
+      (runtime.go streamWindow insert) publishes `prevBatchByEvent` (identity → whole flushed batch in
+      delivery order) alongside the per-row prefix historyByEvent, guard relaxed to len>0 (single-event
+      flushes post the buffer too); `EvalContext.PreviousWindowBatch` (expr.go) carries the buffer with
+      PreviousWindowAccess deliberately false; PrevTail batch mode indexes absolutely from the oldest,
+      PrevCount/PrevWindow read the whole batch, evaluatePreviousOffset keeps plain prev/prior on the
+      row prefix; projectionEvalContext/projectResults/projectTransposeRoute/orderEvents gained the
+      map parameter; snapshotBatch nils per-row historyByEvent for batch-window streams (partial-batch
+      iterator rows resolve nothing, matching Java's missing accessor); eventDelta clones/mergeDelta
+      thread the new map (insert/remove streamWindow + both streamFilter branches).
+      Runner: `prev` case projection adds price/volume/feed aliases (Java `irstream *` carries the
+      underlying columns); case list + scenario activate `normal-view` and `prev` (inserted after
+      `invalid`, matching Java execution order); runtimeIds added to scenario cases[]/javaRuntimes.
+      Tests: run_test.go adds TestRunViewLengthBatchDiffRejectsTraceMutations (6 mutations);
+      view_ext_timed_parity_test.go TestViewExternallyTimedBatchRefWithPrevParity CORRECTED to the
+      Java vector (its old assertions pinned Go's prefix behavior; Java pins whole-batch prevWindow
+      [3,2,1] for all three rows + all-null prev columns on retired rows) and extended with the
+      single-event D row and old-row null checks.
+- [x] Java trace regenerated via run-view-length-batch.sh (exit 0, pinned commit 9e1b9f1cc9117fea4bf3
+      3ab043762c045d73839c verified; 58 records, case counts 6/6/3/6/1/9/1/8/9/9). Go replay -mode
+      view-length-batch matches shape; -mode view-length-batch-diff -evidence ... = status passing,
+      0 differences; evidence + checked-in trace regenerated.
+- [x] Manifest: case.view-length-batch 7→9 runtime IDs (Java execution order), javaNames updated,
+      goTests +2 (mutations test + corrected ext-timed parity test), notes rewritten (Drafts
+      4.242+4.419, 58 records, 0 differences, prev-on-batch semantics); differentialVerifiedRuntimeIds
+      = javaRuntimeIds; capability view.basic-windows DV runtime IDs 12→14; summary advanced to
+      666 cases / 664 implemented / 290 DV cases / 27 intentionally-different / 1059 DV runtime IDs /
+      3657 associations / referenced 3311 / unreferenced 825. Facts recorded (CHANGELOG + roadmap
+      newest-first, Draft 4.419). go test ./internal/compat green.
+- [x] Independent parity review (agent ParityReview): OVERALL PASS, areas A-E all PASS, no P0/P1/P2.
+      Three P3 findings: PLANS header ordinal swap (fixed in place), roadmap runtime-count wording
+      (fixed: "差分覆盖从 7 个 runtime 扩展到 9 个（场景 javaRuntimes 列表 8→10）"), and a pre-existing
+      evidence-vs-trace serializer convention (not introduced here, no action). Reviewer confirmed the
+      corrected ext-timed test is strictly stronger than before and the guard change is
+      behavior-preserving for len==0/len==1.
+- [x] N+1 prefetch during review (read-only, agents NextJavaContract + NextGoSurface): ViewTimeWin.java
+      differential closure — `case.inventory.view-time-win` already implemented-not-DV with 15 runtime
+      IDs (ords 2-16; ords 0/1 covered by earlier chains); recommended unit = new `view-time-win`
+      chain cloning the view-length-batch pattern (oracle + run script + runner + advance-time steps at
+      RFC3339 `at`); tricky executions flagged: ord 7 WPrev (sliding-window prev keeps prefix semantics
+      — untouched by 4.419), ords 3-5 sum families with old-only expiry deliveries, ord 6/13-16
+      calendar-month expiry, ord 8 substitution params, ords 9/11 variable durations, ord 12
+      high-precision time-period parsing. Read-only contract notes recorded here; writes deferred
+      until this unit is committed.
+- [x] Gates after review: `make check` (check-layout, vet, full `go test ./...`) exit 0; gofmt clean;
+      `git diff --check` clean. Shipped; Git owns identity — Draft 4.419 committed and pushed as the
+      semantic work-unit commit (chain view-length-batch 7→9 DV runtime IDs; manifest 290 DV cases /
+      1059 DV runtime IDs).
+
+## Current work unit
 Active: Draft 4.418 ('local-group-closure').
 
 - Unit: `ResultSetQueryTypeLocalGroupBy.java` ordinals 15 `ResultSetLocalPlanning`,

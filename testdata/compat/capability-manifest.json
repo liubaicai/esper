@@ -4293,7 +4293,9 @@
     "java-runtime-2461852109912927f5ac",
     "java-runtime-f354e2a6054730d80312",
     "java-runtime-ba0287f83e55f5fd2454",
-    "java-runtime-5956f7d158bda2623d70"
+    "java-runtime-5956f7d158bda2623d70",
+    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-03b48f31fe26fedf4d4b"
    ]
   },
   {
@@ -36040,6 +36042,8 @@
     "java-runtime-964e6db2f54f1b508387",
     "java-runtime-edd63c54bc9fe03a8380",
     "java-runtime-5a98579c3673cc0224ce",
+    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-03b48f31fe26fedf4d4b",
     "java-runtime-8bc763b2e677e747ee4c",
     "java-runtime-a3dc40576e7c9def33fb",
     "java-runtime-b6eb26431d8d05188516"
@@ -36049,12 +36053,16 @@
     "ViewLengthBatchSize2",
     "ViewLengthBatchSize1",
     "ViewLengthBatchSize3",
+    "ViewLengthBatchNormal{runType=VIEW}",
+    "ViewLengthBatchPrev",
     "ViewLengthBatchDelete",
     "ViewLengthBatchNormal{runType=NAMEDWINDOW}",
     "ViewLengthBatchNormal{runType=GROUPWIN}"
    ],
    "goTests": [
-    "internal/app/parity/run_test.go:TestRunViewLengthBatchDiffWritesPassingEvidence"
+    "internal/app/parity/run_test.go:TestRunViewLengthBatchDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewLengthBatchDiffRejectsTraceMutations",
+    "internal/esper/view_ext_timed_parity_test.go:TestViewExternallyTimedBatchRefWithPrevParity"
    ],
    "tags": [
     "view",
@@ -36075,7 +36083,7 @@
     "tools/java-oracle/ViewLengthBatchScenarioOracle.java",
     "tools/java-oracle/run-view-length-batch.sh"
    ],
-   "notes": "Draft 4.242: 8 cases covering 8 of 10 executions (Prev and Normal{VIEW} deferred). 48 records, 0 differences.",
+   "notes": "Drafts 4.242+4.419: all 10 executions replayed except the compile-only invalid twin (case.view-length-batch-invalid). 58 records, 0 differences. Draft 4.419 closes ords 5/6: prev(1) anchors per row to the flushed-batch prefix; prevtail/prevcount/prevwindow read the whole flushed batch for every released row (Java IStreamRelativeAccess lastNewData); old rows and partial-batch iterator rows resolve nothing; the wildcard prev projection carries the underlying symbol/price/volume/feed columns next to the accessor aliases.",
    "verification": [
     "inventoried",
     "implemented",
@@ -36086,6 +36094,8 @@
     "java-runtime-964e6db2f54f1b508387",
     "java-runtime-edd63c54bc9fe03a8380",
     "java-runtime-5a98579c3673cc0224ce",
+    "java-runtime-d22e3122427d1dd8ceb0",
+    "java-runtime-03b48f31fe26fedf4d4b",
     "java-runtime-8bc763b2e677e747ee4c",
     "java-runtime-a3dc40576e7c9def33fb",
     "java-runtime-b6eb26431d8d05188516"
@@ -45512,7 +45522,7 @@
   "inventoriedCases": 666,
   "implementedCases": 664,
   "differentialVerifiedCases": 290,
-  "differentialVerifiedRuntimeIds": 1057,
+  "differentialVerifiedRuntimeIds": 1059,
   "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -45522,10 +45532,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3655,
-  "referencedJavaRuntimeIds": 3309,
+  "runtimeAssociationCount": 3657,
+  "referencedJavaRuntimeIds": 3311,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 827,
+  "unreferencedJavaRuntimeIds": 825,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
   "totalCases": 666,

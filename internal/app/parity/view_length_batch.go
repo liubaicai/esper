@@ -46,7 +46,7 @@ var (
 		"java-runtime-d22e3122427d1dd8ceb0", // Normal{VIEW}
 		"java-runtime-a3dc40576e7c9def33fb", // Normal{NAMEDWINDOW}
 		"java-runtime-b6eb26431d8d05188516", // Normal{GROUPWIN}
-		"java-runtime-03b48f31fe26fedf4d4b", // Prev (deferred)
+		"java-runtime-03b48f31fe26fedf4d4b", // Prev
 		"java-runtime-8bc763b2e677e747ee4c", // Delete
 	}
 	viewLengthBatchJavaExecutions = []string{
@@ -56,7 +56,7 @@ var (
 		"ViewLengthBatchSize3",
 		"ViewLengthBatchInvalid",
 		"ViewLengthBatchNormal{runType=VIEW}",
-		"ViewLengthBatchPrev (deferred)",
+		"ViewLengthBatchPrev",
 		"ViewLengthBatchNormal{runType=NAMEDWINDOW}",
 		"ViewLengthBatchNormal{runType=GROUPWIN}",
 		"ViewLengthBatchDelete",
@@ -70,7 +70,7 @@ func runViewLengthBatchScenario(ctx context.Context, scenario compat.Scenario) (
 	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
 	for _, caseName := range []string{
 		"scene-one", "size-two", "size-one", "size-three", "invalid",
-		"delete", "normal-namedwindow", "normal-groupwin",
+		"normal-view", "prev", "delete", "normal-namedwindow", "normal-groupwin",
 	} {
 		if !scenarioHasCase(scenario, caseName) {
 			continue
@@ -154,10 +154,16 @@ func runViewLengthBatchCase(ctx context.Context, scenario compat.Scenario, caseN
 			esper.Alias("prevString", esper.Prev[*string](1, ts)),
 		).Query(esper.StatementName("s0"), esper.WithOldStream()))
 	case "prev":
+		// Java's `select irstream *, prev...` carries the full underlying
+		// event (symbol/price/volume/feed) next to the five accessor
+		// columns, so the projection mirrors all nine properties.
 		js := func() esper.Expression[string] { return esper.Field[viewLengthBatchMarket, string]("symbol") }
 		err = build("s0", true, esper.Select(
 			esper.From[viewLengthBatchMarket](env, "SupportMarketDataBean").Window(esper.LengthBatch(3)),
 			esper.Alias("symbol", js()),
+			esper.Alias("price", esper.Field[viewLengthBatchMarket, float64]("price")),
+			esper.Alias("volume", esper.Field[viewLengthBatchMarket, int64]("volume")),
+			esper.Alias("feed", esper.Field[viewLengthBatchMarket, string]("feed")),
 			esper.Alias("prev1", esper.Prev[string](1, js())),
 			esper.Alias("prevTail0", esper.PrevTail[string](0, js())),
 			esper.Alias("prevTail1", esper.PrevTail[string](1, js())),

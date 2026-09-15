@@ -78,6 +78,12 @@ func previousOffsetValue(value Value) (int, bool) {
 
 func evaluatePreviousOffset[V any](ctx EvalContext, offset int, expression Expression[V], prior bool) Value {
 	history := ctx.PreviousHistory
+	if ctx.PreviousWindowBatch {
+		// A batch buffer only serves prevtail/prevcount/prevwindow; plain
+		// prev and prior stay anchored to the per-row batch prefix in
+		// History, matching Java's indexPerEvent-relative resolution.
+		history = nil
+	}
 	windowAccess := ctx.PreviousWindowAccess && !prior
 	if prior && (ctx.PriorHistorySet || ctx.PriorHistory != nil) {
 		history = ctx.PriorHistory

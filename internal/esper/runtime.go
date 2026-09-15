@@ -7464,14 +7464,15 @@ func evaluateTimeWindowDuration(expression Expr, variables map[string]Value) tim
 }
 
 type eventDelta struct {
-	newEvents       []Event
-	oldEvents       []Event
-	history         []Event
-	historyByEvent  map[string][]Event
-	previousByEvent map[string][]Event
-	priorByEvent    map[string][]Event
-	forced          bool
-	hadInput        bool
+	newEvents        []Event
+	oldEvents        []Event
+	history          []Event
+	historyByEvent   map[string][]Event
+	previousByEvent  map[string][]Event
+	priorByEvent     map[string][]Event
+	prevBatchByEvent map[string][]Event
+	forced           bool
+	hadInput         bool
 }
 
 func (s *Statement) process(ctx context.Context, now time.Time, event Event, variables map[string]Value, accepted bool, acceptedKnown bool) (batch ResultBatch, changed bool, err error) {
@@ -11383,7 +11384,18 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 	history := append([]Event(nil), events...)
 	previousByEvent := r.currentPreviousAccess(plan.query.input)
 	priorByEvent := r.currentPriorAccess(plan.query.input)
-	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, history, nil, previousByEvent, priorByEvent, false, r.evaluationContext())
+	// Java's batch views only hand relative access to released batch rows, so
+	// iterator rows over a partial batch (or after the buffer's next flush)
+	// resolve prev-family and prior expressions as null rather than against
+	// the partial window contents.
+	historyByEvent := map[string][]Event(nil)
+	if batchWindowStreamNode(plan.query.input) != nil {
+		historyByEvent = make(map[string][]Event, len(events))
+		for _, event := range events {
+			historyByEvent[eventIdentity(event)] = nil
+		}
+	}
+	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, history, historyByEvent, previousByEvent, nil, priorByEvent, false, r.evaluationContext())
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
 	}
@@ -12532,7 +12544,7 @@ func (r *statementRuntime) reprojectPendingBatch(pending ResultBatch, plan Plan,
 		return result
 	}
 	result := ResultBatch{Time: now}
-	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, nil, nil, nil, nil, false, r.evaluationContext())
+	result.New = projectResults(events, plan.query, plan.resultSchema, now, r.variables, nil, nil, nil, nil, nil, false, r.evaluationContext())
 	if plan.query.distinct {
 		result.New = distinctSnapshotResults(result.New)
 	}
@@ -14767,11 +14779,12 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			return eventDelta{}, err
 		}
 		filtered := eventDelta{
-			history:         append([]Event(nil), inputDelta.history...),
-			historyByEvent:  cloneEventHistories(inputDelta.historyByEvent),
-			previousByEvent: cloneEventHistories(inputDelta.previousByEvent),
-			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
-			hadInput:        inputDelta.hadInput,
+			history:          append([]Event(nil), inputDelta.history...),
+			historyByEvent:   cloneEventHistories(inputDelta.historyByEvent),
+			previousByEvent:  cloneEventHistories(inputDelta.previousByEvent),
+			priorByEvent:     cloneEventHistories(inputDelta.priorByEvent),
+			prevBatchByEvent: cloneEventHistories(inputDelta.prevBatchByEvent),
+			hadInput:         inputDelta.hadInput,
 		}
 		// Single filter evaluation: the dispatch loop's verdict replaces the
 		// duplicate predicate evaluation for this node when
@@ -14832,12 +14845,13 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 			}
 		}
 		result := eventDelta{
-			oldEvents:       append([]Event(nil), inputDelta.oldEvents...),
-			history:         append([]Event(nil), inputDelta.history...),
-			historyByEvent:  cloneEventHistories(inputDelta.historyByEvent),
-			previousByEvent: cloneEventHistories(inputDelta.previousByEvent),
-			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
-			hadInput:        inputDelta.hadInput,
+			oldEvents:        append([]Event(nil), inputDelta.oldEvents...),
+			history:          append([]Event(nil), inputDelta.history...),
+			historyByEvent:   cloneEventHistories(inputDelta.historyByEvent),
+			previousByEvent:  cloneEventHistories(inputDelta.previousByEvent),
+			priorByEvent:     cloneEventHistories(inputDelta.priorByEvent),
+			prevBatchByEvent: cloneEventHistories(inputDelta.prevBatchByEvent),
+			hadInput:         inputDelta.hadInput,
 		}
 		// Java's GroupByViewReclaimAged sweeps inside view.update before the
 		// current event is routed, so a reclaimed group does not observe the
@@ -14864,13 +14878,19 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 				result.historyByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents[:index+1]...)
 			}
 		}
-		if isLengthOrTimeBatchWindow(node.window) && len(result.newEvents) > 1 {
-			// LengthBatch/TimeLengthBatch/TimeBatch flush the whole batch as one
-			// new-data array; PREV/PRIOR resolve against the batch prefix like
-			// expression batch, so each row sees history through itself.
+		if isLengthOrTimeBatchWindow(node.window) && len(result.newEvents) > 0 {
+			// Java's batch views release the completed batch through one
+			// IStreamRelativeAccess per agent instance: plain prev anchors
+			// per row to the batch prefix through the row, while
+			// prevtail/prevcount/prevwindow read the whole flushed batch for
+			// every released row; rows outside the released batch (old rows
+			// at the next flush, undelivered rows) have no accessor and
+			// resolve nothing.
 			result.historyByEvent = make(map[string][]Event, len(result.newEvents))
+			result.prevBatchByEvent = make(map[string][]Event, len(result.newEvents))
 			for index, event := range result.newEvents {
 				result.historyByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents[:index+1]...)
+				result.prevBatchByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents...)
 			}
 		}
 		if windowUsesPreviousAccess(node.window) {
@@ -14912,6 +14932,26 @@ func isLengthOrTimeBatchWindow(spec WindowSpec) bool {
 	default:
 		return false
 	}
+}
+
+// batchWindowStreamNode walks a stream chain to its data window and reports
+// the node when that window is a length/time batch view. Filter wrappers are
+// traversed; grouped, joined and other sources report nil.
+func batchWindowStreamNode(node *streamNode) *streamNode {
+	for node != nil {
+		switch node.kind {
+		case streamWindow:
+			if isLengthOrTimeBatchWindow(node.window) {
+				return node
+			}
+			return nil
+		case streamFilter:
+			node = node.input
+		default:
+			return nil
+		}
+	}
+	return nil
 }
 
 func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) (eventDelta, error) {
@@ -14962,10 +15002,11 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 			return eventDelta{}, err
 		}
 		filtered := eventDelta{
-			history:         append([]Event(nil), inputDelta.history...),
-			historyByEvent:  cloneEventHistories(inputDelta.historyByEvent),
-			previousByEvent: cloneEventHistories(inputDelta.previousByEvent),
-			priorByEvent:    cloneEventHistories(inputDelta.priorByEvent),
+			history:          append([]Event(nil), inputDelta.history...),
+			historyByEvent:   cloneEventHistories(inputDelta.historyByEvent),
+			previousByEvent:  cloneEventHistories(inputDelta.previousByEvent),
+			priorByEvent:     cloneEventHistories(inputDelta.priorByEvent),
+			prevBatchByEvent: cloneEventHistories(inputDelta.prevBatchByEvent),
 		}
 		for _, candidate := range inputDelta.oldEvents {
 			value := node.predicate.eval(EvalContext{Event: candidate, OuterEvent: candidate, ContainedParentEvent: containedParentEvent(candidate), History: historyForEvent(inputDelta, candidate), Now: now, Variables: r.variables})
@@ -16779,6 +16820,14 @@ func mergeDelta(left, right eventDelta) eventDelta {
 		}
 		for key, history := range right.previousByEvent {
 			left.previousByEvent[key] = append([]Event(nil), history...)
+		}
+	}
+	if right.prevBatchByEvent != nil {
+		if left.prevBatchByEvent == nil {
+			left.prevBatchByEvent = make(map[string][]Event)
+		}
+		for key, history := range right.prevBatchByEvent {
+			left.prevBatchByEvent[key] = append([]Event(nil), history...)
 		}
 	}
 	if right.priorByEvent != nil {
@@ -21144,7 +21193,7 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 	newResults := []Result(nil)
 	oldResults := []Result(nil)
 	if plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream || plan.query.distinct {
-		newResults = projectResults(delta.newEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, delta.historyByEvent, delta.previousByEvent, delta.priorByEvent, false, r.evaluationContext())
+		newResults = projectResults(delta.newEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, delta.historyByEvent, delta.previousByEvent, delta.prevBatchByEvent, delta.priorByEvent, false, r.evaluationContext())
 	}
 	if plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream || plan.query.distinct {
 		oldPreviousByEvent := cloneEventHistories(delta.previousByEvent)
@@ -21165,7 +21214,7 @@ func (r *statementRuntime) batch(delta eventDelta, plan Plan, now time.Time) Res
 				oldHistoryByEvent[eventIdentity(old)] = nil
 			}
 		}
-		oldResults = projectResults(delta.oldEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, oldHistoryByEvent, oldPreviousByEvent, delta.priorByEvent, true, r.evaluationContext())
+		oldResults = projectResults(delta.oldEvents, plan.query, plan.resultSchema, now, r.variables, delta.history, oldHistoryByEvent, oldPreviousByEvent, delta.prevBatchByEvent, delta.priorByEvent, true, r.evaluationContext())
 	}
 	if plan.query.distinct {
 		newResults, oldResults = r.applyDistinct(plan.query, newResults, oldResults)
@@ -21292,15 +21341,15 @@ func filterTuplesByHaving(tuples [][]Event, having Expr, now time.Time, variable
 	return filtered
 }
 
-func projectResults(events []Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) []Result {
+func projectResults(events []Event, query Query, resultSchema Schema, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) []Result {
 	if len(events) == 0 {
 		return nil
 	}
-	events = orderEvents(events, query.orderBy, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)
+	events = orderEvents(events, query.orderBy, now, variables, history, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent, leaving, evaluation)
 	if transpose, transposeIndex, ok := transposeRouteInfo(query); ok {
 		results := make([]Result, 0, len(events))
 		for _, event := range events {
-			projected, err := projectTransposeRoute(event, query, resultSchema, transpose, transposeIndex, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)
+			projected, err := projectTransposeRoute(event, query, resultSchema, transpose, transposeIndex, now, variables, history, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent, leaving, evaluation)
 			if err != nil || !projected.hasValue {
 				continue
 			}
@@ -21316,7 +21365,7 @@ func projectResults(events []Event, query Query, resultSchema Schema, now time.T
 		}
 		values := make([]Value, 0, len(query.selections))
 		for _, selection := range query.selections {
-			values = append(values, selection.Expr.eval(projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)))
+			values = append(values, selection.Expr.eval(projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent, leaving, evaluation)))
 		}
 		row := newRow(resultSchema, values)
 		results = append(results, resultRowWithEvent(row, event))
@@ -21351,8 +21400,8 @@ type transposedRouteProjection struct {
 // payload value is then coerced to the target's underlying representation and
 // wrapped in a target Event, mirroring SelectExprProcessorHelper's native
 // transpose coercion. A nil payload drops the row (no routed event).
-func projectTransposeRoute(event Event, query Query, resultSchema Schema, transpose Selection, transposeIndex int, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) (transposedRouteProjection, error) {
-	ctx := projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)
+func projectTransposeRoute(event Event, query Query, resultSchema Schema, transpose Selection, transposeIndex int, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) (transposedRouteProjection, error) {
+	ctx := projectionEvalContext(event, now, variables, history, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent, leaving, evaluation)
 	payloadValue := transpose.Expr.eval(ctx)
 	marker, ok := payloadValue.Any().(transposeValue)
 	if !ok || marker.value == nil {
@@ -21557,14 +21606,14 @@ func fieldValueInterface(value reflect.Value) any {
 	return value.Interface()
 }
 
-func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) []Event {
+func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) []Event {
 	if len(keys) == 0 || len(events) < 2 {
 		return events
 	}
 	ordered := append([]Event(nil), events...)
 	sort.SliceStable(ordered, func(left, right int) bool {
 		for _, key := range keys {
-			comparison, ok := compareValues(key.Expr.eval(projectionEvalContext(ordered[left], now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)), key.Expr.eval(projectionEvalContext(ordered[right], now, variables, history, historyByEvent, previousByEvent, priorByEvent, leaving, evaluation)))
+			comparison, ok := compareValues(key.Expr.eval(projectionEvalContext(ordered[left], now, variables, history, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent, leaving, evaluation)), key.Expr.eval(projectionEvalContext(ordered[right], now, variables, history, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent, leaving, evaluation)))
 			if !ok || comparison == 0 {
 				continue
 			}
@@ -21578,7 +21627,7 @@ func orderEvents(events []Event, keys []SortKey, now time.Time, variables map[st
 	return ordered
 }
 
-func projectionEvalContext(event Event, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) EvalContext {
+func projectionEvalContext(event Event, now time.Time, variables map[string]Value, history []Event, historyByEvent, previousByEvent, prevBatchByEvent, priorByEvent map[string][]Event, leaving bool, evaluation ExpressionEvaluationContext) EvalContext {
 	eventHistory := history
 	identity := eventIdentity(event)
 	if historyByEvent != nil {
@@ -21589,6 +21638,17 @@ func projectionEvalContext(event Event, now time.Time, variables map[string]Valu
 		if previous, ok := previousByEvent[identity]; ok {
 			ctx.PreviousWindowAccess = true
 			ctx.PreviousHistory = append([]Event(nil), previous...)
+		}
+	}
+	if prevBatchByEvent != nil {
+		if batch, ok := prevBatchByEvent[identity]; ok {
+			// Java's batch views expose one IStreamRelativeAccess buffer per
+			// agent instance holding the whole flushed batch; only released
+			// rows carry the accessor. The buffer rides PreviousHistory while
+			// PreviousWindowAccess stays false so plain prev keeps resolving
+			// against the per-row prefix in History.
+			ctx.PreviousWindowBatch = true
+			ctx.PreviousHistory = append([]Event(nil), batch...)
 		}
 	}
 	if priorByEvent != nil {

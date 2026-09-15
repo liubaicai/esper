@@ -15145,6 +15145,84 @@ func TestRunViewLengthBatchDiffWritesPassingEvidence(t *testing.T) {
 	}
 }
 
+func TestRunViewLengthBatchDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "prev-window-batch-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				// prevwindow must expose the whole flushed batch
+				// newest-first for every released row, not the row prefix.
+				trace.Records[31].New[0].Fields["prevWindowSym"] = []any{"E1"}
+			},
+		},
+		{
+			name: "prev-tail-batch-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[31].New[0].Fields["prevTail1"] = "E3"
+			},
+		},
+		{
+			name: "prev-count-per-row-prefix-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[31].New[0].Fields["prevCountSym"] = 1
+			},
+		},
+		{
+			name: "normal-view-snapshot-prev-not-null",
+			mutate: func(trace *compat.Trace) {
+				// Iterator rows over a partial batch resolve nothing.
+				trace.Records[24].New[1].Fields["prevString"] = "E1"
+			},
+		},
+		{
+			name: "normal-view-old-prevstring-drift",
+			mutate: func(trace *compat.Trace) {
+				// Retired batch rows lose their relative access.
+				trace.Records[28].Old[0].Fields["prevString"] = "E2"
+			},
+		},
+		{
+			name: "normal-view-new-prevstring-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[25].New[2].Fields["prevString"] = "E1"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-length-batch.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "view-length-batch.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-length-batch.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "view-length-batch-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunViewUniqueDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "view-unique.evidence.json"),

@@ -493,8 +493,9 @@ func TestViewExternallyTimedBatchWithRefParity(t *testing.T) {
 }
 
 // TestViewExternallyTimedBatchRefWithPrevParity covers ViewExternallyTimedBatchRefWithPrev:
-// prev-family projections over an ext_timed_batch flush, with per-row batch
-// prefix semantics.
+// prev-family projections over an ext_timed_batch flush. Java anchors plain
+// prev per row to the batch prefix while prevtail/prevcount/prevwindow read
+// the whole flushed batch for every released row; retired rows resolve null.
 func TestViewExternallyTimedBatchRefWithPrevParity(t *testing.T) {
 	env, engine := newViewMarketDataEnv(t)
 	defer func() { _ = engine.Close(context.Background()) }()
@@ -560,10 +561,35 @@ func TestViewExternallyTimedBatchRefWithPrevParity(t *testing.T) {
 	if rows[2].Get("currSymbol").Any() != "C" || rows[2].Get("prev2Symbol").Any() != "A" || rows[2].Get("prev2Price").Any() != 1.0 {
 		t.Fatalf("C row = %#v", rows[2])
 	}
-	if got := rows[0].Get("prevWindowPrice").Any(); !reflect.DeepEqual(got, []float64{1.0}) {
+	if got := rows[0].Get("prevTail0Price").Any(); got != 1.0 || rows[0].Get("prevTail1Price").Any() != 2.0 {
+		t.Fatalf("A prevTail = %#v/%#v", rows[0].Get("prevTail0Price").Any(), rows[0].Get("prevTail1Price").Any())
+	}
+	if got := rows[0].Get("prevCountPrice").Any(); got != int64(3) {
+		t.Fatalf("A prevCount = %#v", got)
+	}
+	if got := rows[0].Get("prevWindowPrice").Any(); !reflect.DeepEqual(got, []float64{3.0, 2.0, 1.0}) {
 		t.Fatalf("A prevWindow = %#v", got)
 	}
 	if got := rows[2].Get("prevWindowPrice").Any(); !reflect.DeepEqual(got, []float64{3.0, 2.0, 1.0}) {
 		t.Fatalf("C prevWindow = %#v", got)
+	}
+	// E@20000 flushes D alone; the retired A/B/C rows lose their relative
+	// access and every prev-family column resolves null.
+	sendVol("E", 5, 20000)
+	if len(*batches) != 2 || len((*batches)[1].New) != 1 || len((*batches)[1].Old) != 3 {
+		t.Fatalf("E: %#v", *batches)
+	}
+	newRow := (*batches)[1].New[0]
+	if newRow.Get("currSymbol").Any() != "D" || newRow.Get("prev0Symbol").Any() != "D" || newRow.Get("prev1Symbol").Any() != nil ||
+		newRow.Get("prevTail1Price").Any() != nil || newRow.Get("prevCountPrice").Any() != int64(1) ||
+		!reflect.DeepEqual(newRow.Get("prevWindowPrice").Any(), []float64{4.0}) {
+		t.Fatalf("D row = %#v", newRow)
+	}
+	for index, oldRow := range (*batches)[1].Old {
+		if oldRow.Get("prev0Symbol").Any() != nil || oldRow.Get("prev1Symbol").Any() != nil ||
+			oldRow.Get("prevTail0Price").Any() != nil || oldRow.Get("prevCountPrice").Any() != nil ||
+			oldRow.Get("prevWindowPrice").Any() != nil {
+			t.Fatalf("old row %d = %#v", index, oldRow)
+		}
 	}
 }

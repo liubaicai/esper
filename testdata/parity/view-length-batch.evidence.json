@@ -23,7 +23,7 @@
     "ViewLengthBatchSize3",
     "ViewLengthBatchInvalid",
     "ViewLengthBatchNormal{runType=VIEW}",
-    "ViewLengthBatchPrev (deferred)",
+    "ViewLengthBatchPrev",
     "ViewLengthBatchNormal{runType=NAMEDWINDOW}",
     "ViewLengthBatchNormal{runType=GROUPWIN}",
     "ViewLengthBatchDelete"
@@ -240,6 +240,122 @@
       {
         "op": "deployed",
         "statement": "invalid"
+      },
+      {
+        "op": "case",
+        "case": "normal-view"
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E9"
+        }
+      },
+      {
+        "op": "case",
+        "case": "prev"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "E3"
+        }
       },
       {
         "op": "case",
@@ -1330,6 +1446,318 @@
         "operation": "deployed",
         "statement": "invalid",
         "sequence": 0
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E1",
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E2",
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E4",
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E5",
+              "theString": "E6"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "normal-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E7",
+              "theString": "E8"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E8",
+              "theString": "E9"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": 3,
+              "prevTail0": "E1",
+              "prevTail1": "E2",
+              "prevWindowSym": [
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "price": 0,
+              "symbol": "E1",
+              "volume": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "prev1": "E1",
+              "prevCountSym": 3,
+              "prevTail0": "E1",
+              "prevTail1": "E2",
+              "prevWindowSym": [
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "price": 0,
+              "symbol": "E2",
+              "volume": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "prev1": "E2",
+              "prevCountSym": 3,
+              "prevTail0": "E1",
+              "prevTail1": "E2",
+              "prevWindowSym": [
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "price": 0,
+              "symbol": "E3",
+              "volume": 0
+            }
+          }
+        ]
       },
       {
         "case": "delete",
@@ -2888,6 +3316,318 @@
         "operation": "deployed",
         "statement": "invalid",
         "sequence": 0
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E1",
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E2",
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E4",
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E5",
+              "theString": "E6"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "normal-view",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "normal-view",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E7"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E7",
+              "theString": "E8"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": "E8",
+              "theString": "E9"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E4"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E5"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "prevString": {
+                "state": "null"
+              },
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "prev",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "prev1": {
+                "state": "null"
+              },
+              "prevCountSym": 3,
+              "prevTail0": "E1",
+              "prevTail1": "E2",
+              "prevWindowSym": [
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "price": 0,
+              "symbol": "E1",
+              "volume": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "prev1": "E1",
+              "prevCountSym": 3,
+              "prevTail0": "E1",
+              "prevTail1": "E2",
+              "prevWindowSym": [
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "price": 0,
+              "symbol": "E2",
+              "volume": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "feed": {
+                "state": "null"
+              },
+              "prev1": "E2",
+              "prevCountSym": 3,
+              "prevTail0": "E1",
+              "prevTail1": "E2",
+              "prevWindowSym": [
+                "E3",
+                "E2",
+                "E1"
+              ],
+              "price": 0,
+              "symbol": "E3",
+              "volume": 0
+            }
+          }
+        ]
       },
       {
         "case": "delete",

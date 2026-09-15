@@ -295,6 +295,13 @@ type EvalContext struct {
 	// sequence (index zero is the access head) rather than the default
 	// newest-relative history. Sorted and time-order views use this mode.
 	PreviousWindowAccess bool
+	// PreviousWindowBatch marks PreviousHistory as a batch view's relative
+	// access buffer: the full flushed batch in delivery order. Only rows
+	// released by the flush carry the buffer. prevtail/prevcount/prevwindow
+	// read the whole buffer for every released row while plain prev keeps
+	// resolving against the per-row prefix in History, mirroring Java's
+	// IStreamRelativeAccess.
+	PreviousWindowBatch bool
 	// PriorHistory is the arrival-order history used by Prior when a view has
 	// a separate previous-access ordering, such as TimeOrder or Sort.
 	PriorHistory []Event
@@ -1191,6 +1198,19 @@ func PrevTail[V any](offset int, expression Expression[V]) Expression[V] {
 	description := fmt.Sprintf("prev-tail(%d,%s)", offset, expression.Description())
 	return makeExpr[V]("prev-tail", description, []*exprNode{expression.node()}, func(ctx EvalContext) Value {
 		history := previousWindowHistory(ctx)
+		if ctx.PreviousWindowBatch {
+			// Java's batch views anchor prevtail absolutely to the flushed
+			// batch (index zero is the oldest released row) for every row
+			// that the flush carried.
+			history = ctx.PreviousHistory
+			if offset < 0 || len(history) == 0 || offset >= len(history) {
+				return Null()
+			}
+			nested := ctx
+			nested.Event = history[offset]
+			nested.History = append([]Event(nil), history[:offset+1]...)
+			return expression.eval(nested)
+		}
 		if offset < 0 || len(history) == 0 {
 			return Null()
 		}
@@ -1220,6 +1240,9 @@ func PrevCount[V any](expression Expression[V]) Expression[int64] {
 	}
 	return makeExpr[int64]("prev-count", description, children, func(ctx EvalContext) Value {
 		history := previousWindowHistory(ctx)
+		if ctx.PreviousWindowBatch {
+			history = ctx.PreviousHistory
+		}
 		if expression == nil || (ctx.IsLeaving && history == nil) {
 			return Null()
 		}
@@ -1239,6 +1262,11 @@ func PrevWindow[V any](expression Expression[V]) Expression[[]V] {
 	}
 	return makeExpr[[]V]("prev-window", description, children, func(ctx EvalContext) Value {
 		history := previousWindowHistory(ctx)
+		if ctx.PreviousWindowBatch {
+			// Java's batch views return the whole flushed batch newest-first
+			// for every released row.
+			history = ctx.PreviousHistory
+		}
 		if expression == nil || len(history) == 0 || (ctx.IsLeaving && history == nil) {
 			return Null()
 		}
@@ -1256,7 +1284,14 @@ func PrevWindow[V any](expression Expression[V]) Expression[[]V] {
 				nested.PreviousWindowAccess = true
 			} else {
 				nested.History = append([]Event(nil), events[:index+1]...)
-				nested.PreviousHistory = nil
+				if ctx.PreviousWindowBatch {
+					// Keep the flushed-batch buffer readable to nested
+					// prev-family expressions; only the per-row prefix in
+					// History narrows to the reversed window prefix.
+					nested.PreviousHistory = append([]Event(nil), history...)
+				} else {
+					nested.PreviousHistory = nil
+				}
 				nested.PreviousWindowAccess = false
 			}
 			nested.PriorHistory = nil
