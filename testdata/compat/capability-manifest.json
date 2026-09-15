@@ -963,6 +963,7 @@
     "internal/app/parity/resultset_querytype_local_group_by.go",
     "internal/app/parity/resultset_querytype_local_group_ungrouped.go",
     "internal/app/parity/resultset_querytype_local_group_extended.go",
+    "internal/app/parity/resultset_querytype_local_group_grouped.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 3,
@@ -39327,6 +39328,79 @@
     "Java asserts the ord-8 batches any-order while the oracle records the emitted retained-window order; the typed Go `JoinMany(JoinSource(driver).Unidirectional(), JoinSource(passive keepall))` with `LocalGroupBy(Sum[int32], theString)` and the `LengthWindow(4)` local-group columns reproduce both. scenario/oracle validators pin Java metadata, EPL text, step order, row counts and mutation rejection; no engine change was required."
    ]
   },
+ {
+   "id": "case.resultset-querytype-local-group-by-grouped",
+   "javaRuntimeIds": [
+    "java-runtime-49be8402f85fb067edc3",
+    "java-runtime-9a3385eedb2df5f1627c",
+    "java-runtime-6f77d02f924ecaa4c3ca"
+   ],
+   "javaNames": [
+    "ResultSetLocalGroupedSimple",
+    "ResultSetLocalGroupedMultiLevelMethod",
+    "ResultSetLocalGroupedMultiLevelNoDefaultLvl"
+   ],
+   "javaStaticIds": [
+    "java-c2618f1757daf7867b21",
+    "java-c4b89d0fa19bf787a80e",
+    "java-59de6fa8771761db231b"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupGroupedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupGroupedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupGroupedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupGroupedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupGroupedRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupGroupedRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "local-group-by",
+    "aggregate",
+    "grouped",
+    "window",
+    "snapshot",
+    "virtual-time",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-local-group-grouped.json",
+    "testdata/parity/resultset-querytype-local-group-grouped.trace.json",
+    "testdata/parity/resultset-querytype-local-group-grouped.go.trace.json",
+    "testdata/parity/resultset-querytype-local-group-grouped.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeLocalGroupGroupedScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-local-group-grouped.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-49be8402f85fb067edc3",
+    "java-runtime-9a3385eedb2df5f1627c",
+    "java-runtime-6f77d02f924ecaa4c3ca"
+   ],
+   "notes": [
+    "ResultSetQueryTypeLocalGroupBy ordinals 10/11/14 replay one deterministic chain (9 Java/Go records, 0 differences): ord 10 pins the five per-event grouped rows of `SupportBean#length(4) group by theString, intPrimitive` with sum/count/window(*) at the theString, intPrimitive and global local levels plus the outer-group sum (including the first-event expiry at length(4)); ords 11/14 pin the two `output snapshot every 10 seconds` batches over an unbounded stream at t=10s/20s.",
+    "Java delivers snapshot batches in HashMap group order, which is not a contract, so both traces pin the canonical ascending (theString, intPrimitive) row order; the Java execution also asserts new-only, and the oracle confirmed zero old rows (all five ord-10 callbacks carried exactly one new row and no old data), so the pin is new-only. Typed Go uses `GroupBy` with `LocalGroupBy(Sum[int64]/CountAll/WindowEvents, keys...)` over `LengthWindow(4)` and `OutputSnapshotEvery(10s)`; no engine change was required."
+   ]
+  },
   {
    "id": "case.resultset-output-limit-row-limit-context-grouped",
    "javaRuntimeIds": [
@@ -44489,6 +44563,10 @@
    "caseId": "case.resultset-querytype-local-group-by-extended"
   },
   {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-by-grouped"
+  },
+  {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit"
   },
@@ -44702,10 +44780,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 654,
-  "implementedCases": 652,
-  "differentialVerifiedCases": 280,
-  "differentialVerifiedRuntimeIds": 1029,
+  "inventoriedCases": 655,
+  "implementedCases": 653,
+  "differentialVerifiedCases": 281,
+  "differentialVerifiedRuntimeIds": 1032,
   "intentionallyDifferentCases": 25,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -44715,13 +44793,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3625,
+  "runtimeAssociationCount": 3628,
   "referencedJavaRuntimeIds": 3299,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 837,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 654,
+  "totalCases": 655,
   "totalCapabilities": 120
  }
 }

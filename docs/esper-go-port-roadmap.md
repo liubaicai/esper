@@ -296,6 +296,7 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.408（2026-09-15），resultset 本地分组 grouped 差分链：新增 `case.resultset-querytype-local-group-by-grouped`（ResultSetQueryTypeLocalGroupBy ords 10/11/14：length(4) 逐事件十列、snapshot-every 双边界多层级和/计数/window 列），Java/Go 各 9 条 records、0 differences，26 个 scenario 步骤，零引擎改动。summary：655 cases、281 DV cases、1032 DV runtime IDs。
 > 最新补充：Draft 4.407（2026-09-15），resultset 本地分组 extended 差分链：新增 `case.resultset-querytype-local-group-by-extended`（ResultSetQueryTypeLocalGroupBy ords 8-9：unidirectional join 局部和、length(4) 三层 window/count/sum 列），Java/Go 各 7 条 records、0 differences，13 个 scenario 步骤，零引擎改动。summary：654 cases、280 DV cases、1029 DV runtime IDs。
 > 最新补充：Draft 4.406（2026-09-15），resultset 本地分组 ungrouped 差分链：新增 `case.resultset-querytype-local-group-by-ungrouped`（ResultSetQueryTypeLocalGroupBy ords 3-6：iter 迭代快照、SODA 文本/模型孪生、列名渲染），Java/Go 各 13 条 records、0 differences，20 个 scenario 步骤，零引擎改动，零核心改动。summary：653 cases、279 DV cases、1027 DV runtime IDs、25 intentionally-different。
 > 最新补充：Draft 4.405（2026-09-14），event/json 子域第二个差分链：`event-json-adapter` 链覆盖 EventJsonAdapter 三个可观测 executions（insert-into、create-schema 串转换、doc-sample），Java/Go 各 8 条 records、0 differences；适配器两类诊断升级为 ErrorInvalidRule 分类并由进程内测试断言；manifest 拆分出 `case.event-json-adapter-invalid`（intentionally-different）。summary：652 cases、278 DV cases、1023 DV runtime IDs、25 intentionally-different。

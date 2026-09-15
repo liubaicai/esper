@@ -1,0 +1,80 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-local-group-grouped",
+  "description": "ResultSetQueryTypeLocalGroupBy ordinals 10/11/14: grouped local-group aggregates over a length window and under snapshot-every output.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java",
+  "javaRuntimes": [
+    "java-runtime-49be8402f85fb067edc3",
+    "java-runtime-9a3385eedb2df5f1627c",
+    "java-runtime-6f77d02f924ecaa4c3ca"
+  ],
+  "javaNames": [
+    "ResultSetLocalGroupedSimple",
+    "ResultSetLocalGroupedMultiLevelMethod",
+    "ResultSetLocalGroupedMultiLevelNoDefaultLvl"
+  ],
+  "javaStaticIds": [
+    "java-c2618f1757daf7867b21",
+    "java-c4b89d0fa19bf787a80e",
+    "java-59de6fa8771761db231b"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "grouped-simple",
+      "ordinal": 10,
+      "runtimeId": "java-runtime-49be8402f85fb067edc3",
+      "executionName": "ResultSetLocalGroupedSimple",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@Name('s0') select sum(longPrimitive, group_by:theString) as c0,count(*, group_by:theString) as c1,window(*, group_by:theString) as c2,sum(longPrimitive, group_by:intPrimitive) as c3,count(*, group_by:intPrimitive) as c4,window(*, group_by:intPrimitive) as c5,sum(longPrimitive, group_by:()) as c6,count(*, group_by:()) as c7,window(*, group_by:()) as c8,sum(longPrimitive) as c9 from SupportBean#length(4)group by theString, intPrimitive"
+    },
+    {
+      "case": "grouped-multi-level-method",
+      "ordinal": 11,
+      "runtimeId": "java-runtime-9a3385eedb2df5f1627c",
+      "executionName": "ResultSetLocalGroupedMultiLevelMethod",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select theString, intPrimitive, sum(longPrimitive, group_by:(intPrimitive, theString)) as c0, sum(longPrimitive) as c1, sum(longPrimitive, group_by:(theString)) as c2, sum(longPrimitive, group_by:(intPrimitive)) as c3, sum(longPrimitive, group_by:()) as c4 from SupportBean group by theString, intPrimitive output snapshot every 10 seconds"
+    },
+    {
+      "case": "grouped-multi-level-no-default-lvl",
+      "ordinal": 14,
+      "runtimeId": "java-runtime-6f77d02f924ecaa4c3ca",
+      "executionName": "ResultSetLocalGroupedMultiLevelNoDefaultLvl",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select theString, intPrimitive, sum(longPrimitive, group_by:(theString)) as c0, sum(longPrimitive, group_by:(intPrimitive)) as c1, sum(longPrimitive, group_by:()) as c2 from SupportBean group by theString, intPrimitive output snapshot every 10 seconds"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "grouped-simple"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 100}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10, "longPrimitive": 101}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 20, "longPrimitive": 102}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 103}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 104}},
+    {"op": "case", "case": "grouped-multi-level-method"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 100}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 20, "longPrimitive": 202}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10, "longPrimitive": 303}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 404}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10, "longPrimitive": 505}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:10Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 1}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:20Z"},
+    {"op": "case", "case": "grouped-multi-level-no-default-lvl"},
+    {"op": "advance-time", "at": "1970-01-01T00:00:00Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 100}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 20, "longPrimitive": 202}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10, "longPrimitive": 303}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 404}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10, "longPrimitive": 505}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:10Z"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 1}},
+    {"op": "advance-time", "at": "1970-01-01T00:00:20Z"}
+  ]
+}
