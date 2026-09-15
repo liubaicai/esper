@@ -237,8 +237,33 @@ Active: Draft 4.409 ('resultset-querytype-local-group-ungrouped-agg').
 - [x] Independent parity review (agent ReviewCurrent4): OVERALL PASS, areas A-E all PASS, no P0/P1/P2;
       both P3 findings were manifest-note accuracy (stale `CountAll` enumeration and the undisclosed
       filtered-variant evidence limit) and are fixed in this commit.
-- [ ] Commit and push the work unit; then start N+1 from the prefetched survey of the remaining
-      ordinals (12/16/17/18/19/20/21/22/23/24/26/27).
+- [x] Shipped; Git owns identity. Draft 4.409 committed and pushed as `5b0b454c2`; manifest 656
+      cases / 282 DV cases / 1036 DV runtime IDs.
+
+## Next work unit (prefetched, not started)
+N+1: Draft 4.410 ('resultset-querytype-local-group-row-remove') covering ResultSetQueryTypeLocalGroupBy
+ordinals 20 `ResultSetLocalUngroupedRowRemove` (`java-runtime-3a47ac428a21e66d8614`, static
+`java-3da6ea3da5df0d53578a`) and 21 `ResultSetLocalGroupedRowRemove`
+(`java-runtime-07d68fdd9a8dffc8c7f4`, static `java-ce99d7bbb48728947c59`).
+
+- Contract (frozen read-only by agents NextJavaContract4 + NextGoSurface4): one trigger harness per
+  case (`create window MyWindow#keepall as SupportBean`, `insert into MyWindow select * from
+  SupportBean`, `on SupportBean_S0 delete from MyWindow where p00 = theString and id = intPrimitive`,
+  `on SupportBean_S1 delete from MyWindow`). Ord 20 query `select theString, intPrimitive,
+  sum(longPrimitive) as c0, sum(longPrimitive, group_by:theString) as c1 from MyWindow` is ungrouped
+  row-per-event: nine sends produce six new-only rows and the two delete sends deliver NO callback
+  (`assertListenerNotInvoked`), with c0/c1 recomputed over the retained rows. Ord 21 adds
+  `group by theString, intPrimitive`: an emptied group delivers `{E1,10,null,null}` rows, and the
+  delete-all send resets the listener (Java asserts nothing there, so the oracle trace is the
+  contract and any multi-group callback must be canonicalized ascending by (theString, intPrimitive)).
+- Expected Go surface: `CreateNamedWindow` KeepAll, `InsertIntoNamedWindow`, `DeleteFromNamedWindow`
+  (predicate), `DeleteAllFromNamedWindow`, `FromNamedWindow`, `Aggregate`/`GroupBy`/`LocalGroupBy(Sum)`.
+  Zero engine change expected; both ords share one oracle + scenario + evidence set.
+- Deferred/blocked ordinals from the same survey: 15 (JVM plan-printing hook), 16 (compile-diagnostic
+  text), 25 (JVM plugin aggregate) are excluded; 22 needs a new public non-rollup grouped on-select API;
+  17 + 23 form a context + `output snapshot when terminated` unit; 12 is its own small unit (TimeWindow
+  expiry coinciding with the snapshot boundary plus float division); 18 + 19 + 26 (+27) are the
+  fallback `local-group key representation` unit (object-array schemas, array-typed keys).
 
 ### Previous work unit (prior)
 
