@@ -4271,7 +4271,6 @@
    "status": "implemented",
    "remaining": [
     "ViewLengthWinWPropertyDetail",
-    "ViewFirstTime suite",
     "ViewTimeBatch suite",
     "ViewParameterizedByContext suite"
    ],
@@ -4311,7 +4310,10 @@
     "java-runtime-cc6e1ac37196bc5ae5e8",
     "java-runtime-c9c0f3b2ebd23aedce50",
     "java-runtime-25dfb49811c974a34e5d",
-    "java-runtime-a8007c80ae5756bb4ddb"
+    "java-runtime-a8007c80ae5756bb4ddb",
+    "java-runtime-9733dfdbee02d899bb23",
+    "java-runtime-b1061971825b14664ff2",
+    "java-runtime-ac89ffce844dc00114f7"
    ]
   },
   {
@@ -23544,7 +23546,9 @@
     "TestViewTimeAccumPreviousAndPriorSceneTwoParity",
     "TestViewTimeAccumMonthScopedParity",
     "TestViewTimeAccumSumParity",
-    "TestViewTimeAccumGroupedWindowParity"
+    "TestViewTimeAccumGroupedWindowParity",
+    "internal/app/parity/run_test.go:TestRunViewFirstTimeDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewFirstTimeDiffRejectsTraceMutations"
    ],
    "tags": [
     "anchor-first-event",
@@ -23564,17 +23568,28 @@
     "view",
     "virtual-clock"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
     "java-runtime-inventory",
-    "go-unit"
+    "go-unit",
+    "testdata/parity/view-first-time.json",
+    "testdata/parity/view-first-time.trace.json",
+    "testdata/parity/view-first-time.evidence.json",
+    "tools/java-oracle/ViewFirstTimeScenarioOracle.java",
+    "tools/java-oracle/run-view-first-time.sh"
    ],
    "difference": "",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ],
-   "notes": "Draft 4.403 (2026-09-14) closed the go-unit coverage gaps recorded by the 4.402 reconciliation: ViewTimeAccumPreviousAndPriorSceneOne/Two (prev/prior over time_accum, incl. old-batch prior survival with null window history), ViewTimeAccumSum (running aggregate rows, empty-window null at expiry), ViewTimeAccumGroupedWindow (per-group accum deadlines, exact-order group flushes) and ViewTimeAccumMonthScoped (TimeAccumCalendar month boundary, its first end-to-end exercise) are pinned Java-behavior parity tests now. Engine fix: prev-family access over time_accum windows previously returned null/empty history - the accum window now provides newest-first prev-access history (window_previous_access.go). The 4.402-dropped phantom names were never written; the replacements above are the real pins."
+   "notes": "Draft 4.422: PARTIAL differential upgrade — the three ViewFirstTime executions (firsttime(1 month) calendar anchor with E2 admitted at deadline-minus-1ms and E3 at the deadline tick never admitted; firsttime(10 sec) c0/c1 projection with deadline retention; firsttime(1 sec) irstream wildcard with SILENT deadline expiry) are differential-verified via the view-first-time chain (3 cases, 13 records, 0 differences, zero engine change). The remaining 35 executions of this mega case stay implemented-not-DV under their own suites (time-batch, time-accum, time-length-batch, ext-timed families).",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9733dfdbee02d899bb23",
+    "java-runtime-b1061971825b14664ff2",
+    "java-runtime-ac89ffce844dc00114f7"
+   ]
   },
   {
    "id": "case.pattern-composite-select",
@@ -45571,8 +45586,8 @@
  "summary": {
   "inventoriedCases": 666,
   "implementedCases": 664,
-  "differentialVerifiedCases": 292,
-  "differentialVerifiedRuntimeIds": 1076,
+  "differentialVerifiedCases": 293,
+  "differentialVerifiedRuntimeIds": 1079,
   "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,

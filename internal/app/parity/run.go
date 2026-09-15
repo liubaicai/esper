@@ -56,6 +56,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-aggregate-filtered-w-math-context and resultset-aggregate-filtered-w-math-context-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-named-window-insert-shape and infra-named-window-insert-shape-diff")
 		fmt.Fprintln(stderr, "runner modes include view-time-win and view-time-win-diff")
+		fmt.Fprintln(stderr, "runner modes include view-first-time and view-first-time-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-named-window-final-views and infra-named-window-final-views-diff")
 		flags.PrintDefaults()
 	}
@@ -3511,6 +3512,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNwTableFafJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNwTableFafJoinJavaSources),
 				splitMetadata(*javaExecutions, infraNwTableFafJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "view-first-time" || *mode == "view-first-time-diff" {
+		trace, err := runViewFirstTimeScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-first-time-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewFirstTimeJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewFirstTimeJavaSources),
+				splitMetadata(*javaExecutions, viewFirstTimeJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -15223,6 +15223,109 @@ func TestRunViewLengthBatchDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunViewFirstTimeDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-first-time.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "view-first-time.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-first-time.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "view-first-time-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunViewFirstTimeDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "simple-deadline-admission-leak",
+			mutate: func(trace *compat.Trace) {
+				// E3 sent at the deadline tick is never admitted; the
+				// window must stay [E1,E2].
+				trace.Records[2].New = append(trace.Records[2].New, compat.ResultRecord{
+					Kind:   "row",
+					Fields: map[string]any{"doubleBoxed": nil, "intPrimitive": 3, "theString": "E3"},
+				})
+			},
+		},
+		{
+			name: "scene-one-retention-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[1].Fields["c1"] = 99
+			},
+		},
+		{
+			name: "scene-one-preatmission-snapshot-leak",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New = append(trace.Records[3].New, compat.ResultRecord{
+					Kind:   "row",
+					Fields: map[string]any{"c0": "E1", "c1": 1},
+				})
+			},
+		},
+		{
+			name: "scene-two-expiry-row-appears",
+			mutate: func(trace *compat.Trace) {
+				// The deadline expiry is silent; no old-data rows exist.
+				trace.Records[12].Old = []compat.ResultRecord{{
+					Kind:   "row",
+					Fields: map[string]any{"feed": nil, "price": 0.0, "symbol": "E1", "volume": 0},
+				}}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-first-time.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "view-first-time.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-first-time.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "view-first-time-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunViewTimeWinDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "view-time-win.evidence.json"),

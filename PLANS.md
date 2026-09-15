@@ -612,6 +612,43 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.422 ('view-first-time-differential').
+
+- Unit: the ViewFirstTime suite slice of `case.view-timebatch-basic` (38-runtime-ID mega case,
+      implemented-not-DV): ViewFirstTimeSimple (java-runtime-9733dfdbee02d899bb23),
+      ViewFirstTimeSceneOne (java-runtime-b1061971825b14664ff2), ViewFirstTimeSceneTwo
+      (java-runtime-ac89ffce844dc00114f7) differential-verified via NEW chain `view-first-time`
+      (3 cases), following the view-time-win pattern. Case upgrade is PARTIAL (3 of 38 runtime
+      IDs DV) — precedent: case.view-length-batch was differential-verified with deferred
+      executions noted from 4.242 through 4.418.
+- [x] Java contract read in full from ViewFirstTime.java; Go surface = existing FirstTime /
+      FirstTimeCalendar facade + view_first_time_parity_test.go (Go tests use a MODIFIED Simple
+      schedule — the chain pins the Java-verbatim one: E3 sent exactly AT the 1-month deadline is
+      NOT admitted, iterator stays [E1,E2]; SceneTwo's assertListenerNotInvoked at 1500 proves the
+      firsttime deadline expiry is SILENT — no old-data delivery to an irstream statement; if the
+      Go replay shows expiry listener records that is an engine fix).
+      SERIAL IMPLEMENTATION documented: the oracle is a three-arm clone of this session's
+      ViewTimeWinScenarioOracle pattern; contract fully in-context; no independent parallel scope.
+- [x] Scenario (testdata/parity/view-first-time.json, 3 cases / 38 steps) + runner
+      (internal/app/parity/view_first_time.go) + run.go wiring + run_test family (passing + 4
+      mutations) written by the primary agent; oracle/script via agent OracleAssets (javac-checked,
+      verbatim EPL incl. @Name capital-N in scene-one).
+- [x] Differential replay: Java trace 13 records; Go replay 13 records; evidence status passing /
+      0 differences on the FIRST run — zero engine change needed (Go FirstTime admission window,
+      silent deadline expiry, and iterator retention already match Java).
+- [x] Manifest: case.view-timebatch-basic → differential-verified PARTIAL (3/38 runtime IDs DV,
+      notes recorded, evidence + goTests +2); capability view.basic-windows remaining minus
+      ViewFirstTime suite, DV list 31→34; summary → 293 DV cases / 1079 DV runtime IDs. Facts
+      recorded (CHANGELOG + roadmap newest-first, Draft 4.422).
+- [x] Independent parity review (agent ParityReview): OVERALL PASS, areas 1-7 all PASS, no
+      P0/P1/P2. Three informational P3s (snapshot sequence rendering convention, mutation index
+      12 semantics documented, evidence schema parity with prior chains) — no action. Gates
+      re-verified by the reviewer. Shipped; Git owns identity — Draft 4.422 committed and pushed
+      (chain view-first-time; case.view-timebatch-basic partial DV 3/38; manifest 293 DV cases /
+      1079 DV runtime IDs; view.basic-windows remaining now ViewLengthWinWPropertyDetail,
+      ViewTimeBatch suite, ViewParameterizedByContext suite).
+
+## Current work unit
 Active: Draft 4.421 ('view-timewin-scenes-differential').
 
 - Unit: `case.view-timewindow-scenes` (implemented-not-DV, runtime IDs

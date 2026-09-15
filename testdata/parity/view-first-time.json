@@ -1,0 +1,218 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-first-time",
+ "description": "All three ViewFirstTime executions replayed per pinned module under the virtual clock: first-time-simple anchors a calendar-month firsttime window at 2002-02-01T09:00:00Z, admits E1 and E2 before the deadline (E2 at minus one millisecond), never admits E3 sent at the deadline tick and keeps iterator [E1,E2]; first-time-scene-one projects c0/c1 over firsttime(10 sec) with two admitted rows, quiet 9999, deadline-anchored iterator retention and E3/E4 never admitted; first-time-scene-two replays irstream wildcard firsttime(1 sec) with two admitted market events and silent deadline expiry (1500/1600/2000 advances deliver nothing).",
+ "javaRuntimes": [
+  "java-runtime-9733dfdbee02d899bb23",
+  "java-runtime-b1061971825b14664ff2",
+  "java-runtime-ac89ffce844dc00114f7"
+ ],
+ "cases": [
+  {
+   "case": "first-time-simple",
+   "runtimeId": "java-runtime-9733dfdbee02d899bb23"
+  },
+  {
+   "case": "first-time-scene-one",
+   "runtimeId": "java-runtime-b1061971825b14664ff2"
+  },
+  {
+   "case": "first-time-scene-two",
+   "runtimeId": "java-runtime-ac89ffce844dc00114f7"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "first-time-simple"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-02-01T09:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-02-15T09:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-01T08:59:59.999Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-03-01T09:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "first-time-scene-one"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:09.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 30
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 40
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "first-time-scene-two"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.500Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00.600Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.500Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01.600Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E3"
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E4"
+   }
+  }
+ ]
+}
