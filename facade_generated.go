@@ -3577,7 +3577,14 @@ func Linest[X Numeric, Y Numeric](x Expression[X], y Expression[Y]) LinearRegres
 	return internalengine.Linest[X, Y](x, y)
 }
 
-// Listener receives one deterministic new/old-stream batch.
+// Listener receives one deterministic new/old-stream batch. A listener may
+// retain the delivered batch: the engine never reuses or mutates its slice
+// arrays after dispatch. Within one dispatch, all but the last consumer
+// receive a private clone, so in-place slice mutation of a delivered batch is
+// invisible to the statement's other consumers; mutating a borrowed (last)
+// batch affects only that dead dispatch copy. As before, Result values share
+// their underlying event/row pointers across consumers, so deep mutation
+// through them remains visible everywhere.
 type Listener = internalengine.Listener
 
 // Literal creates a constant expression.
@@ -6072,6 +6079,9 @@ type SimpleCaseBuilder[T any] = internalengine.SimpleCaseBuilder[T]
 
 // Sink is the chain endpoint for asynchronous integration adapters. The
 // default Engine path still invokes it synchronously for Esper-like ordering.
+// Sinks follow the Listener retention/mutation contract: the delivered batch
+// may be retained, and the sink — as the last dispatch consumer — receives
+// the borrowed batch whose in-place slice mutation stays private to it.
 type Sink = internalengine.Sink
 
 type SinkFunc = internalengine.SinkFunc
