@@ -6869,9 +6869,34 @@ func numericAggregateValues[T Numeric](expression Expression[T], ctx EvalContext
 
 func aggregateExtreme[T Ordered](kind string, expression Expression[T], minimum bool) AggregateExpression[T] {
 	return makeAggregateExpr[T](kind, kind+"("+expression.Description()+")", []*exprNode{expression.node()}, func(ctx EvalContext) Value {
+		// A nested aggregate such as max(sum(price)) is evaluated bottom-up by
+		// Esper: its inner aggregate contributes one value for each historical
+		// group prefix, including events that have since left a data window
+		// (the same rule the nested Avg implements). Ordinary (non-aggregate)
+		// expressions keep evaluating per retained event.
+		events := ctx.Group
+		historical := isAggregateExpression(expression)
+		if historical && len(ctx.EverGroup) > 0 {
+			events = ctx.EverGroup
+		}
 		var result Value
-		for index, event := range ctx.Group {
-			value := expression.eval(ctx.groupEventContext(event, index))
+		for index, event := range events {
+			evaluation := ctx.groupEventContext(event, index)
+			if historical {
+				// Keep the complete aggregate evaluation context while narrowing
+				// the nested aggregate to this event's cumulative prefix. Do not
+				// use groupEventContext here: it intentionally clears Group for
+				// ordinary per-event expressions.
+				evaluation = ctx
+				evaluation.Event = event
+				evaluation.Group = append([]Event(nil), events[:index+1]...)
+				evaluation.EverGroup = append([]Event(nil), events[:index+1]...)
+				evaluation.History = append([]Event(nil), events[:index+1]...)
+				if index < len(ctx.GroupTags) {
+					evaluation.GroupTags = append([]map[string]Event(nil), ctx.GroupTags[:index+1]...)
+				}
+			}
+			value := expression.eval(evaluation)
 			if !value.IsPresent() {
 				continue
 			}

@@ -1,0 +1,158 @@
+{
+  "version": "esper-parity/v1",
+  "id": "orderby-rowperevent-agg",
+  "description": "ResultSetOrderByRowPerEvent ordinals 3 and 5: ungrouped row-per-event aggregates ordered by an order-by key that mixes the event's volume with sum(price), and the nested max(sum(price)) historical-prefix aggregate, both delivered once per six events over a length(10) window.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByRowPerEvent.java",
+  "javaRuntimes": [
+    "java-runtime-e5b38082f9b30ce8a13b",
+    "java-runtime-1be3cb0efcdb94f20d5f"
+  ],
+  "javaNames": [
+    "ResultSetRowPerEventOrderFunction",
+    "ResultSetRowPerEventMaxSum"
+  ],
+  "javaStaticIds": [
+    "java-f583dbb6e793f0fae373",
+    "java-55bd91f3bd2eecde7acf"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "order-function",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-e5b38082f9b30ce8a13b",
+      "executionName": "ResultSetRowPerEventOrderFunction",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, sum(price) from SupportMarketDataBean#length(10) output every 6 events order by volume*sum(price), symbol"
+    },
+    {
+      "case": "max-sum",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-1be3cb0efcdb94f20d5f",
+      "executionName": "ResultSetRowPerEventMaxSum",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select symbol, max(sum(price)) from SupportMarketDataBean#length(10) output every 6 events order by symbol"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "order-function"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "price": 2,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "KGB",
+        "price": 1,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CMU",
+        "price": 3,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "price": 6,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CAT",
+        "price": 6,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CAT",
+        "price": 5,
+        "volume": 0
+      }
+    },
+    {
+      "op": "case",
+      "case": "max-sum"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "price": 3,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "price": 4,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CMU",
+        "price": 1,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CMU",
+        "price": 2,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CAT",
+        "price": 5,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CAT",
+        "price": 6,
+        "volume": 0
+      }
+    }
+  ]
+}

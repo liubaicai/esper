@@ -41,6 +41,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-context-terminated and resultset-querytype-local-group-context-terminated-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-keys and resultset-querytype-local-group-keys-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-solution-pattern and resultset-querytype-local-group-solution-pattern-diff")
+		fmt.Fprintln(stderr, "runner modes include orderby-rowperevent-agg and orderby-rowperevent-agg-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-aggregate-grouped-having and resultset-querytype-aggregate-grouped-having-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-orderby-aggregate-grouped and resultset-orderby-aggregate-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-context-grouped and resultset-output-limit-row-limit-context-grouped-diff")
@@ -267,6 +268,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetQueryTypeLocalGroupKeysScenario(file)
 	} else if *mode == "resultset-querytype-local-group-solution-pattern" || *mode == "resultset-querytype-local-group-solution-pattern-diff" {
 		scenario, err = loadResultSetQueryTypeLocalGroupSolutionScenario(file)
+	} else if *mode == "orderby-rowperevent-agg" || *mode == "orderby-rowperevent-agg-diff" {
+		scenario, err = loadOrderByRowPerEventAggScenario(file)
 	} else if *mode == "resultset-output-limit-row-limit-context-grouped" || *mode == "resultset-output-limit-row-limit-context-grouped-diff" {
 		scenario, err = loadResultsetOutputLimitRowLimitContextGroupedScenario(file)
 	} else if *mode == "resultset-output-limit-row-limit" || *mode == "resultset-output-limit-row-limit-diff" {
@@ -3914,6 +3917,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeLocalGroupSolutionJavaRuntimeIDs()),
 				splitMetadata(*javaSourceFiles, resultSetQueryTypeLocalGroupSolutionSources),
 				splitMetadata(*javaExecutions, resultSetQueryTypeLocalGroupSolutionJavaExecutions()), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "orderby-rowperevent-agg" || *mode == "orderby-rowperevent-agg-diff" {
+		trace, err := runOrderByRowPerEventAggScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "orderby-rowperevent-agg-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, orderbyRowPerEventAggJavaRuntimeIDs()),
+				splitMetadata(*javaSourceFiles, orderbyRowPerEventAggSources),
+				splitMetadata(*javaExecutions, orderbyRowPerEventAggJavaExecutions()), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

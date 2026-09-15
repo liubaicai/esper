@@ -54502,3 +54502,416 @@ func mustFloat64(t *testing.T, value any) float64 {
 	}
 	return parsed
 }
+
+func TestRunOrderByRowPerEventAggDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "orderby-rowperevent-agg",
+		"-scenario", filepath.Join(root, "orderby-rowperevent-agg.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertOrderByRowPerEventAggTrace(t, trace)
+}
+
+func TestRunOrderByRowPerEventAggDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "orderby-rowperevent-agg.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "orderby-rowperevent-agg-diff",
+		"-scenario", filepath.Join(root, "orderby-rowperevent-agg.json"),
+		"-java-trace", filepath.Join(root, "orderby-rowperevent-agg.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != orderbyRowPerEventAggJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, orderbyRowPerEventAggJavaRuntimeIDs()) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, orderbyRowPerEventAggSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, orderbyRowPerEventAggJavaExecutions()) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertOrderByRowPerEventAggTrace(t, evidence.JavaTrace)
+	assertOrderByRowPerEventAggTrace(t, evidence.GoTrace)
+}
+
+func TestRunOrderByRowPerEventAggDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "order-function-symbol", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["symbol"] = "D"
+		}},
+		{name: "order-function-sum", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[1].Fields["sum(price)"] = json.Number("24")
+		}},
+		{name: "order-function-row-order", mutate: func(trace *compat.Trace) {
+			// The exact-order assertion pins CAT 18 before CAT 23.
+			trace.Records[0].New[0], trace.Records[0].New[1] = trace.Records[0].New[1], trace.Records[0].New[0]
+		}},
+		{name: "max-sum-first-row", mutate: func(trace *compat.Trace) {
+			// The first delivered row's prefix maximum is 3 (the running sum at
+			// that event), not the final 21.
+			trace.Records[1].New[0].Fields["max(sum(price))"] = json.Number("21")
+		}},
+		{name: "max-sum-running-value", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New[1].Fields["max(sum(price))"] = json.Number("22")
+		}},
+		{name: "max-sum-symbol", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New[2].Fields["symbol"] = "D"
+		}},
+		{name: "max-sum-last-row", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New[5].Fields["max(sum(price))"] = json.Number("23")
+		}},
+		{name: "sequence", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Sequence = 9
+		}},
+		{name: "time", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "row-count", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New = trace.Records[0].New[:5]
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "orderby-rowperevent-agg.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "orderby-rowperevent-agg.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "orderby-rowperevent-agg-diff",
+				"-scenario", filepath.Join(root, "orderby-rowperevent-agg.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunOrderByRowPerEventAggCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, "orderby-rowperevent-agg.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, "orderby-rowperevent-agg.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "orderby-rowperevent-agg.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from checked-in trace: %#v", differences)
+	}
+	assertOrderByRowPerEventAggTrace(t, javaTrace)
+	assertOrderByRowPerEventAggTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, "orderby-rowperevent-agg.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadOrderByRowPerEventAggScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		orderbyRowPerEventAggJavaCommit,
+		orderbyRowPerEventAggJavaRuntimeIDs(),
+		orderbyRowPerEventAggSources,
+		orderbyRowPerEventAggJavaExecutions(),
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "orderby-rowperevent-agg",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertOrderByRowPerEventAggTrace(t, replayed)
+}
+
+func TestRunOrderByRowPerEventAggRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "orderby-rowperevent-agg.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "orderby-rowperevent-agg"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-name", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "max-sum"`), []byte(`"case": "wrong-case"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"executionName": "ResultSetRowPerEventMaxSum",`), []byte(`"executionName": "ResultSetRowPerEventMaxSum", "extra": 0,`), 1)
+		}},
+		{name: "observation-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"observation": "listener"`), []byte(`"observation": "iterator"`), 1)
+		}},
+		{name: "epl-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`order by volume*sum(price), symbol`), []byte(`order by symbol`), 1)
+		}},
+		{name: "epl-mismatch-nested", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select symbol, max(sum(price)) from SupportMarketDataBean`), []byte(`select symbol, min(sum(price)) from SupportMarketDataBean`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 5`), []byte(`"ordinal": 6`), 1)
+		}},
+		{name: "static-id-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-55bd91f3bd2eecde7acf"`), []byte(`"java-wrong"`), 1)
+		}},
+		{name: "send-payload-wrong-symbol", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "CMU",`+"\n"+`        "price": 3`), []byte(`"symbol": "D",`+"\n"+`        "price": 3`), 1)
+		}},
+		{name: "send-payload-wrong-price", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "CAT",`+"\n"+`        "price": 5`), []byte(`"symbol": "CAT",`+"\n"+`        "price": 7`), 1)
+		}},
+		{name: "send-payload-volume-nonzero", mutate: func(data []byte) []byte {
+			// volume 0 collapses the ord-3 order key to 0.0; a non-zero volume
+			// changes the contract.
+			return bytes.Replace(data, []byte(`"price": 2,`+"\n"+`        "volume": 0`), []byte(`"price": 2,`+"\n"+`        "volume": 1`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportMarketDataBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": null`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "orderby-rowperevent-agg",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunOrderByRowPerEventAggRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "orderby-rowperevent-agg.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != orderbyRowPerEventAggID ||
+		document.Description != orderbyRowPerEventAggDescription ||
+		document.JavaCommit != orderbyRowPerEventAggJavaCommit ||
+		document.JavaSource != orderbyRowPerEventAggSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, orderbyRowPerEventAggJavaRuntimeIDs()) ||
+		!reflect.DeepEqual(document.JavaNames, orderbyRowPerEventAggJavaExecutions()) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, orderbyRowPerEventAggStaticIDs) ||
+		len(document.JavaFlags) != 0 {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	if len(document.Cases) != len(orderbyRowPerEventAggCaseSpecs) {
+		t.Fatalf("scenario cases = %d", len(document.Cases))
+	}
+	for index, spec := range orderbyRowPerEventAggCaseSpecs {
+		entry := document.Cases[index]
+		if entry.Case != spec.name || entry.Ordinal != spec.ordinal || entry.RuntimeID != spec.runtimeID ||
+			entry.ExecutionName != spec.execution || entry.Observation != "listener" ||
+			entry.IteratorSnapshots != 0 || entry.EPL != spec.epl {
+			t.Fatalf("scenario case %d = %#v", index, entry)
+		}
+	}
+}
+
+func assertOrderByRowPerEventAggTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != orderbyRowPerEventAggID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 2 {
+		t.Fatalf("trace records = %d, want 2", len(trace.Records))
+	}
+	// Ordinal 3: the ungrouped running window sums 2,3,6,12,18,23 delivered in
+	// `order by volume*sum(price), symbol` order (volume is 0L for every event,
+	// so the key collapses to 0.0 and `symbol` decides). Ordinal 5: the nested
+	// max(sum(price)) historical-prefix maximum per row, which for the monotone
+	// running sums equals the running sum at that row's own event.
+	boundaries := []struct {
+		caseName string
+		column   string
+		rows     []struct {
+			symbol string
+			value  float64
+		}
+	}{
+		{caseName: "order-function", column: "sum(price)", rows: []struct {
+			symbol string
+			value  float64
+		}{
+			{"CAT", 18}, {"CAT", 23}, {"CMU", 6}, {"IBM", 2}, {"IBM", 12}, {"KGB", 3},
+		}},
+		{caseName: "max-sum", column: "max(sum(price))", rows: []struct {
+			symbol string
+			value  float64
+		}{
+			{"CAT", 15}, {"CAT", 21}, {"CMU", 8}, {"CMU", 10}, {"IBM", 3}, {"IBM", 7},
+		}},
+	}
+	for index, boundary := range boundaries {
+		record := trace.Records[index]
+		if record.Case != boundary.caseName || record.Operation != "listener" ||
+			record.Statement != "s0" || record.Sequence != 1 ||
+			record.Time != "1970-01-01T00:00:00Z" || len(record.Old) != 0 || len(record.New) != 6 {
+			t.Fatalf("%s record = %#v", boundary.caseName, record)
+		}
+		for rowIndex, want := range boundary.rows {
+			fields := record.New[rowIndex].Fields
+			if value, ok := fields["symbol"].(string); !ok || value != want.symbol {
+				t.Fatalf("%s row %d symbol = %#v, want %q", boundary.caseName, rowIndex, fields["symbol"], want.symbol)
+			}
+			if got := mustFloat64(t, fields[boundary.column]); got != want.value {
+				t.Fatalf("%s row %d %s = %v, want %v", boundary.caseName, rowIndex, boundary.column, got, want.value)
+			}
+		}
+	}
+}

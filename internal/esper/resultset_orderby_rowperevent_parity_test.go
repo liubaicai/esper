@@ -443,3 +443,64 @@ func TestResultSetRowPerEventJoinParity(t *testing.T) {
 		}
 	}
 }
+
+// TestNestedMaxOfSumHistoricalPrefix pins the nested-aggregate form
+// max(sum(price)) over a length(10) window, ungrouped row-per-event: the inner
+// sum contributes one value for each historical group prefix ending at the
+// row's own event, and the outer max keeps the extreme, so each delivered row
+// carries the running window sum as of its own event. This is
+// ResultSetOrderByRowPerEvent's ResultSetRowPerEventMaxSum shape (running sums
+// 3, 7, 8, 10, 15, 21 for the sends below).
+func TestNestedMaxOfSumHistoricalPrefix(t *testing.T) {
+	type orderByEvent struct {
+		Symbol string  `esper:"symbol"`
+		Price  float64 `esper:"price"`
+	}
+	env := NewEnvironment()
+	if _, err := RegisterStruct[orderByEvent](env, "OrderByEvent"); err != nil {
+		t.Fatal(err)
+	}
+	symbol := Field[orderByEvent, string]("symbol")
+	price := Field[orderByEvent, float64]("price")
+	plan, err := env.Build(From[orderByEvent](env, "OrderByEvent").
+		Window(LengthWindow(10)).
+		Aggregate(
+			Alias("symbol", symbol),
+			Alias("maxSum", Max[float64](Sum[float64](price))),
+		).
+		Query(StatementName("nested-max-of-sum")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var latest Row
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		if len(batch.New) > 0 {
+			latest, _ = batch.New[len(batch.New)-1].Row()
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	events := []orderByEvent{
+		{Symbol: "IBM", Price: 3},
+		{Symbol: "IBM", Price: 4},
+		{Symbol: "CMU", Price: 1},
+		{Symbol: "CMU", Price: 2},
+		{Symbol: "CAT", Price: 5},
+		{Symbol: "CAT", Price: 6},
+	}
+	expected := []float64{3, 7, 8, 10, 15, 21}
+	for index, event := range events {
+		if err := engine.SendEvent(context.Background(), event); err != nil {
+			t.Fatal(err)
+		}
+		if got := latest.Get("maxSum").Any(); got != expected[index] {
+			t.Fatalf("nested max(sum) row %d = %#v, want %v", index, got, expected[index])
+		}
+	}
+}

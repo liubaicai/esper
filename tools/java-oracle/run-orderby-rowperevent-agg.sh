@@ -1,0 +1,178 @@
+#!/usr/bin/env sh
+set -eu
+
+usage() {
+    cat >&2 <<'EOF'
+usage: run-orderby-rowperevent-agg.sh --esper-root PATH --scenario PATH --output PATH [--skip-build]
+
+The Esper checkout must be exactly the pinned Java oracle commit. Java 17 and
+Maven are selected from PATH unless JAVA_HOME/MAVEN_HOME are provided.
+EOF
+    exit 2
+}
+
+esper_root=
+scenario=
+output=
+skip_build=0
+expected_commit=9e1b9f1cc9117fea4bf33ab043762c045d73839c
+script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --esper-root)
+            [ "$#" -ge 2 ] || usage
+            esper_root=$2
+            shift 2
+            ;;
+        --scenario)
+            [ "$#" -ge 2 ] || usage
+            scenario=$2
+            shift 2
+            ;;
+        --output)
+            [ "$#" -ge 2 ] || usage
+            output=$2
+            shift 2
+            ;;
+        --skip-build)
+            skip_build=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            echo "unknown argument: $1" >&2
+            usage
+            ;;
+    esac
+done
+
+[ -n "$esper_root" ] || { echo "--esper-root is required" >&2; exit 2; }
+[ -n "$scenario" ] || { echo "--scenario is required" >&2; exit 2; }
+[ -n "$output" ] || { echo "--output is required" >&2; exit 2; }
+[ -d "$esper_root/.git" ] || { echo "Esper root is not a Git checkout: $esper_root" >&2; exit 1; }
+[ -f "$scenario" ] || { echo "scenario was not found: $scenario" >&2; exit 1; }
+
+actual_commit=$(git -C "$esper_root" rev-parse HEAD 2>/dev/null) || {
+    echo "cannot read Esper Git commit" >&2
+    exit 1
+}
+[ "$actual_commit" = "$expected_commit" ] || {
+    echo "Esper checkout is $actual_commit; expected $expected_commit" >&2
+    exit 1
+}
+
+java_bin=${JAVA:-java}
+javac_bin=${JAVAC:-javac}
+mvn_bin=${MAVEN:-mvn}
+if [ -n "${JAVA_HOME:-}" ]; then
+    java_bin="$JAVA_HOME/bin/java"
+    javac_bin="$JAVA_HOME/bin/javac"
+fi
+if [ -n "${MAVEN_HOME:-}" ]; then
+    mvn_bin="$MAVEN_HOME/bin/mvn"
+fi
+command -v "$java_bin" >/dev/null 2>&1 || { echo "Java executable was not found: $java_bin" >&2; exit 1; }
+command -v "$javac_bin" >/dev/null 2>&1 || { echo "javac executable was not found: $javac_bin" >&2; exit 1; }
+command -v "$mvn_bin" >/dev/null 2>&1 || { echo "Maven executable was not found: $mvn_bin" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo "jq executable was not found; it is required to validate the scenario and oracle trace" >&2; exit 1; }
+java_version=$($java_bin -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | sed -n '1p')
+[ "$java_version" = "17" ] || { echo "Java 17 is required; found ${java_version:-unknown}" >&2; exit 1; }
+
+if ! jq -e -s '
+    if length != 1 then false else .[0] as $s |
+    (($s | keys_unsorted | sort) == ["cases","description","id","javaCommit","javaFlags","javaNames","javaRuntimes","javaSource","javaStaticIds","steps","version"])
+    and $s.version == "esper-parity/v1"
+    and $s.id == "orderby-rowperevent-agg"
+    and $s.description == "ResultSetOrderByRowPerEvent ordinals 3 and 5: ungrouped row-per-event aggregates ordered by an order-by key that mixes the event\u0027s volume with sum(price), and the nested max(sum(price)) historical-prefix aggregate, both delivered once per six events over a length(10) window."
+    and $s.javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
+    and $s.javaSource == "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByRowPerEvent.java"
+    and $s.javaRuntimes == ["java-runtime-e5b38082f9b30ce8a13b","java-runtime-1be3cb0efcdb94f20d5f"]
+    and $s.javaNames == ["ResultSetRowPerEventOrderFunction","ResultSetRowPerEventMaxSum"]
+    and $s.javaStaticIds == ["java-f583dbb6e793f0fae373","java-55bd91f3bd2eecde7acf"]
+    and $s.javaFlags == []
+    and $s.cases == [
+        {"case":"order-function","ordinal":3,"runtimeId":"java-runtime-e5b38082f9b30ce8a13b","executionName":"ResultSetRowPerEventOrderFunction","observation":"listener","iteratorSnapshots":0,"epl":"@name(\u0027s0\u0027) select symbol, sum(price) from SupportMarketDataBean#length(10) output every 6 events order by volume*sum(price), symbol"},
+        {"case":"max-sum","ordinal":5,"runtimeId":"java-runtime-1be3cb0efcdb94f20d5f","executionName":"ResultSetRowPerEventMaxSum","observation":"listener","iteratorSnapshots":0,"epl":"@name(\u0027s0\u0027) select symbol, max(sum(price)) from SupportMarketDataBean#length(10) output every 6 events order by symbol"}
+    ]
+    and $s.steps == [
+        {"op":"case","case":"order-function"},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","price":2,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"KGB","price":1,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"CMU","price":3,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","price":6,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"CAT","price":6,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"CAT","price":5,"volume":0}},
+        {"op":"case","case":"max-sum"},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","price":3,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"IBM","price":4,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"CMU","price":1,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"CMU","price":2,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"CAT","price":5,"volume":0}},
+        {"op":"send","eventType":"SupportMarketDataBean","payload":{"symbol":"CAT","price":6,"volume":0}}
+    ]
+    end
+' "$scenario" >/dev/null 2>&1; then
+    echo "scenario is not a valid orderby-rowperevent-agg replay: $scenario" >&2
+    exit 1
+fi
+
+if [ "$skip_build" -eq 0 ]; then
+    "$mvn_bin" -f "$esper_root/pom.xml" -pl common,common-avro,compiler,runtime,regression-lib -am test-compile \
+        -DskipTests=true -Dcheckstyle.skip=true -Dgpg.skip=true \
+        -Dfile.encoding=UTF-8 -Dproject.build.sourceEncoding=UTF-8 \
+        -Dproject.reporting.outputEncoding=UTF-8 -Duser.timezone=UTC
+fi
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/esper-orderby-rowperevent-agg.XXXXXX")
+cleanup() { rm -rf "$work"; }
+trap cleanup EXIT HUP INT TERM
+"$mvn_bin" -q -f "$esper_root/compiler/pom.xml" dependency:build-classpath \
+    -Dmdep.outputFile="$work/compiler-cp.txt" -Dmdep.includeScope=runtime \
+    -Dgpg.skip=true -Dfile.encoding=UTF-8 -Duser.timezone=UTC
+"$mvn_bin" -q -f "$esper_root/runtime/pom.xml" dependency:build-classpath \
+    -Dmdep.outputFile="$work/runtime-cp.txt" -Dmdep.includeScope=runtime \
+    -Dgpg.skip=true -Dfile.encoding=UTF-8 -Duser.timezone=UTC
+classes="$work/classes"
+mkdir -p "$classes"
+classpath="$classes:$esper_root/common/target/classes:$esper_root/compiler/target/classes:$esper_root/runtime/target/classes"
+classpath="$classpath:$esper_root/common-avro/target/classes:$esper_root/common-xmlxsd/target/classes"
+classpath="$classpath:$esper_root/regression-lib/target/classes"
+classpath="$classpath:$(tr '\n' ':' < "$work/compiler-cp.txt"):$(tr '\n' ':' < "$work/runtime-cp.txt")"
+"$javac_bin" -encoding UTF-8 -cp "$classpath" -d "$classes" \
+    "$script_root/ResultSetOrderByRowPerEventAggScenarioOracle.java"
+
+mkdir -p "$(dirname "$output")"
+"$java_bin" -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Duser.language=en \
+    -Duser.country=US -Duser.variant= -cp "$classpath" \
+    ResultSetOrderByRowPerEventAggScenarioOracle "$scenario" > "$output"
+
+if ! jq -e '
+    .version == "esper-parity/v1"
+    and .id == "orderby-rowperevent-agg"
+    and .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
+    and (.java | type == "string" and startswith("17."))
+    and ((keys_unsorted | sort) == ["id","java","javaCommit","records","version"])
+    and (.records | length) == 2
+    and ([.records[] | .case] == ["order-function","max-sum"])
+    and ([.records[] | .operation] | unique == ["listener"])
+    and ([.records[] | .statement] | unique == ["s0"])
+    and ([.records[] | .sequence] == [1,1])
+    and ([.records[] | .time] == ["1970-01-01T00:00:00Z","1970-01-01T00:00:00Z"])
+    and ([.records[] | has("old")] | any | not)
+    and ([.records[] | (.new | length)] == [6,6])
+    and ([.records[] | .new[] | .kind] | unique == ["row"])
+    and ([.records[] | .new[].fields.symbol | type] | unique == ["string"])
+    and ([.records[0].new[] | .fields | keys_unsorted] | unique == [["sum(price)","symbol"]])
+    and ([.records[1].new[] | .fields | keys_unsorted] | unique == [["max(sum(price))","symbol"]])
+    and ([.records[0].new[] | [.fields.symbol, .fields["sum(price)"]]] == [
+        ["CAT",18.0],["CAT",23.0],["CMU",6.0],["IBM",2.0],["IBM",12.0],["KGB",3.0]])
+    and ([.records[1].new[] | [.fields.symbol, .fields["max(sum(price))"]]] == [
+        ["CAT",15.0],["CAT",21.0],["CMU",8.0],["CMU",10.0],["IBM",3.0],["IBM",7.0]])
+' "$output" >/dev/null 2>&1; then
+    echo "Java oracle produced an invalid trace: $output" >&2
+    exit 1
+fi
+echo "javaCommit=$actual_commit java=$java_version output=$output"
