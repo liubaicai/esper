@@ -46,78 +46,75 @@ activity or a single coverage percentage.
 - Shipped by this commit: Draft 4.391 ('infra-named-window-consumer-views'); Git owns identity. Eleventh InfraNamedWindowViews slice (ords 43/45/49/50/51) differential-verified: filtered/prior/univariate/late consumers and the left-outer late join; no engine change.
 - Shipped by this commit: Draft 4.392 ('infra-named-window-bean-views'); Git owns identity. Twelfth InfraNamedWindowViews slice (ords 2/35/37/38) differential-verified: bean/schema representations, nested fragment, supertype insert and FAF observation; the ord-2 update-wave adjacency is oracle-pinned and normalized through the established hook.
 
+- Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
-Active: Draft 4.405 ('event-json-adapter').
+Active: Draft 4.406 ('resultset-querytype-local-group-ungrouped').
 
-- [x] Unit selected: `case.event-json-adapter` (4 executions: EventJsonAdapterInsertInto,
-      EventJsonAdapterCreateSchemaWStringTransform, EventJsonAdapterInvalid,
-      EventJsonAdapterDocSample; EventJsonAdapter.java, 192 lines). Continues the 4.401 event/json
-      differential chain whose runner conventions (kind/row normalization, JSONSender surface) are
-      proven. Target: differential-verified for the observable executions + an approved-difference
-      disposition for the compile-diagnostic execution; manifest dvIds advance accordingly.
-- [x] Read-only scouts dispatched concurrently: Java contract scout (agent_b7d80cb5: verbatim EPL/
-      JSON payloads, listener assertions, determinism, chain layout) + Go surface scout
-      (agent_1b39edf3: 4.401 runner conventions, JSON/create-schema/insert-into surface, invalid
-      disposition precedent, scenario op protocol).
-- [x] Go surface scout report (agent_1b39edf3): full 4.401 conventions mapped (runner file layout +
-      in-file metadata constants; run.go LoadScenario branch at 142 + execution branch 484-495;
-      test family DiffWritesPassingEvidence/DirectReplay/DiffRejectsTraceMutations; scenario/evidence
-      data files). Surface: RegisterJSON + WithJSONFieldAdapter/NewJSONFieldAdapter (string
-      transforms supported; nullable pointer-typed round trip already proven citing these Java
-      executions, json_render_parity_test.go:96), JSONSender Parse/SendEvent/Send + runtime
-      SendJSON, RecordStream.InsertInto into a JSON target proven end-to-end
-      (json_sender_adapter_test.go:192). NO runtime create-json-schema: runners pre-register via
-      RegisterJSON (accepted substitution, documented per sibling case). No send-json scenario op:
-      JSON literals live in the runner, scenario steps stay aligned documentation. Invalid
-      disposition precedent: exclude from trace + manifest case intentionally-different
-      (capability-manifest.json:41549 model) + in-process ErrorCode assertions. Recommended:
-      runner event_json_adapter.go with 3 healthy cases (insert-into, string-transform, doc-sample),
-      Invalid (rid java-runtime-e949fd77aef3bbc74c60) disposed separately.
-- [x] Java contract scout report (agent_b7d80cb5) + CONTRACT FROZEN. All three healthy executions
-      deterministic (no milestones, no time control, one-row listener assertions, schema-ordered
-      JSON round trips); TZ-sensitive Date parsing -> pin TZ=UTC on both sides; values recorded as
-      adapter-written STRINGS so both sides canonicalize identically.
-      Cases (suite order, healthy only): (1) adapter-insert-into: LocalEvent(Point(7,14), Date
-      2002-05-01T08:00:01.999) bean send -> inferred JSON type via insert-into -> s0 row
-      {point:"7,14", mydate:"2002-05-01T08:00:01.999"} + s1 row {json:'{"point":"7,14",
-      "mydate":"2002-05-01T08:00:01.999"}'}; (2) adapter-create-schema: explicit json schema
-      point/mydate with adapters, two sends (filled, nulls) -> s0/s1 x2: filled row, filled json,
-      null-marker row, null json '{"point":null,"mydate":null}'; (3) adapter-doc-sample: json
-      schema myDate(Date) with dd-MM-yyyy adapter, exact bytes '{"myDate" : "22-09-2018"}' ->
-      s0 {myDate:"22-09-2018"} + render record {json:'{"hello":{"myDate":"22-09-2018"}}'}
-      (WithJSONTitle). Total 7 trace records.
-      Invalid (rid java-runtime-e949fd77aef3bbc74c60, 4 compile-only diagnostics): disposed
-      intentionally-different per the infra-namedwindow-views-invalid precedent - manifest SPLIT:
-      case.event-json-adapter keeps 3 rids -> differential-verified (dvCases 278, dvIds 1023,
-      cases 652, intentionallyDifferent 25); NEW case.event-json-adapter-invalid with the invalid
-      rid + in-process test TestJSONFieldAdapterInvalidParity (adapter parse failures surface the
-      adapter error, typed Go adapter registration makes Java's class-loader mismatches
-      unrepresentable). Parallel writes: parity-asset writer (Java oracle + run script, disjoint
-      files) + primary (Go runner, scenario, run.go wiring, test family, manifest, facts).
-- [x] Implemented: Go runner `event_json_adapter.go` (3 cases, 8 records verified in replay),
-      scenario `event-json-adapter.json`, run.go loader+execution wiring, test family
-      (DiffWritesPassingEvidence / DirectReplay full-layout pins / DiffRejectsTraceMutations x7),
-      in-process `TestJSONFieldAdapterInvalidParity` + ErrorInvalidRule classification of the two
-      adapter diagnostics (registration type mismatch, parse failure with preserved cause chain).
-      Parity-asset writer (agent_9c6e61ef) delivered the Java oracle + run script; its bare-array
-      trace emission was fixed back to the exemplar wrapper via follow-up. Java trace regenerated:
-      8/8 records, 0 differences, evidence passing.
-- [x] Manifest split applied: case.event-json-adapter -> 3 rids differential-verified (evidence +
-      traces + oracle assets + goTests); new case.event-json-adapter-invalid intentionally-different
-      (rid e949..., difference rationale, TestJSONFieldAdapterInvalidParity, mapping event.json-typed).
-      Summary: 652 total/inventoried, 650 implemented, 278 DV cases, 1023 DV rids, 25
-      intentionally-different; association/referenced counts unchanged. compat validator green.
-- [x] Facts recorded (CHANGELOG + roadmap, newest-first).
-- [x] Full gates: JSON family + full internal/esper (60s) + full parity package (185s) + compat +
-      -race on new tests + gofmt + vet + `git diff --check` green.
-- [x] Independent parity review (agent_899046d3): OVERALL PASS (A-E all PASS; reviewer independently
-      re-executed the Java oracle at the pinned commit and the Go runner and confirmed 8/8
-      byte-identical traces end-to-end; mechanically recounted every summary counter). P2 fixed:
-      the manifest-referenced standalone `event-json-adapter.go.trace.json` is now generated and
-      byte-identical to the evidence's embedded Go trace.
-- [x] Shipped; Git owns identity. event/json subdomain now has two differential chains; DV
-      counters advanced to 278 cases / 1023 runtime IDs.
+- [x] Unit selected: `case.resultset-querytype-local-group-by-ungrouped` - ResultSetQueryTypeLocalGroupBy
+      ordinals 3-6 (ResultSetLocalUngroupedAggIterator, ResultSetLocalUngroupedParenSODA{soda=false},
+      {soda=true}, ResultSetLocalUngroupedColNameRendering; all four previously unreferenced).
+      New chain `resultset-querytype-local-group-ungrouped`; the 4.305 chain stays ordinal-13-only
+      (its single-case + eight-step pins are load-bearing).
+- [x] Read-only scouts dispatched concurrently: Java contract scout (`JavaContract`) and Go surface
+      scout (`GoSurface`); both reported, contract frozen below.
+- [x] Java scout facts: ord 3 (`java-runtime-2116fa46dfb43cd6ec83`, static
+      `java-15d21d1c89c691d1be52`) asserts iterators only over `SupportBean#keepall` after sends
+      (E1,10)(E2,20)(E1,30): Integer sums 10/30/60 and per-theString 10/20/40; no virtual time and
+      no listener assertion. ord 4/ord 5 (`java-runtime-1309ac2ab21826013abf` /
+      `java-runtime-e9dbed674201a7324216`, shared static `java-dac296ac610fa9db8d71`) share EPL and
+      listener rows; only the compile path differs (text vs SODA model round-trip). ord 6
+      (`java-runtime-748fbcf754462901d0e0`, static `java-4d4e4747a49e26787a4d`) is statement
+      metadata only: names `count(*,group_by:(theString,intPrimitive))` / `count(group_by:theString,*)`.
+- [x] Go scout facts: compat `snapshot` op with `mode: "any"`; iterator precedent
+      `resultset-querytype-rollup-having-iterator` replays per case with `statement.Snapshot(ctx)`
+      and emits snapshot-only records; statement-metadata precedent
+      `resultset-aggregate-sorted-minmax-by-no-alias` uses `deployed` + `types` steps; typed
+      `LocalGroupBy(agg, keys...)`, `Sum`, `CountAll`, `Alias`, `KeepAll` all exist. No
+      `internal/esper` change expected; any engine gap found during replay becomes a shared-core fix
+      owned solely by the primary agent.
+- [x] FROZEN contract: scenario `testdata/parity/resultset-querytype-local-group-ungrouped.json`
+      (4 cases / 20 steps: three snapshots, four plus four listener sends, deployed + types).
+      Java oracle + run script owned by a parity-asset writer; runner/loader/run.go/tests/scenario/
+      manifest/docs owned by the primary agent (disjoint file sets). Singleton asset spawn is
+      deliberate: the only sibling lane is the primary agent's own disjoint write set.
+- [x] Implemented (primary): scenario `testdata/parity/resultset-querytype-local-group-ungrouped.json`
+      (4 cases / 20 steps), runner `internal/app/parity/resultset_querytype_local_group_ungrouped.go`
+      (strict loader with per-step pins, per-case replay: iterator case uses `statement.Snapshot`
+      after each send, listener cases subscribe, metadata case emits deployed + types), run.go
+      loader/execution/hint wiring, six run-family tests in run_test.go, and the two Java assets from
+      the parity-asset worker (agent OracleAssets; oracle + run script only, no other file touched).
+      No `internal/esper` change was needed: the typed `Aggregate` + `LocalGroupBy` surface already
+      reproduced all four executions.
+- [x] Java trace regenerated with `tools/java-oracle/run-resultset-querytype-local-group-ungrouped.sh
+      --esper-root /root/app/esper --scenario ... --output testdata/parity/resultset-querytype-local-group-ungrouped.trace.json`
+      (exit 0, pinned commit verified by the script; 13 records 3/4/4/2). Go diff run with
+      `go run ./cmd/parity -mode resultset-querytype-local-group-ungrouped-diff ...` reported
+      status passing / 0 differences; `-mode resultset-querytype-local-group-ungrouped` wrote the
+      checked-in `.go.trace.json`.
+- [x] Manifest: new `case.resultset-querytype-local-group-by-ungrouped` (4 runtime IDs, 3 static IDs,
+      evidence list incl. oracle + script, notes on the alias representation登记), mapping to
+      `resultset.aggregate-local-group`, summary advanced to 653 cases / 651 implemented / 279 DV
+      cases / 1027 DV runtime IDs / 3623 associations / referenced 3297 / unreferenced 839;
+      `go test ./internal/compat/...` green.
+- [x] Facts recorded (CHANGELOG + roadmap newest-first).
+- [x] Independent parity review (agent ReviewCurrent): OVERALL PASS, areas A-E all PASS, no P0/P1/P2.
+      Five P3 findings fixed and re-confirmed by the same reviewer (CONFIRM, PASS unchanged): runner now
+      calls compat.FormatTraceTime instead of a local copy; tests reuse mustInt64 instead of a
+      duplicate helper; the oracle requires boxed Integer for all three ord-3 snapshot columns and
+      matches snapshot rows as a multiset while recording iterator order (same asset writer,
+      OracleAssets); capability resultset.aggregate-local-group goRefs lists the new chain file.
+- [x] Gates after the fixes: Java oracle re-run byte-identical (md5 d57811df8f52e22acf010112e96a29b8);
+      Go diff passing / 0 differences; six-test family green; `make check` (check-layout, vet, full
+      `go test ./...`) exit 0; gofmt clean; `git diff --check` clean. Baseline repair separate commit:
+      `fix(generate): sync the facade with the 4.398 listener/sink retention docs` (facade_generated.go
+      was stale at HEAD, which made check-layout red before this unit).
+- [ ] Commit and push the work unit; then start N+1 (Prefetched contract: ResultSetQueryTypeLocalGroupBy
+      ords 8 `ResultSetLocalUngroupedUnidirectionalJoin` `java-runtime-a1b494ebb2cb69d4c90a` static
+      `java-d4c45f0591f6b53f8f74` and 9 `ResultSetLocalUngroupedThreeLevelWTop` static candidate pair;
+      listener-only, any-order batches of 3 then 4 rows for ord 8; ord 9 pins ten columns across five
+      sends over `SupportBean#length(4)`; ord 15 `ResultSetLocalPlanning` needs a new plan-inspection
+      accessor plus a compat op and is deferred to its own later unit).
 
 ### Previous work unit (prior)
 

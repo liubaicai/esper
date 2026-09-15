@@ -50718,3 +50718,476 @@ func TestRunEventJsonAdapterDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+
+func TestRunResultSetQueryTypeLocalGroupUngroupedDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-querytype-local-group-ungrouped",
+		"-scenario", filepath.Join(root, "resultset-querytype-local-group-ungrouped.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertResultSetQueryTypeLocalGroupUngroupedTrace(t, trace)
+}
+
+func TestRunResultSetQueryTypeLocalGroupUngroupedDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-local-group-ungrouped.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-querytype-local-group-ungrouped-diff",
+		"-scenario", filepath.Join(root, "resultset-querytype-local-group-ungrouped.json"),
+		"-java-trace", filepath.Join(root, "resultset-querytype-local-group-ungrouped.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != resultSetQueryTypeLocalGroupUngroupedJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, resultSetQueryTypeLocalGroupUngroupedJavaRuntimeIDs()) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, resultSetQueryTypeLocalGroupUngroupedJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, resultSetQueryTypeLocalGroupUngroupedJavaExecutions()) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertResultSetQueryTypeLocalGroupUngroupedTrace(t, evidence.JavaTrace)
+	assertResultSetQueryTypeLocalGroupUngroupedTrace(t, evidence.GoTrace)
+}
+
+func TestRunResultSetQueryTypeLocalGroupUngroupedDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	// LoadTrace JSON round-trips values; mutations use the generic shape.
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "snapshot-aggregate-value", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["sum1"] = json.Number("999")
+		}},
+		{name: "listener-local-value", mutate: func(trace *compat.Trace) {
+			trace.Records[3].New[0].Fields["c4"] = json.Number("999")
+		}},
+		{name: "listener-sequence", mutate: func(trace *compat.Trace) {
+			trace.Records[4].Sequence = 9
+		}},
+		{name: "metadata-column-name", mutate: func(trace *compat.Trace) {
+			entries := trace.Records[12].Value.([]any)
+			entries[0].(map[string]any)["name"] = "count(*)"
+		}},
+		{name: "metadata-column-type", mutate: func(trace *compat.Trace) {
+			entries := trace.Records[12].Value.([]any)
+			entries[1].(map[string]any)["type"] = "Integer"
+		}},
+		{name: "time", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Time = "1970-01-01T00:00:01Z"
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:len(trace.Records)-1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "resultset-querytype-local-group-ungrouped.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-querytype-local-group-ungrouped.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-querytype-local-group-ungrouped-diff",
+				"-scenario", filepath.Join(root, "resultset-querytype-local-group-ungrouped.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetQueryTypeLocalGroupUngroupedCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, "resultset-querytype-local-group-ungrouped.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, "resultset-querytype-local-group-ungrouped.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "resultset-querytype-local-group-ungrouped.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from checked-in trace: %#v", differences)
+	}
+	assertResultSetQueryTypeLocalGroupUngroupedTrace(t, javaTrace)
+	assertResultSetQueryTypeLocalGroupUngroupedTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, "resultset-querytype-local-group-ungrouped.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadResultSetQueryTypeLocalGroupUngroupedScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		resultSetQueryTypeLocalGroupUngroupedJavaCommit,
+		resultSetQueryTypeLocalGroupUngroupedJavaRuntimeIDs(),
+		resultSetQueryTypeLocalGroupUngroupedJavaSources,
+		resultSetQueryTypeLocalGroupUngroupedJavaExecutions(),
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "resultset-querytype-local-group-ungrouped",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertResultSetQueryTypeLocalGroupUngroupedTrace(t, replayed)
+}
+
+func TestRunResultSetQueryTypeLocalGroupUngroupedRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "resultset-querytype-local-group-ungrouped.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "resultset-querytype-local-group-ungrouped"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-order", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "ungrouped-agg-iterator"`), []byte(`"case": "wrong-case"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "ungrouped-colname-rendering",`), []byte(`"case": "ungrouped-colname-rendering", "extra": 0,`), 1)
+		}},
+		{name: "case-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "ungrouped-colname-rendering",`), []byte(`"case": "ungrouped-colname-rendering", "case": "ungrouped-colname-rendering",`), 1)
+		}},
+		{name: "iterator-snapshot-count", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"iteratorSnapshots": 3`), []byte(`"iteratorSnapshots": 4`), 1)
+		}},
+		{name: "observation-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"observation": "iterator"`), []byte(`"observation": "listener"`), 1)
+		}},
+		{name: "marker-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "case", "case": "ungrouped-agg-iterator"}`), []byte(`{"op": "case", "case": "ungrouped-agg-iterator", "extra": 0}`), 1)
+		}},
+		{name: "snapshot-mode-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "snapshot", "statement": "s0", "mode": "any"}`), []byte(`{"op": "snapshot", "statement": "s0", "mode": "strict"}`), 1)
+		}},
+		{name: "snapshot-statement-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "snapshot", "statement": "s0", "mode": "any"}`), []byte(`{"op": "snapshot", "statement": "s1", "mode": "any"}`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"longPrimitive": 0`), []byte(`"longPrimitive": 0, "extra": 0`), 1)
+		}},
+		{name: "payload-duplicate", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"longPrimitive": 10`), []byte(`"longPrimitive": 10, "longPrimitive": 11`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "wrong-string", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1", "intPrimitive": 10`), []byte(`"theString": "E9", "intPrimitive": 10`), 1)
+		}},
+		{name: "wrong-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1", "intPrimitive": 10`), []byte(`"theString": "E1", "intPrimitive": 11`), 1)
+		}},
+		{name: "non-integer", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intPrimitive": 30`), []byte(`"intPrimitive": 30.5`), 1)
+		}},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": null`), 1)
+		}},
+		{name: "static-id-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-4d4e4747a49e26787a4d"`), []byte(`"java-wrong"`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 6`), []byte(`"ordinal": 7`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "resultset-querytype-local-group-ungrouped",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunResultSetQueryTypeLocalGroupUngroupedRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-querytype-local-group-ungrouped.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != resultSetQueryTypeLocalGroupUngroupedID ||
+		document.Description != resultSetQueryTypeLocalGroupUngroupedDescription ||
+		document.JavaCommit != resultSetQueryTypeLocalGroupUngroupedJavaCommit ||
+		document.JavaSource != resultSetQueryTypeLocalGroupUngroupedSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, resultSetQueryTypeLocalGroupUngroupedJavaRuntimeIDs()) ||
+		!reflect.DeepEqual(document.JavaNames, resultSetQueryTypeLocalGroupUngroupedJavaExecutions()) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, resultSetQueryTypeLocalGroupUngroupedJavaStaticIDs) ||
+		len(document.JavaFlags) != 0 {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	if len(document.Cases) != len(resultSetQueryTypeLocalGroupUngroupedCaseSpecs) {
+		t.Fatalf("scenario cases = %d", len(document.Cases))
+	}
+	for index, spec := range resultSetQueryTypeLocalGroupUngroupedCaseSpecs {
+		entry := document.Cases[index]
+		if entry.Case != spec.name || entry.Ordinal != spec.ordinal || entry.RuntimeID != spec.runtimeID ||
+			entry.ExecutionName != spec.execution || entry.Observation != spec.observation ||
+			entry.IteratorSnapshots != spec.iteratorSnapshots || entry.EPL != spec.epl {
+			t.Fatalf("scenario case %d = %#v", index, entry)
+		}
+	}
+}
+
+type resultSetQueryTypeLocalGroupUngroupedExpectedRow map[string]int64
+
+func assertResultSetQueryTypeLocalGroupUngroupedRows(t *testing.T, rows []compat.ResultRecord, want []resultSetQueryTypeLocalGroupUngroupedExpectedRow) {
+	t.Helper()
+	if len(rows) != len(want) {
+		t.Fatalf("rows = %d, want %d", len(rows), len(want))
+	}
+	for index, row := range rows {
+		if row.Kind != "row" || len(row.Fields) != len(want[index]) {
+			t.Fatalf("row %d shape = %#v", index, row)
+		}
+		for name, expected := range want[index] {
+			value, ok := row.Fields[name]
+			if !ok {
+				t.Fatalf("row %d missing field %q", index, name)
+			}
+			actual := mustInt64(t, value)
+			if actual != expected {
+				t.Fatalf("row %d field %q = %d, want %d", index, name, actual, expected)
+			}
+		}
+	}
+}
+
+func assertResultSetQueryTypeLocalGroupUngroupedTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != resultSetQueryTypeLocalGroupUngroupedID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 13 {
+		t.Fatalf("trace records = %d, want 13", len(trace.Records))
+	}
+	iteratorSnapshots := [][]resultSetQueryTypeLocalGroupUngroupedExpectedRow{
+		{{"c0": 10, "sum0": 10, "sum1": 10}},
+		{{"c0": 10, "sum0": 30, "sum1": 10}, {"c0": 20, "sum0": 30, "sum1": 20}},
+		{{"c0": 10, "sum0": 60, "sum1": 40}, {"c0": 20, "sum0": 60, "sum1": 20}, {"c0": 30, "sum0": 60, "sum1": 40}},
+	}
+	for index, want := range iteratorSnapshots {
+		record := trace.Records[index]
+		if record.Case != "ungrouped-agg-iterator" || record.Operation != "snapshot" ||
+			record.Statement != "s0" || record.Sequence != uint64(index+1) ||
+			record.Time != "1970-01-01T00:00:00Z" || len(record.Old) != 0 {
+			t.Fatalf("snapshot record %d = %#v", index, record)
+		}
+		assertResultSetQueryTypeLocalGroupUngroupedRows(t, record.New, want)
+	}
+	listenerRows := []resultSetQueryTypeLocalGroupUngroupedExpectedRow{
+		{"c0": 10, "c1": 10, "c2": 10, "c3": 10, "c4": 10, "longPrimitive": 10},
+		{"c0": 21, "c1": 21, "c2": 21, "c3": 21, "c4": 11, "longPrimitive": 11},
+		{"c0": 33, "c1": 33, "c2": 33, "c3": 12, "c4": 12, "longPrimitive": 12},
+		{"c0": 46, "c1": 46, "c2": 46, "c3": 25, "c4": 13, "longPrimitive": 13},
+	}
+	for _, testCase := range []struct {
+		name  string
+		index int
+	}{
+		{name: "ungrouped-paren-soda-text", index: 3},
+		{name: "ungrouped-paren-soda-model", index: 7},
+	} {
+		for offset, want := range listenerRows {
+			record := trace.Records[testCase.index+offset]
+			if record.Case != testCase.name || record.Operation != "listener" ||
+				record.Statement != "s0" || record.Sequence != uint64(offset+1) ||
+				record.Time != "1970-01-01T00:00:00Z" || len(record.Old) != 0 {
+				t.Fatalf("listener record for %s = %#v", testCase.name, record)
+			}
+			assertResultSetQueryTypeLocalGroupUngroupedRows(t, record.New, []resultSetQueryTypeLocalGroupUngroupedExpectedRow{want})
+		}
+	}
+	deployed := trace.Records[11]
+	if deployed.Case != "ungrouped-colname-rendering" || deployed.Operation != "deployed" ||
+		deployed.Statement != "s0" || deployed.Sequence != 0 || deployed.Time != "" ||
+		len(deployed.New) != 0 || len(deployed.Old) != 0 || deployed.Value != nil {
+		t.Fatalf("deployed record = %#v", deployed)
+	}
+	types := trace.Records[12]
+	if types.Case != "ungrouped-colname-rendering" || types.Operation != "types" ||
+		types.Statement != "s0" || types.Sequence != 0 || types.Time != "" ||
+		len(types.New) != 0 || len(types.Old) != 0 {
+		t.Fatalf("types record = %#v", types)
+	}
+	entries, ok := types.Value.([]map[string]any)
+	if !ok {
+		if generic, genericOK := types.Value.([]any); genericOK {
+			entries = make([]map[string]any, 0, len(generic))
+			for _, item := range generic {
+				entry, entryOK := item.(map[string]any)
+				if !entryOK {
+					t.Fatalf("types entry = %#v", item)
+				}
+				entries = append(entries, entry)
+			}
+		} else {
+			t.Fatalf("types value = %#v", types.Value)
+		}
+	}
+	wantEntries := []map[string]any{
+		{"name": "count(*,group_by:(theString,intPrimitive))", "type": "Long"},
+		{"name": "count(group_by:theString,*)", "type": "Long"},
+	}
+	if len(entries) != len(wantEntries) {
+		t.Fatalf("types entries = %d, want %d", len(entries), len(wantEntries))
+	}
+	for index, expected := range wantEntries {
+		for name, want := range expected {
+			if entries[index][name] != want {
+				t.Fatalf("types entry %d %q = %#v, want %#v", index, name, entries[index][name], want)
+			}
+		}
+	}
+}

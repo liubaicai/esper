@@ -961,6 +961,7 @@
     "internal/esper/aggregate_test.go",
     "internal/esper/aggregate_local_group_test.go",
     "internal/app/parity/resultset_querytype_local_group_by.go",
+    "internal/app/parity/resultset_querytype_local_group_ungrouped.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 3,
@@ -39184,6 +39185,80 @@
     "Typed Go uses GroupBy, WindowEvents, and LocalGroupBy with a 10-second snapshot; strict scenario/oracle validators pin Java metadata, EPL, payload order, timer boundary, listener shape, full SupportBean properties, and mutation rejection."
    ]
   },
+ {
+   "id": "case.resultset-querytype-local-group-by-ungrouped",
+   "javaRuntimeIds": [
+    "java-runtime-2116fa46dfb43cd6ec83",
+    "java-runtime-1309ac2ab21826013abf",
+    "java-runtime-e9dbed674201a7324216",
+    "java-runtime-748fbcf754462901d0e0"
+   ],
+   "javaNames": [
+    "ResultSetLocalUngroupedAggIterator",
+    "ResultSetLocalUngroupedParenSODA{soda=false}",
+    "ResultSetLocalUngroupedParenSODA{soda=true}",
+    "ResultSetLocalUngroupedColNameRendering"
+   ],
+   "javaStaticIds": [
+    "java-15d21d1c89c691d1be52",
+    "java-dac296ac610fa9db8d71",
+    "java-4d4e4747a49e26787a4d"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupUngroupedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupUngroupedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupUngroupedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupUngroupedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupUngroupedRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupUngroupedRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "local-group-by",
+    "aggregate",
+    "iterator",
+    "listener",
+    "statement-metadata",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-local-group-ungrouped.json",
+    "testdata/parity/resultset-querytype-local-group-ungrouped.trace.json",
+    "testdata/parity/resultset-querytype-local-group-ungrouped.go.trace.json",
+    "testdata/parity/resultset-querytype-local-group-ungrouped.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeLocalGroupByUngroupedScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-local-group-ungrouped.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2116fa46dfb43cd6ec83",
+    "java-runtime-1309ac2ab21826013abf",
+    "java-runtime-e9dbed674201a7324216",
+    "java-runtime-748fbcf754462901d0e0"
+   ],
+   "notes": [
+    "ResultSetQueryTypeLocalGroupBy ordinals 3-6 replay one deterministic chain (13 Java/Go records, 0 differences): ord 3 takes three iterator snapshots over SupportBean#keepall after (E1,10)(E2,20)(E1,30) and pins the Integer global sum 10/30/60 with per-theString local sums 10/20/40; ords 4-5 pin identical listener rows for sum(longPrimitive), sum(group_by:(),longPrimitive), sum(longPrimitive,group_by:()), per-theString and per-(theString,intPrimitive) forms, differing only in the Java compile path (EPL text vs SODA model round-trip).",
+    "Ord 6 sends no events: it pins the deployment acknowledgement plus the Java auto-derived column names count(*,group_by:(theString,intPrimitive)) and count(group_by:theString,*) with boxed Long tokens. The typed Go surface expresses those exact names as explicit aliases (case.resultset-aggregate-sorted-minmax-by-no-alias precedent); scenario and oracle validators pin Java metadata, EPL text, step order, any-mode snapshots, record shapes and mutation rejection."
+   ]
+  },
   {
    "id": "case.resultset-output-limit-row-limit-context-grouped",
    "javaRuntimeIds": [
@@ -44338,6 +44413,10 @@
    "caseId": "case.resultset-querytype-local-group-by"
   },
   {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-by-ungrouped"
+  },
+  {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit"
   },
@@ -44551,10 +44630,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 652,
-  "implementedCases": 650,
-  "differentialVerifiedCases": 278,
-  "differentialVerifiedRuntimeIds": 1023,
+  "inventoriedCases": 653,
+  "implementedCases": 651,
+  "differentialVerifiedCases": 279,
+  "differentialVerifiedRuntimeIds": 1027,
   "intentionallyDifferentCases": 25,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -44564,13 +44643,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3619,
-  "referencedJavaRuntimeIds": 3293,
+  "runtimeAssociationCount": 3623,
+  "referencedJavaRuntimeIds": 3297,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 843,
+  "unreferencedJavaRuntimeIds": 839,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 652,
+  "totalCases": 653,
   "totalCapabilities": 120
  }
 }

@@ -1,0 +1,691 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-2116fa46dfb43cd6ec83",
+    "java-runtime-1309ac2ab21826013abf",
+    "java-runtime-e9dbed674201a7324216",
+    "java-runtime-748fbcf754462901d0e0"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+  ],
+  "javaExecutions": [
+    "ResultSetLocalUngroupedAggIterator",
+    "ResultSetLocalUngroupedParenSODA{soda=false}",
+    "ResultSetLocalUngroupedParenSODA{soda=true}",
+    "ResultSetLocalUngroupedColNameRendering"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-ungrouped",
+    "steps": [
+      {
+        "op": "case",
+        "case": "ungrouped-agg-iterator"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 30,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-paren-soda-text"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 13
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-paren-soda-model"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "longPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2,
+          "longPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1,
+          "longPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "longPrimitive": 13
+        }
+      },
+      {
+        "op": "case",
+        "case": "ungrouped-colname-rendering"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "types",
+        "statement": "s0"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-ungrouped",
+    "records": [
+      {
+        "case": "ungrouped-agg-iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "sum0": 10,
+              "sum1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-agg-iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "sum0": 30,
+              "sum1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "sum0": 30,
+              "sum1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-agg-iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "sum0": 60,
+              "sum1": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "sum0": 60,
+              "sum1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 30,
+              "sum0": 60,
+              "sum1": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-text",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 10,
+              "c3": 10,
+              "c4": 10,
+              "longPrimitive": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-text",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 21,
+              "c2": 21,
+              "c3": 21,
+              "c4": 11,
+              "longPrimitive": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-text",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 33,
+              "c1": 33,
+              "c2": 33,
+              "c3": 12,
+              "c4": 12,
+              "longPrimitive": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-text",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 46,
+              "c1": 46,
+              "c2": 46,
+              "c3": 25,
+              "c4": 13,
+              "longPrimitive": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 10,
+              "c3": 10,
+              "c4": 10,
+              "longPrimitive": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 21,
+              "c2": 21,
+              "c3": 21,
+              "c4": 11,
+              "longPrimitive": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 33,
+              "c1": 33,
+              "c2": 33,
+              "c3": 12,
+              "c4": 12,
+              "longPrimitive": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 46,
+              "c1": 46,
+              "c2": 46,
+              "c3": 25,
+              "c4": 13,
+              "longPrimitive": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-colname-rendering",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "ungrouped-colname-rendering",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "value": [
+          {
+            "name": "count(*,group_by:(theString,intPrimitive))",
+            "type": "Long"
+          },
+          {
+            "name": "count(group_by:theString,*)",
+            "type": "Long"
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-ungrouped",
+    "records": [
+      {
+        "case": "ungrouped-agg-iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "sum0": 10,
+              "sum1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-agg-iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "sum0": 30,
+              "sum1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "sum0": 30,
+              "sum1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-agg-iterator",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "sum0": 60,
+              "sum1": 40
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "sum0": 60,
+              "sum1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 30,
+              "sum0": 60,
+              "sum1": 40
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-text",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 10,
+              "c3": 10,
+              "c4": 10,
+              "longPrimitive": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-text",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 21,
+              "c2": 21,
+              "c3": 21,
+              "c4": 11,
+              "longPrimitive": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-text",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 33,
+              "c1": 33,
+              "c2": 33,
+              "c3": 12,
+              "c4": 12,
+              "longPrimitive": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-text",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 46,
+              "c1": 46,
+              "c2": 46,
+              "c3": 25,
+              "c4": 13,
+              "longPrimitive": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "c1": 10,
+              "c2": 10,
+              "c3": 10,
+              "c4": 10,
+              "longPrimitive": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 21,
+              "c1": 21,
+              "c2": 21,
+              "c3": 21,
+              "c4": 11,
+              "longPrimitive": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 33,
+              "c1": 33,
+              "c2": 33,
+              "c3": 12,
+              "c4": 12,
+              "longPrimitive": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-paren-soda-model",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 46,
+              "c1": 46,
+              "c2": 46,
+              "c3": 25,
+              "c4": 13,
+              "longPrimitive": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-colname-rendering",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "ungrouped-colname-rendering",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "value": [
+          {
+            "name": "count(*,group_by:(theString,intPrimitive))",
+            "type": "Long"
+          },
+          {
+            "name": "count(group_by:theString,*)",
+            "type": "Long"
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

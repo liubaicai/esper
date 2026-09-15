@@ -1,0 +1,85 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-local-group-ungrouped",
+  "description": "ResultSetQueryTypeLocalGroupBy ordinals 3-6: ungrouped local-group aggregates across iterator, listener and statement-metadata observations.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java",
+  "javaRuntimes": [
+    "java-runtime-2116fa46dfb43cd6ec83",
+    "java-runtime-1309ac2ab21826013abf",
+    "java-runtime-e9dbed674201a7324216",
+    "java-runtime-748fbcf754462901d0e0"
+  ],
+  "javaNames": [
+    "ResultSetLocalUngroupedAggIterator",
+    "ResultSetLocalUngroupedParenSODA{soda=false}",
+    "ResultSetLocalUngroupedParenSODA{soda=true}",
+    "ResultSetLocalUngroupedColNameRendering"
+  ],
+  "javaStaticIds": [
+    "java-15d21d1c89c691d1be52",
+    "java-dac296ac610fa9db8d71",
+    "java-4d4e4747a49e26787a4d"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "ungrouped-agg-iterator",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-2116fa46dfb43cd6ec83",
+      "executionName": "ResultSetLocalUngroupedAggIterator",
+      "observation": "iterator",
+      "iteratorSnapshots": 3,
+      "epl": "@name('s0') select intPrimitive as c0, sum(intPrimitive, group_by:()) as sum0, sum(intPrimitive, group_by:(theString)) as sum1 from SupportBean#keepall"
+    },
+    {
+      "case": "ungrouped-paren-soda-text",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-1309ac2ab21826013abf",
+      "executionName": "ResultSetLocalUngroupedParenSODA{soda=false}",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select longPrimitive, sum(longPrimitive) as c0, sum(group_by:(),longPrimitive) as c1, sum(longPrimitive,group_by:()) as c2, sum(longPrimitive,group_by:theString) as c3, sum(longPrimitive,group_by:(theString,intPrimitive)) as c4 from SupportBean"
+    },
+    {
+      "case": "ungrouped-paren-soda-model",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-e9dbed674201a7324216",
+      "executionName": "ResultSetLocalUngroupedParenSODA{soda=true}",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select longPrimitive, sum(longPrimitive) as c0, sum(group_by:(),longPrimitive) as c1, sum(longPrimitive,group_by:()) as c2, sum(longPrimitive,group_by:theString) as c3, sum(longPrimitive,group_by:(theString,intPrimitive)) as c4 from SupportBean"
+    },
+    {
+      "case": "ungrouped-colname-rendering",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-748fbcf754462901d0e0",
+      "executionName": "ResultSetLocalUngroupedColNameRendering",
+      "observation": "statement-metadata",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select count(*, group_by:(theString, intPrimitive)), count(group_by:theString, *) from SupportBean"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "ungrouped-agg-iterator"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 0}},
+    {"op": "snapshot", "statement": "s0", "mode": "any"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 20, "longPrimitive": 0}},
+    {"op": "snapshot", "statement": "s0", "mode": "any"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 30, "longPrimitive": 0}},
+    {"op": "snapshot", "statement": "s0", "mode": "any"},
+    {"op": "case", "case": "ungrouped-paren-soda-text"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1, "longPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 2, "longPrimitive": 11}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 1, "longPrimitive": 12}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2, "longPrimitive": 13}},
+    {"op": "case", "case": "ungrouped-paren-soda-model"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1, "longPrimitive": 10}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 2, "longPrimitive": 11}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 1, "longPrimitive": 12}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2, "longPrimitive": 13}},
+    {"op": "case", "case": "ungrouped-colname-rendering"},
+    {"op": "deployed", "statement": "s0"},
+    {"op": "types", "statement": "s0"}
+  ]
+}
