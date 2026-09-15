@@ -55333,3 +55333,410 @@ func assertOrderByRowPerEventAggJoinTrace(t *testing.T, trace compat.Trace) {
 		}
 	}
 }
+
+func TestRunOrderByRowPerEventIteratorDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "orderby-rowperevent-iterator",
+		"-scenario", filepath.Join(root, "orderby-rowperevent-iterator.json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertOrderByRowPerEventIteratorTrace(t, trace)
+}
+
+func TestRunOrderByRowPerEventIteratorDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), "orderby-rowperevent-iterator.evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "orderby-rowperevent-iterator-diff",
+		"-scenario", filepath.Join(root, "orderby-rowperevent-iterator.json"),
+		"-java-trace", filepath.Join(root, "orderby-rowperevent-iterator.trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidenceFile, err := os.Open(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != orderbyRowPerEventIteratorJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, orderbyRowPerEventIteratorJavaRuntimeIDs()) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, orderbyRowPerEventIteratorSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, orderbyRowPerEventIteratorJavaExecutions()) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertOrderByRowPerEventIteratorTrace(t, evidence.JavaTrace)
+	assertOrderByRowPerEventIteratorTrace(t, evidence.GoTrace)
+}
+
+func TestRunOrderByRowPerEventIteratorDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{name: "snapshot1-symbol", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["symbol"] = "D"
+		}},
+		{name: "snapshot1-sum", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New[0].Fields["sumPrice"] = json.Number("215")
+		}},
+		{name: "snapshot1-row-order", mutate: func(trace *compat.Trace) {
+			// Exact-order iterator rows: CAT before IBM.
+			trace.Records[0].New[1], trace.Records[0].New[2] = trace.Records[0].New[2], trace.Records[0].New[1]
+		}},
+		{name: "snapshot1-row-count", mutate: func(trace *compat.Trace) {
+			trace.Records[0].New = trace.Records[0].New[:3]
+		}},
+		{name: "snapshot2-sum", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New[0].Fields["sumPrice"] = json.Number("290")
+		}},
+		{name: "snapshot2-last-symbol", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New[4].Fields["symbol"] = "D"
+		}},
+		{name: "snapshot2-row-count", mutate: func(trace *compat.Trace) {
+			trace.Records[1].New = trace.Records[1].New[:4]
+		}},
+		{name: "operation", mutate: func(trace *compat.Trace) {
+			trace.Records[0].Operation = "listener"
+		}},
+		{name: "sequence", mutate: func(trace *compat.Trace) {
+			trace.Records[1].Sequence = 9
+		}},
+		{name: "record-count", mutate: func(trace *compat.Trace) {
+			trace.Records = trace.Records[:1]
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join(root, "orderby-rowperevent-iterator.trace.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "orderby-rowperevent-iterator.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "orderby-rowperevent-iterator-diff",
+				"-scenario", filepath.Join(root, "orderby-rowperevent-iterator.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunOrderByRowPerEventIteratorCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, "orderby-rowperevent-iterator.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, "orderby-rowperevent-iterator.go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceFile, err := os.Open(filepath.Join(root, "orderby-rowperevent-iterator.evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(evidenceFile)
+	closeErr := evidenceFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from checked-in trace: %#v", differences)
+	}
+	assertOrderByRowPerEventIteratorTrace(t, javaTrace)
+	assertOrderByRowPerEventIteratorTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, "orderby-rowperevent-iterator.json")
+	scenarioFile, err := os.Open(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenario, err := loadOrderByRowPerEventIteratorScenario(scenarioFile)
+	closeErr = scenarioFile.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		orderbyRowPerEventIteratorJavaCommit,
+		orderbyRowPerEventIteratorJavaRuntimeIDs(),
+		orderbyRowPerEventIteratorSources,
+		orderbyRowPerEventIteratorJavaExecutions(),
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", "orderby-rowperevent-iterator",
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertOrderByRowPerEventIteratorTrace(t, replayed)
+}
+
+func TestRunOrderByRowPerEventIteratorRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, "orderby-rowperevent-iterator.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const id = "orderby-rowperevent-iterator"
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "top-level-duplicate", mutate: func(data []byte) []byte {
+			needle := []byte(`"id": "` + id + `"`)
+			return bytes.Replace(data, needle, append(append([]byte(nil), needle...), []byte(`, "id": "`+id+`"`)...), 1)
+		}},
+		{name: "metadata-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c"`), []byte(`"javaCommit": "wrong"`), 1)
+		}},
+		{name: "case-name", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "iterator-join"`), []byte(`"case": "wrong-case"`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"executionName": "ResultSetIteratorAggregateRowPerEvent",`), []byte(`"executionName": "ResultSetIteratorAggregateRowPerEvent", "extra": 0,`), 1)
+		}},
+		{name: "observation-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"observation": "iterator"`), []byte(`"observation": "listener"`), 1)
+		}},
+		{name: "epl-mismatch-alias", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`sum(price) as sumPrice`), []byte(`sum(price)`), 1)
+		}},
+		{name: "epl-mismatch-order", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`order by symbol`), []byte(`order by price`), 1)
+		}},
+		{name: "ordinal-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 0`), []byte(`"ordinal": 1`), 1)
+		}},
+		{name: "static-id-mismatch", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"java-d88b4c5e379242ff177b"`), []byte(`"java-wrong"`), 1)
+		}},
+		{name: "snapshot-statement", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "s0"`), []byte(`"statement": "s9"`), 1)
+		}},
+		{name: "snapshot-mode-added", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "snapshot",`), []byte(`"op": "snapshot", "mode": "any",`), 1)
+		}},
+		{name: "mdb-payload-wrong-price", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"symbol": "CAT",`+"\n"+`        "price": 50`), []byte(`"symbol": "CAT",`+"\n"+`        "price": 51`), 1)
+		}},
+		{name: "sbs-payload-wrong-value", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "KGB"`), []byte(`"theString": "DOG"`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportMarketDataBean"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "java-flags-null", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": []`), []byte(`"javaFlags": null`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", "orderby-rowperevent-iterator",
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunOrderByRowPerEventIteratorRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "orderby-rowperevent-iterator.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case              string `json:"case"`
+			Ordinal           int    `json:"ordinal"`
+			RuntimeID         string `json:"runtimeId"`
+			ExecutionName     string `json:"executionName"`
+			Observation       string `json:"observation"`
+			IteratorSnapshots int    `json:"iteratorSnapshots"`
+			EPL               string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != orderbyRowPerEventIteratorID ||
+		document.Description != orderbyRowPerEventIteratorDescription ||
+		document.JavaCommit != orderbyRowPerEventIteratorJavaCommit ||
+		document.JavaSource != orderbyRowPerEventIteratorSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, orderbyRowPerEventIteratorJavaRuntimeIDs()) ||
+		!reflect.DeepEqual(document.JavaNames, orderbyRowPerEventIteratorJavaExecutions()) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, orderbyRowPerEventIteratorStaticIDs) ||
+		len(document.JavaFlags) != 0 {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	if len(document.Cases) != len(orderbyRowPerEventIteratorCaseSpecs) {
+		t.Fatalf("scenario cases = %d", len(document.Cases))
+	}
+	entry := document.Cases[0]
+	spec := orderbyRowPerEventIteratorCaseSpecs[0]
+	if entry.Case != spec.name || entry.Ordinal != spec.ordinal || entry.RuntimeID != spec.runtimeID ||
+		entry.ExecutionName != spec.execution || entry.Observation != "iterator" ||
+		entry.IteratorSnapshots != spec.snapshots || entry.EPL != spec.epl {
+		t.Fatalf("scenario case = %#v", entry)
+	}
+}
+
+func assertOrderByRowPerEventIteratorTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != orderbyRowPerEventIteratorID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 2 {
+		t.Fatalf("trace records = %d, want 2", len(trace.Records))
+	}
+	// Ordinal 0: the join aggregate read through the statement iterator twice;
+	// every row carries the CURRENT window sum (214, then 289 after the last
+	// send), ordered by `order by symbol` exactly as Java's
+	// assertPropsPerRowIterator pins it.
+	boundaries := []struct {
+		sequence int
+		rows     []struct {
+			symbol string
+			value  float64
+		}
+	}{
+		{sequence: 1, rows: []struct {
+			symbol string
+			value  float64
+		}{
+			{"CAT", 214}, {"CAT", 214}, {"IBM", 214}, {"IBM", 214},
+		}},
+		{sequence: 2, rows: []struct {
+			symbol string
+			value  float64
+		}{
+			{"CAT", 289}, {"CAT", 289}, {"IBM", 289}, {"IBM", 289}, {"KGB", 289},
+		}},
+	}
+	for index, boundary := range boundaries {
+		record := trace.Records[index]
+		if record.Case != "iterator-join" || record.Operation != "snapshot" ||
+			record.Statement != "s0" || record.Sequence != uint64(boundary.sequence) ||
+			record.Time != "1970-01-01T00:00:00Z" || len(record.Old) != 0 ||
+			len(record.New) != len(boundary.rows) {
+			t.Fatalf("snapshot %d record = %#v", index, record)
+		}
+		for rowIndex, want := range boundary.rows {
+			fields := record.New[rowIndex].Fields
+			if value, ok := fields["symbol"].(string); !ok || value != want.symbol {
+				t.Fatalf("snapshot %d row %d symbol = %#v, want %q", index, rowIndex, fields["symbol"], want.symbol)
+			}
+			if got := mustFloat64(t, fields["sumPrice"]); got != want.value {
+				t.Fatalf("snapshot %d row %d sumPrice = %v, want %v", index, rowIndex, got, want.value)
+			}
+		}
+	}
+}

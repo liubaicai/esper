@@ -11481,7 +11481,7 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 		if !aggregateDefinitionReadsNonKeyEvent(definition) {
 			values, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi)
 			if visible {
-				entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key})
+				entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key, sourceEvent: group.current})
 			}
 			continue
 		}
@@ -11490,7 +11490,7 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 			if !memberVisible {
 				continue
 			}
-			entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key})
+			entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key, sourceEvent: member})
 		}
 	}
 	if len(plan.query.orderBy) > 0 {
@@ -11794,7 +11794,7 @@ func (r *statementRuntime) snapshotAggregateStateBatchInternal(plan Plan, now ti
 					group.multiPluginStates,
 				)
 				if visible {
-					entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group, key: key})
+					entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group, key: key, sourceEvent: current})
 				}
 			}
 		}
@@ -20721,6 +20721,18 @@ func orderAggregateResults(entries []aggregateResultEntry, keys []SortKey, defin
 			leftContext.resultRow = &leftRow
 			rightContext := aggregateResultContext(entries[right].group, definition, allEvents, allEverEvents, now, variables, leaving)
 			rightContext.resultRow = &rightRow
+			// Row-per-event rows are ordered by their OWN event's fields (Java
+			// evaluates the order-by against each row's underlying event), not
+			// by the shared group representative. sourceEvent carries that row's
+			// event where the producing path records it.
+			if entries[left].sourceEvent.Schema().Name() != "" {
+				leftContext.Event = entries[left].sourceEvent
+				leftContext.JoinEvents = joinTupleEvents(entries[left].sourceEvent)
+			}
+			if entries[right].sourceEvent.Schema().Name() != "" {
+				rightContext.Event = entries[right].sourceEvent
+				rightContext.JoinEvents = joinTupleEvents(entries[right].sourceEvent)
+			}
 			comparison, ok := compareOrderValues(key.Expr.eval(leftContext), key.Expr.eval(rightContext))
 			if !ok || comparison == 0 {
 				continue

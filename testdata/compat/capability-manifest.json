@@ -4817,7 +4817,8 @@
     "internal/app/parity/resultset_orderby_multi_delivery.go",
     "internal/app/parity/resultset_orderby_self_join.go",
     "internal/app/parity/orderby_rowperevent_agg.go",
-    "internal/app/parity/orderby_rowperevent_agg_join.go"
+    "internal/app/parity/orderby_rowperevent_agg_join.go",
+    "internal/app/parity/orderby_rowperevent_iterator.go"
    ],
    "phase": 2,
    "status": "differential-verified",
@@ -39911,6 +39912,69 @@
     "This unit documents that the historical row-collapsing limitation of the ungrouped-join-aggregate path (recorded at resultset_orderby_rowperevent_parity_test.go) no longer applies: the join row-per-event aggregate delivers one row per join pair, and the nested max(sum(price)) plus the plain running sum evaluate per join-output prefix as of each pair's creation, exactly matching Java. Pinned at engine level by `TestNestedMaxOfSumJoinHistoricalPrefix` (deliveries [CAT 11,11], [IBM 18,18], [CMU 21,21]). The engine fix in `aggregateExtreme` (nested extreme) came with Draft 4.414; this unit required no further engine change."
    ]
   },
+  {
+   "id": "case.resultset-orderby-rowperevent-iterator",
+   "javaRuntimeIds": [
+    "java-runtime-7bef2fa8f755e74b24ac"
+   ],
+   "javaNames": [
+    "ResultSetIteratorAggregateRowPerEvent"
+   ],
+   "javaStaticIds": [
+    "java-d88b4c5e379242ff177b"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByRowPerEvent.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventIteratorDirectReplay",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventIteratorDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventIteratorDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventIteratorCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventIteratorRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunOrderByRowPerEventIteratorRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "orderby",
+    "aggregate",
+    "row-per-event",
+    "length-window",
+    "join",
+    "iterator",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/orderby-rowperevent-iterator.json",
+    "testdata/parity/orderby-rowperevent-iterator.trace.json",
+    "testdata/parity/orderby-rowperevent-iterator.go.trace.json",
+    "testdata/parity/orderby-rowperevent-iterator.evidence.json",
+    "tools/java-oracle/ResultSetOrderByRowPerEventIteratorScenarioOracle.java",
+    "tools/java-oracle/run-orderby-rowperevent-iterator.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-7bef2fa8f755e74b24ac"
+   ],
+   "notes": [
+    "ResultSetOrderByRowPerEvent ordinal 0 replays one deterministic chain (2 Java/Go snapshot records, 0 differences, 1 case / 11 steps, no virtual time, no output policy and no listener): the join SupportMarketDataBean#length(10) x SupportBeanString#length(100) on symbol=theString is read through the statement ITERATOR twice. Three SBS seeds (CAT, IBM, KGB) then four MDB sends (CAT 50, IBM 49, CAT 15, IBM 100) create four join pairs; snapshot 1 pins CAT,CAT,IBM,IBM each carrying the CURRENT window sum 214 (50+49+15+100); a fifth MDB send (KGB 75) then snapshot 2 pins CAT,CAT,IBM,IBM,KGB each carrying 289. Java's assertPropsPerRowIterator is index-by-index EXACT order, so the snapshot op runs in strict mode (no mode:any) and neither trace normalizes row order. The alias column keeps Java's engine-generated name `sumPrice`.",
+    "Engine fix (shared core, snapshot ordering): the row-per-event snapshot branch of `snapshotAggregateStateBatchInternal` built grouped entries without a source event, so `orderAggregateResults` evaluated each order-by key against the shared group representative; for JoinField keys on a join that resolved to Missing and left rows in join-creation order. The snapshot row-per-event entries now carry `sourceEvent` (the row's own tuple) and `orderAggregateResults` evaluates each order-by key with the row's own event (Event/JoinEvents from sourceEvent) so per-row fields resolve per row; the join snapshot path (`snapshotJoinAggregateBatch`, used by row-recognition statements) was hardened the same way. Row-per-event output paths already carried sourceEvent. No other chain changed behavior (full esper + parity suites green)."
+   ]
+  },
  {
    "id": "case.resultset-output-limit-row-limit-context-grouped",
    "javaRuntimeIds": [
@@ -45105,6 +45169,10 @@
    "caseId": "case.resultset-orderby-rowperevent-agg-join"
   },
   {
+   "capabilityId": "resultset.orderby-simple",
+   "caseId": "case.resultset-orderby-rowperevent-iterator"
+  },
+  {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit"
   },
@@ -45318,10 +45386,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 662,
-  "implementedCases": 660,
-  "differentialVerifiedCases": 288,
-  "differentialVerifiedRuntimeIds": 1051,
+  "inventoriedCases": 663,
+  "implementedCases": 661,
+  "differentialVerifiedCases": 289,
+  "differentialVerifiedRuntimeIds": 1052,
   "intentionallyDifferentCases": 25,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -45331,13 +45399,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3647,
-  "referencedJavaRuntimeIds": 3304,
+  "runtimeAssociationCount": 3648,
+  "referencedJavaRuntimeIds": 3305,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 832,
+  "unreferencedJavaRuntimeIds": 831,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 662,
+  "totalCases": 663,
   "totalCapabilities": 120
  }
 }

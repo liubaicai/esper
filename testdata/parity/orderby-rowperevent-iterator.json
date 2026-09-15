@@ -1,0 +1,108 @@
+{
+  "version": "esper-parity/v1",
+  "id": "orderby-rowperevent-iterator",
+  "description": "ResultSetOrderByRowPerEvent ordinal 0: the join aggregate read through the statement iterator twice inside one runtime, each row carrying the current window sum, ordered by symbol.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/orderby/ResultSetOrderByRowPerEvent.java",
+  "javaRuntimes": [
+    "java-runtime-7bef2fa8f755e74b24ac"
+  ],
+  "javaNames": [
+    "ResultSetIteratorAggregateRowPerEvent"
+  ],
+  "javaStaticIds": [
+    "java-d88b4c5e379242ff177b"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "iterator-join",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-7bef2fa8f755e74b24ac",
+      "executionName": "ResultSetIteratorAggregateRowPerEvent",
+      "observation": "iterator",
+      "iteratorSnapshots": 2,
+      "epl": "@name('s0') select symbol, sum(price) as sumPrice from SupportMarketDataBean#length(10) as one, SupportBeanString#length(100) as two where one.symbol = two.theString order by symbol"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "iterator-join"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "CAT"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "IBM"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBeanString",
+      "payload": {
+        "theString": "KGB"
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CAT",
+        "price": 50,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "price": 49,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "CAT",
+        "price": 15,
+        "volume": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "IBM",
+        "price": 100,
+        "volume": 0
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportMarketDataBean",
+      "payload": {
+        "symbol": "KGB",
+        "price": 75,
+        "volume": 0
+      }
+    },
+    {
+      "op": "snapshot",
+      "statement": "s0"
+    }
+  ]
+}
