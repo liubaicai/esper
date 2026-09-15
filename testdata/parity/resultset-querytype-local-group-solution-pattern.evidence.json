@@ -1,0 +1,395 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-ae96db5ed464e562e6d7"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+  ],
+  "javaExecutions": [
+    "ResultSetLocalGroupedSolutionPattern"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-solution-pattern",
+    "steps": [
+      {
+        "op": "case",
+        "case": "grouped-solution-pattern"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:20Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0,
+          "longPrimitive": 0
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:30Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-solution-pattern",
+    "records": [
+      {
+        "case": "grouped-solution-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.16666666666666666,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.5,
+              "theString": "B"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.3333333333333333,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-solution-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.25,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.5833333333333334,
+              "theString": "B"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.16666666666666666,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-solution-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.5,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.4166666666666667,
+              "theString": "B"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.08333333333333333,
+              "theString": "C"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-solution-pattern",
+    "records": [
+      {
+        "case": "grouped-solution-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.16666666666666666,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.5,
+              "theString": "B"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.3333333333333333,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-solution-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:20Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.25,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.5833333333333334,
+              "theString": "B"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.16666666666666666,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-solution-pattern",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:30Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.5,
+              "theString": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.4166666666666667,
+              "theString": "B"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pct": 0.08333333333333333,
+              "theString": "C"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

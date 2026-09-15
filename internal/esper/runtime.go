@@ -371,16 +371,22 @@ type Engine struct {
 	pendingNamedWindowConsumerDeltas   []namedWindowConsumerDelta
 	pendingFrontRoutedEvents           []routedEvent
 	pendingRoutedEvents                []routedEvent
-	pendingExternalRoutes              []externalRoute
-	dispatching                        bool
-	dispatchDepth                      int
-	drainingExternalRoutes             bool
-	closed                             bool
-	nextID                             uint64
-	inboundPool                        *asyncTaskPool
-	outboundPool                       *asyncTaskPool
-	routePool                          *asyncTaskPool
-	timerPool                          *asyncTaskPool
+	// advanceSpan is the duration covered by the clock advance currently being
+	// processed; Java's same-tick window-expiry/snapshot ordering depends on it.
+	// It is only meaningful inside the advance flow (every expireBatch caller
+	// runs there today) and is intentionally left stale after the advance
+	// returns rather than read by any out-of-advance path.
+	advanceSpan            time.Duration
+	pendingExternalRoutes  []externalRoute
+	dispatching            bool
+	dispatchDepth          int
+	drainingExternalRoutes bool
+	closed                 bool
+	nextID                 uint64
+	inboundPool            *asyncTaskPool
+	outboundPool           *asyncTaskPool
+	routePool              *asyncTaskPool
+	timerPool              *asyncTaskPool
 }
 
 func NewEngine(env *Environment, options ...EngineOption) *Engine {
@@ -4621,6 +4627,7 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	defer func() {
 		e.finishDispatchLifecycle(ctx, outerDispatch, &err)
 	}()
+	e.advanceSpan = at.Sub(e.clock.Now())
 	if err := e.clock.Advance(at); err != nil {
 		e.mu.Unlock()
 		return err
@@ -10115,15 +10122,22 @@ func (r *statementRuntime) expireBatch(plan Plan, now time.Time, variables map[s
 	r.variables = r.withContextVariables(r.variables)
 	r.variables = r.withContextProperties(r.variables)
 	variables = r.variables
-	// Esper evaluates a time-based snapshot output before the same-tick
-	// window expiry: an event whose deadline equals the snapshot tick is
-	// still visible in the snapshot (ResultSetLimitSnapshot at t=10s), while
-	// overdue (< now) events crossed by a clock jump stay excluded. Capture
-	// the exact-boundary aggregate events before expiry; snapshotAggregate
-	// consumes them when the snapshot fires, and the expiry below still runs
-	// so state and istream consumers see the removal.
+	// A time-based snapshot tick that is also a time-window deadline needs the
+	// exact-boundary aggregate events captured before the expiry, because whether
+	// Java keeps them visible depends on the clock advance (see boundaryVisible
+	// below); overdue (< now) events crossed by a clock jump are never visible.
+	// snapshotAggregate consumes the capture when the snapshot fires, and the
+	// expiry below still runs so state and istream consumers see the removal.
 	policy := plan.query.output
-	if policy.Kind == OutputEveryTimePolicy && policy.Snapshot && r.outputState != nil &&
+	// Java's scheduling interaction for a time-based snapshot tick that is also a
+	// time-window deadline depends on how many output ticks the clock advance
+	// covered: one advance spanning MORE than one output interval leaves the
+	// deadline events visible in the snapshot, while an advance covering at most
+	// one interval lets the expiry win. Reproduced against JDK 17 across window
+	// and interval combinations (see the 4.413 unit notes). The comparison applies
+	// to fixed intervals only; an expression-driven rate keeps the prior behavior.
+	boundaryVisible := policy.Interval <= 0 || r.engine == nil || r.engine.advanceSpan > policy.Interval
+	if boundaryVisible && policy.Kind == OutputEveryTimePolicy && policy.Snapshot && r.outputState != nil &&
 		!r.outputState.nextOutputAt.IsZero() && !now.Before(r.outputState.nextOutputAt) &&
 		r.aggregateState != nil {
 		preExpiryAllEvents := append([]Event(nil), r.aggregateState.allEvents...)

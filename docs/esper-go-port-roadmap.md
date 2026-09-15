@@ -296,6 +296,7 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.413（2026-09-15），resultset 本地分组第十个差分链（solution-pattern 除法 + 虚拟时间边界，含共享核心到期顺序修复）：新增 `case.resultset-querytype-local-group-by-solution-pattern`（链 id `resultset-querytype-local-group-solution-pattern`），覆盖固定 Java `ResultSetQueryTypeLocalGroupBy.java` ordinal 12 `ResultSetLocalGroupedSolutionPattern`（`java-runtime-ae96db5ed464e562e6d7`；static `java-13f0da7834ee65870fb0`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`）。Java/Go 各 3 条 records、0 differences，1 case / 23 个 scenario 步骤（纯虚拟时间 0/10/20/30s）：`count(*) / count(*, group_by:())` 在 `#time(30 sec)` 上按 theString 分组、`output snapshot every 10 seconds`，三个边界分别断言 A/B/C = 1/6、3/6、2/6 → 3/12、7/12、2/12 → 6/12、5/12、1/12；第三个分母为 12（而非 18）正是 t=0 那一批在同一 tick 快照前已到期的可观测证据。`pct` 必须按浮点除法计算（Esper 默认除法为浮点，整数除会得 0/1）。**引擎修复（共享核心）**：同一 tick 的「时间窗口到期 vs 时间快照」顺序取决于该次时钟推进覆盖了多少个输出周期——`Engine.advanceSpan` 记录本次推进跨度，仅当 `advanceSpan > policy.Interval` 时保留 deadline==tick 的事件可见（本次推进恰好覆盖一个周期时由到期优先，正是 ordinal 12 所需）。该规则由对固定 Esper 的 JDK 17 探针确定（窗口 10/20/30/40/60s × 各整除周期，含单次跳跃变体），两个参考执行方向分别被钉定，并由 `TestTimeWindowSnapshotTickSpanRule` 在进程内复现；`case.resultset-aggregate-limit-snapshot` 仍为 0 differences。已记录的已知缺口：当整组在同一 span>interval 边界到期时 Java 仍交付该组行而 Go 丢弃空组（暂无 scenario 覆盖）。manifest 更新为 660 cases、658 implemented、286 个 differential-verified case、1046 个 differential runtime IDs、3642 条 associations（referenced 3299、unreferenced 837 不变）；capability `resultset.aggregate-local-group` 的 remaining 收窄为 plan 钩子/非法诊断与 grouped on-select/plugin 聚合。
 > 最新补充：Draft 4.412（2026-09-15），resultset 本地分组键表示与回读差分链：新增 `case.resultset-querytype-local-group-by-keys`（链 id `resultset-querytype-local-group-keys`），覆盖固定 Java `ResultSetQueryTypeLocalGroupBy.java` ordinals 18/19/24/26/27 —— ord 18 `ResultSetLocalUngroupedSameKey`（`java-runtime-890001d4334d5de6c50a`；static `java-2c2e1d80b0046f88b67e`）、ord 19 `ResultSetLocalGroupedSameKey`（`java-runtime-a2b77511196632040e51`；static `java-b0aa55f10cfa580ccd4f`）、ord 24 `ResultSetLocalEnumMethods`（`java-runtime-b6a938fde543383eb73c`；static `java-98ac70ee0f434579c8c8`）、ord 26 `ResultSetLocalMultikeyWArray`（`java-runtime-81855e4095ee0ca7cadd`；static `java-6f7f7c3ba440787d3117`）、ord 27 `ResultSetLocalUngroupedOnlyWGroupBy`（`java-runtime-e1253cd2c17a180c243a`；static `java-e3b7ff9f0f3bf5872d7b`；Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`；flags 全空）。Java/Go 各 20 条 records、0 differences，5 cases / 25 个 scenario 步骤、无虚拟时间：object-array 事件上的两个单表达式局部键（{10,10}{21,11}{12,22}{13,35}{27,14}）；外层 `group by g1` 与跨外层组共享状态的局部键（`X` 行 {13,34,35}、收尾行 {47,26,14}）；`window(*)/window(intPrimitive)` 经 `firstOf()` 与 `first(*)` 取属性回读 statement-wide 与按当前事件键选中的局部层（c0/c1 为发出事件本体）；int[]/long[]/double[] 及三键元组按**内容深度相等**分组（E4 的不同 int[]{1} 实例并入 E1/E5：{23,24,24,13,46}，E5 {37,36,24,24,60}，E6 {27,39,27,15,75}，E7 {27,55,40,27,91}）；`first(*, group_by:())` 恒取首个事件（外层键变化后 c0 仍为 1）。**引擎修复（共享核心，由 parity review 的 P2 发现驱动）**：Go 的本地分组键比较沿用 `compareValues`/`reflect.DeepEqual`，浮点标量与 `[]float64`/`[]float32` 键走 Go 的 `==` 语义（`-0.0 == 0.0`、`NaN != NaN`），与 Java 的键语义正好相反（Java 用 `Double.equals` 与 `Arrays.equals(double[])`，即 `doubleToLongBits`，`-0.0 != 0.0` 且 `NaN == NaN`）；新增 `localGroupKeyFloatEqual`（value.go）与 `javaDoubleToLongBits`/`javaFloatToIntBits`（NaN payload 规范化为单一 quiet-NaN，与 Java 一致）并接入 `localGroupValueEqual`（expr.go），对浮点标量、浮点数组与 object-array 组件按位比较，其余键路径不变。新语义类别由三个 Go 回归钉定：`TestLocalGroupByArrayKeyDeepContentEquality`（数组键内容相等、类型分层、三键元组、全量非局部和）、`TestLocalGroupKeyFloatBitSemantics`（五条键路径；去掉修复以 `scalarSum=3` 失败、去掉 NaN 规范化以 `scalarSum=8, want 12` 失败）与 `TestEnumMethodsOverLocalGroupAggregate`（enum 方法经 `EnumFirstOf`/`NestedField` 读取 `LocalGroupBy`，语句级与按组层取值不同）。typed Go 使用 `RegisterObjectArray` + `FromAny`+`Field[any,T]`（ord 18/19）、`RegisterStruct[SupportThreeArrayEvent]`（ord 26）、`LocalGroupBy`/`Sum`/`WindowEvents`/`WindowValues`/`EnumFirstOf`/`FirstEventValue`/`NestedField`。manifest 更新为 659 cases、657 implemented、285 个 differential-verified case、1045 个 differential runtime IDs、3641 条 associations（referenced 3299、unreferenced 837 不变）；capability `resultset.aggregate-local-group` 的 remaining 收窄为 solution-pattern 除法/计划钩子/非法诊断、grouped on-select 与 plugin 聚合。
 > 最新补充：Draft 4.411（2026-09-15），resultset 本地分组 context-terminated 差分链：新增 `case.resultset-querytype-local-group-by-context-terminated`（ResultSetQueryTypeLocalGroupBy ords 17/23：四种子形态的 terminated 快照 + 聚合 order-by 并列序），Java/Go 各 6 条 records、0 differences；引擎修复：局部 group_by 键未被外层 group by 覆盖时必须走 row-per-event（此前误判为 fully-aggregated）。summary：658 cases、284 DV cases、1040 DV runtime IDs。
 > 最新补充：Draft 4.410（2026-09-15），resultset 本地分组 row-remove 差分链：新增 `case.resultset-querytype-local-group-by-row-remove`（ResultSetQueryTypeLocalGroupBy ords 20/21：命名窗口逐键删除与全删、ungrouped 零回调 vs grouped null 聚合行），Java/Go 各 15 条 records、0 differences，20 个 scenario 步骤；**引擎修复**：命名窗口删除的 row-for-event 旧行分支补齐流选择器门控（此前默认 istream-only 查询也会投递仅 old 回调，Java 不会）。summary：657 cases、283 DV cases、1038 DV runtime IDs。
@@ -1615,11 +1616,11 @@
 
 | 域 | 未覆盖 runtime | 关键子域/类 |
 | --- | --- | --- |
-| epl | 247 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 243 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
-| resultset | 41 | 聚合、输出、排序、分组 |
+| resultset | 35 | 聚合、输出、排序、分组 |
 | multithread | 56 | 并发回归 |
 | context | 45 | Context 分区、嵌套、生命周期 |
 | rowrecog | 34 | Match Recognize |
@@ -1645,11 +1646,11 @@
 
 | 域 | 未覆盖 runtime | 说明 |
 | --- | --- | --- |
-| epl | 247 | subselect、insertinto、database、dataflow、方法源 |
+| epl | 243 | subselect、insertinto、database、dataflow、方法源 |
 | infra | 156 | 表、Named Window、mutation、transaction |
 | event | 151 | 事件表示和 Serde 完整矩阵 |
 | expr | 95 | 表达式函数、类型、脚本、枚举集合 |
-| resultset | 41 | 聚合、输出、排序、分组 |
+| resultset | 35 | 聚合、输出、排序、分组 |
 | context | 45 | Context 分区、嵌套、生命周期 |
 | multithread | 56 | 并发回归 |
 | rowrecog | 34 | Match Recognize |

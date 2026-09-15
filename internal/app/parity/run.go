@@ -40,6 +40,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-row-remove and resultset-querytype-local-group-row-remove-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-context-terminated and resultset-querytype-local-group-context-terminated-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-keys and resultset-querytype-local-group-keys-diff")
+		fmt.Fprintln(stderr, "runner modes include resultset-querytype-local-group-solution-pattern and resultset-querytype-local-group-solution-pattern-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-querytype-aggregate-grouped-having and resultset-querytype-aggregate-grouped-having-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-orderby-aggregate-grouped and resultset-orderby-aggregate-grouped-diff")
 		fmt.Fprintln(stderr, "runner modes include resultset-output-limit-row-limit-context-grouped and resultset-output-limit-row-limit-context-grouped-diff")
@@ -264,6 +265,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetQueryTypeLocalGroupCtxTermScenario(file)
 	} else if *mode == "resultset-querytype-local-group-keys" || *mode == "resultset-querytype-local-group-keys-diff" {
 		scenario, err = loadResultSetQueryTypeLocalGroupKeysScenario(file)
+	} else if *mode == "resultset-querytype-local-group-solution-pattern" || *mode == "resultset-querytype-local-group-solution-pattern-diff" {
+		scenario, err = loadResultSetQueryTypeLocalGroupSolutionScenario(file)
 	} else if *mode == "resultset-output-limit-row-limit-context-grouped" || *mode == "resultset-output-limit-row-limit-context-grouped-diff" {
 		scenario, err = loadResultsetOutputLimitRowLimitContextGroupedScenario(file)
 	} else if *mode == "resultset-output-limit-row-limit" || *mode == "resultset-output-limit-row-limit-diff" {
@@ -3895,6 +3898,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeLocalGroupKeysJavaRuntimeIDs()),
 				splitMetadata(*javaSourceFiles, resultSetQueryTypeLocalGroupKeysJavaSources),
 				splitMetadata(*javaExecutions, resultSetQueryTypeLocalGroupKeysJavaExecutions()), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-querytype-local-group-solution-pattern" || *mode == "resultset-querytype-local-group-solution-pattern-diff" {
+		trace, err := runResultSetQueryTypeLocalGroupSolutionScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-querytype-local-group-solution-pattern-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultSetQueryTypeLocalGroupSolutionJavaRuntimeIDs()),
+				splitMetadata(*javaSourceFiles, resultSetQueryTypeLocalGroupSolutionSources),
+				splitMetadata(*javaExecutions, resultSetQueryTypeLocalGroupSolutionJavaExecutions()), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

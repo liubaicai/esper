@@ -552,7 +552,8 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
       `5f28073be66fb2bb6ee0565957b2bcf8`), the six-test family green, the three engine regressions
       green (`-race` re-run too), the manifest validator green, `git diff --check` clean, and the
       manifest diff back to zero reindentation lines (99 insertions / 10 deletions).
-- [ ] Commit and push the work unit.
+- [x] Shipped; Git owns identity (semantic commit pushed to `master`; 16 files, 4590 insertions /
+      11 deletions).
 
 - N+1 contract PREFETCHED (read-only, frozen; no 4.413 writes started while 4.412 is under review):
       ordinal 12 `ResultSetLocalGroupedSolutionPattern`, runtime `java-runtime-ae96db5ed464e562e6d7`,
@@ -592,9 +593,13 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
       3. **Summary derivability: CLEAN.** The manifest's own validator recomputes every counter from
          the case and capability contents and passed; the roadmap/CHANGELOG numbers for 4.412 are
          copies of that validated summary, not hand-computed.
-      4. **Earlier-capability regression risk: CLEAN so far.** The full `go test ./...` corpus
-         (including the whole parity suite) is green after the change, and this unit modified no
-         production semantic surface, so no earlier capability could have been perturbed.
+      4. **Earlier-capability regression risk: CLEAN.** The full `go test ./...` corpus (including the
+         whole parity suite) is green after the change. The unit's single shared-core change
+         (floating-point local-group key comparison) has exactly one call site
+         (`localGroupValueEqual`, reached only from `localGroupKeysEqual`), leaves every non-float key
+         path on the previous `compareValues`/`Value.Equal` code, and the only pre-existing test that
+         uses a float key (`internal/esper/aggregate_test.go:716`, exact 2.0/4.0 values) passes
+         unmodified - so no earlier capability is perturbed.
          Remaining audit dimensions (race/stress/Docker/benchmark at a milestone boundary) are run
          below for the affected packages; the full-suite race/stress and Docker gates stay with the
          subdomain milestone close, which is not reached here (ordinals 12/15/16/22/25 of this Java
@@ -605,6 +610,157 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          there; no chain exercises `-0.0`/`NaN` context keys, and this unit makes no claim either
          way. Worth a read-only check the next time the keyed-context surface is touched, rather than
          a speculative change now.
+
+## Current work unit
+Active: Draft 4.413 ('resultset-querytype-local-group-solution-pattern').
+
+- Unit: the LAST normal execution of `ResultSetQueryTypeLocalGroupBy` - ordinal 12
+      `ResultSetLocalGroupedSolutionPattern` (`java-runtime-ae96db5ed464e562e6d7`, static
+      `java-13f0da7834ee65870fb0`). Ordinals 15/16/22/25 stay deferred (plan hook, compile
+      diagnostics, grouped on-select, plugin aggregate), so this unit closes every executable
+      behavior of the file except those four.
+- Contract: FROZEN during 4.412's review by two independent read-only scouts and re-verified line by
+      line by the primary agent (see the 4.412 section's prefetch block above for the exact EPL,
+      timeline, boundary semantics and double spellings). Non-negotiable implementation facts:
+      - the `pct` column is FLOATING division, so it must be spelled
+        `Divide[float64](Cast[int64,float64](CountAll()), Cast[int64,float64](LocalGroupBy[int64](CountAll())))`;
+        `Divide[int64]` would truncate to 0/1;
+      - the denominator is the statement-wide `group_by:()` level, and the t=30s boundary expires the
+        t=0 batch (inclusive), which is why the third snapshot's denominator is 12 and not 18;
+      - snapshot row order is NOT a contract (Java HashMap order), so the chain canonicalizes the
+        three rows ascending by `theString`, exactly as the grouped chain canonicalizes its key order;
+      - one callback per advance (3 rows, new-only), no callback for any send, so 3 records / 9 rows.
+- Engine gap FOUND by the first direct replay (this is the unit's shared-core fix):
+      ordinal 12's own Java trace is ground truth for a boundary the existing engine got wrong. Go
+      produced A/B/C = 7/18, 8/18, 3/18 at the t=30s snapshot, while Java asserts 6/12, 5/12, 1/12 -
+      i.e. Java had already expired the six t=0 events (deadline exactly 30s) before that snapshot.
+      The engine had a deliberate same-tick exception (in `runtime.go`, introduced with the
+      resultset-aggregate-limit-snapshot chain) that keeps deadline==tick events visible in a
+      time-based snapshot. Removing it fixed ordinal 12 but broke
+      `TestRunResultSetAggregateLimitSnapshotDiffWritesPassingEvidence`, so both behaviors are real.
+      To resolve the contradiction I ran a standalone JDK 17 probe (compiled against the pinned
+      Esper checkout, kept outside the repo) over window/interval/anchor combinations. Result: the
+      outcome depends on how many output ticks the SAME clock advance covers.
+        - advance spanning exactly one interval -> the expiry wins (deadline event absent):
+          window 10s / interval 10s with one event at t=0 and a single advance 0->10s gives
+          `[10000:none]`; the full stepped matrix (windows 10/20/30/40/60s x every dividing interval
+          from 1s to 60s, each advance equal to the interval) is `none` at every boundary; two events
+          at 0 and 5s give `[10000:[A=1]]` (only the t=5s event survives).
+        - advance spanning more than one interval -> the deadline event stays visible:
+          window 10s / interval 1s with a single jump 0->10s gives `[10000:[1]]`; with events at 0 and
+          5s it gives `[5000:[A=1], 10000:[A=2]]`; window 30s / interval 1s advanced in 10s jumps
+          keeps the event visible at 30s, while window 30s / interval 10s does not.
+      Fix (shared core, `internal/esper/runtime.go`): the engine records the duration of the clock
+      advance it is processing (`Engine.advanceSpan`) and the same-tick snapshot boundary capture is
+      gated on `advanceSpan > policy.Interval`. Expression-driven output rates keep the previous
+      behavior. Both reference chains are green: ordinal 12 now matches Java exactly (6/12, 5/12,
+      1/12) and the limit-snapshot chain still reports 0 differences. Pinned by
+      `TestTimeWindowSnapshotTickSpanRule` in both directions.
+      KNOWN, RECORDED GAP: Java also keeps the boundary snapshot row when the whole group expires at
+      that tick (window 10s / interval 1s, one event at t=0, single jump 0->10s: Java delivers
+      `[10000:[A=1]]`); Go's grouped-aggregate snapshot drops a group whose events all expired, so
+      that shape currently delivers nothing. No differential scenario exercises it (the
+      limit-snapshot chain keeps a second event in the group; ordinal 12 keeps later rounds), so it
+      is recorded here and in the manifest notes as a follow-up rather than silently diverged. A fix
+      would synthesize the group from the captured pre-expiry events inside
+      `snapshotAggregateStateBatchInternal`.
+- [x] Scenario `testdata/parity/resultset-querytype-local-group-solution-pattern.json` (1 case / 23
+      steps) + runner `internal/app/parity/resultset_querytype_local_group_solution_pattern.go` +
+      the three `run.go` wiring points + the six-test family in `run_test.go` (13 trace mutations and
+      15 raw-scenario mutations, all rejected). Direct replay matched the Java source values as soon
+      as the engine rule below was in place.
+- [x] Java oracle + run script delivered by a parity-asset writer (agent `general-purpose-1`,
+      task agent-2e2561d153e8496f; only its two authorized files touched) and the authoritative trace
+      regenerated by the primary agent: 3 records, md5 `5cbb858706ff78746bb5e59c93f0514f`,
+      byte-reproducible on a re-run. The asset writer also caught and reported an arithmetic error in
+      the primary agent's brief (the 20s C share is 2/12, not 2/6) instead of silently following it.
+- [x] Differential replay: `-mode resultset-querytype-local-group-solution-pattern-diff` reports
+      status `passing` / 0 differences; the checked-in Go trace is md5
+      `45ece653c1371c7a9d42902f6dd2bef6`.
+- [x] Manifest/roadmap/CHANGELOG facts: 660 cases / 658 implemented / 286 DV cases / 1046 DV runtime
+      IDs / 3642 associations (referenced 3299 and unreferenced 837 unchanged - ordinal 12's runtime
+      id was already referenced by the umbrella case); capability goRefs extended and its `remaining`
+      now names only the genuinely open items (plan hook, invalid diagnostics, grouped on-select,
+      plugin aggregate); the umbrella difference no longer lists the solution-pattern division.
+- [x] Gate note (recorded because it is part of the unit's history): the first `make check` after the
+      unit was assembled failed at `check-layout` with "Go files require gofmt" for the new runner
+      (`30 * time.Second` vs the gofmt spelling `30*time.Second`). Fixed immediately with gofmt on the
+      affected file before any other work continued; `check-layout.sh` then passed and the full
+      `make check` was re-run to green. The Java trace was independently re-generated at the same
+      time and is byte-reproducible (md5 `5cbb858706ff78746bb5e59c93f0514f`), and the race gates on the
+      new engine regression and the new chain are green.
+- Audit finding recorded for the doc pass after the review: the roadmap's per-domain unreferenced
+      runtime tables (sections 5.2 and 6.1) are stale against the current manifest+inventory. A fresh
+      derivation (unreferenced = inventory runtime ids not listed by any case, grouped by the top-level
+      `suite/<domain>` directory) gives epl 243 (table says 247) and resultset 35 (table says 41); the
+      other seven domains match (infra 156, event 151, expr 95, multithread 56, context 45, rowrecog 34,
+      view 22). Fix the two numbers in both tables as part of this unit's doc updates so the roadmap
+      stays derived from machine facts.
+- [x] Full local gates GREEN for the final state: `make check` exit 0 twice (before and after the
+      comment-only runtime.go edit), including the fresh 4.413 family, the engine regression, the
+      manifest validator, `check-layout` and `go vet`; race gates green on
+      `TestTimeWindowSnapshotTickSpanRule` and the new chain; `git diff --check` clean; the Java
+      trace is byte-reproducible (md5 `5cbb858706ff78746bb5e59c93f0514f`) and the Go trace
+      deterministic (md5 `45ece653c1371c7a9d42902f6dd2bef6`); both reference chains report 0
+      differences simultaneously (limit-snapshot chain diff re-run against its extracted Java
+      trace).
+- [x] Gate stumble recorded: the first `make check` failed at `check-layout` ("Go files require
+      gofmt" on the new runner, `30 * time.Second` vs `30*time.Second`); fixed with gofmt before
+      continuing, then re-run to green.
+- [x] Audit/doc fixes folded in: the stale comment above the boundary capture in `runtime.go` was
+      corrected to describe the conditional rule, and the roadmap's per-domain unreferenced tables
+      were re-derived and corrected (epl 247 -> 243, resultset 41 -> 35; the other seven domains
+      matched).
+- [x] **Independent parity review COMPLETE (retry after the 429): OVERALL PASS**, all five areas
+      PASS, no P0/P1/P2. The reviewer (fresh read-only agent, task agent-bbb5a9b3c2c5439c)
+      independently re-derived every expected value and IEEE double spelling, verified the
+      ordinal/runtime/static ids from the inventory and static manifest, re-ran BOTH differential
+      checks (solution-pattern and the limit-snapshot chain that motivated the original unconditional
+      exception: both exit 0, passing, 0 differences), regenerated the Java trace byte-for-byte (md5
+      `5cbb858706ff78746bb5e59c93f0514f`), re-verified the manifest counters pre->post and
+      recomputed the roadmap uncovered-runtime tables itself (confirming epl 243 / resultset 35 were
+      the correct corrections). Three P3 observations, no action required for the unit, two folded
+      in as comments: (1) LongPrimitive 0 / CharPrimitive NUL vs Java null is the established family
+      convention with no observable impact; (2) `advanceSpan` is only meaningful inside the advance
+      flow - the field comment now states that invariant explicitly; (3) a backwards/zero-span
+      advance suppresses the boundary capture, acceptable since `clock.Advance` rejects backwards
+      moves. The original "BLOCKED, resume here" note below is superseded by this entry and kept for
+      the record of the 429 outage.
+- [x] Historical note of the 429 outage (superseded by the review above): the reviewer agent
+      (`Explore-1`, task agent-942397b2ac3b404d) ran 15m58s and then FAILED with a platform usage
+      limit - `429 您的使用量已超出频率限制，将在 2026-09-16 15:57:11 UTC+8 重置` - so its findings
+      were lost and must be redone from scratch (a fresh read-only reviewer with the review brief
+      already written into this checkpoint's delegation notes). NOTHING has been committed for
+      4.413: the working tree holds the complete unit and every local gate is green for it, so the
+      resume order is (1) re-run the independent review, (2) fix findings, (3) re-run `make check`,
+      (4) commit and push. Do not commit before the review.
+      UPDATE: the quota recovered on retry - a fresh read-only reviewer
+      (`Explore-1`, task agent-bbb5a9b3c2c5439c) is now running with a focused brief covering the
+      same five areas (Java fidelity, runner semantics, the advanceSpan engine rule including a
+      re-run of BOTH differential checks, trace/evidence integrity with byte-reproduction, and
+      manifest/doc consistency). One formatting-only edit landed after the earlier reviewer started
+      (`30 * time.Second` -> `30*time.Second` in the new runner, forced by the check-layout gate);
+      it does not change any reviewed semantics.
+- Next unit prefetch (read-only, complete): both N+1 scouts reported for
+  `ResultSetOrderByRowPerEvent.java` before the rate limit hit. Java contract scout (Explore-3,
+  task agent-32712f26fa8c40b1) delivered the full contract for the six unverified executions
+  (ords 0/2/3/5/9/10 with runtime and static ids, exact EPLs, send vectors, order-sensitivity
+  analysis - every assertion is EXACT-ORDER, and ords 9/10's values are delivery-order cumulative,
+  not group sums) and recommended slicing {3,5} (single-stream, reuses the existing
+  `orderby-rowperevent` oracle harness, no engine change) with the join cluster {2,9,10} next and
+  ord 0 (iterator surface) last. Go surface scout (Explore-2, task agent-a87349d5bf554cfd)
+  delivered the expressibility table: ords 3 is expressible today; ords 5/9 need new surface for
+  nested `max(sum(price))` (only `Avg` implements the historical-prefix nested-aggregate
+  evaluation, `expr.go:4272-4312`); ords 0/2/9/10 hit the documented join row-per-event
+  multiplicity gap (`resultset_orderby_rowperevent_parity_test.go:333-337`); the legacy
+  `orderby-rowperevent` case has no goTests/javaSourceFiles and must not be extended. Frozen
+  decision for the next unit (4.414): ords {3,5} as a new chain `orderby-rowperevent-agg`
+  (new case ids; the legacy case stays untouched), with the nested-`max(sum)` engine work and the
+  join cluster deferred to their own units. The review brief for 4.413 is above; when the platform
+  quota resets, resume there first.
+- [ ] Java oracle + run script by a parity-asset writer (disjoint file set), then the authoritative
+      trace and the differential replay.
+- [ ] Manifest/roadmap/CHANGELOG facts, independent review, gates, commit and push.
 
 ### Previous work unit (prior)
 
@@ -865,6 +1021,32 @@ Active: Draft 4.392 ('infra-named-window-bean-views') - chain, evidence and docs
 
 
 ## Delegation checkpoint (recent)
+
+Draft 4.413 unit:
+- Delegation gate satisfied by the prefetch that ran during 4.412's review: Java contract scout
+  (`Explore-2`, ordinal 12 contract incl. the floating-division typing and the t=30s expiry
+  semantics) and Go surface scout (`Explore-3`, builder inventory, row-order normalization and the
+  ranked risk list). The primary agent re-verified the contract line by line against the Java source
+  before writing anything.
+- Lanes: one parity-asset writer (`general-purpose-1`) ran on the disjoint oracle+script file set
+  after the contract was frozen; the primary agent owned the scenario, runner, run.go/run_test.go,
+  the engine fix, the manifest, the docs and PLANS.md.
+- Independent read-only reviewer `Explore-1` (task agent-942397b2ac3b404d) started on the frozen
+  diff, explicitly asked to try to falsify the empirically derived engine rule and to re-derive the
+  expected values, manifest counters and mutation needles itself. No N+1 writes were started while
+  the review was outstanding. Ordinal 12 was the last normal execution of this Java file (only ords
+  15/16/22/25 remain, all deferred), so the read-only prefetch was re-pointed at the next cluster:
+  a fresh manifest/inventory scan (unreferenced runtime ids grouped by source file, excluding the
+  performance-only suites) makes `regressionlib/suite/resultset/orderby/ResultSetOrderByRowPerEvent.java`
+  (6 unreferenced executions) the largest ordinary resultset cluster, followed by
+  `resultset/aggregate/ResultSetAggregateCountSum.java` (4),
+  `resultset/outputlimit/ResultSetOutputLimitCrontabWhen.java` (3) and
+  `resultset/querytype/ResultSetQueryTypeHaving.java` (3). The choice, and the two read-only scouts
+  for it, belong to the next work unit. During 4.413's review the two read-only N+1 scouts were
+  dispatched for that cluster (Java contract scout `Explore-3`, task agent-32712f26fa8c40b1, for the
+  six unverified executions; Go surface scout `Explore-2`, task agent-a87349d5bf554cfd, for
+  expressibility, precedents, wiring and risks) so the next unit can start from a frozen contract.
+  No N+1 writes were started.
 
 Draft 4.412 unit:
 - Delegation gate satisfied before implementation: two read-only scouts ran concurrently on the

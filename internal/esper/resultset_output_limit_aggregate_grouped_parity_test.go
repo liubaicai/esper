@@ -582,3 +582,105 @@ func TestResultSetHavingEveryEventsParity(t *testing.T) {
 	assertHavingRow(batches[2], "old", 1, 2, 11)
 	assertHavingRow(batches[2], "old", 2, 3, 11)
 }
+
+// TestTimeWindowSnapshotTickSpanRule pins how a time-based snapshot tick that
+// is also a time-window deadline resolves against the expiry. Java's scheduler
+// makes the outcome depend on how many output ticks the clock advance covered:
+//
+//   - an advance covering exactly ONE output interval lets the expiry win, so the
+//     deadline event is absent from that snapshot (ResultSetQueryTypeLocalGroupBy
+//     ordinal 12 advances 20s -> 30s with a 10s interval and reports the t=0 batch
+//     as already expired);
+//   - an advance spanning MORE than one interval keeps the deadline event visible
+//     in the boundary snapshot (ResultSetOutputLimitAggregateGrouped's
+//     ResultSetLimitSnapshot jumps 1.5s -> 10s with a 1s interval and still
+//     reports the event sent at t=0).
+//
+// Both shapes were reproduced against JDK 17 with a standalone probe before this
+// test was written; each case keeps a second event in the group so the group
+// itself survives the boundary expiry.
+func TestTimeWindowSnapshotTickSpanRule(t *testing.T) {
+	type snapEvent struct {
+		Key string `esper:"key"`
+	}
+	build := func(t *testing.T, interval time.Duration) (*Engine, *Deployment) {
+		t.Helper()
+		env := NewEnvironment()
+		if _, err := RegisterStruct[snapEvent](env, "SnapEvent"); err != nil {
+			t.Fatal(err)
+		}
+		key := Field[snapEvent, string]("key")
+		plan, err := env.Build(From[snapEvent](env, "SnapEvent").
+			Window(TimeWindow(10*time.Second)).
+			GroupBy(key).
+			Select(
+				Alias("key", key),
+				Alias("cnt", CountAll()),
+			).
+			Query(StatementName("s0"), WithOutput(OutputSnapshotEvery(interval))))
+		if err != nil {
+			t.Fatal(err)
+		}
+		engine := NewEngine(env)
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return engine, deployment
+	}
+	collect := func(t *testing.T, deployment *Deployment) *[]int64 {
+		t.Helper()
+		counts := make([]int64, 0, 4)
+		if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+			for _, result := range batch.New {
+				if row, ok := result.Row(); ok {
+					if value, ok := row.Get("cnt").Any().(int64); ok {
+						counts = append(counts, value)
+					}
+				}
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return &counts
+	}
+	sendAt := func(t *testing.T, engine *Engine, at time.Duration) {
+		t.Helper()
+		ctx := context.Background()
+		if at > 0 {
+			if err := engine.AdvanceTime(ctx, time.Unix(0, 0).UTC().Add(at)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := engine.Send(ctx, "SnapEvent", snapEvent{Key: "A"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Advance covering exactly one output interval: the t=0 event expires before
+	// the t=10s snapshot, so only the t=5s event is counted.
+	engineEqual, deploymentEqual := build(t, 10*time.Second)
+	equalCounts := collect(t, deploymentEqual)
+	sendAt(t, engineEqual, 0)
+	sendAt(t, engineEqual, 5*time.Second)
+	if err := engineEqual.AdvanceTime(context.Background(), time.Unix(10, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(*equalCounts) != 1 || (*equalCounts)[0] != 1 {
+		t.Fatalf("advance covering exactly one interval counted %v, want one row with cnt 1 (the t=0 event expired)", *equalCounts)
+	}
+
+	// Advance spanning more than one output interval: the t=0 event is still part
+	// of the boundary snapshot, so the last delivery counts both events.
+	engineSpan, deploymentSpan := build(t, time.Second)
+	spanCounts := collect(t, deploymentSpan)
+	sendAt(t, engineSpan, 0)
+	sendAt(t, engineSpan, 5*time.Second)
+	if err := engineSpan.AdvanceTime(context.Background(), time.Unix(10, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if len(*spanCounts) == 0 || (*spanCounts)[len(*spanCounts)-1] != 2 {
+		t.Fatalf("advance spanning ten intervals counted %v, want the final boundary row to count both events", *spanCounts)
+	}
+}

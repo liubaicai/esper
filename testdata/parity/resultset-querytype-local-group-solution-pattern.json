@@ -1,0 +1,212 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-local-group-solution-pattern",
+  "description": "ResultSetQueryTypeLocalGroupBy ordinal 12: the grouped solution-pattern ratio, count(*) divided by the statement-wide count(*, group_by:()) over a 30-second time window with an output snapshot every 10 seconds, driven entirely by virtual time (0/10/20/30s) so the final boundary expires the batch sent at zero and the third snapshot's denominator is 12.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java",
+  "javaRuntimes": [
+    "java-runtime-ae96db5ed464e562e6d7"
+  ],
+  "javaNames": [
+    "ResultSetLocalGroupedSolutionPattern"
+  ],
+  "javaStaticIds": [
+    "java-13f0da7834ee65870fb0"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "grouped-solution-pattern",
+      "ordinal": 12,
+      "runtimeId": "java-runtime-ae96db5ed464e562e6d7",
+      "executionName": "ResultSetLocalGroupedSolutionPattern",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@name('s0') select theString, count(*) / count(*, group_by:()) as pct from SupportBean#time(30 sec) group by theString output snapshot every 10 seconds"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "grouped-solution-pattern"
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:00Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "C",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "C",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:10Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:20Z"
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "C",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 0,
+        "longPrimitive": 0
+      }
+    },
+    {
+      "op": "advance-time",
+      "at": "1970-01-01T00:00:30Z"
+    }
+  ]
+}
