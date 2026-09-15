@@ -259,3 +259,120 @@ func TestLocalGroupByRejectsInvalidKeys(t *testing.T) {
 		t.Fatalf("valid local group key rejected: %v", err)
 	}
 }
+
+// TestNamedWindowDeleteStreamSelectionGate pins the stream-selection gate on
+// named-window removals: a plain query is istream-only (Java's default stream
+// selection), so a deleted row produces NO callback, while an explicit
+// irstream query observes the removal as an old-only row computed over the
+// post-removal state.
+func TestNamedWindowDeleteStreamSelectionGate(t *testing.T) {
+	env, _ := newLocalGroupTest(t)
+	schema, ok := env.Schema("LocalGroupEvent")
+	if !ok {
+		t.Fatal("local group schema is missing")
+	}
+	if _, err := CreateNamedWindow(env, "stream-gate-window", schema); err != nil {
+		t.Fatal(err)
+	}
+	source := From[localGroupEvent](env, "LocalGroupEvent")
+	insertPlan, err := env.Build(OnEvent(source).InsertIntoNamedWindow("stream-gate-window",
+		SetColumn("id", Field[localGroupEvent, string]("id")),
+		SetColumn("group", Field[localGroupEvent, string]("group")),
+		SetColumn("level", Field[localGroupEvent, int]("level")),
+		SetColumn("value", Field[localGroupEvent, int64]("value")),
+	).Query(StatementName("stream-gate-insert")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := Field[any, string]("id")
+	value := Field[any, int64]("value")
+	newOnlyPlan, err := env.Build(FromNamedWindow(env, "stream-gate-window").Aggregate(
+		Alias("id", id),
+		Alias("c0", Sum[int64](value)),
+	).Query(StatementName("stream-gate-new-only")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	iStreamPlan, err := env.Build(FromNamedWindow(env, "stream-gate-window").Aggregate(
+		Alias("id", id),
+		Alias("c0", Sum[int64](value)),
+	).Query(StatementName("stream-gate-irstream"), WithOldStream()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletePlan, err := env.Build(OnEvent(From[localGroupDeleteEvent](env, "LocalGroupDeleteEvent")).DeleteFromNamedWindow(
+		"stream-gate-window",
+		Equal[string](NamedWindowField[string]("id"), Field[localGroupDeleteEvent, string]("id")),
+	).Query(StatementName("stream-gate-delete")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	newOnlyDeployment, err := engine.Deploy(context.Background(), newOnlyPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	iStreamDeployment, err := engine.Deploy(context.Background(), iStreamPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, plan := range []Plan{insertPlan, deletePlan} {
+		if _, err := engine.Deploy(context.Background(), plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	type observed struct {
+		newRows, oldRows int
+		oldSums          []int64
+	}
+	newOnlyBatches := make([]observed, 0, 2)
+	iStreamBatches := make([]observed, 0, 2)
+	collect := func(target *[]observed) Listener {
+		return func(_ context.Context, batch ResultBatch) error {
+			entry := observed{newRows: len(batch.New), oldRows: len(batch.Old)}
+			for _, result := range batch.Old {
+				if row, ok := result.Row(); ok {
+					sum, _ := row.Get("c0").Any().(int64)
+					entry.oldSums = append(entry.oldSums, sum)
+				}
+			}
+			*target = append(*target, entry)
+			return nil
+		}
+	}
+	if _, err := newOnlyDeployment.Statements()[0].Subscribe(collect(&newOnlyBatches)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := iStreamDeployment.Statements()[0].Subscribe(collect(&iStreamBatches)); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := engine.Send(ctx, "LocalGroupEvent", localGroupEvent{ID: "A", Group: "E1", Level: 1, Value: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Send(ctx, "LocalGroupEvent", localGroupEvent{ID: "B", Group: "E2", Level: 2, Value: 15}); err != nil {
+		t.Fatal(err)
+	}
+	if len(newOnlyBatches) != 2 || len(iStreamBatches) != 2 {
+		t.Fatalf("insert batches = %d/%d, want two per statement", len(newOnlyBatches), len(iStreamBatches))
+	}
+	if err := engine.Send(ctx, "LocalGroupDeleteEvent", localGroupDeleteEvent{ID: "A"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(newOnlyBatches) != 2 {
+		t.Fatalf("istream-only query observed %d extra batches on a named-window delete: %#v", len(newOnlyBatches)-2, newOnlyBatches[2:])
+	}
+	if len(iStreamBatches) != 3 {
+		t.Fatalf("irstream query batches = %d, want three", len(iStreamBatches))
+	}
+	removal := iStreamBatches[2]
+	if removal.newRows != 0 || removal.oldRows != 1 || len(removal.oldSums) != 1 || removal.oldSums[0] != 15 {
+		t.Fatalf("removal batch = %#v, want one old row carrying the post-removal sum 15", removal)
+	}
+	if err := engine.Send(ctx, "LocalGroupEvent", localGroupEvent{ID: "C", Group: "E3", Level: 3, Value: 20}); err != nil {
+		t.Fatal(err)
+	}
+	if len(newOnlyBatches) != 3 || len(iStreamBatches) != 4 {
+		t.Fatalf("post-delete insert batches = %d/%d, want three and four", len(newOnlyBatches), len(iStreamBatches))
+	}
+}

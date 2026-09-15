@@ -1,0 +1,809 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-3a47ac428a21e66d8614",
+    "java-runtime-07d68fdd9a8dffc8c7f4"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+  ],
+  "javaExecutions": [
+    "ResultSetLocalUngroupedRowRemove",
+    "ResultSetLocalGroupedRowRemove"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-row-remove",
+    "steps": [
+      {
+        "op": "case",
+        "case": "ungrouped-row-remove"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 101
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 102
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 30,
+          "longPrimitive": 103
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 40,
+          "longPrimitive": 104
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 40,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 50,
+          "longPrimitive": 105
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 60,
+          "longPrimitive": 106
+        }
+      },
+      {
+        "op": "case",
+        "case": "grouped-row-remove"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 101
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20,
+          "longPrimitive": 102
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 30,
+          "longPrimitive": 103
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 40,
+          "longPrimitive": 104
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 40,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 50,
+          "longPrimitive": 105
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 60,
+          "longPrimitive": 106
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-row-remove",
+    "records": [
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 101,
+              "c1": 101,
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 102,
+              "c1": 102,
+              "intPrimitive": 20,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 205,
+              "c1": 103,
+              "intPrimitive": 30,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 309,
+              "c1": 206,
+              "intPrimitive": 40,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 310,
+              "c1": 207,
+              "intPrimitive": 50,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 106,
+              "c1": 106,
+              "intPrimitive": 60,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 101,
+              "c1": 101,
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 102,
+              "c1": 102,
+              "intPrimitive": 20,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 103,
+              "c1": 103,
+              "intPrimitive": 30,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 104,
+              "c1": 206,
+              "intPrimitive": 40,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 102,
+              "intPrimitive": 40,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 105,
+              "c1": 207,
+              "intPrimitive": 50,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "intPrimitive": 20,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "intPrimitive": 50,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "intPrimitive": 30,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 106,
+              "c1": 106,
+              "intPrimitive": 60,
+              "theString": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-querytype-local-group-row-remove",
+    "records": [
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 101,
+              "c1": 101,
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 102,
+              "c1": 102,
+              "intPrimitive": 20,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 205,
+              "c1": 103,
+              "intPrimitive": 30,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 309,
+              "c1": 206,
+              "intPrimitive": 40,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 310,
+              "c1": 207,
+              "intPrimitive": 50,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "ungrouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 106,
+              "c1": 106,
+              "intPrimitive": 60,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 101,
+              "c1": 101,
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 102,
+              "c1": 102,
+              "intPrimitive": 20,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 103,
+              "c1": 103,
+              "intPrimitive": 30,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 104,
+              "c1": 206,
+              "intPrimitive": 40,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": 102,
+              "intPrimitive": 40,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 105,
+              "c1": 207,
+              "intPrimitive": 50,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "intPrimitive": 20,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "intPrimitive": 50,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              },
+              "c1": {
+                "state": "null"
+              },
+              "intPrimitive": 30,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "grouped-row-remove",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 106,
+              "c1": 106,
+              "intPrimitive": 60,
+              "theString": "E1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

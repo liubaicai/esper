@@ -19567,10 +19567,15 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				})
 			}
 		}
-		if aggregateDefinitionIsRowForEvent(definition) && len(delta.newEvents) == 0 && len(delta.oldEvents) > 0 {
+		if aggregateDefinitionIsRowForEvent(definition) && len(delta.newEvents) == 0 && len(delta.oldEvents) > 0 &&
+			(plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) {
 			// Named-window deletes (no incoming events): one old row per
 			// leaving event with plain columns from the leaving event and
-			// aggregates over the post-removal state; no new row.
+			// aggregates over the post-removal state; no new row. Like every
+			// other old-entry block in this function, the removal row is only
+			// produced for remove-stream selections: Java's default stream
+			// selection is istream-only, so a plain query reports no callback
+			// when a named-window row disappears.
 			postRemoval, postVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
 			for _, leaving := range delta.oldEvents {
 				oldValues := append([]Value(nil), postRemoval...)

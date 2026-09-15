@@ -965,6 +965,7 @@
     "internal/app/parity/resultset_querytype_local_group_extended.go",
     "internal/app/parity/resultset_querytype_local_group_grouped.go",
     "internal/app/parity/resultset_querytype_local_group_ungrouped_agg.go",
+    "internal/app/parity/resultset_querytype_local_group_row_remove.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 3,
@@ -39478,6 +39479,75 @@
     "All four Java executions assert new-only semantics (exactly one new row and no old data per callback), which the oracle enforces, and no row-order canonicalization is needed. Ord 2's window arrays are insertion order and its sorted arrays ascending by intPrimitive, with every event column rendered as the full 20-field SupportBean row. Typed Go reuses `LocalGroupBy` over the sum, statistical, window and event-valued aggregates with `FilterAggregate` for the filtered max/min variants, adds a local `Math.round` Func1 for the standard-deviation column (the facade has no equivalent scalar function), spells `select *` as 20 explicit aliases, and applies the local-group aggregate inside `Having`; no engine change was required. Evidence-strength limit: the Java execution's own inputs keep `intPrimitive` positive throughout, so the pinned rows cannot distinguish the filtered fmax/fmin variants from their unfiltered twins (identical in Java as well); `FilterAggregate` semantics are covered by the dedicated filtered-aggregate chains."
    ]
   },
+ {
+   "id": "case.resultset-querytype-local-group-by-row-remove",
+   "javaRuntimeIds": [
+    "java-runtime-3a47ac428a21e66d8614",
+    "java-runtime-07d68fdd9a8dffc8c7f4"
+   ],
+   "javaNames": [
+    "ResultSetLocalUngroupedRowRemove",
+    "ResultSetLocalGroupedRowRemove"
+   ],
+   "javaStaticIds": [
+    "java-3da6ea3da5df0d53578a",
+    "java-ce99d7bbb48728947c59"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupRowRemoveDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupRowRemoveDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupRowRemoveDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupRowRemoveCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupRowRemoveRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupRowRemoveRuntimeIDMappingMatchesScenario",
+    "internal/esper/aggregate_local_group_test.go:TestNamedWindowDeleteStreamSelectionGate"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "local-group-by",
+    "aggregate",
+    "named-window",
+    "row-remove",
+    "null-aggregate",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-local-group-row-remove.json",
+    "testdata/parity/resultset-querytype-local-group-row-remove.trace.json",
+    "testdata/parity/resultset-querytype-local-group-row-remove.go.trace.json",
+    "testdata/parity/resultset-querytype-local-group-row-remove.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeLocalGroupRowRemoveScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-local-group-row-remove.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-3a47ac428a21e66d8614",
+    "java-runtime-07d68fdd9a8dffc8c7f4"
+   ],
+   "notes": [
+    "ResultSetQueryTypeLocalGroupBy ordinals 20/21 replay one deterministic chain (15 Java/Go records, 0 differences): both cases deploy the same five statements (keep-all named window over SupportBean, insert-into, the S0 delete-by-key trigger, the S1 delete-all trigger and the observed query) and replay nine driver sends. The ungrouped case pins six new-only rows and no callback at all for the two delete steps and the delete-all step; the grouped case pins the row-per-group replacement rows, the `{E1,10,null,null}` and `{E1,40,null,102}` null-aggregate rows for the emptied groups, and one delete-all callback carrying the three remaining groups as all-null rows.",
+    "Java delivers the delete-all groups in HashMap order while `env.listenerReset` discards the assertion, so both traces pin the canonical ascending (theString, intPrimitive) order (E1/20, E1/50, E2/30). Typed Go models the harness with CreateNamedWindow/KeepAll, InsertIntoNamedWindow(CopyMatchingFields), DeleteFromNamedWindow(predicate) and DeleteAllFromNamedWindow over FromNamedWindowAs, with LocalGroupBy(Sum) for the local column. Engine fix (shared core, internal/esper/runtime.go): the row-for-event named-window-removal block emitted an old row per leaving event without consulting the stream selector, so a plain istream-only query reported removal callbacks that Java never delivers; the block now requires an RStream/IRStream selection, pinned by TestNamedWindowDeleteStreamSelectionGate (fails without the gate) and left intact for explicit WithOldStream queries."
+   ]
+  },
   {
    "id": "case.resultset-output-limit-row-limit-context-grouped",
    "javaRuntimeIds": [
@@ -44648,6 +44718,10 @@
    "caseId": "case.resultset-querytype-local-group-by-ungrouped-agg"
   },
   {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-by-row-remove"
+  },
+  {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit"
   },
@@ -44861,10 +44935,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 656,
-  "implementedCases": 654,
-  "differentialVerifiedCases": 282,
-  "differentialVerifiedRuntimeIds": 1036,
+  "inventoriedCases": 657,
+  "implementedCases": 655,
+  "differentialVerifiedCases": 283,
+  "differentialVerifiedRuntimeIds": 1038,
   "intentionallyDifferentCases": 25,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -44874,13 +44948,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3632,
+  "runtimeAssociationCount": 3634,
   "referencedJavaRuntimeIds": 3299,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 837,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 656,
+  "totalCases": 657,
   "totalCapabilities": 120
  }
 }

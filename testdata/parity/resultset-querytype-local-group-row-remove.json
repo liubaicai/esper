@@ -1,0 +1,62 @@
+{
+  "version": "esper-parity/v1",
+  "id": "resultset-querytype-local-group-row-remove",
+  "description": "ResultSetQueryTypeLocalGroupBy ordinals 20/21: named-window row removal with ungrouped and grouped local-group aggregates.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java",
+  "javaRuntimes": [
+    "java-runtime-3a47ac428a21e66d8614",
+    "java-runtime-07d68fdd9a8dffc8c7f4"
+  ],
+  "javaNames": [
+    "ResultSetLocalUngroupedRowRemove",
+    "ResultSetLocalGroupedRowRemove"
+  ],
+  "javaStaticIds": [
+    "java-3da6ea3da5df0d53578a",
+    "java-ce99d7bbb48728947c59"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "ungrouped-row-remove",
+      "ordinal": 20,
+      "runtimeId": "java-runtime-3a47ac428a21e66d8614",
+      "executionName": "ResultSetLocalUngroupedRowRemove",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create window MyWindow#keepall as SupportBean;\ninsert into MyWindow select * from SupportBean;\non SupportBean_S0 delete from MyWindow where p00 = theString and id = intPrimitive;\non SupportBean_S1 delete from MyWindow;\n@name('s0') select theString, intPrimitive, sum(longPrimitive) as c0,   sum(longPrimitive, group_by:theString) as c1 from MyWindow;\n"
+    },
+    {
+      "case": "grouped-row-remove",
+      "ordinal": 21,
+      "runtimeId": "java-runtime-07d68fdd9a8dffc8c7f4",
+      "executionName": "ResultSetLocalGroupedRowRemove",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create window MyWindow#keepall as SupportBean;\ninsert into MyWindow select * from SupportBean;\non SupportBean_S0 delete from MyWindow where p00 = theString and id = intPrimitive;\non SupportBean_S1 delete from MyWindow;\n@name('s0') select theString, intPrimitive, sum(longPrimitive) as c0,   sum(longPrimitive, group_by:theString) as c1   from MyWindow group by theString, intPrimitive;\n"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "ungrouped-row-remove"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 101}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "E1"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 20, "longPrimitive": 102}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 30, "longPrimitive": 103}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 40, "longPrimitive": 104}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 40, "p00": "E1"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 50, "longPrimitive": 105}},
+    {"op": "send", "eventType": "SupportBean_S1", "payload": {"id": -1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 60, "longPrimitive": 106}},
+    {"op": "case", "case": "grouped-row-remove"},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10, "longPrimitive": 101}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "E1"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 20, "longPrimitive": 102}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 30, "longPrimitive": 103}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 40, "longPrimitive": 104}},
+    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 40, "p00": "E1"}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 50, "longPrimitive": 105}},
+    {"op": "send", "eventType": "SupportBean_S1", "payload": {"id": -1}},
+    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 60, "longPrimitive": 106}}
+  ]
+}
