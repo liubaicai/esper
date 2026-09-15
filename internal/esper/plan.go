@@ -6076,6 +6076,60 @@ func expressionTreeContainsLocalGroup(expression Expr) bool {
 	return visit(expression.node())
 }
 
+// aggregateLocalGroupKeysUncovered reports whether any local group-by key
+// inside the statement's SELECT and HAVING aggregates is absent from the outer
+// group-by list. Esper routes such statements to the row-per-event processors:
+// the fully aggregated routing requires every local partition expression to be
+// a subset of the outer group-by expressions (deepEqualsIsSubset), so a local
+// key that the outer group does not cover forces one row per event with the
+// aggregate evaluated over the final group state. Esper folds the ORDER BY
+// aggregate expressions into the same check; this helper does not visit them
+// yet, so a local-group aggregate that appears only in ORDER BY keeps the
+// group-level routing (tracked as a known gap in the capability manifest).
+func aggregateLocalGroupKeysUncovered(definition *aggregateDefinition) bool {
+	if definition == nil {
+		return false
+	}
+	outer := make(map[string]struct{}, len(definition.groupBy))
+	for _, key := range definition.groupBy {
+		if key == nil {
+			continue
+		}
+		outer[key.Description()] = struct{}{}
+	}
+	uncovered := false
+	var visit func(*exprNode)
+	visit = func(node *exprNode) {
+		if node == nil || uncovered {
+			return
+		}
+		if node.kind == "aggregate-local-group" {
+			for _, child := range node.children[1:] {
+				if child == nil {
+					continue
+				}
+				if _, ok := outer[child.description]; !ok {
+					uncovered = true
+					return
+				}
+			}
+		}
+		for _, child := range node.children {
+			visit(child)
+		}
+	}
+	for _, selection := range definition.selections {
+		if selection.Expr == nil {
+			continue
+		}
+		visit(selection.Expr.node())
+	}
+	if definition.having != nil {
+		visit(definition.having.node())
+	}
+	return uncovered
+}
+
 func validateAggregateGrouping(definition *aggregateDefinition) error {
 	if definition == nil {
 		return NewError(ErrorInvalidRule, "aggregate grouping is required")

@@ -966,6 +966,7 @@
     "internal/app/parity/resultset_querytype_local_group_grouped.go",
     "internal/app/parity/resultset_querytype_local_group_ungrouped_agg.go",
     "internal/app/parity/resultset_querytype_local_group_row_remove.go",
+    "internal/app/parity/resultset_querytype_local_group_context_terminated.go",
     "internal/app/parity/run_test.go"
    ],
    "phase": 3,
@@ -39548,6 +39549,75 @@
     "Java delivers the delete-all groups in HashMap order while `env.listenerReset` discards the assertion, so both traces pin the canonical ascending (theString, intPrimitive) order (E1/20, E1/50, E2/30). Typed Go models the harness with CreateNamedWindow/KeepAll, InsertIntoNamedWindow(CopyMatchingFields), DeleteFromNamedWindow(predicate) and DeleteAllFromNamedWindow over FromNamedWindowAs, with LocalGroupBy(Sum) for the local column. Engine fix (shared core, internal/esper/runtime.go): the row-for-event named-window-removal block emitted an old row per leaving event without consulting the stream selector, so a plain istream-only query reported removal callbacks that Java never delivers; the block now requires an RStream/IRStream selection, pinned by TestNamedWindowDeleteStreamSelectionGate (fails without the gate) and left intact for explicit WithOldStream queries."
    ]
   },
+ {
+   "id": "case.resultset-querytype-local-group-by-context-terminated",
+   "javaRuntimeIds": [
+    "java-runtime-ee681560ebeda52abbb1",
+    "java-runtime-377240544dc6ec554ab2"
+   ],
+   "javaNames": [
+    "ResultSetAggregateFullyVersusNotFullyAgg",
+    "ResultSetLocalUngroupedOrderBy"
+   ],
+   "javaStaticIds": [
+    "java-d7190dd845b29e121075",
+    "java-ae42d2957d2e50829f37"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeLocalGroupBy.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupCtxTermDirectReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupCtxTermDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupCtxTermDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupCtxTermCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupCtxTermRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunResultSetQueryTypeLocalGroupCtxTermRuntimeIDMappingMatchesScenario",
+    "internal/esper/aggregate_local_group_test.go:TestLocalGroupByUncoveredKeyRoutesToRowPerEvent"
+   ],
+   "tags": [
+    "correctness",
+    "resultset",
+    "querytype",
+    "local-group-by",
+    "aggregate",
+    "context",
+    "output-snapshot-when-terminated",
+    "order-by",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-querytype-local-group-context-terminated.json",
+    "testdata/parity/resultset-querytype-local-group-context-terminated.trace.json",
+    "testdata/parity/resultset-querytype-local-group-context-terminated.go.trace.json",
+    "testdata/parity/resultset-querytype-local-group-context-terminated.evidence.json",
+    "tools/java-oracle/ResultSetQueryTypeLocalGroupContextTerminatedScenarioOracle.java",
+    "tools/java-oracle/run-resultset-querytype-local-group-context-terminated.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-ee681560ebeda52abbb1",
+    "java-runtime-377240544dc6ec554ab2"
+   ],
+   "notes": [
+    "ResultSetQueryTypeLocalGroupBy ordinals 17/23 replay one deterministic chain (6 Java/Go records, 0 differences): the four ordinal-17 sub-cases deploy the same context (`StartS0EndS1` over SupportBean_S0/SupportBean_S1) with `output snapshot when terminated` and pin the fully aggregated ungrouped row {c0:60} plus its empty-partition row {c0:null}, the row-per-event rows {10},{50},{50} for the uncovered local key, the row-per-group rows {E1,60,10},{E2,60,50}, and the row-per-event grouped rows {E1,600,100,100},{E2,600,500,200},{E2,600,500,300}; ordinal 23 pins the five-row aggregate order-by snapshot E1/40, E1/40, E3/40, E2/70, E2/70 whose 40-tie keeps window insertion order.",
+    "Engine fix (shared core): Go classified aggregate-only projections as fully aggregated even when a local group-by key was not covered by the outer group-by list, so `sum(group_by:theString, x)` over a keep-all window produced one row instead of one row per retained event. `aggregateLocalGroupKeysUncovered` now implements Esper's `localGroupByMatchesGroupBy`/`deepEqualsIsSubset` rule for the SELECT and HAVING aggregates and is wired into the row-per-event predicates; `TestLocalGroupByUncoveredKeyRoutesToRowPerEvent` fails without it. Known gap: Java also folds the ORDER BY aggregate expressions into that check, while this helper does not yet, so a local-group aggregate appearing only in ORDER BY keeps the group-level routing. Typed Go uses `CreateInitiatedTerminatedContext`, `WithContext`, `OutputSnapshotWhenTerminated`, `LocalGroupBy` with `GroupBy`/`Aggregate`, and `OrderBy(Ascending(ResultField(\"c0\")))` because Java's ORDER BY restates the aggregate while the typed surface orders by the projected column carrying the same per-row value."
+   ]
+  },
   {
    "id": "case.resultset-output-limit-row-limit-context-grouped",
    "javaRuntimeIds": [
@@ -44722,6 +44792,10 @@
    "caseId": "case.resultset-querytype-local-group-by-row-remove"
   },
   {
+   "capabilityId": "resultset.aggregate-local-group",
+   "caseId": "case.resultset-querytype-local-group-by-context-terminated"
+  },
+  {
    "capabilityId": "output.when-basic",
    "caseId": "case.resultset-output-limit-row-limit"
   },
@@ -44935,10 +45009,10 @@
   }
  ],
  "summary": {
-  "inventoriedCases": 657,
-  "implementedCases": 655,
-  "differentialVerifiedCases": 283,
-  "differentialVerifiedRuntimeIds": 1038,
+  "inventoriedCases": 658,
+  "implementedCases": 656,
+  "differentialVerifiedCases": 284,
+  "differentialVerifiedRuntimeIds": 1040,
   "intentionallyDifferentCases": 25,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -44948,13 +45022,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3634,
+  "runtimeAssociationCount": 3636,
   "referencedJavaRuntimeIds": 3299,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 837,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 657,
+  "totalCases": 658,
   "totalCapabilities": 120
  }
 }

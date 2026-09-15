@@ -376,3 +376,71 @@ func TestNamedWindowDeleteStreamSelectionGate(t *testing.T) {
 		t.Fatalf("post-delete insert batches = %d/%d, want three and four", len(newOnlyBatches), len(iStreamBatches))
 	}
 }
+
+// TestLocalGroupByUncoveredKeyRoutesToRowPerEvent pins Esper's routing rule
+// for local group-by keys: when a key is not covered by the outer group-by
+// list, the statement is row-per-event even though every projection is an
+// aggregate (Esper's localGroupByMatchesGroupBy check), so a snapshot carries
+// one row per retained event while a covered key set keeps the fully
+// aggregated single row.
+func TestLocalGroupByUncoveredKeyRoutesToRowPerEvent(t *testing.T) {
+	env, _ := newLocalGroupTest(t)
+	group := Field[localGroupEvent, string]("group")
+	level := Field[localGroupEvent, int]("level")
+	uncovered := From[localGroupEvent](env, "LocalGroupEvent").Window(KeepAll()).Aggregate(
+		Alias("c0", LocalGroupBy[int](Sum[int](level), group)),
+	).Query(StatementName("uncovered-local-group"))
+	covered := From[localGroupEvent](env, "LocalGroupEvent").Window(KeepAll()).Aggregate(
+		Alias("c0", LocalGroupBy[int](Sum[int](level))),
+	).Query(StatementName("covered-local-group"))
+	uncoveredPlan, err := env.Build(uncovered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coveredPlan, err := env.Build(covered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	uncoveredDeployment, err := engine.Deploy(context.Background(), uncoveredPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coveredDeployment, err := engine.Deploy(context.Background(), coveredPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	for _, event := range []localGroupEvent{
+		{ID: "1", Group: "E1", Level: 10, Value: 100},
+		{ID: "2", Group: "E2", Level: 20, Value: 200},
+		{ID: "3", Group: "E2", Level: 30, Value: 300},
+	} {
+		if err := engine.Send(ctx, "LocalGroupEvent", event); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := func(deployment *Deployment) []int {
+		statement := deployment.Statements()[0]
+		result, err := statement.Snapshot(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		values := make([]int, 0, len(result.Batch.New))
+		for _, entry := range result.Batch.New {
+			row, ok := entry.Row()
+			if !ok {
+				t.Fatalf("snapshot result is not a row: %#v", entry)
+			}
+			value, _ := row.Get("c0").Any().(int)
+			values = append(values, value)
+		}
+		return values
+	}
+	if got := read(uncoveredDeployment); !reflect.DeepEqual(got, []int{10, 50, 50}) {
+		t.Fatalf("uncovered local group key snapshot = %v, want one row per retained event [10 50 50]", got)
+	}
+	if got := read(coveredDeployment); !reflect.DeepEqual(got, []int{60}) {
+		t.Fatalf("covered local group key snapshot = %v, want the fully aggregated row [60]", got)
+	}
+}

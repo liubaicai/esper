@@ -296,6 +296,7 @@
 
 ## 0. 实时状态入口
 
+> 最新补充：Draft 4.411（2026-09-15），resultset 本地分组 context-terminated 差分链：新增 `case.resultset-querytype-local-group-by-context-terminated`（ResultSetQueryTypeLocalGroupBy ords 17/23：四种子形态的 terminated 快照 + 聚合 order-by 并列序），Java/Go 各 6 条 records、0 differences；引擎修复：局部 group_by 键未被外层 group by 覆盖时必须走 row-per-event（此前误判为 fully-aggregated）。summary：658 cases、284 DV cases、1040 DV runtime IDs。
 > 最新补充：Draft 4.410（2026-09-15），resultset 本地分组 row-remove 差分链：新增 `case.resultset-querytype-local-group-by-row-remove`（ResultSetQueryTypeLocalGroupBy ords 20/21：命名窗口逐键删除与全删、ungrouped 零回调 vs grouped null 聚合行），Java/Go 各 15 条 records、0 differences，20 个 scenario 步骤；**引擎修复**：命名窗口删除的 row-for-event 旧行分支补齐流选择器门控（此前默认 istream-only 查询也会投递仅 old 回调，Java 不会）。summary：657 cases、283 DV cases、1038 DV runtime IDs。
 > 最新补充：Draft 4.409（2026-09-15），resultset 本地分组 ungrouped-agg 差分链：新增 `case.resultset-querytype-local-group-by-ungrouped-agg`（ResultSetQueryTypeLocalGroupBy ords 0/1/2/7：四档 ungrouped 局部和、SQL 统计列、事件值局部聚合、局部组 HAVING），Java/Go 各 14 条 records、0 differences，21 个 scenario 步骤，零引擎改动。summary：656 cases、282 DV cases、1036 DV runtime IDs。
 > 最新补充：Draft 4.408（2026-09-15），resultset 本地分组 grouped 差分链：新增 `case.resultset-querytype-local-group-by-grouped`（ResultSetQueryTypeLocalGroupBy ords 10/11/14：length(4) 逐事件十列、snapshot-every 双边界多层级和/计数/window 列），Java/Go 各 9 条 records、0 differences，26 个 scenario 步骤，零引擎改动。summary：655 cases、281 DV cases、1032 DV runtime IDs。

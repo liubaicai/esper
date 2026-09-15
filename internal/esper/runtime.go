@@ -20814,7 +20814,10 @@ func aggregateDefinitionIsRowForEvent(definition *aggregateDefinition) bool {
 		hasAggregate = hasAggregate || isAggregateExpression(selection.Expr)
 		readsCurrentEvent = readsCurrentEvent || expressionTreeReadsCurrentEvent(selection.Expr)
 	}
-	return hasAggregate && readsCurrentEvent
+	// A local group-by key the outer group does not cover also routes to the
+	// row-per-event processor (Esper's deepEqualsIsSubset check on the local
+	// partition expressions), even when every projection is an aggregate.
+	return hasAggregate && (readsCurrentEvent || aggregateLocalGroupKeysUncovered(definition))
 }
 
 // aggregateDefinitionReadsNonKeyEvent reports whether any scalar projection
@@ -20932,7 +20935,10 @@ func aggregateDefinitionReadsNonKeyEvent(definition *aggregateDefinition) bool {
 			readsNonKeyEvent = true
 		}
 	}
-	return hasAggregate && readsNonKeyEvent
+	// An uncovered local group-by key forces the row-per-event routing even
+	// when every projection is an aggregate or a group key (Esper's
+	// localGroupByMatchesGroupBy check).
+	return hasAggregate && (readsNonKeyEvent || aggregateLocalGroupKeysUncovered(definition))
 }
 
 // aggregateDefinitionSnapshotRowForEvent extends the row-per-event shape to
