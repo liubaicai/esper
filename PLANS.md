@@ -1122,6 +1122,12 @@ Active: Draft 4.434 ('resultset-outputlimit-row-per-group-all').
 - [x] Full local gates GREEN after every edit: `make check` exit 0
       (check-layout, go vet, full go test; parity ~197s, internal/esper
       ~57s), compat manifest validation green, gofmt clean.
+- [x] Shipped; Git owns identity — Drafts 4.432/4.433/4.434 committed and
+      pushed together as `6e536dcd8` (runtime.go hunks entangled across the
+      three units; all three independently reviewed PASS). Manifest: 677
+      cases / 675 implemented / 303 DV cases / 1126 DV runtime IDs /
+      associations 3682 / unreferenced 805. Umbrella case.output-row-per-group
+      now 20 IDs.
 
 ## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').
