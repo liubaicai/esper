@@ -663,15 +663,38 @@ Active: Draft 4.427 ('view-intersect-closure').
       found a P0 regression from my edit (TimeOrderWindowSpec expire case
       swallowed) — restored verbatim, TestInfraNWViewsTimeOrder* green.
       Final verdict: PASS.
-- [x] run_test family: TestRunViewIntersectDiffWritesPassingEvidence +
-      TestRunViewIntersectDiffRejectsTraceMutations (3 mutations, all rejected;
-      asymmetric-child-removal-missing pins the fix path at record 22).
-- [x] Manifest: NEW case.view-intersect-closure born-DV (6 runtime IDs, static
-      java-099d757b97d6b93b2878, mapping to view.window-core); view.window-core
-      DV list 11→17, remaining narrowed to reclaim-hints/iterator-fragment/
-      shared-trace; summary recomputed: 670 cases / 668 implemented / 297 DV
-      cases / 1097 DV runtime IDs / 3675 associations / referenced 3324 /
-      unreferenced 812. Roadmap + CHANGELOG recorded (Draft 4.427).
+- [x] Shipped; Git owns identity — Draft 4.427 committed and pushed as
+      `33cabc868` (ViewIntersect.java 20/20 executions referenced;
+      case.view-intersect-closure born-DV; manifest 297 DV cases / 1097 DV
+      runtime IDs).
+
+## Current work unit
+Active: Draft 4.428 ('resultset-aggregate-count-sum-closure').
+
+- Unit selected: `ResultSetAggregateCountSum.java` four unreferenced
+      executions — ord6 `ResultSetAggregateCountOneViewCompile`
+      (`java-runtime-a9af0eeb0ed82e3ac363`, static `java-fdfd33bb4cc20514a799`;
+      eplToModel twin of count-one-view: grouped count(*)/count(distinct
+      volume)/count(volume) over #length(3) with multi-row group expiry),
+      ord9 `ResultSetAggregateCountDistinctGrouped`
+      (`java-runtime-d52c75b9bcbbb9806320`, static `java-0a799e23445e03077205`;
+      unwindowed grouped count(distinct price), single send, no assertions —
+      listener delivery is the observable), ord11
+      `ResultSetAggregateCountDistinctMultikeyWArray`
+      (`java-runtime-8d52ec09b7ee23463eed`, static `java-bef79e8bc77e1df9083a`;
+      count(distinct int[]) + count(distinct {intOne,intTwo}) over
+      SupportEventWithManyArray#length(3) — array content equality + tuple
+      distinct + expiry re-evaluation), ord12 `ResultSetAggregateCountSumInvalid`
+      (`java-runtime-43aefbafe9af60b5168b`, static `java-e1b20a2b1091836f24fb`;
+      compile-invalid avg/median/sum/stddev(null) — intentionally-different
+      candidate: typed API cannot express a null-literal aggregate).
+- [x] Contract frozen from read-only scouts (OMP batch): Java contract scout
+      (`NextJavaContract`, java-oracle-scout — full per-execution step/assertion
+      table delivered) and Go surface scout (`NextGoSurface`, scout — all APIs
+      exist: CountDistinct/DistinctAggregate/ArrayOf; extend the existing
+      resultset-aggregate-count-sum chain; pitfall: DistinctAggregate counts
+      Null as a distinct key where Java count(distinct) skips nulls — safe for
+      pinned non-null payloads).
 
 ## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').
