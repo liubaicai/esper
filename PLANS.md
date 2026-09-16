@@ -49,6 +49,86 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.437 ('rollup-having-orderby-grouping-func').
+
+- Unit: `ResultSetQueryTypeRollupHavingAndOrderBy` ords 0/1
+      (`java-runtime-23e2e441fc8898fe0303` join=false,
+      `java-runtime-5c2e7accf8d815fe3ced` join=true) +
+      `ResultSetQueryTypeRollupGroupingFuncs` ord 3
+      `ResultSetQueryTypeGroupingFuncExpressionUse`
+      (`java-runtime-7c4135247329f06e2e40`). Java commit
+      `9e1b9f1cc9117fea4bf33ab043762c045d73839c` verified.
+- Contract FROZEN by read-only scouts DirtyNarwhal (Java) + ChronicBonobo (Go):
+  - ords 0/1: two sequential deploy/undeploy cycles each. Phase A EPL
+    `select theString as c0, intPrimitive as c1, sum(longPrimitive) as c2 from
+    SupportBean#keepall[, SupportBean_S0#lastevent] group by rollup(theString,
+    intPrimitive) having sum(longPrimitive) > 1000`; events E1,10,100 /
+    E2,20,200 / E1,11,300 / E2,20,400 (silent) then E1,11,500 ->
+    [{null,null,1500}] and E2,20,600 -> [{E2,20,1200},{E2,null,1200},
+    {null,null,2100}]. Phase B EPL `select theString as c0, sum(intPrimitive)
+    as c1 ... group by rollup(theString) having (theString is null and
+    sum(intPrimitive) > 100) or (theString is not null and sum(intPrimitive) >
+    200)`; E1,50/E2,50 silent, E2,20 -> [{null,120}], E3,-300 silent, E1,200 ->
+    [{E1,250}], E2,500 -> [{E2,570},{null,520}]. join=true sends
+    SupportBean_S0(1) before each phase (multiplicity-1 inner join, identical
+    expected rows). assertPropsPerRowLastNew only; no timers.
+  - ord 3 phase A: `group by grouping sets((name,place),name,place,())` over
+    SupportCarEvent; Java asserts a void 8-arg UDF's captured tuples
+    [{skoda,france,10000,0,0,0,c01,|skoda|},{skoda,null,10000,0,1,1,c01,|skoda|},
+    {null,france,10000,1,0,2,c01,|skoda|},{null,null,10000,1,1,3,c01,|skoda|}]
+    covering grouping()/grouping_id()/uncorrelated-subquery/declared-expr per
+    rollup level. Go equivalent: two Func4 captures (arity cap) recording the
+    same 8 values as trace records. Phase B: `prev(1,name)/prior(1,name)/name/
+    sum(count)` over `rollup(name)` on #keepall — [{null,null,skoda,10},
+    {null,null,null,10}] then [{skoda,skoda,vw,15},{skoda,skoda,null,25}].
+  - Go surface: GroupByRollup/Having-per-level/OrderBy/Grouping/GroupingID all
+    supported; join+rollup via .GroupBy().Rollup() unverified end-to-end;
+    prev/prior in rollup select unverified; Func arity caps at 4.
+  - DEFERRED: ord 1 ResultSetQueryTypeInvalid (INVALIDITY, 7 compile
+    diagnostics) — Go has zero grouping-func misuse validation; separate
+    invalid-diagnostic unit.
+- [x] ENGINE WORK (shared core, primary agent): smoke tests exposed a real gap —
+      prev/prior inside aggregate rows resolved the group-by key instead of the
+      historical event (Field.eval's groupingValues substitution leaked into the
+      nested prev/prior context). Fixed in `aggregateGroupContext` by wiring
+      `PreviousHistory`/`PriorHistory` to the statement-level stream
+      (allEvents/allEverEvents) and clearing `groupingValues`/`groupingPresent`
+      in the nested contexts of `evaluatePreviousOffset` and
+      `evaluatePreviousAt`. Verified: join+rollup+having emits leaf→total with
+      per-level having; prev(1)/prior(1) return the previous stream event on
+      leaf and total rows. Full internal/esper suite green (56.9s).
+- [x] Assets via parity-asset-worker LabourFowl: oracle
+      `tools/java-oracle/ResultSetRollupHavingOrderByScenarioOracle.java` +
+      `run-resultset-rollup-having-orderby.sh`, scenario
+      `testdata/parity/resultset-rollup-having-orderby.json` (3 cases / 48
+      steps), runner `internal/app/parity/resultset_rollup_having_orderby.go`.
+      Worker-flagged JoinField masking gap fixed in shared core (expr.go
+      groupingValues check). The 8-arg Java UDF contract is captured as
+      `operation:"capture"` records (c0..c7) since Go Func arity caps at 4.
+- [x] run.go wiring + run_test family (passing + 3 mutations) by primary.
+- [x] Differential replay: Java 16 records / Go 16 records, status passing /
+      0 differences; evidence
+      `testdata/parity/resultset-rollup-having-orderby.evidence.json`.
+- [x] Manifest: `case.resultset-rollup-having-orderby` born-DV (3 runtime IDs,
+      2 static IDs, mapping to `resultset.aggregate-dimensional`); summary
+      681 cases / 679 implemented / 307 DV / 1141 DV runtime IDs /
+      associations 3689 / referenced 3334 / unreferenced 802. Roadmap +
+      CHANGELOG entries added.
+- [x] Full local gates GREEN: `make check` exit 0 (parity 198.5s,
+      internal/esper 57.7s, compat 0.19s); gofmt + `git diff --check` clean.
+- [x] Independent parity review (agent FortunateMarsupial, read-only): OVERALL
+      PASS, all five areas PASS, no P0/P1/P2. Reviewer re-ran the diff (exit 0,
+      passing, 0 differences, evidence byte-identical), verified EPLs
+      byte-exact including quirky spacing, and confirmed the three engine
+      fixes carry no regression risk to non-rollup prev/prior or non-join
+      Field paths. Four P3s: two FIXED (capability DV id list extended to 28;
+      unrelated goTests entry moved to the 4.436 case); two recorded
+      observations (groupingPresent-clearing inside nested prev/prior is an
+      exotic unverified corner; pre-existing prevwindow-family grouping leak
+      in grouped queries — not introduced by this diff).
+- [ ] Commit and push.
+
+## Current work unit
 Active: Draft 4.436 ('resultset-output-limit-row-per-group-first').
 
 - [x] Unit: `ResultSetOutputLimitRowPerGroup` ordinals 0/36/37/38 — the output-first
@@ -111,7 +191,7 @@ Active: Draft 4.436 ('resultset-output-limit-row-per-group-first').
       areas PASS, no remaining P0/P1/P2; the reviewer re-ran the diff itself
       (exit 0, passing, 0 differences, evidence byte-identical) and manually
       traced the new regression test against Java semantics.
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.436 committed and pushed.
 
 ## Current work unit
 Active: Draft 4.406 ('resultset-querytype-local-group-ungrouped').

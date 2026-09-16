@@ -754,7 +754,9 @@
     "internal/esper/aggregate_test.go",
     "internal/app/parity/rollup_dimensionality.go",
     "internal/app/parity/rollup_grouping_funcs.go",
-    "internal/app/parity/rollup_grouping_faf.go"
+    "internal/app/parity/rollup_grouping_faf.go",
+    "internal/app/parity/resultset_rollup_having_orderby.go",
+    "internal/esper/expr_previous_dynamic.go"
    ],
    "phase": 3,
    "status": "implemented",
@@ -793,7 +795,10 @@
     "java-runtime-994120aef6b9ff1c0e75",
     "java-runtime-71fb38d67af471287089",
     "java-runtime-52a4f853b6052fb47437",
-    "java-runtime-e8f49362431d4c33baa8"
+    "java-runtime-e8f49362431d4c33baa8",
+    "java-runtime-23e2e441fc8898fe0303",
+    "java-runtime-5c2e7accf8d815fe3ced",
+    "java-runtime-7c4135247329f06e2e40"
    ]
   },
   {
@@ -43446,7 +43451,8 @@
    ],
    "goTests": [
     "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupFirstDiffWritesPassingEvidence",
-    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupFirstDiffRejectsTraceMutations"
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupFirstDiffRejectsTraceMutations",
+    "internal/esper/output_first_having_test.go:TestOutputFirstEveryEventsExprUngroupedMatchesEsper"
    ],
    "tags": [
     "resultset",
@@ -43489,6 +43495,68 @@
    ],
    "notes": [
     "ResultSetOutputFirstWhenThen, ResultSetOutputFirstHavingJoinNoJoin, ResultSetOutputFirstCrontab and ResultSetOutputFirstEveryNEvents replayed through one shared scenario (47 records, 0 differences): output first over a named-window grouped source covering when-then variable reset, having with join/order-by variants, crontab schedule, and every-N-events with a deployment-scoped variable."
+   ]
+  },
+  {
+   "id": "case.resultset-rollup-having-orderby",
+   "javaRuntimeIds": [
+    "java-runtime-23e2e441fc8898fe0303",
+    "java-runtime-5c2e7accf8d815fe3ced",
+    "java-runtime-7c4135247329f06e2e40"
+   ],
+   "javaStaticIds": [
+    "java-24e47ca92d533e352474",
+    "java-1ae66c9985dc53282af0"
+   ],
+   "javaNames": [
+    "ResultSetQueryTypeHaving{join=false}",
+    "ResultSetQueryTypeHaving{join=true}",
+    "ResultSetQueryTypeGroupingFuncExpressionUse"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupHavingAndOrderBy.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupGroupingFuncs.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetRollupHavingOrderByDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetRollupHavingOrderByDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "rollup",
+    "grouping-sets",
+    "having",
+    "join",
+    "grouping-func",
+    "prev-prior",
+    "subquery",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-rollup-having-orderby.json",
+    "testdata/parity/resultset-rollup-having-orderby.trace.json",
+    "testdata/parity/resultset-rollup-having-orderby.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-23e2e441fc8898fe0303",
+    "java-runtime-5c2e7accf8d815fe3ced",
+    "java-runtime-7c4135247329f06e2e40"
+   ],
+   "representativeScenarioIds": [
+    "resultset-rollup-having-orderby"
+   ],
+   "notes": [
+    "ResultSetQueryTypeHaving{join=false}/{join=true} and ResultSetQueryTypeGroupingFuncExpressionUse replayed through one shared scenario (16 records, 0 differences): per-level having over rollup including null-key discrimination, multiplicity-1 join equivalence, grouping()/grouping_id()/uncorrelated-subquery/declared-expression per grouping-set level, and stream-anchored prev/prior inside aggregate rows."
    ]
   }
  ],
@@ -46548,15 +46616,19 @@
   {
    "capabilityId": "output.core",
    "caseId": "case.resultset-output-limit-row-per-group-first"
+  },
+  {
+   "capabilityId": "resultset.aggregate-dimensional",
+   "caseId": "case.resultset-rollup-having-orderby"
   }
  ],
  "summary": {
-  "inventoriedCases": 680,
-  "implementedCases": 678,
-  "differentialVerifiedCases": 306,
-  "differentialVerifiedRuntimeIds": 1138,
+  "inventoriedCases": 681,
+  "implementedCases": 679,
+  "differentialVerifiedCases": 307,
+  "differentialVerifiedRuntimeIds": 1141,
   "intentionallyDifferentCases": 28,
-  "representativeVerifiedCases": 113,
+  "representativeVerifiedCases": 114,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46564,13 +46636,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3686,
-  "referencedJavaRuntimeIds": 3331,
+  "runtimeAssociationCount": 3689,
+  "referencedJavaRuntimeIds": 3334,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 805,
-  "representativeScenarioTotal": 116,
-  "representativeScenarioPassing": 116,
-  "totalCases": 680,
+  "unreferencedJavaRuntimeIds": 802,
+  "representativeScenarioTotal": 117,
+  "representativeScenarioPassing": 117,
+  "totalCases": 681,
   "totalCapabilities": 120
  }
 }

@@ -21583,6 +21583,18 @@ func aggregateGroupContext(definition *aggregateDefinition, events []Event, ever
 	}
 	engine := aggregateEngineFromVariables(variables)
 	ctx := EvalContext{Event: current, JoinEvents: joinTupleEvents(current), Group: append([]Event(nil), events...), EverGroup: append([]Event(nil), everEvents...), AllGroup: append([]Event(nil), allEvents...), AllEverGroup: append([]Event(nil), allEverEvents...), LeavingEvents: append([]Event(nil), leavingEvents...), History: append([]Event(nil), events...), IsLeaving: leaving, Engine: engine, Now: now, Variables: variables, aggregatePluginStates: pluginStates, aggregateMultiPluginStates: multiPluginStates, aggregateEvaluation: true}
+	// prev/prior inside aggregate rows anchor to the statement-level stream,
+	// not the group's events: prev reads the window contents in arrival order
+	// (allEvents) and prior reads the arrival history (allEverEvents), both
+	// ending at the newest event — matching Java's per-row evaluation over
+	// the triggering update's stream position.
+	if len(allEvents) > 0 {
+		ctx.PreviousHistory = append([]Event(nil), allEvents...)
+	}
+	if len(allEverEvents) > 0 {
+		ctx.PriorHistory = append([]Event(nil), allEverEvents...)
+		ctx.PriorHistorySet = true
+	}
 	if engine != nil && engine.env != nil {
 		if context, configured := engine.env.decimalMathContextSnapshot(); configured {
 			ctx.decimalMathContext = context

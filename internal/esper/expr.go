@@ -510,6 +510,11 @@ func JoinField[V any](source int, name string) Expression[V] {
 		if source < 0 || name == "" {
 			return Missing()
 		}
+		if ctx.groupingValues != nil {
+			if value, ok := ctx.groupingValues[groupingNodeKey(node, description)]; ok {
+				return value
+			}
+		}
 		events := ctx.JoinEvents
 		if events == nil {
 			tuple, ok := ctx.Event.Underlying().(joinTuple)
@@ -1325,6 +1330,10 @@ func evaluatePreviousAt[V any](expression Expression[V], ctx EvalContext, index 
 	nested.PreviousWindowAccess = ctx.PreviousWindowAccess
 	nested.PriorHistory = append([]Event(nil), ctx.PriorHistory...)
 	nested.PriorHistorySet = ctx.PriorHistorySet
+	// The inner expression reads the historical event, not the group frame:
+	// group-by key substitution must not apply inside prev/prior.
+	nested.groupingValues = nil
+	nested.groupingPresent = nil
 	return expression.eval(nested)
 }
 

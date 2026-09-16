@@ -21452,6 +21452,125 @@ func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *t
 	}
 }
 
+func TestRunResultSetRollupHavingOrderByDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-rollup-having-orderby.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-rollup-having-orderby.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-rollup-having-orderby.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-rollup-having-orderby-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 3 {
+		t.Fatalf("runtime ids = %d, want 3", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetRollupHavingOrderByDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "having-nojoin-total-missing",
+			mutate: func(trace *compat.Trace) {
+				// having-nojoin record 1 is the grand-total-only emission
+				// after E1,11,500 — the only rollup level passing
+				// sum > 1000. Dropping it means per-level having was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "having-nojoin" && rec.Sequence == 1 {
+						rec.New = nil
+						return
+					}
+				}
+				panic("no having-nojoin record 1")
+			},
+		},
+		{
+			name: "grouping-func-capture-mutated",
+			mutate: func(trace *compat.Trace) {
+				// grouping-func-expr record 2 is the name-only subtotal
+				// capture: grouping(name)=0, grouping(place)=1,
+				// grouping_id=1. Flipping c4 breaks the per-level
+				// grouping() contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "grouping-func-expr" && rec.Sequence == 2 {
+						rec.New[0].Fields["c4"] = float64(0)
+						return
+					}
+				}
+				panic("no grouping-func-expr record 2")
+			},
+		},
+		{
+			name: "prev-prior-value-mutated",
+			mutate: func(trace *compat.Trace) {
+				// grouping-func-expr record 6 carries prev(1)/prior(1) =
+				// 'skoda' on both rows. Mutating c0 breaks the
+				// stream-anchored prev contract inside aggregate rows.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "grouping-func-expr" && rec.Sequence == 6 {
+						rec.New[0].Fields["c0"] = "mutated"
+						return
+					}
+				}
+				panic("no grouping-func-expr record 6")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-rollup-having-orderby.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-rollup-having-orderby.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-rollup-having-orderby.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-rollup-having-orderby-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunResultSetOutputLimitRowPerGroupFirstDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-first.trace.json"),

@@ -118,6 +118,10 @@ func evaluatePreviousOffset[V any](ctx EvalContext, offset int, expression Expre
 	nested.PreviousWindowAccess = ctx.PreviousWindowAccess
 	nested.PriorHistory = append([]Event(nil), ctx.PriorHistory...)
 	nested.PriorHistorySet = ctx.PriorHistorySet
+	// The inner expression reads the historical event, not the group frame:
+	// group-by key substitution must not apply inside prev/prior.
+	nested.groupingValues = nil
+	nested.groupingPresent = nil
 	var tags []string
 	expression.node().referencedTags(&tags)
 	if len(tags) > 0 || len(ctx.PreviousTagEvents) > 0 {

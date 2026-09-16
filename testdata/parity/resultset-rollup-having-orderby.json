@@ -1,0 +1,429 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-rollup-having-orderby",
+ "description": "ResultSetQueryTypeRollupHavingAndOrderBy ordinals 0/1 (having over rollup, nojoin/join) plus ResultSetQueryTypeRollupGroupingFuncs ordinal 3 (grouping functions in expressions)",
+ "steps": [
+  {
+   "op": "case",
+   "case": "having-nojoin"
+  },
+  {
+   "op": "deploy",
+   "case": "having-nojoin",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 300
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 400
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 500
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 600
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "having-nojoin"
+  },
+  {
+   "op": "deploy",
+   "case": "having-nojoin",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 50
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 50
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": -300
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-nojoin",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 500
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "having-nojoin"
+  },
+  {
+   "op": "case",
+   "case": "having-join"
+  },
+  {
+   "op": "deploy",
+   "case": "having-join",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10,
+    "longPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 300
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 400
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11,
+    "longPrimitive": 500
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20,
+    "longPrimitive": 600
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "having-join"
+  },
+  {
+   "op": "deploy",
+   "case": "having-join",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 50
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 50
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": -300
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "case": "having-join",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 500
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "having-join"
+  },
+  {
+   "op": "case",
+   "case": "grouping-func-expr"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-func-expr",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "grouping-func-expr",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-func-expr",
+   "eventType": "SupportCarInfoEvent",
+   "payload": {
+    "name": "a",
+    "place": "b",
+    "refId": "c01"
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-func-expr",
+   "eventType": "SupportCarEvent",
+   "payload": {
+    "name": "skoda",
+    "place": "france",
+    "count": 10000
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "grouping-func-expr"
+  },
+  {
+   "op": "deploy",
+   "case": "grouping-func-expr",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "grouping-func-expr",
+   "eventType": "SupportCarEvent",
+   "payload": {
+    "name": "skoda",
+    "place": "france",
+    "count": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "grouping-func-expr",
+   "eventType": "SupportCarEvent",
+   "payload": {
+    "name": "vw",
+    "place": "france",
+    "count": 15
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "grouping-func-expr"
+  }
+ ],
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupHavingAndOrderBy.java",
+ "javaSource2": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/querytype/ResultSetQueryTypeRollupGroupingFuncs.java",
+ "javaRuntimes": [
+  "java-runtime-23e2e441fc8898fe0303",
+  "java-runtime-5c2e7accf8d815fe3ced",
+  "java-runtime-7c4135247329f06e2e40"
+ ],
+ "javaNames": [
+  "ResultSetQueryTypeHaving{join=false}",
+  "ResultSetQueryTypeHaving{join=true}",
+  "ResultSetQueryTypeGroupingFuncExpressionUse"
+ ],
+ "javaStaticIds": [
+  "java-24e47ca92d533e352474",
+  "java-1ae66c9985dc53282af0"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "having-nojoin",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-23e2e441fc8898fe0303",
+   "executionName": "ResultSetQueryTypeHaving{join=false}",
+   "observation": "listener",
+   "epl": "@Name('s0')select theString as c0, intPrimitive as c1, sum(longPrimitive) as c2 from SupportBean#keepall group by rollup(theString, intPrimitive)having sum(longPrimitive) > 1000",
+   "eplB": "@Name('s0')select theString as c0, sum(intPrimitive) as c1 from SupportBean#keepall group by rollup(theString) having (theString is null and sum(intPrimitive) > 100) or (theString is not null and sum(intPrimitive) > 200)"
+  },
+  {
+   "case": "having-join",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-5c2e7accf8d815fe3ced",
+   "executionName": "ResultSetQueryTypeHaving{join=true}",
+   "observation": "listener",
+   "epl": "@Name('s0')select theString as c0, intPrimitive as c1, sum(longPrimitive) as c2 from SupportBean#keepall , SupportBean_S0#lastevent group by rollup(theString, intPrimitive)having sum(longPrimitive) > 1000",
+   "eplB": "@Name('s0')select theString as c0, sum(intPrimitive) as c1 from SupportBean#keepall , SupportBean_S0#lastevent group by rollup(theString) having (theString is null and sum(intPrimitive) > 100) or (theString is not null and sum(intPrimitive) > 200)"
+  },
+  {
+   "case": "grouping-func-expr",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-7c4135247329f06e2e40",
+   "executionName": "ResultSetQueryTypeGroupingFuncExpressionUse",
+   "observation": "listener+capture",
+   "epl": "create expression myExpr {x=> '|' || x.name || '|'};\n@name('s0') select myfunc(  name, place, sum(count), grouping(name), grouping(place), grouping_id(name, place),  (select refId from SupportCarInfoEvent#lastevent),   myExpr(ce)  )from SupportCarEvent ce group by grouping sets((name, place),name, place,())",
+   "eplB": "@name('s0') select prev(1, name) as c0, prior(1, name) as c1, name as c2, sum(count) as c3 from SupportCarEvent#keepall ce group by rollup(name)"
+  }
+ ]
+}

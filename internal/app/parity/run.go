@@ -4325,6 +4325,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-rollup-having-orderby" || *mode == "resultset-rollup-having-orderby-diff" {
+		trace, err := runResultSetRollupHavingOrderByScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-rollup-having-orderby-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetRollupHavingOrderByJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetRollupHavingOrderByJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetRollupHavingOrderByJavaSources),
+				splitMetadata(*javaExecutions, resultsetRollupHavingOrderByJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-querytype-aggregate-grouped-having" || *mode == "resultset-querytype-aggregate-grouped-having-diff" {
 		trace, err := runResultsetQueryTypeAggregateGroupedHavingScenario(context.Background(), scenario)
 		if err != nil {
