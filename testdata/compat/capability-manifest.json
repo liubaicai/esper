@@ -1148,7 +1148,9 @@
     "internal/app/parity/resultset_output_limit_microsecond_resolution.go",
     "internal/app/parity/resultset_output_limit_parameterized_context.go",
     "internal/app/parity/resultset_output_limit_changeset_opt.go",
-    "internal/esper/output_changeset_test.go"
+    "internal/esper/output_changeset_test.go",
+    "internal/app/parity/resultset_output_limit_row_per_group_events.go",
+    "internal/esper/runtime.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1193,7 +1195,12 @@
     "java-runtime-327ce9d41c4e5489cc38",
     "java-runtime-fd011003ea3fe327b12c",
     "java-runtime-1debb0e930f955641300",
-    "java-runtime-dc2ac7e7293a204aa102"
+    "java-runtime-dc2ac7e7293a204aa102",
+    "java-runtime-fb1d7cc0c950463969d1",
+    "java-runtime-c55c536922e604536dd8",
+    "java-runtime-33f3e496a6431e2b7d10",
+    "java-runtime-896a57e1bb14df31d330",
+    "java-runtime-897df7824f16ef7db1c9"
    ],
    "representativeScenarioIds": [
     "filter-window-aggregate-output",
@@ -1219,7 +1226,8 @@
     "rollup-output-first-having",
     "resultset-aggregate-default",
     "resultset-aggregate-last",
-    "resultset-aggregate-no-output"
+    "resultset-aggregate-no-output",
+    "resultset-output-limit-row-per-group-events"
    ]
   },
   {
@@ -15013,14 +15021,9 @@
     "java-runtime-7238514718862bc6b951",
     "java-runtime-95facebe857914d29fc6",
     "java-runtime-e48997a92ab27b0586b6",
-    "java-runtime-fb1d7cc0c950463969d1",
     "java-runtime-32e4ee023a3b309c2b4c",
-    "java-runtime-c55c536922e604536dd8",
     "java-runtime-36976af041d05fe907ff",
     "java-runtime-d72753a34dd8191e28c1",
-    "java-runtime-33f3e496a6431e2b7d10",
-    "java-runtime-896a57e1bb14df31d330",
-    "java-runtime-897df7824f16ef7db1c9",
     "java-runtime-9ec92fc889874b973112",
     "java-runtime-e499360495e769be65ec",
     "java-runtime-198f226a1080d3e02cf0",
@@ -15058,14 +15061,9 @@
     "ResultSetLimitSnapshot",
     "ResultSetLimitSnapshotLimit",
     "ResultSetGroupByAll",
-    "ResultSetGroupByDefault",
     "ResultSetMaxTimeWindow",
-    "ResultSetNoJoinLast",
     "ResultSetNoOutputClauseView",
     "ResultSetNoOutputClauseJoin",
-    "ResultSetNoJoinAll",
-    "ResultSetJoinLast",
-    "ResultSetJoinAll",
     "ResultSetCrontabNumberSetVariations",
     "ResultSetOutputFirstHavingJoinNoJoin",
     "ResultSetOutputFirstCrontab",
@@ -42929,6 +42927,79 @@
     "ResultSetAggregateStar, ResultSetAggregateUnboundedStream and ResultSetAggregateLastMaxMixedOnSelect replayed through one shared scenario (18 records, 0 differences): star-form first/last/window/firstever/lastever event access over length(2), unbounded first/last as ever semantics, and a keep-all named window observed by a constant-key grouped on-select emitting one last/max aggregate row per trigger.",
     "The typed Go builder uses FirstEventValue/LastEventValue/WindowEvents for the star forms, FirstEver[Event](EventValue[Event]())/LastEver for the ever forms, and SelectFromNamedWindowGroupBy with a constant Literal(1) key for the single aggregate row per trigger. The Java ord0 execution runs compileDeploy then eplToModelCompileDeploy under one runtime id; the compile path is not observable so one pass is replayed."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-per-group-events",
+   "javaRuntimeIds": [
+    "java-runtime-fb1d7cc0c950463969d1",
+    "java-runtime-c55c536922e604536dd8",
+    "java-runtime-33f3e496a6431e2b7d10",
+    "java-runtime-896a57e1bb14df31d330",
+    "java-runtime-897df7824f16ef7db1c9"
+   ],
+   "javaNames": [
+    "ResultSetGroupByDefault",
+    "ResultSetNoJoinLast",
+    "ResultSetNoJoinAll",
+    "ResultSetJoinLast",
+    "ResultSetJoinAll"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupEventsDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupEventsDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "row-per-group",
+    "grouped",
+    "join",
+    "output-all",
+    "output-last",
+    "output-every",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-per-group-events.json",
+    "testdata/parity/resultset-output-limit-row-per-group-events.trace.json",
+    "testdata/parity/resultset-output-limit-row-per-group-events.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowPerGroupEventsScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-per-group-events.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-fb1d7cc0c950463969d1",
+    "java-runtime-c55c536922e604536dd8",
+    "java-runtime-33f3e496a6431e2b7d10",
+    "java-runtime-896a57e1bb14df31d330",
+    "java-runtime-897df7824f16ef7db1c9"
+   ],
+   "representativeScenarioIds": [
+    "resultset-output-limit-row-per-group-events"
+   ],
+   "notes": [
+    "ResultSetGroupByDefault, ResultSetNoJoinLast, ResultSetNoJoinAll, ResultSetJoinLast and ResultSetJoinAll replayed through one shared scenario (25 records, 0 differences): grouped irstream aggregates over length windows with event-count output limiting — default policy buffered per-event rows, output last/all every 2 events with a global (not per-group) counter, x3 ENABLE/DISABLE_OUTPUTLIMIT_OPT hint variants per hinted execution, and SupportBeanString join twins.",
+    "Shared-core fix: applyAllEveryEvents routed grouped bounded 'output all' through the per-event pending path; Java's ResultSetProcessorRowPerGroupOutputAllHelper emits one row per live group plus interval-start old rows for irstream. The row shape now follows the processor predicate (aggregateDefinitionReadsNonKeyEvent), and allEveryOld tracks each group's interval-start state.",
+    "The Java executions deploy each hinted statement three times (default/ENABLE/DISABLE hint) with identical observable output; the scenario replays the send block per variant via deploy/undeploy-all ops."
+   ]
   }
  ],
  "mappings": [
@@ -45955,15 +46026,19 @@
   {
    "capabilityId": "resultset.aggregate-access",
    "caseId": "case.resultset-aggregate-firstlastwindow-star"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-row-per-group-events"
   }
  ],
  "summary": {
-  "inventoriedCases": 672,
-  "implementedCases": 670,
-  "differentialVerifiedCases": 298,
-  "differentialVerifiedRuntimeIds": 1103,
+  "inventoriedCases": 673,
+  "implementedCases": 671,
+  "differentialVerifiedCases": 299,
+  "differentialVerifiedRuntimeIds": 1108,
   "intentionallyDifferentCases": 28,
-  "representativeVerifiedCases": 105,
+  "representativeVerifiedCases": 106,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -45975,9 +46050,9 @@
   "referencedJavaRuntimeIds": 3331,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 805,
-  "representativeScenarioTotal": 108,
-  "representativeScenarioPassing": 108,
-  "totalCases": 672,
+  "representativeScenarioTotal": 109,
+  "representativeScenarioPassing": 109,
+  "totalCases": 673,
   "totalCapabilities": 120
  }
 }

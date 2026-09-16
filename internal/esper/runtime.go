@@ -6607,6 +6607,8 @@ type outputRuntimeState struct {
 	allEveryReps           map[string]Result
 	allEveryRepsOrder      []string
 	allEverySeen           map[string]struct{}
+	allEveryOld            map[string]Result
+	allEveryOldOrder       []string
 	outputScheduleAnchored bool
 	pending                *ResultBatch
 	pendingCount           int
@@ -7155,6 +7157,8 @@ func cloneOutputRuntimeState(source *outputRuntimeState) *outputRuntimeState {
 	result.allEveryReps = cloneResultMap(source.allEveryReps)
 	result.allEveryRepsOrder = append([]string(nil), source.allEveryRepsOrder...)
 	result.allEverySeen = cloneStringSet(source.allEverySeen)
+	result.allEveryOld = cloneResultMap(source.allEveryOld)
+	result.allEveryOldOrder = append([]string(nil), source.allEveryOldOrder...)
 	result.snapshotBoundary = cloneAggregateSnapshotBoundary(source.snapshotBoundary)
 	result.lastOutputGroupRows = cloneResultMap(source.lastOutputGroupRows)
 	return &result
@@ -11130,11 +11134,12 @@ func (r *statementRuntime) applyAllEveryTimeAggregateGrouped(policy OutputPolicy
 }
 
 // applyAllEveryEvents implements Esper's grouped "output all every N events"
-// result-set processor for aggregate-grouped queries. Each input event
-// contributes one accumulated row carrying the group aggregate as of that
-// event; at an output boundary groups with no new event in the interval are
-// re-emitted with their representative (last seen) row. Old rows are not
-// synthesized for insert-only intervals, matching ResultSetNoJoinAll.
+// result-set processors. Two shapes share this entry point: row-per-event
+// queries (a non-key event property is projected) buffer one accumulated row
+// per input event and re-post untouched groups' representative rows at the
+// boundary, while row-per-group queries (group keys and aggregates only) emit
+// one row per live group plus, for irstream statements, one interval-start
+// old row per group — Esper's ResultSetProcessorRowPerGroupOutputAllHelper.
 func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
 	if r == nil || r.outputState == nil {
 		return ResultBatch{}
@@ -11155,12 +11160,43 @@ func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch Result
 	state.pendingInserted = 0
 	state.pendingRemoved = 0
 	var result ResultBatch
-	if len(plans) > 0 && unboundedRowInput(plans[0].query.input) && groupedAggregateHasFunctions(plans[0].query.aggregate) {
-		// Unbounded inputs use one representative row per group, mirroring
-		// Esper's ResultSetProcessorGroupedOutputAllGroupReps: at the output
-		// boundary every live group appears exactly once with its current
-		// aggregate.
+	rowPerGroup := false
+	if len(plans) > 0 && definition != nil && len(definition.groupBy) > 0 && groupedAggregateHasFunctions(definition) {
+		tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
+		rowPerGroup = !tableSource && len(aggregateGroupingSetsForDefinition(definition)) == 1 && !aggregateDefinitionReadsNonKeyEvent(definition)
+	}
+	if rowPerGroup {
+		// Row-per-group output-all: every live group appears exactly once
+		// with its current aggregate, and irstream statements pair each row
+		// with the group's interval-start state (its previous output row, or
+		// the null-aggregate row captured at group creation). Rstream
+		// statements produce no new rows, so their output is the
+		// interval-start old rows alone, in first-seen order.
 		result = r.everyNGroupRepsBatch(now)
+		selector := plans[0].query.selector
+		if selector == SelectIRStream || selector == SelectRStream {
+			for _, key := range result.outputKeysNew {
+				if old, exists := state.allEveryOld[key]; exists {
+					result.Old = append(result.Old, old)
+					result.outputKeysOld = append(result.outputKeysOld, key)
+				}
+			}
+			if len(result.New) == 0 {
+				for _, key := range state.allEveryOldOrder {
+					result.Old = append(result.Old, state.allEveryOld[key])
+					result.outputKeysOld = append(result.outputKeysOld, key)
+				}
+			}
+		}
+		// The emitted rows become next interval's interval-start state.
+		state.allEveryOld = make(map[string]Result, len(state.allEveryReps))
+		state.allEveryOldOrder = state.allEveryOldOrder[:0]
+		for _, key := range state.allEveryRepsOrder {
+			if rep, exists := state.allEveryReps[key]; exists {
+				state.allEveryOld[key] = rep
+				state.allEveryOldOrder = append(state.allEveryOldOrder, key)
+			}
+		}
 	} else {
 		if state.pending != nil {
 			result = state.pending.clone()
@@ -11184,11 +11220,19 @@ func (r *statementRuntime) applyAllEveryEvents(policy OutputPolicy, batch Result
 
 // accumulateAllEveryRows buffers one row per input event, keeps removal old
 // rows, posts a representative-based current row for each removed group, and
-// tracks group representatives/seen keys for the output-all helper.
+// tracks group representatives/seen keys for the output-all helper. For the
+// row-per-group shape it also captures each group's interval-start old row:
+// the first removal row seen for a group this interval (a null-aggregate row
+// for a group created mid-interval), while groups already carrying an
+// interval-start row keep it until the next boundary replaces it with the
+// emitted representative.
 func (r *statementRuntime) accumulateAllEveryRows(state *outputRuntimeState, batch ResultBatch, definition *aggregateDefinition) {
 	if state.allEveryReps == nil {
 		state.allEveryReps = make(map[string]Result)
 		state.allEverySeen = make(map[string]struct{})
+	}
+	if state.allEveryOld == nil {
+		state.allEveryOld = make(map[string]Result)
 	}
 	if batch.empty() && len(batch.removedGroupKeys) == 0 {
 		return
@@ -11213,6 +11257,13 @@ func (r *statementRuntime) accumulateAllEveryRows(state *outputRuntimeState, bat
 		if rep, exists := state.allEveryReps[key]; exists && definition != nil {
 			state.pending.New = append(state.pending.New, combineAggregateGroupRow(rep, result, definition))
 			state.pending.outputKeysNew = append(state.pending.outputKeysNew, key)
+		}
+		if _, exists := state.allEveryOld[key]; !exists {
+			// First removal row for this group in the interval: its
+			// pre-removal state is the interval-start old row (null
+			// aggregates for a group created mid-interval).
+			state.allEveryOld[key] = result
+			state.allEveryOldOrder = append(state.allEveryOldOrder, key)
 		}
 		state.allEverySeen[key] = struct{}{}
 	}

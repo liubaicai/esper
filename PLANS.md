@@ -777,6 +777,93 @@ Active: Draft 4.429 ('resultset-aggregate-firstlastwindow-star').
       1103 DV runtime IDs / 3682 associations / referenced 3331 / unreferenced
       805. ResultSetAggregateFirstLastWindow.java 25/25 executions referenced.
       Roadmap + CHANGELOG recorded (Draft 4.429).
+- [x] Independent parity review (agent ParityReview429): OVERALL PASS, all
+      eight acceptance points confirmed. Three P3s, all latent/pre-existing:
+      constant-key GroupBy emits 0 rows on empty window vs Java's 1 null row
+      (unexercised — window never empty at trigger time); ord0 property-type
+      check unobservable under row/fields rendering; doublePrimitive 1.0→1
+      (cutOffPointZero convention). Constant-key GroupBy confirmed NECESSARY —
+      ungrouped SelectFromNamedWindow emits one row per window event.
+- [x] Shipped; Git owns identity — Draft 4.429 committed and pushed as
+      `9e4ea2614` (ResultSetAggregateFirstLastWindow.java 25/25 referenced;
+      manifest 298 DV cases / 1103 DV runtime IDs / 805 unreferenced).
+
+## Current work unit
+Active: Draft 4.430 ('resultset-outputlimit-row-per-group-events').
+
+- Unit selected: `ResultSetOutputLimitRowPerGroup.java` five executions from
+      the event-count cluster (zero virtual time, one harness): ord27
+      `ResultSetGroupByDefault` (`java-runtime-fb1d7cc0c950463969d1`, static
+      `java-999cff794b4fe5ace1df`; irstream symbol,sum(price) over #length(5)
+      group by symbol output every 5 events — default policy buffers per-event
+      rows, old = prior aggregate state), ord29 `ResultSetNoJoinLast`
+      (`java-runtime-c55c536922e604536dd8`, static `java-3a4ec5065e9a5ad5e6e0`;
+      length(3) + symbol filter + output last every 2 events, x3 hint
+      variants), ord32 `ResultSetNoJoinAll` (`java-runtime-33f3e496a6431e2b7d10`,
+      static `java-7b23312effb6b3d69a43`; length(5) + output all every 2
+      events — all re-emits unchanged groups, anyOrder), ord33
+      `ResultSetJoinLast` (`java-runtime-896a57e1bb14df31d330`, static
+      `java-2392f4d677fe24094870`; SupportBeanString#length(100) join twin of
+      29), ord34 `ResultSetJoinAll` (`java-runtime-897df7824f16ef7db1c9`,
+      static `java-b0e3f821aa45bd9cf7f9`; join twin of 32).
+- [x] Contract frozen from read-only scouts (OMP batch): Java contract scout
+      (`NextJavaContract3` — full 43-execution inventory + frozen per-execution
+      contract: GLOBAL event counter not per-group; grouped irstream old =
+      previous OUTPUTTED row; all emits unchanged groups anyOrder; hint
+      variants x3 identical observable output; join pre-seed after listener
+      attach) and Go surface scout (`NextGoSurface3` — OutputPolicy kinds +
+      OutputEvery/OutputLastEveryEvents/OutputAllEveryEvents exist at
+      stream.go:2796-2960, grouped variants runtime.go:10670+, hint via
+      WithStatementHints/HintEnableOutputLimitOptimization, zero virtual time
+      needed; NEW chain resultset_output_limit_row_per_group.go).
+- Open questions for implementation: (1) `output all` anyOrder — verify Java
+      group-iteration order in trace or normalize multi-row batches; (2) hint
+      variants — record all 3 deployments or collapse to default (observable
+      output identical); (3) avg double precision 170/3d, 130/3d.
+- [x] Assets authored by parity-asset-worker `FLWStarAssets` (same worker,
+      file-disjoint lane): oracle + run.sh + scenario (5 cases / 102 steps,
+      deploy/undeploy-all hint rounds, mode:"any" on the two all-cases) +
+      runner + run.go wiring. Worker surfaced a genuine shared-core gap:
+      grouped bounded `output all` emitted per-event rows.
+- [x] **Engine fix (shared core, primary agent)**: `applyAllEveryEvents`
+      (internal/esper/runtime.go) now routes by processor row shape —
+      row-per-group (groupBy + aggregates only, !ReadsNonKeyEvent, non-table)
+      emits one row per live group via everyNGroupRepsBatch plus, for
+      IR/R-stream selectors, one interval-start old row per group tracked in
+      the new `allEveryOld` state (first removal row per group per interval;
+      carried reps become next interval's start state). Row-per-event shapes
+      keep the pending+unseen-reps path. Matches Java
+      ResultSetProcessorRowPerGroupOutputAllHelperImpl (interval-start old =
+      prior output row; new group = null-aggregate row). Time-based
+      applyAllEveryTime already routed correctly (snapshot path per-group,
+      AggregateGrouped per-event) — untouched.
+- [x] Differential replay: Java 25 records / Go 25 records, status passing /
+      0 differences (was 13/25 pre-fix). Checked-in Java trace md5
+      `c88667cff86f2aa642e4e9c54de8f615`.
+- [x] run_test pair added: four discriminating mutations
+      (default-old-state-drift @0, last-global-counter @2,
+      all-unchanged-group-missing @8, join-all-interval-start-old @20) — all
+      rejected.
+- [x] Manifest: NEW case.resultset-output-limit-row-per-group-events born-DV
+      (5 IDs split from case.output-row-per-group umbrella, now 38 IDs);
+      capability output.core +5 DV IDs + goRefs + scenario. Summary: 673
+      cases / 671 implemented / 299 DV cases / 1108 DV runtime IDs / 3682
+      associations / referenced 3331 / unreferenced 805. Roadmap + CHANGELOG
+      recorded (Draft 4.430).
+- [x] Regression caught and fixed in-unit: the row-per-group predicate
+      initially missed the aggregate requirement, misrouting the no-aggregate
+      `wildcard-all` case (group-output chain). Added
+      `groupedAggregateHasFunctions` to the gate; both diffs and the full
+      internal/esper + internal/app/parity suites green.
+- [x] Independent parity review (agent ParityReview430): initial FAIL — P1
+      cloneOutputRuntimeState dropped allEveryReps/allEveryRepsOrder deep
+      copies (FAF staged-clone aliasing); P2 dead SelectRStream branch.
+      FIXED in-unit: clone lines restored; rstream now emits allEveryOld in
+      first-seen order via allEveryOldOrder; BASE_EPLS/scenario whitespace
+      made byte-exact (P3c). Re-review: PASS. Latents recorded: stale rep on
+      drained/having-failed groups; outputAtTermination old predicate;
+      rstream interval-start carry (allEveryReps never populated for
+      rstream); allEveryOld populated for non-row-per-group shapes.
 
 ## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').
