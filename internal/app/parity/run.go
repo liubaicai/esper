@@ -4228,6 +4228,54 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-output-limit-row-per-group-last" || *mode == "resultset-output-limit-row-per-group-last-diff" {
+		trace, err := runResultSetOutputLimitRowPerGroupLastScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-row-per-group-last-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitRowPerGroupLastJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowPerGroupLastJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowPerGroupLastJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitRowPerGroupLastJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-row-per-group-having-first-snap" || *mode == "resultset-output-limit-row-per-group-having-first-snap-diff" {
+		trace, err := runResultSetOutputLimitRowPerGroupHavingFirstSnapScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-row-per-group-having-first-snap-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitRowPerGroupHavingFirstSnapJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowPerGroupHavingFirstSnapJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowPerGroupHavingFirstSnapJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitRowPerGroupHavingFirstSnapJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-row-per-group-all" || *mode == "resultset-output-limit-row-per-group-all-diff" {
+		trace, err := runResultSetOutputLimitRowPerGroupAllScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-row-per-group-all-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitRowPerGroupAllJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowPerGroupAllJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowPerGroupAllJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitRowPerGroupAllJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-querytype-aggregate-grouped-having" || *mode == "resultset-querytype-aggregate-grouped-having-diff" {
 		trace, err := runResultsetQueryTypeAggregateGroupedHavingScenario(context.Background(), scenario)
 		if err != nil {

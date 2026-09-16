@@ -191,6 +191,7 @@ type ResultBatch struct {
 	outputKeysOld    []string
 	inputKeysNew     []string
 	removedGroupKeys []string
+	updatedGroupKeys []string
 }
 
 func (b ResultBatch) empty() bool { return len(b.New) == 0 && len(b.Old) == 0 }
@@ -199,9 +200,9 @@ func (b ResultBatch) clone() ResultBatch {
 	b.New = append([]Result(nil), b.New...)
 	b.Old = append([]Result(nil), b.Old...)
 	b.outputKeysNew = append([]string(nil), b.outputKeysNew...)
-	b.outputKeysOld = append([]string(nil), b.outputKeysOld...)
 	b.inputKeysNew = append([]string(nil), b.inputKeysNew...)
 	b.removedGroupKeys = append([]string(nil), b.removedGroupKeys...)
+	b.updatedGroupKeys = append([]string(nil), b.updatedGroupKeys...)
 	return b
 }
 
@@ -6602,8 +6603,11 @@ type outputRuntimeState struct {
 	lastEverySeen          int
 	lastEverySeenRemoved   int
 	lastEveryOutputRows    map[string]Result
+	lastEveryOutputVisible map[string]bool
 	allEveryOutputRows     map[string]Result
+	allEveryOutputVisible  map[string]bool
 	allEveryOutputOrder    []string
+	allEveryUpdatedKeys    map[string]struct{}
 	allEveryReps           map[string]Result
 	allEveryRepsOrder      []string
 	allEverySeen           map[string]struct{}
@@ -7150,9 +7154,11 @@ func cloneOutputRuntimeState(source *outputRuntimeState) *outputRuntimeState {
 	result.whenPending = cloneResultBatchDeep(source.whenPending)
 	result.cronPending = cloneResultBatchDeep(source.cronPending)
 	result.firstEveryCounts = cloneIntMap(source.firstEveryCounts)
-	result.firstEveryNext = cloneTimeMap(source.firstEveryNext)
 	result.lastEveryOutputRows = cloneResultMap(source.lastEveryOutputRows)
+	result.lastEveryOutputVisible = cloneBoolMap(source.lastEveryOutputVisible)
 	result.allEveryOutputRows = cloneResultMap(source.allEveryOutputRows)
+	result.allEveryOutputVisible = cloneBoolMap(source.allEveryOutputVisible)
+	result.allEveryUpdatedKeys = cloneStringSet(source.allEveryUpdatedKeys)
 	result.allEveryOrderCopy(source)
 	result.allEveryReps = cloneResultMap(source.allEveryReps)
 	result.allEveryRepsOrder = append([]string(nil), source.allEveryRepsOrder...)
@@ -7225,6 +7231,17 @@ func cloneStringSet(source map[string]struct{}) map[string]struct{} {
 	result := make(map[string]struct{}, len(source))
 	for key := range source {
 		result[key] = struct{}{}
+	}
+	return result
+}
+
+func cloneBoolMap(source map[string]bool) map[string]bool {
+	if source == nil {
+		return nil
+	}
+	result := make(map[string]bool, len(source))
+	for key, value := range source {
+		result[key] = value
 	}
 	return result
 }
@@ -10558,7 +10575,8 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 				return ResultBatch{}
 			}
 			if result.empty() {
-				return ResultBatch{}
+				// OutputConditionTime force-dispatches the empty pair.
+				return ResultBatch{Time: now, forced: true}
 			}
 			result.Time = now
 			return r.finishOutput(policy, result, now, plans...)
@@ -10580,7 +10598,8 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 			if !r.advanceOutputSchedule(policy, now) {
 				return ResultBatch{}
 			}
-			return ResultBatch{}
+			// OutputConditionTime force-dispatches the empty pair.
+			return ResultBatch{Time: now, forced: true}
 		}
 		result := r.outputState.pending.clone()
 		result.Time = now
@@ -10770,9 +10789,12 @@ func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch Result
 		result.Old, result.outputKeysOld = orderGroupedOutputRows(result.Old, result.outputKeysOld, groupNames)
 		if plans[0].query.aggregate.having != nil {
 			// Esper's grouped output-first-with-having delivers the current
-			// aggregate values in both new and old rows.
-			result.Old = append([]Result(nil), result.New...)
-			result.outputKeysOld = append([]string(nil), result.outputKeysNew...)
+			// aggregate values in both new and old rows, but only when the
+			// statement selects the remove stream (irstream/rstream).
+			if plans[0].query.selector == SelectIRStream || plans[0].query.selector == SelectRStream {
+				result.Old = append([]Result(nil), result.New...)
+				result.outputKeysOld = append([]string(nil), result.outputKeysNew...)
+			}
 		}
 	}
 	return r.finishOutput(policy, result, now, plans...)
@@ -10883,7 +10905,10 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
 		return r.applyLastEveryTimeGrouped(policy, batch, flush, now, plans...)
 	}
-	if !batch.empty() {
+	if !batch.empty() || len(batch.updatedGroupKeys) > 0 {
+		// Suppressed-row batches (all updated groups failed having under
+		// istream) still merge: updatedGroupKeys invalidate stale pending
+		// rows and arm the output schedule, matching Java's delta set.
 		copyBatch := mergeLastOutputBatch(state.pending, batch)
 		state.pending = &copyBatch
 		if state.nextOutputAt.IsZero() {
@@ -10895,7 +10920,9 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 	}
 	if state.pending == nil {
 		r.advanceOutputSchedule(policy, now)
-		return ResultBatch{}
+		// Java's OutputConditionTime force-dispatches the callback even when
+		// the output pair is empty (OutputStrategyUtil forceUpdate).
+		return ResultBatch{Time: now, forced: true}
 	}
 	result := state.pending.clone()
 	result.Time = now
@@ -10905,13 +10932,15 @@ func (r *statementRuntime) applyLastEveryTime(policy OutputPolicy, batch ResultB
 	}
 	return r.finishOutput(policy, result, now, plans...)
 }
-
 func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch ResultBatch, flush bool, now time.Time, plans ...Plan) ResultBatch {
 	state := r.outputState
-	if !batch.empty() {
+	if !batch.empty() || len(batch.updatedGroupKeys) > 0 {
 		// The changeset counter already ticked once per update in applyOutput;
 		// Java's grouped delta set is the same single buffering layer, so the
-		// grouped path must not count the update pair a second time.
+		// grouped path must not count the update pair a second time. Batches
+		// whose rows were all suppressed (every updated group failed having
+		// under istream) still merge: their updatedGroupKeys invalidate stale
+		// pending rows and arm the output schedule.
 		copyBatch := mergeLastOutputBatch(state.pending, batch)
 		state.pending = &copyBatch
 		if state.nextOutputAt.IsZero() {
@@ -10923,7 +10952,8 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 	}
 	if state.pending == nil {
 		r.advanceOutputSchedule(policy, now)
-		return ResultBatch{}
+		// OutputConditionTime force-dispatches the empty pair.
+		return ResultBatch{Time: now, forced: true}
 	}
 	current := state.pending.clone()
 	current.Time = now
@@ -10931,7 +10961,7 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 		state.pending = nil
 		state.pendingCount = 0
 		r.advanceOutputSchedule(policy, now)
-		return ResultBatch{}
+		return ResultBatch{Time: now, forced: true}
 	}
 	keys := current.outputKeysNew
 	if len(keys) != len(current.New) {
@@ -10945,12 +10975,12 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 	current.New, keys = orderGroupedOutputRows(current.New, keys, groupNames)
 	tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
 	aggregateGroupedRowPerEvent := !tableSource && len(definition.groupBy) > 0 && len(aggregateGroupingSetsForDefinition(definition)) == 1 && aggregateDefinitionReadsNonKeyEvent(definition)
-	if aggregateGroupedRowPerEvent || len(aggregateGroupingSetsForDefinition(definition)) == 1 {
-		// Aggregate-grouped and plain row-per-group irstream output-last post
-		// the current row per group as new; old rows come only from leaving
-		// events carried in the pending batches. Previous-output rows are not
-		// posted as old (ResultSetLastNoDataWindow). Rollup output-last below
-		// additionally posts the previous output rows as old.
+	if aggregateGroupedRowPerEvent {
+		// Aggregate-grouped irstream output-last posts the current row per
+		// group as new; old rows come only from leaving events carried in the
+		// pending batches. Previous-output rows are not posted as old
+		// (ResultSetLastNoDataWindow). Plain row-per-group and rollup
+		// output-last below post the previous output rows as old instead.
 		result := ResultBatch{Time: now, New: current.New, Old: current.Old, outputKeysNew: keys, outputKeysOld: current.outputKeysOld}
 		if len(result.outputKeysOld) != len(result.Old) {
 			result.outputKeysOld = nil
@@ -10960,23 +10990,98 @@ func (r *statementRuntime) applyLastEveryTimeGrouped(policy OutputPolicy, batch 
 		r.advanceOutputSchedule(policy, now)
 		return r.finishOutput(policy, result, now, plans...)
 	}
+	selector := plans[0].query.selector
+	emitOld := selector == SelectIRStream || selector == SelectRStream
+	newKeySet := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		newKeySet[key] = struct{}{}
+	}
 	old := make([]Result, 0, len(current.New))
 	oldKeys := make([]string, 0, len(current.New))
-	for index, key := range keys {
-		if row, exists := state.lastEveryOutputRows[key]; exists {
-			old = append(old, row)
-		} else {
-			old = append(old, lastEveryNullResult(current.New[index], groupNames))
+	if emitOld {
+		// Java's row-per-group output-last helper posts the previous output
+		// row as old for EVERY group updated in the interval — including
+		// groups whose latest state fails the having clause and therefore
+		// produced no new row (tryAssertion15_16: at t=7200 IBM's new row is
+		// suppressed while its previous output still posts as old).
+		emptyVisible := true
+		if definition.having != nil {
+			_, emptyVisible = evaluateEmptyAggregateGroup(definition, now, r.variables)
 		}
-		oldKeys = append(oldKeys, key)
+		appendOld := func(key string, rep Result) {
+			if row, exists := state.lastEveryOutputRows[key]; exists {
+				// Java's rstream old event is generated at the group's first
+				// update in the interval from the PRE-UPDATE state, gated by
+				// having on that state. A group whose latest state failed
+				// having (or that was removed) is tracked invisible and posts
+				// no old row — the stored row is not the interval-start
+				// output row Java would regenerate.
+				if visible, tracked := state.lastEveryOutputVisible[key]; !tracked || visible {
+					old = append(old, row)
+					oldKeys = append(oldKeys, key)
+				}
+				return
+			}
+			// A group with no previous output posts a null-prior old row
+			// only when the having clause accepts the empty-group state.
+			if definition.having != nil && !emptyVisible {
+				return
+			}
+			old = append(old, lastEveryNullResult(rep, groupNames))
+			oldKeys = append(oldKeys, key)
+		}
+		for index, key := range keys {
+			appendOld(key, current.New[index])
+		}
+		for _, key := range current.updatedGroupKeys {
+			if _, isNew := newKeySet[key]; isNew {
+				continue
+			}
+			rep, hasPrev := state.lastEveryOutputRows[key]
+			if !hasPrev {
+				// No previous output and no new row: the null-prior rep
+				// needs the group's key columns from its last event.
+				group := r.aggregateState.groups[key]
+				if group == nil || group.current.Schema().Name() == "" {
+					continue
+				}
+				repValues := make([]Value, len(plans[0].resultSchema.Fields()))
+				fields := plans[0].resultSchema.Fields()
+				for index, field := range fields {
+					repValues[index] = Null()
+					for groupIndex, name := range groupNames {
+						if field.Name == name && groupIndex < len(definition.groupBy) {
+							repValues[index] = definition.groupBy[groupIndex].eval(EvalContext{Event: group.current, JoinEvents: joinTupleEvents(group.current), Now: now, Variables: r.variables})
+						}
+					}
+				}
+				rep = resultRow(newRow(plans[0].resultSchema, repValues))
+			}
+			appendOld(key, rep)
+		}
 	}
 	result := ResultBatch{Time: now, New: current.New, Old: old, outputKeysNew: keys, outputKeysOld: oldKeys}
 	if state.lastEveryOutputRows == nil {
 		state.lastEveryOutputRows = make(map[string]Result)
 	}
+	if state.lastEveryOutputVisible == nil {
+		state.lastEveryOutputVisible = make(map[string]bool)
+	}
 	for index, key := range keys {
 		if index < len(result.New) {
 			state.lastEveryOutputRows[key] = result.New[index]
+			state.lastEveryOutputVisible[key] = true
+		}
+	}
+	// Groups updated this interval whose latest state produced no new row
+	// (having rejected it, or the group emptied under a having that rejects
+	// the empty state) are tracked invisible: their stored row is not the
+	// interval-start output row Java would regenerate as old next interval.
+	for _, key := range current.updatedGroupKeys {
+		if _, isNew := newKeySet[key]; !isNew {
+			if _, tracked := state.lastEveryOutputRows[key]; tracked {
+				state.lastEveryOutputVisible[key] = false
+			}
 		}
 	}
 	state.pending = nil
@@ -10993,6 +11098,14 @@ func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBa
 	}
 	state := r.outputState
 	aggregateGroupedRowPerEvent := false
+	if len(batch.updatedGroupKeys) > 0 {
+		if state.allEveryUpdatedKeys == nil {
+			state.allEveryUpdatedKeys = make(map[string]struct{}, len(batch.updatedGroupKeys))
+		}
+		for _, key := range batch.updatedGroupKeys {
+			state.allEveryUpdatedKeys[key] = struct{}{}
+		}
+	}
 	if len(plans) > 0 && plans[0].query.aggregate != nil && len(plans[0].query.aggregate.groupBy) > 0 {
 		definition := plans[0].query.aggregate
 		tableSource := containsTableSource(plans[0].query.input, nil) || containsNamedWindow(plans[0].query.input, nil)
@@ -11053,45 +11166,120 @@ func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBa
 			return leftRank < rightRank
 		})
 		newRows := make([]Result, 0, len(keys))
+		newKeys := make([]string, 0, len(keys))
 		old := make([]Result, 0, len(keys))
+		oldKeys := make([]string, 0, len(keys))
 		selector := plans[0].query.selector
 		emitOld := selector == SelectIRStream || selector == SelectRStream
-		for _, key := range keys {
-			current, hasCurrent := currentByKey[key]
-			previous, hasPrevious := state.allEveryOutputRows[key]
-			if !hasCurrent {
-				current = lastEveryNullResult(previous, groupNames)
-			}
-			if emitOld {
-				if hasPrevious {
-					old = append(old, previous)
-				} else {
-					old = append(old, lastEveryNullResult(current, groupNames))
-				}
-			}
-			newRows = append(newRows, current)
-		}
-		result.New = newRows
-		result.outputKeysNew = append([]string(nil), keys...)
-		if emitOld {
-			result.Old = old
-			result.outputKeysOld = append([]string(nil), keys...)
+		// Java's row-per-group output-all helper keeps one representative row
+		// per group — the interval-start state — and having-filters BOTH the
+		// old (interval-start) and new (current) generated rows. Groups whose
+		// latest state fails having still post their interval-start row as
+		// old when that row itself passes having (tryAssertion11_12: at
+		// t=7200 IBM's new row is suppressed while old {IBM,72} emits).
+		emptyVisible := true
+		if definition.having != nil {
+			_, emptyVisible = evaluateEmptyAggregateGroup(definition, now, r.variables)
 		}
 		if state.allEveryOutputRows == nil {
 			state.allEveryOutputRows = make(map[string]Result)
 		}
-		for index, key := range result.outputKeysNew {
-			state.allEveryOutputRows[key] = result.New[index]
+		if state.allEveryOutputVisible == nil {
+			state.allEveryOutputVisible = make(map[string]bool)
+		}
+		for _, key := range keys {
+			current, hasCurrent := currentByKey[key]
+			previous, hasPrevious := state.allEveryOutputRows[key]
+			previousVisible := hasPrevious && state.allEveryOutputVisible[key]
+			_, updated := state.allEveryUpdatedKeys[key]
+			if hasCurrent {
+				// Live group passing having: current row is the new row, the
+				// interval-start row is the old row (or a null-prior for a
+				// first-seen group that passes the empty-group having).
+				if emitOld {
+					if hasPrevious {
+						if previousVisible {
+							old = append(old, previous)
+							oldKeys = append(oldKeys, key)
+						}
+					} else if emptyVisible {
+						old = append(old, lastEveryNullResult(current, groupNames))
+						oldKeys = append(oldKeys, key)
+					}
+				}
+				newRows = append(newRows, current)
+				newKeys = append(newKeys, key)
+				state.allEveryOutputRows[key] = current
+				state.allEveryOutputVisible[key] = true
+				continue
+			}
+			if updated && definition.having != nil {
+				// The group was touched this interval but its latest state
+				// failed having (or the group emptied under a having that
+				// rejects the empty state): no new row. The interval-start
+				// row still posts as old when it passes having; the stored
+				// representative then tracks the failed current state so the
+				// next interval's interval-start row is the failed row —
+				// which fails having and posts nothing.
+				if emitOld && hasPrevious && previousVisible {
+					old = append(old, previous)
+					oldKeys = append(oldKeys, key)
+				}
+				if hasPrevious {
+					state.allEveryOutputVisible[key] = false
+				}
+				continue
+			}
+			// Untouched group missing from the snapshot: the window emptied.
+			// Java retains the representative and emits a null-aggregate row
+			// when the empty-group state passes having.
+			if !emptyVisible {
+				if hasPrevious {
+					state.allEveryOutputVisible[key] = false
+				}
+				continue
+			}
+			current = lastEveryNullResult(previous, groupNames)
+			if emitOld {
+				if hasPrevious {
+					if previousVisible {
+						old = append(old, previous)
+						oldKeys = append(oldKeys, key)
+					}
+				} else {
+					old = append(old, lastEveryNullResult(current, groupNames))
+					oldKeys = append(oldKeys, key)
+				}
+			}
+			newRows = append(newRows, current)
+			newKeys = append(newKeys, key)
+			if hasPrevious {
+				state.allEveryOutputRows[key] = current
+				state.allEveryOutputVisible[key] = true
+			}
+		}
+		result.New = newRows
+		result.outputKeysNew = newKeys
+		if emitOld {
+			result.Old = old
+			result.outputKeysOld = oldKeys
+		}
+		if state.allEveryOutputRows == nil {
+			state.allEveryOutputRows = make(map[string]Result)
+		}
+		for _, key := range result.outputKeysNew {
 			if _, ok := orderRank[key]; !ok {
 				state.allEveryOutputOrder = append(state.allEveryOutputOrder, key)
 			}
 		}
+		state.allEveryUpdatedKeys = nil
 	}
 	if !r.advanceOutputSchedule(policy, now) {
 		return ResultBatch{}
 	}
 	if result.empty() {
-		return ResultBatch{}
+		// OutputConditionTime force-dispatches the empty pair.
+		return ResultBatch{Time: now, forced: true}
 	}
 	result.Time = now
 	return r.finishOutput(policy, result, now, plans...)
@@ -11133,7 +11321,8 @@ func (r *statementRuntime) applyAllEveryTimeAggregateGrouped(policy OutputPolicy
 		return ResultBatch{}
 	}
 	if result.empty() {
-		return ResultBatch{}
+		// OutputConditionTime force-dispatches the empty pair.
+		return ResultBatch{Time: now, forced: true}
 	}
 	result.Time = now
 	return r.finishOutput(policy, result, now, plans...)
@@ -11467,13 +11656,32 @@ func outputGroupKey(keys []string, index int) string {
 	}
 	return "\x00esper-output-global"
 }
-
 func mergeLastOutputBatch(existing *ResultBatch, incoming ResultBatch) ResultBatch {
 	if incoming.empty() {
 		if existing == nil {
-			return ResultBatch{}
+			result := ResultBatch{Time: incoming.Time}
+			result.updatedGroupKeys = append([]string(nil), incoming.updatedGroupKeys...)
+			return result
 		}
-		return existing.clone()
+		result := existing.clone()
+		// An update batch whose rows were all suppressed (every updated
+		// group's latest state failed having under istream) still carries
+		// updatedGroupKeys: Java's output-last helper regenerates the row
+		// per updated key at output time, so earlier pending rows for those
+		// keys must be dropped here exactly as in the non-empty merge.
+		dropLastOutputPending(&result, incoming)
+		seen := make(map[string]struct{}, len(result.updatedGroupKeys)+len(incoming.updatedGroupKeys))
+		for _, key := range result.updatedGroupKeys {
+			seen[key] = struct{}{}
+		}
+		for _, key := range incoming.updatedGroupKeys {
+			if _, ok := seen[key]; !ok {
+				seen[key] = struct{}{}
+				result.updatedGroupKeys = append(result.updatedGroupKeys, key)
+			}
+		}
+		result.Time = incoming.Time
+		return result
 	}
 	if existing == nil || (len(existing.outputKeysNew) == 0 && len(existing.outputKeysOld) == 0 && len(incoming.outputKeysNew) == 0 && len(incoming.outputKeysOld) == 0) {
 		return incoming.clone()
@@ -11481,8 +11689,67 @@ func mergeLastOutputBatch(existing *ResultBatch, incoming ResultBatch) ResultBat
 	result := existing.clone()
 	result.New, result.outputKeysNew = mergeLastOutputSide(result.New, incoming.New, result.outputKeysNew, incoming.outputKeysNew)
 	result.Old, result.outputKeysOld = mergeLastOutputSide(result.Old, incoming.Old, result.outputKeysOld, incoming.outputKeysOld)
+	// Groups updated without a new row (a having clause rejected the latest
+	// state) invalidate any earlier pending row for the same key: Java's
+	// output-last helper regenerates the current row per updated key at
+	// output time, so a stale passing row must not survive a later failing
+	// update.
+	dropLastOutputPending(&result, incoming)
+	if len(incoming.updatedGroupKeys) > 0 {
+		seen := make(map[string]struct{}, len(result.updatedGroupKeys)+len(incoming.updatedGroupKeys))
+		for _, key := range result.updatedGroupKeys {
+			seen[key] = struct{}{}
+		}
+		for _, key := range incoming.updatedGroupKeys {
+			if _, ok := seen[key]; !ok {
+				seen[key] = struct{}{}
+				result.updatedGroupKeys = append(result.updatedGroupKeys, key)
+			}
+		}
+	}
 	result.Time = incoming.Time
 	return result
+}
+
+// dropLastOutputPending removes pending new rows whose group was updated in
+// the incoming batch without producing a new row — the group's latest state
+// failed the having clause, so Java's regenerated output row is suppressed
+// and no earlier passing row may stand in for it.
+func dropLastOutputPending(result *ResultBatch, incoming ResultBatch) {
+	if len(incoming.updatedGroupKeys) == 0 {
+		return
+	}
+	incomingNew := make(map[string]struct{}, len(incoming.New))
+	for index := range incoming.New {
+		incomingNew[outputGroupKey(incoming.outputKeysNew, index)] = struct{}{}
+	}
+	drop := make(map[string]struct{})
+	for _, key := range incoming.updatedGroupKeys {
+		if _, ok := incomingNew[key]; !ok {
+			drop[key] = struct{}{}
+		}
+	}
+	if len(drop) == 0 {
+		return
+	}
+	kept := result.New[:0]
+	keptKeys := result.outputKeysNew[:0]
+	for index, row := range result.New {
+		key := outputGroupKey(result.outputKeysNew, index)
+		// Ungrouped pending rows carry the synthetic global key while the
+		// aggregate state tracks the single group as "<all>".
+		dropKey := key
+		if dropKey == "\x00esper-output-global" {
+			dropKey = "<all>"
+		}
+		if _, bad := drop[dropKey]; bad {
+			continue
+		}
+		kept = append(kept, row)
+		keptKeys = append(keptKeys, key)
+	}
+	result.New = kept
+	result.outputKeysNew = keptKeys
 }
 
 func mergeLastOutputSide(existing, incoming []Result, existingKeys, incomingKeys []string) ([]Result, []string) {
@@ -12559,7 +12826,7 @@ func (r *statementRuntime) finishOutput(policy OutputPolicy, batch ResultBatch, 
 		// counter reads zero after any output evaluation.
 		r.outputState.changesetRows = 0
 	}
-	if batch.empty() {
+	if batch.empty() && !batch.forced {
 		return batch
 	}
 	if batch.Sequence == 0 {
@@ -19858,9 +20125,6 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			state.groupOrder = append(state.groupOrder, key)
 		}
 		// A table trigger may delete an aggregate-backed materialized row
-		// without discarding its aggregation history. The next contribution
-		// change for this group makes the row eligible for materialization
-		// again, matching Esper's into-table ownership lifecycle.
 		group.tableSuppressed = false
 		group.current = event
 		return key
@@ -19888,8 +20152,20 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			}
 		}
 	}
+	// Java's output-limit helpers (OutputConditionLast*/First*/Every over
+	// RowPerGroup) track every updated group key — inserts and expiries
+	// alike — and generate the current row per group at output time. Pure
+	// time-expiry batches suppress listener new rows (emitNew above), but
+	// the pending merge feeding output limits still needs the post-removal
+	// row for each expiry-affected group, so those rows are emitted into
+	// the batch for every explicit output-limit policy. The default
+	// OutputAllPolicy delivers batches directly to listeners and keeps the
+	// suppress-pure-expiry contract.
+	outputLimitExpiryNew := len(definition.groupBy) > 0 && !emitNew && len(delta.oldEvents) > 0 &&
+		plan.query.output.Kind != OutputAllPolicy
 
 	batch := ResultBatch{Time: now, forced: delta.forced}
+	batch.updatedGroupKeys = append(batch.updatedGroupKeys, affected...)
 	batch.outputCountsSet = true
 	batch.outputInserted = int64(len(delta.newEvents))
 	batch.outputRemoved = int64(len(delta.oldEvents))
@@ -20106,7 +20382,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 					})
 				}
 			}
-		} else if visible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
+		} else if visible && (emitNew || outputLimitExpiryNew) && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
 				result: resultRow(newRow(plan.resultSchema, newValues)),
 				group:  group,

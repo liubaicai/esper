@@ -959,6 +959,169 @@ Active: Draft 4.432 ('resultset-outputlimit-row-per-group-last').
   variant 0 = istream (no WithOldStream), variant 1 = irstream; fresh
   env+engine per case, WithStartTime(epoch), non-monotonic AdvanceTime OK.
   Join precedent: resultset_aggregate_join.go (SupportBean#keepall twin).
+- [x] Assets authored by parity-asset-worker `FLWStarAssets` (same worker):
+      oracle (dual-run: deployIndex 0=plain, 1=irstream replace) + run.sh +
+      scenario (320 steps: 4 cases, 204 advance-time, 8 deploy/undeploy-all,
+      96 sends) + runner (manual deploy loop, WithOldStream on variant 1) +
+      run.go wiring. Worker surfaced a NEW engine gap: output last dropped
+      groups whose aggregate changed only via time-window expiry.
+- [x] **Engine fixes (shared core, primary agent)**: (1) aggregateBatch now
+      emits post-removal new rows for expiry-affected groups under the
+      output-last policy family (OutputLast/LastEveryEvents/LastEveryTime) —
+      Java's output-last helpers track updated group keys from inserts AND
+      expiries; pure-expiry listener suppression unchanged for other
+      policies. (2) applyLastEveryTimeGrouped plain row-per-group routed
+      through the previous-output-old path (was merged delta olds) + olds
+      gated on SelectIRStream/SelectRStream — also closes the rollup
+      output-last istream P3 from the 4.431 review. (3) applyFirstEveryTime
+      grouped having New->Old copy gated on remove-stream selector — closes
+      the second 4.431 P3.
+- [x] Differential replay: Java 48 records / Go 48 records, status passing /
+      0 differences (was 40/48 pre-fix — 8 expiry-driven records dropped).
+      Checked-in Java trace md5 `ce7df15fd2ff50b131696e2c43e12d97`.
+      Regression re-verified: multikey diff, rollup-output-last[-sorted|
+      -market], rollup-output-every-sorted, rollup-output-first[-having],
+      output-first-having, rollup-output-all[-sorted], rollup-output-default-
+      market, resultset-aggregate-group-output/-no-output — all passing/0.
+- [x] run_test pair added: four discriminating mutations
+      (expiry-group-dropped, istream-old-leak, previous-output-old-wrong,
+      orderby-violation) — all rejected.
+- [x] Manifest: NEW case.resultset-output-limit-row-per-group-last born-DV
+      (4 IDs split from umbrella, now 30 IDs); output.core +4 DV IDs.
+      Summary: 675 cases / 673 implemented / 301 DV cases / 1116 DV runtime
+      IDs / 3682 associations / referenced 3331 / unreferenced 805. Roadmap +
+      CHANGELOG recorded (Draft 4.432).
+- [x] Independent parity review (agent ParityReview432): OVERALL PASS, A-H
+      all confirmed; three P3 notes — (1) lastEveryOutputRows diverges
+      under having (fixed in 4.433), (2) Java emits expiry rows for ALL
+      row-per-group policies (widened in 4.433), (3) cosmetic
+      advanceOutputSchedule inconsistency. NOTE: 4.432 was NOT committed
+      separately — its runtime.go hunks are entangled with 4.433's; both
+      units ship in one commit after 4.433 review.
+
+## Current work unit
+Active: Draft 4.433 ('resultset-outputlimit-row-per-group-having-first-snap').
+
+- Unit selected: `ResultSetOutputLimitRowPerGroup.java` ords 17-22 —
+  ResultSet15/16LastHaving[Join] (having sum(price)>50 + output last every
+  1s × 3 SupportOutputLimitOpt hint variants), ResultSet17FirstNoHaving
+  [Join] (output first every 1s), ResultSet18SnapshotNoHaving[Join]
+  (output snapshot + order by symbol). All ResultAssertExecution dual-run
+  on the shared ResultAssertInput schedule. Runtime IDs:
+  0537627a9e2ced9a101d / 5662e97901c7b1960530 / 7c3c8427c5d48c24774e /
+  54b18a72ff7fa42b3afe / ebfb2b66f2dd8778a08b / 5d74da396c739c122464.
+- [x] Assets authored by parity-asset-worker `FLWStarAssets` (same worker):
+      oracle (deployIndex→hint×irstream mapping) + run.sh + scenario
+      (796 steps: 6 cases, 510 advance-time, 20 deploy/undeploy-all, 240
+      sends) + runner (Having via GroupBy().Select().Having(Greater(Sum,
+      Literal(50.0))); hints via WithStatementHints) + run.go wiring.
+      Two worker defects fixed via steering: compat.Record/TraceVersion
+      compile errors; stale jq validation in run.sh (copied -last counts).
+- [x] **Engine fixes (shared core, primary agent)**: (1) ResultBatch gained
+      updatedGroupKeys (all group keys touched by the batch incl. expiries),
+      merged through mergeLastOutputBatch; a batch updating a key without a
+      new row (having rejected latest state) invalidates the stale pending
+      row. (2) applyLastEveryTimeGrouped emits old for every updated key —
+      previous output when present, else null-prior gated on having
+      accepting the empty-group state (Java emits old even when new is
+      having-suppressed: t=7200 IBM new=null, old={IBM,72}). (3)
+      aggregateBatch expiry-new emission widened from output-last family to
+      every explicit output-limit policy (Kind != OutputAllPolicy) —
+      output first posts expiry rows like Java's updateOutputCondition(0,1).
+- [x] Differential replay: Java 114 records / Go 114 records, status
+      passing / 0 differences. Checked-in Java trace md5
+      `7a509b90fce43660b4cabff818966e35`. Regression re-verified: last,
+      multikey, events, aggregate-multikey, all rollup-output-* diffs,
+      output-first-having, resultset-aggregate-group-output/-no-output —
+      all passing/0.
+- [x] run_test pair added: four discriminating mutations
+      (having-old-without-new, first-expiry-row-missing,
+      snapshot-emptied-group-kept, istream-old-leak) — all rejected.
+- [x] Manifest: NEW case.resultset-output-limit-row-per-group-having-first-
+      snap born-DV (6 IDs split from umbrella, now 24 IDs); output.core +6
+      DV IDs. Summary: 676 cases / 674 implemented / 302 DV cases / 1122 DV
+      runtime IDs / 3682 associations / referenced 3331 / unreferenced 805.
+      Roadmap + CHANGELOG recorded (Draft 4.433).
+
+## Current work unit
+Active: Draft 4.434 ('resultset-outputlimit-row-per-group-all').
+
+- Unit selected: `ResultSetOutputLimitRowPerGroup.java` ords 9-12 —
+  ResultSet9/10AllNoHaving[Join] (`order by symbol`, no hint loop) and
+  ResultSet11/12AllHaving[Join] (`having sum(price)>50` × 3 hint variants,
+  no order-by — ENABLE hint + order-by is a compile error). Runtime IDs:
+  3cb45ffbbce3a1039f72 / 2cfe8200a666f421582d / 2a425da1594958f77a88 /
+  073783d29500f840e025. Contract frozen by agents NextJavaContract7 +
+  NextGoSurface7 (plain-message fallback after schema-yield failures).
+- [x] Assets authored by parity-asset-worker `FLWStarAssets` (same worker):
+      oracle + run.sh + scenario (636 steps: 4 cases, 408 advance-time,
+      16 deploy/undeploy-all, 192 sends) + runner + run.go wiring.
+- [x] **Engine fixes (shared core, primary agent)**:
+      (1) `applyAllEveryTime` grouped branch reworked to Java `groupReps`
+      semantics — `allEveryOutputRows`/`allEveryOutputVisible`/
+      `allEveryUpdatedKeys` track last-generated rows with having
+      visibility: interval-start row posts as old only when it passed
+      having; updated-but-failed groups emit no new row and mark the rep
+      invisible; emptied groups re-emit a null-aggregate row when the
+      empty-group state passes having (t=7200 MSFT null).
+      (2) **Force-dispatch**: Java `OutputConditionTime`/`Crontab`
+      (FORCE_UPDATE=true) dispatches the listener callback with an empty
+      pair at quiet boundaries — `applyAllEveryTime`,
+      `applyLastEveryTime(+Grouped)` and `OutputEveryTimePolicy` now
+      return `ResultBatch{forced:true}` instead of swallowing the
+      boundary; `finishOutput` lets forced batches reach
+      `applyOutputAssignments`. Parity traces keep the established
+      convention of recording only payload-carrying callbacks: the -all
+      oracle gained the same null/null skip as its 12 siblings, the
+      compat recorders skip empty listener batches (sequence not
+      consumed), and the three custom row-per-group record funcs skip
+      them too.
+      (3) **Reviewer P2 fixes** (ParityReview433): `applyLastEveryTimeGrouped`
+      old rows gated on `lastEveryOutputVisible` (interval-start row must
+      have passed having — fail→fail no longer re-emits stale old);
+      all-suppressed batches (`updatedGroupKeys` only) still merge so
+      stale pending rows are invalidated and the schedule arms;
+      `dropLastOutputPending` covers the empty-incoming path and
+      normalizes the ungrouped `<all>` key vs `\x00esper-output-global`.
+      Reviewer's `removeOutputGroupRow` suggestion was reverted: Java's
+      groupReps retains emptied-group reps (MSFT@7200 evidence).
+- [x] Differential replay: Java 94 records / Go 94 records, status
+      passing / 0 differences. Regression re-verified: all 9 diffs that
+      broke under force-dispatch (rollup-output-last/default-market,
+      aggregate-time-window/-last-time-window/-join/-all-having/
+      -limit-snapshot, row-per-group-last/-having-first-snap) pass again
+      after the recorder convention; plus the earlier 17-diff sweep.
+- [x] run_test pair added: four discriminating mutations
+      (all-reemit-missing, having-old-without-new, emptied-group-null-row,
+      istream-old-leak) — all rejected.
+- [x] Engine tests updated for real Java behavior:
+      TestRollupOutput{Last,Default}MarketParity now expect the forced
+      empty batch at t=3200 (7 batches).
+- [x] **Convention fallout fix**: `context-init-term-output-clause` was the
+      only chain whose oracle recorded null/null listener callbacks
+      (partition-start `output when` + quiet termination forced dispatches).
+      With the recorder skip in place its Java trace needed the same
+      payload-only convention: added the null/null skip to
+      `ContextInitTermOutputClauseScenarioOracle.TraceWriter.update`,
+      regenerated the Java trace (17→15 records) and evidence via the
+      pinned run script; diff passing/0, all five trace mutations still
+      rejected. Full `make check` re-run green after the fix.
+- [x] Manifest: NEW case.resultset-output-limit-row-per-group-all born-DV
+      (4 IDs split from umbrella, now 20 IDs); output.core +4 DV IDs.
+      Summary: 677 cases / 675 implemented / 303 DV cases / 1126 DV
+      runtime IDs / 3682 associations / referenced 3331 / unreferenced 805.
+      Roadmap + CHANGELOG recorded (Draft 4.434).
+- [x] Confirmation review (agent `ParityReview434`, same reviewer as
+      ParityReview433): OVERALL PASS, no new P0/P1/P2. Item A gating
+      verified at runtime.go:11019/11067-11085/10937-10948/11659-11754;
+      `removeOutputGroupRow` confirmed only on genuine group-removal paths
+      (20338/20471); MSFT@7200 null-aggregate row confirmed in the -all
+      trace. Item B oracle guard + regenerated evidence verified; global
+      evidence scan shows zero remaining empty listener records. Item C
+      manifest/evidence totals verified.
+- [x] Full local gates GREEN after every edit: `make check` exit 0
+      (check-layout, go vet, full go test; parity ~197s, internal/esper
+      ~57s), compat manifest validation green, gofmt clean.
 
 ## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').

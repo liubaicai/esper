@@ -1151,7 +1151,9 @@
     "internal/esper/output_changeset_test.go",
     "internal/app/parity/resultset_output_limit_row_per_group_events.go",
     "internal/esper/runtime.go",
-    "internal/app/parity/resultset_output_limit_row_per_group_multikey.go"
+    "internal/app/parity/resultset_output_limit_row_per_group_multikey.go",
+    "internal/app/parity/resultset_output_limit_row_per_group_last.go",
+    "internal/app/parity/resultset_output_limit_row_per_group_having_first_snap.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1205,7 +1207,17 @@
     "java-runtime-4b69198e8a2cc665a379",
     "java-runtime-49a1acbfbe84da2b0479",
     "java-runtime-80584d4ff67f59c3a260",
-    "java-runtime-dbe1c30970ff2232fc35"
+    "java-runtime-dbe1c30970ff2232fc35",
+    "java-runtime-930299a6192880bda3bc",
+    "java-runtime-79057f1ac92150b68e68",
+    "java-runtime-c30ea1262639b9008249",
+    "java-runtime-101fbc773a180b386246",
+    "java-runtime-0537627a9e2ced9a101d",
+    "java-runtime-5662e97901c7b1960530",
+    "java-runtime-7c3c8427c5d48c24774e",
+    "java-runtime-54b18a72ff7fa42b3afe",
+    "java-runtime-ebfb2b66f2dd8778a08b",
+    "java-runtime-5d74da396c739c122464"
    ],
    "representativeScenarioIds": [
     "filter-window-aggregate-output",
@@ -1233,7 +1245,9 @@
     "resultset-aggregate-last",
     "resultset-aggregate-no-output",
     "resultset-output-limit-row-per-group-events",
-    "resultset-output-limit-row-per-group-multikey"
+    "resultset-output-limit-row-per-group-multikey",
+    "resultset-output-limit-row-per-group-last",
+    "resultset-output-limit-row-per-group-having-first-snap"
    ]
   },
   {
@@ -15009,20 +15023,6 @@
     "java-runtime-66eefdbac64b7ab79a9b",
     "java-runtime-3df0124bc42a5e107a8c",
     "java-runtime-56e8b086b5eaf29a9494",
-    "java-runtime-3cb45ffbbce3a1039f72",
-    "java-runtime-2cfe8200a666f421582d",
-    "java-runtime-2a425da1594958f77a88",
-    "java-runtime-073783d29500f840e025",
-    "java-runtime-930299a6192880bda3bc",
-    "java-runtime-79057f1ac92150b68e68",
-    "java-runtime-c30ea1262639b9008249",
-    "java-runtime-101fbc773a180b386246",
-    "java-runtime-0537627a9e2ced9a101d",
-    "java-runtime-5662e97901c7b1960530",
-    "java-runtime-7c3c8427c5d48c24774e",
-    "java-runtime-54b18a72ff7fa42b3afe",
-    "java-runtime-ebfb2b66f2dd8778a08b",
-    "java-runtime-5d74da396c739c122464",
     "java-runtime-b07a17ff039944570426",
     "java-runtime-7238514718862bc6b951",
     "java-runtime-95facebe857914d29fc6",
@@ -15045,20 +15045,6 @@
     "ResultSet6DefaultNoHavingJoin",
     "ResultSet7DefaultHavingNoJoin",
     "ResultSet8DefaultHavingJoin",
-    "ResultSet9AllNoHavingNoJoin",
-    "ResultSet10AllNoHavingJoin",
-    "ResultSet11AllHavingNoJoin",
-    "ResultSet12AllHavingJoin",
-    "ResultSet13LastNoHavingNoJoin",
-    "ResultSet14LastNoHavingJoin",
-    "ResultSet13LastNoHavingNoJoinWOrderBy",
-    "ResultSet14LastNoHavingJoinWOrderBy",
-    "ResultSet15LastHavingNoJoin",
-    "ResultSet16LastHavingJoin",
-    "ResultSet17FirstNoHavingNoJoin",
-    "ResultSet17FirstNoHavingJoin",
-    "ResultSet18SnapshotNoHavingNoJoin",
-    "ResultSet18SnapshotNoHavingJoin",
     "ResultSetJoinSortWindow",
     "ResultSetLimitSnapshot",
     "ResultSetLimitSnapshotLimit",
@@ -43071,6 +43057,239 @@
     "Shared-core fix: applyAllEveryTime's grouped branch synthesized old rows unconditionally; Java emits the remove stream only for irstream/rstream selectors. Old-row synthesis is now gated on the selector, fixing spurious old rows for non-irstream output-all.",
     "The first output for all/last/snapshot fires at the first interval boundary after deployment, not at t=0; output first fires immediately on the first row then suppresses until interval end."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-per-group-last",
+   "javaRuntimeIds": [
+    "java-runtime-930299a6192880bda3bc",
+    "java-runtime-79057f1ac92150b68e68",
+    "java-runtime-c30ea1262639b9008249",
+    "java-runtime-101fbc773a180b386246"
+   ],
+   "javaNames": [
+    "ResultSet13LastNoHavingNoJoin",
+    "ResultSet14LastNoHavingJoin",
+    "ResultSet13LastNoHavingNoJoinWOrderBy",
+    "ResultSet14LastNoHavingJoinWOrderBy"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupLastDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupLastDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "row-per-group",
+    "grouped",
+    "output-last",
+    "time-window",
+    "join",
+    "order-by",
+    "virtual-time",
+    "dual-run",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-per-group-last.json",
+    "testdata/parity/resultset-output-limit-row-per-group-last.trace.json",
+    "testdata/parity/resultset-output-limit-row-per-group-last.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowPerGroupLastScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-per-group-last.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-930299a6192880bda3bc",
+    "java-runtime-79057f1ac92150b68e68",
+    "java-runtime-c30ea1262639b9008249",
+    "java-runtime-101fbc773a180b386246"
+   ],
+   "representativeScenarioIds": [
+    "resultset-output-limit-row-per-group-last"
+   ],
+   "notes": [
+    "ResultSet13LastNoHavingNoJoin, ResultSet14LastNoHavingJoin and their WOrderBy twins replayed through one shared scenario (48 records, 0 differences): grouped irstream output last every 1 second over #time(5.5 sec), with and without a SupportBean#keepall join and an explicit order by symbol. Each execution runs twice per ResultAssertExecution — plain select (istream, old asserted null) then select irstream — over the shared ResultAssertInput virtual-time schedule.",
+    "Shared-core fixes: (1) applyLastEveryTimeGrouped now routes plain row-per-group through the previous-output-rows path (old = each group's last emitted row, incl. emptied groups' retained outputs) instead of merged delta olds, and gates synthesized old rows on SelectIRStream/SelectRStream — also closing the rollup output-last istream latent. (2) aggregateBatch emits post-removal new rows for expiry-affected groups under the output-last policy family (Java's output-last helpers track updated group keys from inserts and expiries alike); pure-expiry listener suppression is unchanged for other policies. (3) applyFirstEveryTime's grouped having branch copies New->Old only for remove-stream selectors.",
+    "Old rows are each group's previous OUTPUT row, not the pre-event delta value: at t=7200 IBM old=72 (the t=6200 output) while its pre-expiry delta was 97."
+   ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-per-group-having-first-snap",
+   "javaRuntimeIds": [
+    "java-runtime-0537627a9e2ced9a101d",
+    "java-runtime-5662e97901c7b1960530",
+    "java-runtime-7c3c8427c5d48c24774e",
+    "java-runtime-54b18a72ff7fa42b3afe",
+    "java-runtime-ebfb2b66f2dd8778a08b",
+    "java-runtime-5d74da396c739c122464"
+   ],
+   "javaNames": [
+    "ResultSet15LastHavingNoJoin",
+    "ResultSet16LastHavingJoin",
+    "ResultSet17FirstNoHavingNoJoin",
+    "ResultSet17FirstNoHavingJoin",
+    "ResultSet18SnapshotNoHavingNoJoin",
+    "ResultSet18SnapshotNoHavingJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupHavingFirstSnapDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupHavingFirstSnapDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "row-per-group",
+    "grouped",
+    "having",
+    "output-last",
+    "output-first",
+    "output-snapshot",
+    "time-window",
+    "join",
+    "order-by",
+    "outputlimit-opt-hint",
+    "virtual-time",
+    "dual-run",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-per-group-having-first-snap.json",
+    "testdata/parity/resultset-output-limit-row-per-group-having-first-snap.trace.json",
+    "testdata/parity/resultset-output-limit-row-per-group-having-first-snap.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowPerGroupHavingFirstSnapScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-per-group-having-first-snap.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0537627a9e2ced9a101d",
+    "java-runtime-5662e97901c7b1960530",
+    "java-runtime-7c3c8427c5d48c24774e",
+    "java-runtime-54b18a72ff7fa42b3afe",
+    "java-runtime-ebfb2b66f2dd8778a08b",
+    "java-runtime-5d74da396c739c122464"
+   ],
+   "representativeScenarioIds": [
+    "resultset-output-limit-row-per-group-having-first-snap"
+   ],
+   "notes": [
+    "ResultSet15LastHavingNoJoin, ResultSet16LastHavingJoin, ResultSet17FirstNoHavingNoJoin/Join and ResultSet18SnapshotNoHavingNoJoin/Join replayed through one shared scenario (114 records, 0 differences): grouped irstream output last/first/snapshot every 1 second over #time(5.5 sec) with having sum(price) > 50 (last-having only), SupportBean#keepall join twins, order by symbol on snapshot, and all three SupportOutputLimitOpt hint variants on the last-having pair. Each execution runs twice per ResultAssertExecution — plain select then select irstream — over the shared ResultAssertInput virtual-time schedule.",
+    "Shared-core fixes: (1) ResultBatch carries updatedGroupKeys — every group key touched by the batch (inserts and expiries) — merged through mergeLastOutputBatch; a batch that updates a key without a new row (having rejected the latest state) invalidates the stale pending row for that key. (2) applyLastEveryTimeGrouped emits old rows for every updated key, not just keys with a new row: previous output when present, else a null-prior row gated on the having clause accepting the empty-group state. (3) aggregateBatch emits post-removal new rows for expiry-affected groups under every explicit output-limit policy (was output-last family only) — output first every 1s posts expiry rows like Java's updateOutputCondition(0,1) path.",
+    "Java's output-last helper posts the previous output row as old even when the group's latest state fails having: at t=7200 IBM's new row is suppressed (48 < 50) while old {IBM,72} still emits."
+   ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-per-group-all",
+   "javaRuntimeIds": [
+    "java-runtime-3cb45ffbbce3a1039f72",
+    "java-runtime-2cfe8200a666f421582d",
+    "java-runtime-2a425da1594958f77a88",
+    "java-runtime-073783d29500f840e025"
+   ],
+   "javaStaticIds": [
+    "java-e4b9e4ed53a43cd360b1",
+    "java-c2f74c2589bf0414d654",
+    "java-62c24905b76ff3fc0c5d",
+    "java-826ccfb25fb656367980"
+   ],
+   "javaNames": [
+    "ResultSet9AllNoHavingNoJoin",
+    "ResultSet10AllNoHavingJoin",
+    "ResultSet11AllHavingNoJoin",
+    "ResultSet12AllHavingJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupAllDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupAllDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "row-per-group",
+    "grouped",
+    "having",
+    "output-all",
+    "time-window",
+    "join",
+    "order-by",
+    "outputlimit-opt-hint",
+    "virtual-time",
+    "dual-run",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-per-group-all.json",
+    "testdata/parity/resultset-output-limit-row-per-group-all.trace.json",
+    "testdata/parity/resultset-output-limit-row-per-group-all.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowPerGroupAllScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-per-group-all.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-3cb45ffbbce3a1039f72",
+    "java-runtime-2cfe8200a666f421582d",
+    "java-runtime-2a425da1594958f77a88",
+    "java-runtime-073783d29500f840e025"
+   ],
+   "representativeScenarioIds": [
+    "resultset-output-limit-row-per-group-all"
+   ],
+   "notes": [
+    "ResultSet9AllNoHavingNoJoin, ResultSet10AllNoHavingJoin, ResultSet11AllHavingNoJoin and ResultSet12AllHavingJoin replayed through one shared scenario (94 records, 0 differences): grouped irstream output all every 1 second over #time(5.5 sec) with having sum(price) > 50 on the having pair, SupportBean#keepall join twins, order by symbol on the no-having pair, and all three SupportOutputLimitOpt hint variants on the having pair. Each execution runs twice per ResultAssertExecution - plain select then select irstream - over the shared ResultAssertInput virtual-time schedule. Output-all re-emits every group each interval including unchanged and emptied groups (MSFT's null-aggregate row at t=7200); under having, updated-but-failing groups still post their interval-start row as old while the new row is suppressed.",
+    "Shared-core fixes: (1) applyAllEveryTime's grouped branch tracks last-generated rows with having visibility (allEveryOutputRows/allEveryOutputVisible/allEveryUpdatedKeys): the interval-start row posts as old only when it passed having, updated-but-failed groups emit no new row and mark the stored representative invisible, and emptied groups re-emit a null-aggregate row when the empty-group state passes having. (2) Java's OutputConditionTime/Crontab force-dispatches the listener callback with an empty pair at quiet boundaries (OutputStrategyUtil forceUpdate): applyAllEveryTime, applyLastEveryTime(+Grouped) and the OutputEveryTimePolicy paths now return a forced batch instead of swallowing the boundary, and finishOutput lets forced batches reach applyOutputAssignments. Parity traces keep the established convention of recording only payload-carrying callbacks - the Java oracles skip the same empty pairs and the compat recorders skip empty listener batches. (3) applyLastEveryTimeGrouped posts old rows only for keys whose interval-start row passed having (lastEveryOutputVisible), merges batches whose rows were all suppressed (updatedGroupKeys still invalidate stale pending rows and arm the schedule), and mergeLastOutputPending drops stale pending rows on the empty-incoming path with the ungrouped <all> key normalized."
+   ]
   }
  ],
  "mappings": [
@@ -46105,15 +46324,27 @@
   {
    "capabilityId": "output.core",
    "caseId": "case.resultset-output-limit-row-per-group-multikey"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-row-per-group-last"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-row-per-group-having-first-snap"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-row-per-group-all"
   }
  ],
  "summary": {
-  "inventoriedCases": 674,
-  "implementedCases": 672,
-  "differentialVerifiedCases": 300,
-  "differentialVerifiedRuntimeIds": 1112,
+  "inventoriedCases": 677,
+  "implementedCases": 675,
+  "differentialVerifiedCases": 303,
+  "differentialVerifiedRuntimeIds": 1126,
   "intentionallyDifferentCases": 28,
-  "representativeVerifiedCases": 107,
+  "representativeVerifiedCases": 110,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46125,9 +46356,9 @@
   "referencedJavaRuntimeIds": 3331,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 805,
-  "representativeScenarioTotal": 110,
-  "representativeScenarioPassing": 110,
-  "totalCases": 674,
+  "representativeScenarioTotal": 113,
+  "representativeScenarioPassing": 113,
+  "totalCases": 677,
   "totalCapabilities": 120
  }
 }

@@ -259,6 +259,13 @@ func Replay(ctx context.Context, engine *esper.Engine, statement *esper.Statemen
 	var mu sync.Mutex
 	var listenerSequence uint64
 	_, err := statement.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+		if len(batch.New) == 0 && len(batch.Old) == 0 {
+			// Java's OutputConditionTime/Crontab force-dispatches the listener
+			// callback with an empty pair at quiet boundaries; the parity
+			// trace convention records only payload-carrying callbacks (the
+			// Java oracles skip the same empty pairs).
+			return nil
+		}
 		listenerSequence++
 		record := TraceRecord{Operation: "listener", Statement: statement.Name(), Sequence: listenerSequence, Time: formatTraceTime(batch.Time)}
 		record.New = normalizeResults(batch.New)
@@ -349,6 +356,13 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 	caseName := ""
 	listenerSequences := make(map[string]uint64)
 	appendBatch := func(caseName, operation string, current *esper.Statement, batch esper.ResultBatch, selector esper.ContextPartitionSelector, sequence uint64) {
+		if operation == "listener" && len(batch.New) == 0 && len(batch.Old) == 0 {
+			// Java's OutputConditionTime/Crontab force-dispatches the listener
+			// callback with an empty pair at quiet boundaries; the parity
+			// trace convention records only payload-carrying callbacks (the
+			// Java oracles skip the same empty pairs).
+			return
+		}
 		record := TraceRecord{Case: caseName, Operation: operation, Statement: current.Name(), Sequence: sequence, Time: formatTraceTime(batch.Time)}
 		record.New = normalizeResults(batch.New)
 		record.Old = normalizeResults(batch.Old)
@@ -377,6 +391,11 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 	for _, current := range statements {
 		current := current
 		if _, err := current.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+			if len(batch.New) == 0 && len(batch.Old) == 0 {
+				// Force-dispatched empty pairs are not recorded and do not
+				// consume a sequence number (Java oracle convention).
+				return nil
+			}
 			listenerSequences[current.Name()]++
 			appendBatch(caseName, "listener", current, batch, nil, listenerSequences[current.Name()])
 			return nil
@@ -438,6 +457,9 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 					statements = append(statements, attached)
 				}
 				if _, err := attached.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+					if len(batch.New) == 0 && len(batch.Old) == 0 {
+						return nil
+					}
 					listenerSequences[attached.Name()]++
 					appendBatch(caseName, "listener", attached, batch, nil, listenerSequences[attached.Name()])
 					return nil

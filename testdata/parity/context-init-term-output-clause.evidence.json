@@ -583,13 +583,6 @@
         "operation": "listener",
         "statement": "s0",
         "sequence": 1,
-        "time": "2002-05-01T08:01:00Z"
-      },
-      {
-        "case": "op-when-set-variable",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
         "time": "2002-05-01T08:01:00Z",
         "new": [
           {
@@ -603,19 +596,14 @@
       {
         "case": "op-when-set-variable",
         "operation": "variable",
+        "sequence": 0,
         "name": "myvar",
         "value": 1
       },
       {
         "case": "op-when-set-variable",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "2002-05-01T08:02:00Z"
-      },
-      {
-        "case": "op-when-set-variable",
         "operation": "variable",
+        "sequence": 0,
         "name": "myvar",
         "value": 2
       },
@@ -637,6 +625,7 @@
       {
         "case": "op-only-terminated-set",
         "operation": "variable",
+        "sequence": 0,
         "name": "myvar",
         "value": 10
       }
@@ -874,13 +863,6 @@
         "operation": "listener",
         "statement": "s0",
         "sequence": 1,
-        "time": "2002-05-01T08:01:00Z"
-      },
-      {
-        "case": "op-when-set-variable",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 2,
         "time": "2002-05-01T08:01:00Z",
         "new": [
           {
@@ -894,19 +876,14 @@
       {
         "case": "op-when-set-variable",
         "operation": "variable",
+        "sequence": 0,
         "name": "myvar",
         "value": 1
       },
       {
         "case": "op-when-set-variable",
-        "operation": "listener",
-        "statement": "s0",
-        "sequence": 3,
-        "time": "2002-05-01T08:02:00Z"
-      },
-      {
-        "case": "op-when-set-variable",
         "operation": "variable",
+        "sequence": 0,
         "name": "myvar",
         "value": 2
       },
@@ -928,6 +905,7 @@
       {
         "case": "op-only-terminated-set",
         "operation": "variable",
+        "sequence": 0,
         "name": "myvar",
         "value": 10
       }

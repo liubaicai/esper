@@ -91,8 +91,11 @@ func TestRollupOutputLastMarketParity(t *testing.T) {
 	advance(7000)
 	advance(7200)
 
-	if len(batches) != 6 {
-		t.Fatalf("batches = %d, want 6", len(batches))
+	// Java's OutputConditionTime force-dispatches the listener callback with
+	// an empty pair at quiet boundaries (OutputStrategyUtil forceUpdate):
+	// the t=3200 boundary produces a seventh, empty batch.
+	if len(batches) != 7 {
+		t.Fatalf("batches = %d, want 7", len(batches))
 	}
 	want := [][][][2]any{
 		{
@@ -103,6 +106,7 @@ func TestRollupOutputLastMarketParity(t *testing.T) {
 			{{"IBM", 75.0}, {"YAH", 1.0}, {nil, 85.0}},
 			{{"IBM", 25.0}, {"YAH", nil}, {nil, 34.0}},
 		},
+		{{}, {}},
 		{
 			{{"YAH", 3.0}, {nil, 87.0}},
 			{{"YAH", 1.0}, {nil, 85.0}},

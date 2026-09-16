@@ -244,6 +244,13 @@ public final class ContextInitTermOutputClauseScenarioOracle {
 
         @Override
         public void update(EventBean[] newEvents, EventBean[] oldEvents, EPStatement ignored, EPRuntime ignoredRuntime) {
+            // Forced dispatches (partition-start `output when`, quiet
+            // termination) invoke the listener with a null/null pair; the
+            // parity trace convention records only payload-carrying
+            // callbacks, matching the output-limit sibling oracles.
+            if (newEvents == null && oldEvents == null) {
+                return;
+            }
             JsonObject record = new JsonObject()
                     .add("case", caseName)
                     .add("operation", "listener")
