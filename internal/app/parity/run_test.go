@@ -15420,6 +15420,109 @@ func TestRunViewLengthWinPropertyDetailDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunViewParameterizedByContextDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-parameterized-by-context.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "view-parameterized-by-context.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-parameterized-by-context.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "view-parameterized-by-context-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunViewParameterizedByContextDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "parameterized-size-cap-leak",
+			mutate: func(trace *compat.Trace) {
+				// Record 36 is the capped snapshot {P1:2,P2:4,P3:3}; a leaked
+				// extra P1 row means the parameterized size was ignored.
+				trace.Records[36].New = append(trace.Records[36].New, compat.ResultRecord{
+					Kind:   "row",
+					Fields: map[string]any{"cnt": 2, "id": "P1"},
+				})
+			},
+		},
+		{
+			name: "partition-filter-leak",
+			mutate: func(trace *compat.Trace) {
+				// The theString=context.miewl.id gate must route P1's value
+				// event only to P1's partition.
+				trace.Records[0].New[0].Fields["id"] = "P1"
+			},
+		},
+		{
+			name: "doc-sample-count-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[37].New[0].Fields["cnt"] = 5
+			},
+		},
+		{
+			name: "ungrouped-old-row-appears",
+			mutate: func(trace *compat.Trace) {
+				// Context-partitioned ungrouped aggregates deliver no
+				// null-prior old rows; injecting one breaks the shape.
+				trace.Records[0].Old = []compat.ResultRecord{{
+					Kind:   "row",
+					Fields: map[string]any{"cnt": 0, "id": "P2"},
+				}}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-parameterized-by-context.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "view-parameterized-by-context.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-parameterized-by-context.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "view-parameterized-by-context-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunViewTimeBatchDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "view-time-batch.evidence.json"),

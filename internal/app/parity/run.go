@@ -59,6 +59,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include view-first-time and view-first-time-diff")
 		fmt.Fprintln(stderr, "runner modes include view-length-win-property-detail and view-length-win-property-detail-diff")
 		fmt.Fprintln(stderr, "runner modes include view-time-batch and view-time-batch-diff")
+		fmt.Fprintln(stderr, "runner modes include view-parameterized-by-context and view-parameterized-by-context-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-named-window-final-views and infra-named-window-final-views-diff")
 		flags.PrintDefaults()
 	}
@@ -3514,6 +3515,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNwTableFafJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNwTableFafJoinJavaSources),
 				splitMetadata(*javaExecutions, infraNwTableFafJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "view-parameterized-by-context" || *mode == "view-parameterized-by-context-diff" {
+		trace, err := runViewParameterizedByContextScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-parameterized-by-context-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewParameterizedByContextJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewParameterizedByContextJavaSources),
+				splitMetadata(*javaExecutions, viewParameterizedByContextJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

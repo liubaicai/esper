@@ -6210,6 +6210,12 @@ type windowRuntimeState struct {
 	// time(<parameter>)), mirroring Esper's view-creation evaluation.
 	timeWindowExprResolved     bool
 	resolvedTimeWindowDuration time.Duration
+	// lengthSizeExprResolved/resolvedLengthSize hold the partition-time
+	// snapshot of a context-parameterized length window
+	// (length(context.<initiator>.<prop>)): resolved once, on the partition's
+	// first event, with the partition's context properties bound.
+	lengthSizeExprResolved bool
+	resolvedLengthSize     int
 }
 
 type statementRuntime struct {
@@ -7473,6 +7479,24 @@ func (r *statementRuntime) resolveWindowDurations(plan Plan) {
 			r.windows[node] = state
 		}
 	}
+}
+
+// resolveLengthWindowSize evaluates a context-parameterized length window
+// size once per partition runtime, with the partition's variables (including
+// its context properties) bound, mirroring Esper's per-partition view-creation
+// evaluation of length(context.<initiator>.<prop>).
+func (r *statementRuntime) resolveLengthWindowSize(window LengthWindowSpec, state *windowRuntimeState, now time.Time) int {
+	if !state.lengthSizeExprResolved {
+		ctx := EvalContext{Variables: r.variables, Engine: r.engine, Now: now, evaluationContextSet: true}
+		value := window.SizeExpr.eval(ctx)
+		resolved := 0
+		if number, ok := numericValue(value); ok {
+			resolved = int(number)
+		}
+		state.resolvedLengthSize = resolved
+		state.lengthSizeExprResolved = true
+	}
+	return state.resolvedLengthSize
 }
 
 func evaluateTimeWindowDuration(expression Expr, variables map[string]Value) time.Duration {
@@ -15560,9 +15584,13 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		state.entries = append(state.entries, stored)
 		return eventDelta{newEvents: []Event{event}}, nil
 	case LengthWindowSpec:
+		size := window.Size
+		if window.SizeExpr != nil {
+			size = r.resolveLengthWindowSize(window, state, now)
+		}
 		state.entries = append(state.entries, stored)
 		result := eventDelta{newEvents: []Event{event}}
-		for len(state.entries) > window.Size {
+		for len(state.entries) > size {
 			result.oldEvents = append(result.oldEvents, state.entries[0].event)
 			state.entries = state.entries[1:]
 		}
@@ -19624,11 +19652,16 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		// until context-partitioned output-limit shapes are
 		// differential-verified in their own units.
 		aggregateGroupedRowPerEvent := !tableSource && len(definition.groupBy) > 0 && len(groupingSets) == 1 && aggregateDefinitionReadsNonKeyEventExceptContext(definition, r.engine.env, plan.query.contextName)
-		// Rollup/cube result sets (multiple grouping sets), ungrouped
-		// aggregates, grouped joins, named-window consumers and grouped
-		// row-per-group result sets post the previous row as old whenever the
-		// statement emits removal-aware output.
-		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) && !aggregateGroupedRowPerEvent && !aggregateDefinitionIsRowForEvent(definition) {
+		// Rollup/cube result sets (multiple grouping sets), fully-aggregated
+		// ungrouped (RowForAll) shapes, grouped joins, named-window consumers
+		// and grouped row-per-group result sets post the previous row as old
+		// whenever the statement emits removal-aware output. Ungrouped
+		// mixed-select aggregates (a bare column beside the aggregate) are
+		// row-per-event: Java delivers new rows only, never the pre-event
+		// state as old (pinned by the view-parameterized-by-context chain:
+		// 68 records, zero old rows across all evictions).
+		ungroupedMixedRowPerEvent := len(definition.groupBy) == 0 && aggregateDefinitionHasBareSelections(definition)
+		if group.emitted && (plan.query.selector == SelectRStream || plan.query.selector == SelectIRStream) && !ungroupedMixedRowPerEvent && !aggregateGroupedRowPerEvent && !aggregateDefinitionIsRowForEvent(definition) {
 			if definition.having != nil && len(delta.oldEvents) > 0 {
 				if plan.query.selector == SelectIRStream && len(definition.groupBy) == 0 {
 					// The old row is the previously emitted aggregate, even when
@@ -19846,11 +19879,14 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				})
 			}
 		}
-		if visible && !emittedBefore && len(definition.groupBy) == 0 && plan.query.selector == SelectIRStream && !aggregateDefinitionReadsNonKeyEvent(definition) {
+		if visible && !emittedBefore && len(definition.groupBy) == 0 && plan.query.selector == SelectIRStream && !aggregateDefinitionReadsNonKeyEvent(definition) && plan.query.contextName == "" {
 			// Ungrouped irstream aggregates pair the first new row with an
 			// old row whose aggregate columns evaluate over the empty group
 			// (Java ResultSetProcessorRowForAll: sum/avg/min/max are null
-			// and count(*) is 0 on the first update). When a having clause
+			// and count(*) is 0 on the first update). Context-partitioned
+			// statements opt out: each partition's first delivery is
+			// new-only (pinned by the view-parameterized-by-context chain).
+			// When a having clause
 			// rejects that empty-group prior state - exactly the pinned
 			// HavingSum flow whose first contribution never delivers -
 			// Java emits no such paired old row.

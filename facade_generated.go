@@ -3482,6 +3482,15 @@ func LengthWindow(size int) LengthWindowSpec {
 	return internalengine.LengthWindow(size)
 }
 
+// LengthWindowExpr sizes the length window by an expression evaluated once
+// per context partition when the partition's window first receives an event,
+// mirroring Esper's view-creation evaluation under a context (for example
+// #length(context.miewl.intSize)). The expression sees the partition's
+// context properties, so ContextInitiatingEvent()-rooted paths resolve.
+func LengthWindowExpr(expr Expr) LengthWindowSpec {
+	return internalengine.LengthWindowExpr(expr)
+}
+
 type LengthWindowSpec = internalengine.LengthWindowSpec
 
 func Less[T Ordered](left, right Expression[T]) Expression[bool] {

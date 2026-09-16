@@ -1739,12 +1739,27 @@ type WindowSpec interface {
 	validate() error
 }
 
-type LengthWindowSpec struct{ Size int }
+type LengthWindowSpec struct {
+	Size     int
+	SizeExpr Expr
+}
 
-func LengthWindow(size int) LengthWindowSpec   { return LengthWindowSpec{Size: size} }
+func LengthWindow(size int) LengthWindowSpec { return LengthWindowSpec{Size: size} }
+
+// LengthWindowExpr sizes the length window by an expression evaluated once
+// per context partition when the partition's window first receives an event,
+// mirroring Esper's view-creation evaluation under a context (for example
+// #length(context.miewl.intSize)). The expression sees the partition's
+// context properties, so ContextInitiatingEvent()-rooted paths resolve.
+func LengthWindowExpr(expr Expr) LengthWindowSpec {
+	return LengthWindowSpec{SizeExpr: expr}
+}
 func (LengthWindowSpec) windowSpec()           {}
 func (w LengthWindowSpec) description() string { return fmt.Sprintf("length(%d)", w.Size) }
 func (w LengthWindowSpec) validate() error {
+	if w.SizeExpr != nil {
+		return nil
+	}
 	if w.Size <= 0 {
 		return fmt.Errorf("esper: length window size must be positive, got %d", w.Size)
 	}

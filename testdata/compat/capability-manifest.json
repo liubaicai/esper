@@ -4270,7 +4270,7 @@
    "phase": 2,
    "status": "implemented",
    "remaining": [
-    "ViewParameterizedByContext suite"
+    "ViewParameterizedByContextMoreWindows (twelve context-parameterized window kinds need expression-size view variants; only TimeWindowExpr/LengthWindowExpr exist)"
    ],
    "verification": [
     "inventoried",
@@ -4320,7 +4320,9 @@
     "java-runtime-736d2f58158461c2c777",
     "java-runtime-9ae5cbb72669d84a7f7f",
     "java-runtime-a3c81710a21ac12db682",
-    "java-runtime-5e01b6f92f8d8bc5851e"
+    "java-runtime-5e01b6f92f8d8bc5851e",
+    "java-runtime-71761cb17e7d22393efc",
+    "java-runtime-de2ad7eb74b76b16867a"
    ]
   },
   {
@@ -23266,6 +23268,53 @@
    "verification": [
     "inventoried",
     "implemented"
+   ]
+  },
+  {
+   "id": "case.view-parameterized-by-context",
+   "javaRuntimeIds": [
+    "java-runtime-71761cb17e7d22393efc",
+    "java-runtime-de2ad7eb74b76b16867a"
+   ],
+   "javaNames": [
+    "ViewParameterizedByContextLengthWindow",
+    "ViewParameterizedByContextDocSample"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewParameterizedByContext.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewParameterizedByContextDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewParameterizedByContextDiffRejectsTraceMutations",
+    "internal/esper/view_parameterized_by_context_parity_test.go:TestViewParameterizedByContextLengthWindowParity"
+   ],
+   "tags": [
+    "correctness",
+    "view",
+    "context-parameterized",
+    "length-window",
+    "initiated-context",
+    "count-aggregate",
+    "virtual-clock",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/view-parameterized-by-context.json",
+    "testdata/parity/view-parameterized-by-context.trace.json",
+    "testdata/parity/view-parameterized-by-context.evidence.json",
+    "tools/java-oracle/ViewParameterizedByContextScenarioOracle.java",
+    "tools/java-oracle/run-view-parameterized-by-context.sh"
+   ],
+   "notes": "Draft 4.425: 2 records x2 cases, 68 records total, 0 differences. Context-parameterized #length(context.miewl.intSize) sizing under an overlapping initiated context (terminated after 1 year via TimerIntervalCalendar): per-partition sizes P1=2/P2=4/P3=3 cap the count(*) aggregate; iterator vectors {P1:0,P2:1,P3:0} -> {P1:2,P2:4,P3:3} pinned mode-any on both sides. Shared-core: new LengthWindowExpr(expr) with per-partition one-time size resolution; accompanying aggregate corrections (context-partitioned ungrouped irstream aggregates pair no null-prior old row; ungrouped mixed-select aggregates never post previous-as-old — grouped shapes unchanged, pinned by TestGroupedAggregateAndHaving). MoreWindows (ord 2, java-runtime-6d60bed2a335972423d2, twelve further context-parameterized window kinds) is the recorded open gap: expression-size variants exist only for time (TimeWindowExpr) and length (LengthWindowExpr) windows.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-71761cb17e7d22393efc",
+    "java-runtime-de2ad7eb74b76b16867a"
    ]
   },
   {
@@ -45710,13 +45759,17 @@
   {
    "capabilityId": "view.basic-windows",
    "caseId": "case.view-timebatch-suite"
+  },
+  {
+   "capabilityId": "view.basic-windows",
+   "caseId": "case.view-parameterized-by-context"
   }
  ],
  "summary": {
-  "inventoriedCases": 668,
-  "implementedCases": 666,
-  "differentialVerifiedCases": 295,
-  "differentialVerifiedRuntimeIds": 1088,
+  "inventoriedCases": 669,
+  "implementedCases": 667,
+  "differentialVerifiedCases": 296,
+  "differentialVerifiedRuntimeIds": 1090,
   "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -45726,13 +45779,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3666,
-  "referencedJavaRuntimeIds": 3315,
+  "runtimeAssociationCount": 3668,
+  "referencedJavaRuntimeIds": 3317,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 821,
+  "unreferencedJavaRuntimeIds": 819,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 668,
+  "totalCases": 669,
   "totalCapabilities": 120
  }
 }

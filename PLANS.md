@@ -612,6 +612,59 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.425 ('view-parameterized-by-context').
+
+- Unit: ViewParameterizedByContextLengthWindow (java-runtime-71761cb17e7d22393efc) and
+      ViewParameterizedByContextDocSample (java-runtime-de2ad7eb74b76b16867a) differential-verified
+      via NEW chain `view-parameterized-by-context` (2 cases), upgrading the capability
+      view.basic-windows. ENGINE WORK (shared core): new `LengthWindowExpr(expr)` —
+      LengthWindowSpec.SizeExpr with per-partition one-time size resolution
+      (resolveLengthWindowSize, runtime.go) mirroring the TimeWindowExpr/windowExprDurations
+      precedent; facade regenerated. Root-level paths over ContextInitiatingEvent() express
+      context.miewl.* access.
+- [x] Engine verified in-process by the promoted permanent test
+      internal/esper/view_parameterized_by_context_parity_test.go
+      (TestViewParameterizedByContextLengthWindowParity): overlapping pattern-terminated context
+      (CreateOverlappingPatternTerminatedContext + TimerIntervalCalendar 1 year = `terminated after
+      1 year`), per-partition sizes P1=2/P2=4/P3=3 capping count(*), iterator vector
+      {P1:0,P2:1,P3:0} → {P1:2,P2:4,P3:3}. Debugging found the key construction trap: the
+      top-level Select(...) combinator does NOT create an aggregate definition — CountAll() in
+      plain Select always evaluates 0; the projection must go through Stream.Aggregate(...)
+      (documented for review).
+- [x] Scenario (testdata/parity/view-parameterized-by-context.json, 2 cases / 76 steps, mode any
+      snapshots) + runner (internal/app/parity/view_parameterized_by_context.go, deploys up front —
+      the oracle lazily deploys before the first init send, same pinned order) + wiring + run_test
+      family (passing + 4 mutations) via agent OracleAssets for oracle/script.
+- [x] Differential replay: Java 68 records; Go 68 records. THREE shared-core fixes converged to
+      status passing / 0 differences: (1) LengthWindowExpr per-partition size resolution (above);
+      (2) context-partitioned ungrouped irstream aggregates do NOT pair the null-prior old row
+      (plan.query.contextName gate on the first-delivery pairing branch); (3) ungrouped mixed-select
+      aggregates never post previous-as-old (ungroupedMixedRowPerEvent gate) — first scoped too wide
+      and caught by TestGroupedAggregateAndHaving (grouped shapes keep previous-as-old; rescooped).
+      Construction trap documented: CountAll() inside the plain Select combinator is a non-aggregate
+      query (always 0) — the projection must go through Stream.Aggregate.
+- [x] Manifest: NEW case case.view-parameterized-by-context born-DV with the 2 IDs (mapping entry
+      added); capability view.basic-windows DV list 43→45, remaining reworded to the MoreWindows
+      execution (12 context-parameterized window kinds need expression-size variants — only
+      TimeWindowExpr/LengthWindowExpr exist); summary recomputed via the compat validator: 669 cases
+      / 667 implemented / 296 DV cases / 1090 DV runtime IDs / associations 3668 / referenced 3317 /
+      unreferenced 819. Docs recorded (CHANGELOG + roadmap newest-first, Draft 4.425).
+- [x] Independent parity review (agent ParityReview) round 1: OVERALL FAIL on one P0 — the 4.425
+      manifest update had never been applied (my sequencing error: docs were written before the
+      manifest edit). Fixed by applying the full update (new case + mapping + capability rewording +
+      validator-recomputed summary 669/667/296/1090/3668/3317/819); reviewer independently
+      recomputed and matched. P3 dispositions: parameterized-size-cap-leak mutation re-pointed to
+      record 36 (the capped snapshot); ZZ probe leftovers removed from the promoted test file;
+      degenerate-size validation (P3-1) and lazy-vs-creation timing (P3-2) accepted as documented
+      fidelity notes. Engine files byte-identical across review rounds.
+- [x] Reviewer re-check (same agent): CONFIRM PASS on all items, one doc-only blocker (this record)
+      plus a cosmetic doc-comment reword (TestZZCtxParamLength reference in the promoted test's
+      header) — both fixed here. Gates re-run green (make check exit 0, gofmt clean, git diff
+      --check clean). Shipped; Git owns identity — Draft 4.425 committed and pushed (new case
+      case.view-parameterized-by-context born DV; manifest 296 DV cases / 1090 DV runtime IDs;
+      view.basic-windows remaining = MoreWindows gap only).
+
+## Current work unit
 Active: Draft 4.424 ('view-time-batch-suite').
 
 - Unit: ViewTimeBatch suite differential slice — NEW chain `view-time-batch` (8 cases) covering
