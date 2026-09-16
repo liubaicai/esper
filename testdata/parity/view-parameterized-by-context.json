@@ -1,10 +1,11 @@
 {
  "version": "esper-parity/v1",
  "id": "view-parameterized-by-context",
- "description": "Two ViewParameterizedByContext executions replayed per pinned module: context-parameterized view sizes under an overlapping initiated context (SupportContextInitEventWLength as miewl, terminated after 1 year). The length-window statement selects context.miewl.id and count(*) over SupportBean(theString=context.miewl.id)#length(context.miewl.intSize) with per-partition sizes P1=2, P2=4, P3=3; snapshots (mode any) observe the per-partition counts after the first value event, after ten full rounds (capped at the partition sizes) and after one more round. The doc-sample execution replays the documentation form of the same statement. The MoreWindows execution (twelve further context-parameterized window kinds) is out of chain scope: expression-size view variants exist only for time windows.",
+ "description": "Two ViewParameterizedByContext executions replayed per pinned module: context-parameterized view sizes under an overlapping initiated context (SupportContextInitEventWLength as miewl, terminated after 1 year). The length-window statement selects context.miewl.id and count(*) over SupportBean(theString=context.miewl.id)#length(context.miewl.intSize) with per-partition sizes P1=2, P2=4, P3=3; snapshots (mode any) observe the per-partition counts after the first value event, after ten full rounds (capped at the partition sizes) and after one more round. The doc-sample execution replays the documentation form of the same statement. The more-windows case replays ViewParameterizedByContextMoreWindows: twelve context-parameterized window kinds (length_batch, time, ext_timed, time_batch, ext_timed_batch, time_length_batch, time_accum, firstlength, firsttime, sort, rank, time_order — every one sized by context.miewl.intSize) deployed in twelve sequential deploy-init-init-undeploy cycles, one deployed record per kind.",
  "javaRuntimes": [
   "java-runtime-71761cb17e7d22393efc",
-  "java-runtime-de2ad7eb74b76b16867a"
+  "java-runtime-de2ad7eb74b76b16867a",
+  "java-runtime-6d60bed2a335972423d2"
  ],
  "cases": [
   {
@@ -14,6 +15,10 @@
   {
    "case": "doc-sample",
    "runtimeId": "java-runtime-de2ad7eb74b76b16867a"
+  },
+  {
+   "case": "more-windows",
+   "runtimeId": "java-runtime-6d60bed2a335972423d2"
   }
  ],
  "steps": [
@@ -604,6 +609,298 @@
    "op": "snapshot",
    "statement": "s0",
    "mode": "any"
+  },
+  {
+   "op": "case",
+   "case": "more-windows"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P1",
+    "intSize": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportContextInitEventWLength",
+   "payload": {
+    "id": "P2",
+    "intSize": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "s0"
   }
  ]
 }

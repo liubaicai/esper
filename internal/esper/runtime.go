@@ -6216,6 +6216,14 @@ type windowRuntimeState struct {
 	// first event, with the partition's context properties bound.
 	lengthSizeExprResolved bool
 	resolvedLengthSize     int
+	// exprParamsResolved/exprSizeValue/exprDurationValue hold the
+	// partition-time snapshot of context-parameterized window parameters
+	// (size and duration expressions), resolved once on the partition's
+	// first event; static specs resolve to their declared values so every
+	// downstream read has a single source.
+	exprParamsResolved bool
+	exprSizeValue      int
+	exprDurationValue  time.Duration
 }
 
 type statementRuntime struct {
@@ -7479,6 +7487,123 @@ func (r *statementRuntime) resolveWindowDurations(plan Plan) {
 			r.windows[node] = state
 		}
 	}
+}
+
+// windowDeadlineFromState computes a window's anchor deadline using the
+// state-resolved duration for context-parameterized specs and the declared
+// calendar/duration otherwise.
+func windowDeadlineFromState(window WindowSpec, state *windowRuntimeState, start time.Time) time.Time {
+	switch w := window.(type) {
+	case TimeBatchWindowSpec:
+		if w.Expr != nil {
+			return start.Add(state.exprDurationValue)
+		}
+		return timeWindowDeadline(w.Duration, w.CalendarYears, w.CalendarMonths, w.CalendarDays, start)
+	case TimeLengthBatchWindowSpec:
+		if w.DurationExpr != nil {
+			return start.Add(state.exprDurationValue)
+		}
+		return timeWindowDeadline(w.Duration, w.CalendarYears, w.CalendarMonths, w.CalendarDays, start)
+	case TimeAccumWindowSpec:
+		if w.Expr != nil {
+			return start.Add(state.exprDurationValue)
+		}
+		return timeWindowDeadline(w.Duration, w.CalendarYears, w.CalendarMonths, w.CalendarDays, start)
+	case FirstTimeWindowSpec:
+		if w.Expr != nil {
+			return start.Add(state.exprDurationValue)
+		}
+		return timeWindowDeadline(w.Duration, w.CalendarYears, w.CalendarMonths, w.CalendarDays, start)
+	}
+	return start
+}
+
+// windowExprParams extracts a spec's context-parameterized size and duration
+// expressions, if any.
+func windowExprParams(spec WindowSpec) (sizeExpr Expr, durationExpr Expr) {
+	switch w := spec.(type) {
+	case LengthBatchWindowSpec:
+		return w.SizeExpr, nil
+	case TimeBatchWindowSpec:
+		return nil, w.Expr
+	case ExternallyTimedWindowSpec:
+		return nil, w.DurationExpr
+	case TimeLengthBatchWindowSpec:
+		return w.SizeExpr, w.DurationExpr
+	case FirstLengthWindowSpec:
+		return w.SizeExpr, nil
+	case FirstTimeWindowSpec:
+		return nil, w.Expr
+	case TimeAccumWindowSpec:
+		return nil, w.Expr
+	case SortedWindowSpec:
+		return w.SizeExpr, nil
+	case TimeOrderWindowSpec:
+		return nil, w.DurationExpr
+	}
+	return nil, nil
+}
+
+// resolveWindowExprParams resolves context-parameterized window parameters
+// (size/duration expressions) once per partition runtime on the window's
+// first event, with the partition's variables (including its context
+// properties) bound. Static specs resolve to their declared values, making
+// the state cache the single source for every downstream read.
+func (r *statementRuntime) resolveWindowExprParams(window WindowSpec, state *windowRuntimeState, now time.Time) {
+	if state.exprParamsResolved {
+		return
+	}
+	state.exprParamsResolved = true
+	ctx := EvalContext{Variables: r.variables, Engine: r.engine, Now: now, evaluationContextSet: true}
+	sizeExpr, durationExpr := windowExprParams(window)
+	state.exprSizeValue = windowStaticSize(window)
+	state.exprDurationValue = windowStaticDuration(window)
+	if sizeExpr != nil {
+		if number, ok := numericValue(sizeExpr.eval(ctx)); ok {
+			state.exprSizeValue = int(number)
+		}
+	}
+	if durationExpr != nil {
+		if number, ok := numericValue(durationExpr.eval(ctx)); ok {
+			state.exprDurationValue = time.Duration(number) * time.Millisecond
+		}
+	}
+}
+
+// windowStaticSize/windowStaticDuration return a spec's declared size or
+// duration, or zero for specs whose value is expression-defined.
+func windowStaticSize(spec WindowSpec) int {
+	switch w := spec.(type) {
+	case LengthBatchWindowSpec:
+		return w.Size
+	case TimeLengthBatchWindowSpec:
+		return w.Size
+	case FirstLengthWindowSpec:
+		return w.Size
+	case SortedWindowSpec:
+		return w.Size
+	}
+	return 0
+}
+
+func windowStaticDuration(spec WindowSpec) time.Duration {
+	switch w := spec.(type) {
+	case TimeBatchWindowSpec:
+		return w.Duration
+	case ExternallyTimedWindowSpec:
+		return w.Duration
+	case FirstTimeWindowSpec:
+		return w.Duration
+	case TimeAccumWindowSpec:
+		return w.Duration
+	case TimeLengthBatchWindowSpec:
+		return w.Duration
+	case TimeOrderWindowSpec:
+		return w.Duration
+	case TimeToLiveWindowSpec:
+		return w.Duration
+	}
+	return 0
 }
 
 // resolveLengthWindowSize evaluates a context-parameterized length window
@@ -9562,14 +9687,16 @@ func (r *statementRuntime) seedInitialWindowSchedules(at time.Time) error {
 			switch window := node.window.(type) {
 			case TimeBatchWindowSpec:
 				if window.StartEager {
+					r.resolveWindowExprParams(window, state, at)
 					state.started = true
 					state.start = at
-					state.scheduleAt = timeBatchBoundary(window, state.start)
+					state.scheduleAt = timeBatchBoundary(window, state.exprDurationValue, state.start)
 				}
 			case TimeLengthBatchWindowSpec:
 				if window.StartEager {
+					r.resolveWindowExprParams(window, state, at)
 					state.started = true
-					state.start = timeLengthBatchDeadline(window, at)
+					state.start = timeLengthBatchDeadline(window, state.exprDurationValue, at)
 					state.scheduleAt = state.start
 				}
 			}
@@ -15448,6 +15575,7 @@ func sameEventRow(left, right Event) bool {
 }
 
 func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeState, event Event, now time.Time) (eventDelta, error) {
+	r.resolveWindowExprParams(spec, state, now)
 	stored := storedEvent{event: event, receivedAt: now}
 	switch window := spec.(type) {
 	case GroupWindowSpec:
@@ -15635,7 +15763,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		}
 		kept := state.entries[:0]
 		for _, existing := range state.entries {
-			if timeOrderExpiry(window, existing.receivedAt).After(cutoff) {
+			if timeOrderExpiry(window, state.exprDurationValue, existing.receivedAt).After(cutoff) {
 				kept = append(kept, existing)
 			} else {
 				result.oldEvents = append(result.oldEvents, existing.event)
@@ -15659,12 +15787,12 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		return result, nil
 	case LengthBatchWindowSpec:
 		state.pendingNew = append(state.pendingNew, stored)
-		return flushLengthBatch(state, window.Size), nil
+		return flushLengthBatch(state, state.exprSizeValue), nil
 	case TimeBatchWindowSpec:
 		if !state.started {
 			state.started = true
 			state.start = now
-			state.scheduleAt = timeBatchBoundary(window, state.start)
+			state.scheduleAt = timeBatchBoundary(window, state.exprDurationValue, state.start)
 		}
 		state.pendingNew = append(state.pendingNew, stored)
 		return eventDelta{}, nil
@@ -15675,12 +15803,12 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 			// period whenever a batch is armed (including start_eager at
 			// deployment time); the schedule never stays anchored to the
 			// first event.
-			state.start = timeLengthBatchDeadline(window, now)
+			state.start = timeLengthBatchDeadline(window, state.exprDurationValue, now)
 		}
 		state.pendingNew = append(state.pendingNew, stored)
-		if len(state.pendingNew) >= window.Size {
+		if len(state.pendingNew) >= state.exprSizeValue {
 			result := flushPendingBatch(state)
-			state.start = timeLengthBatchDeadline(window, now)
+			state.start = timeLengthBatchDeadline(window, state.exprDurationValue, now)
 			return result, nil
 		}
 		return eventDelta{}, nil
@@ -15695,10 +15823,10 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 				state.started = true
 				if window.ReferenceSet {
 					state.start = time.Unix(0, window.ReferenceMillis*int64(time.Millisecond)).UTC()
-					state.scheduleAt = nextExternallyTimedBoundary(state.start, externalAt, window)
+					state.scheduleAt = nextExternallyTimedBoundary(state.start, externalAt, window, state.exprDurationValue)
 				} else {
 					state.start = externalAt
-					state.scheduleAt = externallyTimedBatchBoundary(window, state.start)
+					state.scheduleAt = externallyTimedBatchBoundary(window, state.exprDurationValue, state.start)
 				}
 			}
 			// Esper's ExternallyTimedBatchView checks the boundary before adding
@@ -15710,7 +15838,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 			// event timestamp.
 			if !externalAt.Before(state.scheduleAt) {
 				result = flushPendingBatch(state)
-				state.scheduleAt = nextExternallyTimedBoundary(state.scheduleAt, externalAt, window)
+				state.scheduleAt = nextExternallyTimedBoundary(state.scheduleAt, externalAt, window, state.exprDurationValue)
 			}
 			state.pendingNew = append(state.pendingNew, storedEvent{event: event, receivedAt: externalAt})
 			state.externalAt = externalAt
@@ -15718,7 +15846,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		}
 		kept := state.entries[:0]
 		for _, existing := range state.entries {
-			if externallyTimedWindowExpiry(window, existing.receivedAt).After(externalAt) {
+			if externallyTimedWindowExpiry(window, state.exprDurationValue, existing.receivedAt).After(externalAt) {
 				kept = append(kept, existing)
 			} else {
 				result.oldEvents = append(result.oldEvents, existing.event)
@@ -15743,7 +15871,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		state.entries = []storedEvent{stored}
 		return result, nil
 	case FirstLengthWindowSpec:
-		if len(state.entries) >= window.Size {
+		if len(state.entries) >= state.exprSizeValue {
 			return eventDelta{}, nil
 		}
 		state.entries = append(state.entries, stored)
@@ -15752,7 +15880,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		if !state.started {
 			state.started = true
 			state.start = r.initializedAt
-			state.scheduleAt = timeWindowDeadline(window.Duration, window.CalendarYears, window.CalendarMonths, window.CalendarDays, state.start)
+			state.scheduleAt = windowDeadlineFromState(window, state, state.start)
 		}
 		if !now.Before(state.scheduleAt) {
 			return eventDelta{}, nil
@@ -15767,7 +15895,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		// Esper time_accum reschedules the whole-window callback at every
 		// arriving event: the newest event's deadline owns expiry.
 		state.start = now
-		state.scheduleAt = timeWindowDeadline(window.Duration, window.CalendarYears, window.CalendarMonths, window.CalendarDays, state.start)
+		state.scheduleAt = windowDeadlineFromState(window, state, state.start)
 		state.entries = append(state.entries, stored)
 		state.arrival = append(state.arrival, event)
 		return eventDelta{
@@ -15849,7 +15977,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		sort.SliceStable(state.entries, func(i, j int) bool {
 			return sortedWindowEntryLess(state.entries[i], state.entries[j], window.Keys, window.Rank, now, r.variables)
 		})
-		for len(state.entries) > window.Size {
+		for len(state.entries) > state.exprSizeValue {
 			removeIndex := len(state.entries) - 1
 			if window.Rank {
 				removeIndex = rankEvictionIndex(state.entries, window.Keys, now, r.variables)
@@ -16038,7 +16166,7 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 	case TimeToLiveWindowSpec:
 		kept := state.entries[:0]
 		for _, stored := range state.entries {
-			if !stored.receivedAt.Add(window.Duration).After(now) {
+			if !stored.receivedAt.Add(state.exprDurationValue).After(now) {
 				result.oldEvents = append(result.oldEvents, stored.event)
 				continue
 			}
@@ -16058,7 +16186,7 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 	case TimeOrderWindowSpec:
 		kept := state.entries[:0]
 		for _, stored := range state.entries {
-			if !timeOrderExpiry(window, stored.receivedAt).After(now) {
+			if !timeOrderExpiry(window, state.exprDurationValue, stored.receivedAt).After(now) {
 				result.oldEvents = append(result.oldEvents, stored.event)
 				continue
 			}
@@ -16086,8 +16214,8 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 			result = mergeDelta(result, flush)
 			// The boundary schedule stays anchored: advance from the old
 			// reference, never re-anchor at the current time (deltaAddWReference).
-			state.start = advanceTimeBatchReference(state.start, window, now)
-			state.scheduleAt = timeBatchBoundary(window, state.start)
+			state.start = advanceTimeBatchReference(state.start, window, state.exprDurationValue, now)
+			state.scheduleAt = timeBatchBoundary(window, state.exprDurationValue, state.start)
 			// Only keep the schedule armed while the flushed batch or the
 			// previous batch still holds events, or force-update is enabled;
 			// an all-empty callback does not post and does not reschedule
@@ -16112,7 +16240,7 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 			flush := flushPendingBatch(state)
 			result = mergeDelta(result, flush)
 			if len(flush.oldEvents) > 0 || len(flush.newEvents) > 0 || window.ForceUpdate {
-				state.start = timeLengthBatchDeadline(window, now)
+				state.start = timeLengthBatchDeadline(window, state.exprDurationValue, now)
 				state.scheduleAt = state.start
 			} else {
 				state.started = false
@@ -16123,14 +16251,14 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 			}
 		}
 	case FirstTimeWindowSpec:
-		if state.started && !now.Before(timeWindowDeadline(window.Duration, window.CalendarYears, window.CalendarMonths, window.CalendarDays, state.start)) {
+		if state.started && !now.Before(windowDeadlineFromState(window, state, state.start)) {
 			// The closing callback only flips the gate; retained events are
 			// never expelled from state.
 			state.started = false
 			state.scheduleAt = time.Time{}
 		}
 	case TimeAccumWindowSpec:
-		if state.started && !now.Before(timeWindowDeadline(window.Duration, window.CalendarYears, window.CalendarMonths, window.CalendarDays, state.start)) {
+		if state.started && !now.Before(windowDeadlineFromState(window, state, state.start)) {
 			for _, stored := range state.entries {
 				result.oldEvents = append(result.oldEvents, stored.event)
 			}
@@ -16151,8 +16279,8 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 				flush := flushPendingBatch(state)
 				result = mergeDelta(result, flush)
 				if len(flush.oldEvents) > 0 || len(flush.newEvents) > 0 {
-					state.start = advanceExternallyTimedBatchReference(state.start, window, now)
-					state.scheduleAt = externallyTimedBatchBoundary(window, state.start)
+					state.start = advanceExternallyTimedBatchReference(state.start, window, state.exprDurationValue, now)
+					state.scheduleAt = externallyTimedBatchBoundary(window, state.exprDurationValue, state.start)
 				} else {
 					state.started = false
 					state.scheduleAt = time.Time{}
@@ -16203,29 +16331,38 @@ func timeWindowEventDeadline(window TimeWindowSpec, event Event, receivedAt, now
 	return deadline.Add(window.Duration)
 }
 
-func timeBatchBoundary(window TimeBatchWindowSpec, reference time.Time) time.Time {
+func timeBatchBoundary(window TimeBatchWindowSpec, resolved time.Duration, reference time.Time) time.Time {
 	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
 		return reference.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	if resolved != 0 {
+		return reference.Add(resolved)
 	}
 	return reference.Add(window.Duration)
 }
 
-func timeLengthBatchBoundary(window TimeLengthBatchWindowSpec, reference time.Time) time.Time {
+func timeLengthBatchBoundary(window TimeLengthBatchWindowSpec, resolved time.Duration, reference time.Time) time.Time {
 	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
 		return reference.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	if resolved != 0 {
+		return reference.Add(resolved)
 	}
 	return reference.Add(window.Duration)
 }
 
-func timeLengthBatchDeadline(window TimeLengthBatchWindowSpec, from time.Time) time.Time {
-	return timeLengthBatchBoundary(window, from)
+func timeLengthBatchDeadline(window TimeLengthBatchWindowSpec, resolved time.Duration, from time.Time) time.Time {
+	return timeLengthBatchBoundary(window, resolved, from)
 }
 
 // advanceTimeBatchReference advances a fixed anchored boundary schedule past
 // the current time, matching Esper's deltaAddWReference (boundaries stay at
 // reference + n*period and never re-anchor at now).
-func advanceTimeBatchReference(reference time.Time, window TimeBatchWindowSpec, now time.Time) time.Time {
+func advanceTimeBatchReference(reference time.Time, window TimeBatchWindowSpec, resolved time.Duration, now time.Time) time.Time {
 	period := window.Duration
+	if resolved != 0 {
+		period = resolved
+	}
 	years, months, days := window.CalendarYears, window.CalendarMonths, window.CalendarDays
 	for reference.Before(now) {
 		if years != 0 || months != 0 || days != 0 {
@@ -16244,66 +16381,80 @@ func advanceTimeBatchReference(reference time.Time, window TimeBatchWindowSpec, 
 	return reference
 }
 
-func advanceTimeLengthBatchReference(reference time.Time, window TimeLengthBatchWindowSpec, now time.Time) time.Time {
+func advanceTimeLengthBatchReference(reference time.Time, window TimeLengthBatchWindowSpec, resolved time.Duration, now time.Time) time.Time {
+	duration := window.Duration
+	if resolved != 0 {
+		duration = resolved
+	}
 	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
 		for reference.Before(now) {
 			next := reference.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
 			if !next.After(reference) {
-				return reference.Add(window.Duration)
+				return reference.Add(duration)
 			}
 			reference = next
 		}
 		return reference
 	}
 	for reference.Before(now) {
-		reference = reference.Add(window.Duration)
+		reference = reference.Add(duration)
 	}
 	return reference
 }
 
-func externallyTimedWindowExpiry(window ExternallyTimedWindowSpec, timestamp time.Time) time.Time {
+func externallyTimedWindowExpiry(window ExternallyTimedWindowSpec, resolved time.Duration, timestamp time.Time) time.Time {
 	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
 		return timestamp.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	if resolved != 0 {
+		return timestamp.Add(resolved)
 	}
 	return timestamp.Add(window.Duration)
 }
 
-func externallyTimedBatchBoundary(window ExternallyTimedWindowSpec, reference time.Time) time.Time {
+func externallyTimedBatchBoundary(window ExternallyTimedWindowSpec, resolved time.Duration, reference time.Time) time.Time {
 	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
 		return reference.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	if resolved != 0 {
+		return reference.Add(resolved)
 	}
 	return reference.Add(window.Duration)
 }
 
-func nextExternallyTimedBoundary(reference, timestamp time.Time, window ExternallyTimedWindowSpec) time.Time {
-	boundary := externallyTimedBatchBoundary(window, reference)
+func nextExternallyTimedBoundary(reference, timestamp time.Time, window ExternallyTimedWindowSpec, resolved time.Duration) time.Time {
+	boundary := externallyTimedBatchBoundary(window, resolved, reference)
 	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
 		for boundary.Before(timestamp) || boundary.Equal(timestamp) {
-			boundary = externallyTimedBatchBoundary(window, boundary)
+			boundary = externallyTimedBatchBoundary(window, resolved, boundary)
 		}
 		return boundary
 	}
-	if window.Duration <= 0 {
+	duration := window.Duration
+	if resolved != 0 {
+		duration = resolved
+	}
+	if duration <= 0 {
 		return boundary
 	}
 	elapsed := timestamp.Sub(reference)
 	if elapsed <= 0 {
 		return boundary
 	}
-	steps := elapsed / window.Duration
-	if elapsed%window.Duration != 0 {
+	steps := elapsed / duration
+	if elapsed%duration != 0 {
 		steps++
 	}
 	if steps == 0 {
 		return boundary
 	}
-	return reference.Add(window.Duration * time.Duration(steps))
+	return reference.Add(duration * time.Duration(steps))
 }
 
-func advanceExternallyTimedBatchReference(reference time.Time, window ExternallyTimedWindowSpec, now time.Time) time.Time {
-	boundary := externallyTimedBatchBoundary(window, reference)
+func advanceExternallyTimedBatchReference(reference time.Time, window ExternallyTimedWindowSpec, resolved time.Duration, now time.Time) time.Time {
+	boundary := externallyTimedBatchBoundary(window, resolved, reference)
 	for boundary.Before(now) || boundary.Equal(now) {
-		boundary = externallyTimedBatchBoundary(window, boundary)
+		boundary = externallyTimedBatchBoundary(window, resolved, boundary)
 	}
 	return boundary
 }
@@ -16831,9 +16982,12 @@ func eventTimestamp(expression Expr, event Event, now time.Time, variables map[s
 	return time.Time{}, fmt.Errorf("esper: external timestamp has unsupported type %T", value.Any())
 }
 
-func timeOrderExpiry(window TimeOrderWindowSpec, receivedAt time.Time) time.Time {
+func timeOrderExpiry(window TimeOrderWindowSpec, resolved time.Duration, receivedAt time.Time) time.Time {
 	if window.CalendarYears != 0 || window.CalendarMonths != 0 || window.CalendarDays != 0 {
 		return receivedAt.AddDate(window.CalendarYears, window.CalendarMonths, window.CalendarDays)
+	}
+	if resolved != 0 {
+		return receivedAt.Add(resolved)
 	}
 	return receivedAt.Add(window.Duration)
 }

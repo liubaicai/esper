@@ -612,6 +612,69 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.426 ('more-windows-expression-sizes').
+
+- Unit: ViewParameterizedByContextMoreWindows (java-runtime-6d60bed2a335972423d2, the last
+      unreferenced ViewParameterizedByContext execution) — EXTENDS the `view-parameterized-by-context`
+      chain with a `more-windows` case: twelve context-parameterized window kinds
+      (length_batch/time/ext_timed/time_batch/ext_timed_batch/time_length_batch/time_accum/
+      firstlength/firsttime/sort/rank/time_order, each sized by context.miewl.intSize) deployed in
+      twelve sequential deploy→init→undeploy cycles; the pinned observable is one deployed record per
+      kind (the Java execution attaches no listener and sends no data events).
+- [x] ENGINE WORK (shared core): expression-size variants added for ten window kinds —
+      LengthBatchExpr/TimeBatchExpr/ExternallyTimedExpr/ExternallyTimedBatchExpr/
+      TimeLengthBatchExpr(dur,size)/TimeAccumExpr/FirstLengthExpr/FirstTimeExpr/SortWindowExpr(size,keys)/
+      RankWindowExpr(size,uniqueKeys,keys)/TimeOrderExpr(ts,dur-expr), each with spec Expr fields,
+      validate() acceptance, and per-partition one-time resolution via
+      resolveWindowExprParams/windowExprParams + state-cached exprSizeValue/exprDurationValue
+      (all duration/size consumption sites — flush sizes, first-admission gates, sorted capacity,
+      batch anchors, accum/time-order/ext-timed expiry deadlines, TLB reference math — now read the
+      state-resolved values; named-window retention passes resolved=0). TimeWindowExpr/LengthWindowExpr
+      pre-existed. Facade regenerated.
+- [x] Scenario extended (more-windows case: 12 deploy-init-init-undeploy cycles, one deployed
+      marker per kind) + oracle updated via agent OracleAssets (per-cycle fresh compile; the
+      first runtime run exposed the missing longPrimitive on the oracle's LocalSupportBean — added,
+      mirroring the pinned SupportBean surface) + runner more-windows cycle flow (typed plans for
+      all 12 kinds: LengthBatchExpr/TimeWindowExpr/ExternallyTimedExpr/ExternallyTimedBatchExpr/
+      TimeLengthBatchExpr/TimeAccumExpr/FirstLengthExpr/FirstTimeExpr/SortWindowExpr/RankWindowExpr/
+      TimeOrderExpr, all rooted at ContextInitiatingEvent()) + run_test family (MoreWindows passing
+      + 2 mutations).
+- [x] Differential replay: Java 80 records / Go 80 records, status passing / 0 differences.
+      Engine consumption sites (batch flush sizes, first-admission gates, sorted capacity, batch
+      anchors, accum/time-order/ext-timed expiry deadlines, TLB reference math) now read the
+      state-resolved parameter values; static specs resolve to declared values; named-window
+      retention passes resolved=0.
+- [x] Manifest: case.view-parameterized-by-context +1 runtime ID (3/3 executions covered);
+      capability view.basic-windows remaining CLEARED; summary via validator: 669 cases / 667
+      implemented / 296 DV cases / 1091 DV runtime IDs / associations 3669 / referenced 3318 /
+      unreferenced 818. Docs recorded (CHANGELOG + roadmap, Draft 4.426).
+- [x] Independent parity review (agent ParityReview) round 1: OVERALL FAIL — three P1s in my
+      blast-radius sweep of the duration consumption sites: (1) the mechanical replace of
+      `receivedAt.Add(window.Duration)` hit the TTL expire site instead of TimeAccum (TTL's static
+      default was missing from windowStaticDuration → everything expired on the first tick — a
+      silent regression of public TimeToLive); (2) FirstTimeWindowSpec expire path still static
+      (FirstTimeExpr gate closes at start+0); (3) TimeAccumWindowSpec expire path same class.
+      Plus P2s: seedInitialWindowSchedules read exprDurationValue before resolution; Go-side
+      viewParameterizedByContextJavaRuntimeIDs/Executions not extended to 3 (evidence ID lists
+      stayed at 2); named-window retention accepted expr specs but silently passed resolved=0
+      (zero retention); P3 dead query param in the cycle runner. ALL FIXED: TTL seeded via
+      windowStaticDuration TimeToLiveWindowSpec case; FirstTime/TimeAccum expire paths converted
+      to windowDeadlineFromState; seed path calls resolveWindowExprParams first; ID lists +3 with
+      evidence regenerated (passing/0/80 records, 3 IDs); named-window retention now REJECTS
+      expression-sized specs loudly (ErrorInvalidRule); dead param removed. New engine-level guard
+      test TestContextParameterizedExprWindowExpiry (TimeAccumExpr/FirstTimeExpr expiry semantics +
+      static TTL regression). Gates re-run green (make check exit 0, gofmt clean, git diff --check
+      clean).
+- [x] Reviewer re-check (same agent): CONFIRM PASS — all eight fixes verified, gates re-run green.
+      Residual non-blocking notes recorded in the case notes: windowExprParams does not recurse into
+      grouped/composite inner specs (silent zero-period class), the named-window expr-rejection has no
+      dedicated test, the new guard test added to the case goTests, and time-family expression periods
+      resolve as ms where Java uses seconds for bare numbers (carried P3, unobservable in pinned
+      chains). Shipped; Git owns identity — Draft 4.426 committed and pushed (chain
+      view-parameterized-by-context 3/3 executions DV; manifest 296 DV cases / 1091 DV runtime IDs;
+      capability view.basic-windows remaining EMPTY).
+
+## Current work unit
 Active: Draft 4.425 ('view-parameterized-by-context').
 
 - Unit: ViewParameterizedByContextLengthWindow (java-runtime-71761cb17e7d22393efc) and

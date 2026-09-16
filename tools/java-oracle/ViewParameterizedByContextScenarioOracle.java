@@ -30,8 +30,8 @@ import java.util.TreeSet;
  * Java oracle for ViewParameterizedByContext context-parameterized view
  * scenarios.
  *
- * Covers the two implemented in-chain ViewParameterizedByContext executions
- * replayed as two scenario cases, each case running against its own fresh
+ * Covers all three ViewParameterizedByContext executions replayed as three
+ * scenario cases, each case running against its own fresh
  * runtime and replaying its pinned module verbatim: length-window replays
  * ViewParameterizedByContextLengthWindow and doc-sample replays
  * ViewParameterizedByContextDocSample, the documentation form of the same
@@ -51,12 +51,21 @@ import java.util.TreeSet;
  * JSON text of each row's sorted-fields object so they compare
  * order-insensitively across engines.
  *
- * The ViewParameterizedByContextMoreWindows execution is out of chain scope:
- * its twelve further context-parameterized window kinds (length_batch, time,
- * ext_timed, time_batch, ext_timed_batch, time_length_batch, time_accum,
- * firstlength, firsttime, sort, rank, time_order) reduce to the same
- * expression-size mechanism and expression-size view variants exist only for
- * time windows.
+ * more-windows replays ViewParameterizedByContextMoreWindows as twelve
+ * sequential per-kind cycles over the same pinned two-statement module shape
+ * (create context ... terminated after 1 year;\ncontext CtxInitToTerm select
+ * * from SupportBean#<window>), one per window-parameterized kind:
+ * length_batch, time, ext_timed, time_batch, ext_timed_batch,
+ * time_length_batch, time_accum, firstlength, firsttime, sort, rank and
+ * time_order, each sized by context.miewl.intSize. Each cycle compiles its
+ * kind's module fresh (no cross-cycle caching, mirroring the pinned
+ * re-compilation), deploys it, records one "deployed" marker
+ * {case, operation:"deployed", statement} - the pinned observable that the
+ * kind compiled, deployed and its context partitions initialized from the
+ * following P1(2) and P2(20) init sends; the pinned execution attaches no
+ * listener - and then undeploys. Undeployment destroys the same-named
+ * context with the module, so the next cycle's context re-creation is
+ * legal.
  *
  * Configuration follows the pinned regression schema: SupportBean is
  * mirrored locally as {theString string, intPrimitive int, doubleBoxed
@@ -97,10 +106,15 @@ public class ViewParameterizedByContextScenarioOracle {
         List<JsonObject> records = new ArrayList<>();
 
         // Every cases[] entry runs independently against its own runtime,
-        // matching one runtime ID per execution.
+        // matching one runtime ID per execution. more-windows is a special
+        // case: twelve per-kind deploy/init/undeploy cycles with no listener.
         for (JsonValue caseVal : scenario.get("cases").asArray()) {
             String caseName = caseVal.asObject().getString("case", "");
-            runCase(allSteps, caseName, records);
+            if ("more-windows".equals(caseName)) {
+                runMoreWindowsCase(allSteps, caseName, records);
+            } else {
+                runCase(allSteps, caseName, records);
+            }
         }
 
         JsonObject root = new JsonObject();
@@ -180,6 +194,80 @@ public class ViewParameterizedByContextScenarioOracle {
         }
     }
 
+    /**
+     * Special path for the more-windows case: twelve sequential cycles of
+     * {deployed → init P1(2), P2(20) → undeploy}, one per window kind. Each
+     * deployed step compiles the next kind's module fresh (the previous
+     * module was undeployed, so the same-named context re-creation is
+     * legal), deploys it, and emits one deployed marker record; the pinned
+     * execution attaches no listener. A deployed step after all twelve
+     * kinds are consumed throws.
+     */
+    private static void runMoreWindowsCase(JsonArray allSteps, String caseName, List<JsonObject> records) throws Exception {
+        Configuration config = new Configuration();
+        config.getCommon().addEventType("SupportBean", LocalSupportBean.class);
+        config.getCommon().addEventType("SupportContextInitEventWLength", LocalSupportContextInitEventWLength.class);
+        config.getRuntime().getThreading().setInternalTimerEnabled(false);
+        EPRuntime runtime = EPRuntimeProvider.getRuntime("ViewParameterizedByContextScenarioOracle-" + caseName, config);
+        // The scenario owns no advance-time steps, so the clock is pinned to
+        // epoch at creation to match the Go runner's pinned virtual clock in
+        // record times.
+        runtime.getEventService().advanceTime(0);
+        try {
+            int[] cycleIndex = new int[] {0};
+            String[] activeDeploymentId = new String[] {null};
+
+            boolean inCase = false;
+            for (JsonValue stepVal : allSteps) {
+                JsonObject step = stepVal.asObject();
+                String op = step.getString("op", "");
+                if ("case".equals(op)) {
+                    inCase = caseName.equals(step.getString("case", ""));
+                    continue;
+                }
+                if (!inCase) {
+                    continue;
+                }
+                if ("deployed".equals(op)) {
+                    if (cycleIndex[0] >= MORE_WINDOWS_WINDOWS.length) {
+                        throw new IllegalStateException("unexpected deployed op for case " + caseName +
+                            ": all " + MORE_WINDOWS_WINDOWS.length + " window kinds are consumed");
+                    }
+                    EPCompiled compiled = EPCompilerProvider.getCompiler().compile(moreWindowsEPL(cycleIndex[0]), new CompilerArguments(config));
+                    EPDeployment deployed = runtime.getDeploymentService().deploy(compiled, new DeploymentOptions());
+                    activeDeploymentId[0] = deployed.getDeploymentId();
+                    cycleIndex[0]++;
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "deployed");
+                    record.add("statement", step.getString("statement", "s0"));
+                    records.add(record);
+                    continue;
+                }
+                if ("send".equals(op)) {
+                    sendEvent(runtime, step);
+                    continue;
+                }
+                if ("undeploy".equals(op)) {
+                    if (activeDeploymentId[0] == null) {
+                        throw new IllegalStateException("undeploy without a deployment for case " + caseName);
+                    }
+                    runtime.getDeploymentService().undeploy(activeDeploymentId[0]);
+                    activeDeploymentId[0] = null;
+                    continue;
+                }
+                if ("advance-time".equals(op)) {
+                    runtime.getEventService().advanceTime(Instant.parse(step.getString("at", "")).toEpochMilli());
+                    continue;
+                }
+                throw new IllegalStateException("unknown op: " + op);
+            }
+
+        } finally {
+            runtime.destroy();
+        }
+    }
+
     /** Per-case deployment state: the s0 statement plus a deployed flag. */
     private static final class CaseDeployment {
         private EPStatement statement;
@@ -248,6 +336,35 @@ public class ViewParameterizedByContextScenarioOracle {
             sorted.add(item);
         }
         return sorted;
+    }
+
+    /**
+     * The twelve window-parameterized kinds of the pinned
+     * ViewParameterizedByContextMoreWindows execution, in pinned call order.
+     */
+    private static final String[] MORE_WINDOWS_WINDOWS = {
+        "length_batch(context.miewl.intSize)",
+        "time(context.miewl.intSize)",
+        "ext_timed(longPrimitive, context.miewl.intSize)",
+        "time_batch(context.miewl.intSize)",
+        "ext_timed_batch(longPrimitive, context.miewl.intSize)",
+        "time_length_batch(context.miewl.intSize, context.miewl.intSize)",
+        "time_accum(context.miewl.intSize)",
+        "firstlength(context.miewl.intSize)",
+        "firsttime(context.miewl.intSize)",
+        "sort(context.miewl.intSize, intPrimitive)",
+        "rank(theString, context.miewl.intSize, theString)",
+        "time_order(longPrimitive, context.miewl.intSize)",
+    };
+
+    /**
+     * Verbatim transcription of the pinned runAssertionWindow module shape:
+     * the same-named context plus an (unnamed, like the pinned module)
+     * context-parameterized select over the given window kind.
+     */
+    private static String moreWindowsEPL(int cycleIndex) {
+        return "create context CtxInitToTerm initiated by SupportContextInitEventWLength as miewl terminated after 1 year;\n" +
+            "context CtxInitToTerm select * from SupportBean#" + MORE_WINDOWS_WINDOWS[cycleIndex];
     }
 
     /** Verbatim transcriptions of the pinned ViewParameterizedByContext modules. */
@@ -364,10 +481,16 @@ public class ViewParameterizedByContextScenarioOracle {
         return Json.value(String.valueOf(value));
     }
 
-    /** Local mirror of the pinned SupportBean regression bean members in use. */
+    /**
+     * Local mirror of the pinned SupportBean regression bean members in use.
+     * longPrimitive is required by the more-windows ext_timed /
+     * ext_timed_batch / time_order kinds; bare sends never set it, and the
+     * long primitive defaults to 0 like the pinned bean.
+     */
     public static class LocalSupportBean {
         private String theString;
         private int intPrimitive;
+        private long longPrimitive;
         private Double doubleBoxed;
 
         public String getTheString() {
@@ -384,6 +507,10 @@ public class ViewParameterizedByContextScenarioOracle {
 
         public void setIntPrimitive(int intPrimitive) {
             this.intPrimitive = intPrimitive;
+        }
+
+        public long getLongPrimitive() {
+            return longPrimitive;
         }
 
         public Double getDoubleBoxed() {

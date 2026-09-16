@@ -2,6 +2,7 @@ package esper
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -113,4 +114,115 @@ func TestViewParameterizedByContextLengthWindowParity(t *testing.T) {
 	send("P2", -1)
 	send("P3", -1)
 	assertRows(map[string]int64{"P1": 2, "P2": 4, "P3": 3})
+}
+
+// TestContextParameterizedExprWindowExpiry guards the expire paths of the
+// context-parameterized window variants: time_accum and firsttime must use
+// the partition-resolved period (not a zero default) on the time-advance
+// path, and the static TimeToLive expiry must be unaffected by the
+// resolution plumbing.
+func TestContextParameterizedExprWindowExpiry(t *testing.T) {
+	env := NewEnvironment()
+	RegisterStruct[zzCtxInit](env, "SupportContextInitEventWLength")
+	RegisterStruct[zzBean](env, "SupportBean")
+	isInit := Equal[string](TypeName(EventValue[Event]()), Literal("SupportContextInitEventWLength"))
+	endTimer := TimerIntervalCalendar(From[zzCtxInit](env, "SupportContextInitEventWLength"), 1, 0, 0)
+	if _, err := CreateOverlappingPatternTerminatedContext(env, "Ctx", Literal("global"), isInit, endTimer); err != nil {
+		t.Fatal(err)
+	}
+
+	engine := NewEngine(env, WithStartTime(time.Unix(0, 0).UTC()))
+	defer func() { _ = engine.Close(context.Background()) }()
+
+	build := func(window WindowSpec, withContext bool) *Statement {
+		t.Helper()
+		source := From[zzBean](env, "SupportBean")
+		if withContext {
+			source = source.Filter(EqualOf(Field[zzBean, *string]("theString"), Property[*string](ContextInitiatingEvent(), "id")))
+		}
+		options := []QueryOption{StatementName("s0"), WithOldStream()}
+		if withContext {
+			options = append(options, WithContext("Ctx"))
+		}
+		plan, err := env.Build(source.Window(window).Query(options...))
+		if err != nil {
+			t.Fatal(err)
+		}
+		deployment, err := engine.Deploy(context.Background(), plan)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return deployment.Statements()[0]
+	}
+	snapshotIDs := func(st *Statement) []string {
+		t.Helper()
+		snap, err := st.Snapshot(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for _, row := range snap.Results() {
+			if id := row.Get("theString").Any(); id != nil {
+				ids = append(ids, *(id.(*string)))
+			}
+		}
+		return ids
+	}
+	advance := func(at int64) {
+		if err := engine.AdvanceTime(context.Background(), time.UnixMilli(at).UTC()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendCtx := func(id string, size int32) {
+		if err := engine.Send(context.Background(), "SupportContextInitEventWLength", zzCtxInit{ID: id, IntSize: size}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sendBean := func(id string) {
+		if err := engine.Send(context.Background(), "SupportBean", zzBean{TheString: &id}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// time_accum(<ctx>.intSize = 5): the value event lands at t=0 and must
+	// survive the 2 ms tick, expiring only once the resolved 5 ms period
+	// passes (at t=5).
+	accum := build(TimeAccumExpr(Property[int](ContextInitiatingEvent(), "intSize")), true)
+	sendCtx("A", 5)
+	sendBean("A")
+	advance(2)
+	if got := snapshotIDs(accum); !reflect.DeepEqual(got, []string{"A"}) {
+		t.Fatalf("time-accum before expiry = %v", got)
+	}
+	advance(5)
+	if got := snapshotIDs(accum); len(got) != 0 {
+		t.Fatalf("time-accum after expiry = %v", got)
+	}
+
+	// firsttime(<ctx>.intSize = 10): the partition starts at the current
+	// clock (5 ms), admits everything before start+10 ms (= 15) and closes
+	// exactly there.
+	first := build(FirstTimeExpr(Property[int](ContextInitiatingEvent(), "intSize")), true)
+	sendCtx("B", 10)
+	sendBean("B")
+	advance(14)
+	sendBean("B")
+	advance(15)
+	sendBean("B")
+	if got := snapshotIDs(first); !reflect.DeepEqual(got, []string{"B", "B"}) {
+		t.Fatalf("firsttime rows after close = %v", got)
+	}
+
+	// Static TTL regression: expiry at receivedAt+duration still fires.
+	ttl := build(TimeToLive(5*time.Millisecond), false)
+	advance(2000)
+	sendBean("T1")
+	advance(2003)
+	if got := snapshotIDs(ttl); !reflect.DeepEqual(got, []string{"T1"}) {
+		t.Fatalf("ttl before expiry = %v", got)
+	}
+	advance(2005)
+	if got := snapshotIDs(ttl); len(got) != 0 {
+		t.Fatalf("ttl after expiry = %v", got)
+	}
 }

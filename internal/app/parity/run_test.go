@@ -15523,6 +15523,87 @@ func TestRunViewParameterizedByContextDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunViewParameterizedByContextMoreWindowsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-parameterized-by-context.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "view-parameterized-by-context.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-parameterized-by-context.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "view-parameterized-by-context-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunViewParameterizedByContextMoreWindowsRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "more-windows-marker-statement-drift",
+			mutate: func(trace *compat.Trace) {
+				// Records 68-79 are twelve identical deployed markers (one
+				// per kind); the marker shape itself must not drift.
+				trace.Records[68].Statement = "s1"
+			},
+		},
+		{
+			name: "more-windows-marker-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = append(trace.Records[:79], trace.Records[80:]...)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-parameterized-by-context.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "view-parameterized-by-context.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-parameterized-by-context.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "view-parameterized-by-context-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunViewTimeBatchDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "view-time-batch.evidence.json"),

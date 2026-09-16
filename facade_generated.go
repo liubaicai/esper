@@ -2716,6 +2716,12 @@ func ExternallyTimedBatchCalendar(timestamp Expr, years, months, days int) Exter
 	return internalengine.ExternallyTimedBatchCalendar(timestamp, years, months, days)
 }
 
+// ExternallyTimedBatchExpr builds an externally-timed batch window whose
+// period is a context-parameterized expression (in milliseconds).
+func ExternallyTimedBatchExpr(timestamp, duration Expr) ExternallyTimedWindowSpec {
+	return internalengine.ExternallyTimedBatchExpr(timestamp, duration)
+}
+
 // ExternallyTimedBatchWithReference supplies Esper's optional reference-point
 // argument for ext_timed_batch (for example ext_timed_batch(ts, 10, 0L)).
 func ExternallyTimedBatchWithReference(timestamp Expr, duration time.Duration, referenceMillis int64) ExternallyTimedWindowSpec {
@@ -2726,6 +2732,12 @@ func ExternallyTimedBatchWithReference(timestamp Expr, duration time.Duration, r
 // calendar-period retention (Esper ext_timed(ts, 1 month)).
 func ExternallyTimedCalendar(timestamp Expr, years, months, days int) ExternallyTimedWindowSpec {
 	return internalengine.ExternallyTimedCalendar(timestamp, years, months, days)
+}
+
+// ExternallyTimedExpr builds an externally-timed window whose expiry period
+// is a context-parameterized expression (in milliseconds).
+func ExternallyTimedExpr(timestamp, duration Expr) ExternallyTimedWindowSpec {
+	return internalengine.ExternallyTimedExpr(timestamp, duration)
 }
 
 type ExternallyTimedWindowSpec = internalengine.ExternallyTimedWindowSpec
@@ -2806,6 +2818,12 @@ func FirstLength(size int) FirstLengthWindowSpec {
 	return internalengine.FirstLength(size)
 }
 
+// FirstLengthExpr sizes the first-length window by an expression evaluated
+// once per context partition.
+func FirstLengthExpr(expr Expr) FirstLengthWindowSpec {
+	return internalengine.FirstLengthExpr(expr)
+}
+
 type FirstLengthWindowSpec = internalengine.FirstLengthWindowSpec
 
 func FirstTime(duration time.Duration) FirstTimeWindowSpec {
@@ -2816,6 +2834,12 @@ func FirstTime(duration time.Duration) FirstTimeWindowSpec {
 // measured with calendar arithmetic (Esper firsttime(1 month)).
 func FirstTimeCalendar(years, months, days int) FirstTimeWindowSpec {
 	return internalengine.FirstTimeCalendar(years, months, days)
+}
+
+// FirstTimeExpr sizes the firsttime admission period by an expression
+// evaluated once per context partition.
+func FirstTimeExpr(expr Expr) FirstTimeWindowSpec {
+	return internalengine.FirstTimeExpr(expr)
 }
 
 type FirstTimeWindowSpec = internalengine.FirstTimeWindowSpec
@@ -3474,6 +3498,12 @@ func Leaving(predicate ...Expression[bool]) Expression[bool] {
 
 func LengthBatch(size int) LengthBatchWindowSpec {
 	return internalengine.LengthBatch(size)
+}
+
+// LengthBatchExpr sizes the length-batch window by an expression evaluated
+// once per context partition (context-parameterized view sizes).
+func LengthBatchExpr(expr Expr) LengthBatchWindowSpec {
+	return internalengine.LengthBatchExpr(expr)
 }
 
 type LengthBatchWindowSpec = internalengine.LengthBatchWindowSpec
@@ -5438,6 +5468,12 @@ func RankWindowBy(size int, uniqueKeys []Expr, sortKeys ...SortKey) SortedWindow
 	return internalengine.RankWindowBy(size, uniqueKeys, sortKeys...)
 }
 
+// RankWindowExpr builds a rank window whose capacity is a
+// context-parameterized expression (rank(theString, context.miewl.intSize, theString)).
+func RankWindowExpr(size Expr, uniqueKeys []Expr, keys ...SortKey) SortedWindowSpec {
+	return internalengine.RankWindowExpr(size, uniqueKeys, keys...)
+}
+
 // RankWindowWithUniqueKeys is a descriptive alias for callers that prefer an
 // API name which makes the replacement key behavior explicit.
 func RankWindowWithUniqueKeys(size int, uniqueKeys []Expr, sortKeys ...SortKey) SortedWindowSpec {
@@ -6104,6 +6140,12 @@ type SortKey = internalengine.SortKey
 
 func SortWindow(size int, keys ...SortKey) SortedWindowSpec {
 	return internalengine.SortWindow(size, keys...)
+}
+
+// SortWindowExpr builds a sort window whose capacity is a
+// context-parameterized expression (sort(context.miewl.intSize, price)).
+func SortWindowExpr(size Expr, keys ...SortKey) SortedWindowSpec {
+	return internalengine.SortWindowExpr(size, keys...)
 }
 
 // SortedAccessBy creates a sorted access aggregate over value and key. The
@@ -7169,6 +7211,12 @@ func TimeAccumCalendar(years, months, days int) TimeAccumWindowSpec {
 	return internalengine.TimeAccumCalendar(years, months, days)
 }
 
+// TimeAccumExpr sizes the time-accum period by an expression evaluated once
+// per context partition.
+func TimeAccumExpr(expr Expr) TimeAccumWindowSpec {
+	return internalengine.TimeAccumExpr(expr)
+}
+
 type TimeAccumWindowSpec = internalengine.TimeAccumWindowSpec
 
 func TimeBatch(duration time.Duration) TimeBatchWindowSpec {
@@ -7179,6 +7227,12 @@ func TimeBatch(duration time.Duration) TimeBatchWindowSpec {
 // boundaries (Esper time_batch(1 month)).
 func TimeBatchCalendar(years, months, days int) TimeBatchWindowSpec {
 	return internalengine.TimeBatchCalendar(years, months, days)
+}
+
+// TimeBatchExpr sizes the time-batch period by an expression evaluated once
+// per context partition (context-parameterized view sizes).
+func TimeBatchExpr(expr Expr) TimeBatchWindowSpec {
+	return internalengine.TimeBatchExpr(expr)
 }
 
 // TimeBatchForce builds a time-batch window with Esper's control-keyword
@@ -7200,6 +7254,12 @@ func TimeLengthBatch(duration time.Duration, size int) TimeLengthBatchWindowSpec
 // calendar-period boundaries.
 func TimeLengthBatchCalendar(years, months, days int, size int) TimeLengthBatchWindowSpec {
 	return internalengine.TimeLengthBatchCalendar(years, months, days, size)
+}
+
+// TimeLengthBatchExpr builds a time-length batch window whose period and
+// count are context-parameterized expressions.
+func TimeLengthBatchExpr(durationExpr, sizeExpr Expr) TimeLengthBatchWindowSpec {
+	return internalengine.TimeLengthBatchExpr(durationExpr, sizeExpr)
 }
 
 // TimeLengthBatchForce builds a time-length batch window with Esper's control
@@ -7227,6 +7287,12 @@ func TimeOrder(timestamp Expr, duration time.Duration) TimeOrderWindowSpec {
 // forms; expiry uses time.Time.AddDate rather than a fixed duration.
 func TimeOrderCalendar(timestamp Expr, years, months, days int) TimeOrderWindowSpec {
 	return internalengine.TimeOrderCalendar(timestamp, years, months, days)
+}
+
+// TimeOrderExpr builds a time-order window whose expiry period is a
+// context-parameterized expression (in milliseconds).
+func TimeOrderExpr(timestamp, duration Expr) TimeOrderWindowSpec {
+	return internalengine.TimeOrderExpr(timestamp, duration)
 }
 
 type TimeOrderWindowSpec = internalengine.TimeOrderWindowSpec

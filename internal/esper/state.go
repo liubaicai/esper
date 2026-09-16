@@ -1756,6 +1756,12 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 	if err := config.retention.validate(); err != nil {
 		return NamedWindowDefinition{}, err
 	}
+	if sizeExpr, durationExpr := windowExprParams(config.retention); sizeExpr != nil || durationExpr != nil {
+		// Expression-sized retentions resolve per context partition; the
+		// named-window runtime has no partition scope, so a parameterized
+		// retention would silently resolve to zero. Reject loudly instead.
+		return NamedWindowDefinition{}, NewError(ErrorInvalidRule, "expression-sized view parameters are not supported for named-window retention")
+	}
 	if grouped, ok := config.retention.(GroupWindowSpec); ok {
 		switch grouped.Inner.(type) {
 		case LengthWindowSpec, TimeBatchWindowSpec:
@@ -3510,7 +3516,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 			if err != nil {
 				return NamedWindowDelta{}, err
 			}
-			entry := storedEvent{event: preparedInsert, receivedAt: now, expiresAt: timeOrderExpiry(retention, timestamp)}
+			entry := storedEvent{event: preparedInsert, receivedAt: now, expiresAt: timeOrderExpiry(retention, 0, timestamp)}
 			if !entry.expiresAt.After(now) {
 				delta.New = append(delta.New, preparedInsert)
 				delta.Old = append(delta.Old, preparedInsert)
@@ -3833,7 +3839,7 @@ func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, un
 		if err != nil {
 			return NamedWindowDelta{}, err
 		}
-		entry.expiresAt = timeOrderExpiry(retention, timestamp)
+		entry.expiresAt = timeOrderExpiry(retention, 0, timestamp)
 		if !entry.expiresAt.After(now) {
 			// An event whose external timestamp is already expired under the
 			// current engine time passes straight through: delivered as new

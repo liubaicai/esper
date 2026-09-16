@@ -24,23 +24,26 @@ type viewParameterizedByContextInit struct {
 }
 
 type viewParameterizedByContextBean struct {
-	TheString    *string `esper:"theString"`
-	IntPrimitive int32   `esper:"intPrimitive"`
+	TheString     *string `esper:"theString"`
+	IntPrimitive  int32   `esper:"intPrimitive"`
+	LongPrimitive int64   `esper:"longPrimitive"`
 }
 
 var (
 	viewParameterizedByContextJavaRuntimeIDs = []string{
 		"java-runtime-71761cb17e7d22393efc", // LengthWindow
 		"java-runtime-de2ad7eb74b76b16867a", // DocSample
+		"java-runtime-6d60bed2a335972423d2", // MoreWindows
 	}
 	viewParameterizedByContextJavaExecutions = []string{
 		"ViewParameterizedByContextLengthWindow",
 		"ViewParameterizedByContextDocSample",
+		"ViewParameterizedByContextMoreWindows",
 	}
 )
 
 var viewParameterizedByContextCaseOrder = []string{
-	"length-window", "doc-sample",
+	"length-window", "doc-sample", "more-windows",
 }
 
 func runViewParameterizedByContextScenario(ctx context.Context, scenario compat.Scenario) (compat.Trace, error) {
@@ -103,6 +106,10 @@ func runViewParameterizedByContextCase(ctx context.Context, scenario compat.Scen
 	defer func() { _ = engine.Close(context.Background()) }()
 
 	trace := compat.Trace{Version: caseScenario.Version, ID: caseScenario.ID}
+	if caseName == "more-windows" {
+		return runViewParameterizedByContextMoreWindows(ctx, engine, caseScenario, caseName, env, trace)
+	}
+
 	seq := uint64(0)
 	statementFound := false
 	var statement *esper.Statement
@@ -175,6 +182,86 @@ func runViewParameterizedByContextCase(ctx context.Context, scenario compat.Scen
 		default:
 			return trace, fmt.Errorf("unsupported view-parameterized-by-context step op %q", step.Op)
 		}
+	}
+	return trace, nil
+}
+
+// runViewParameterizedByContextMoreWindows replays ViewParameterizedByContextMoreWindows:
+// twelve context-parameterized window kinds, each deployed in its own
+// deploy→init(P1=2)→init(P2=20)→undeploy cycle with no listener attached.
+// The pinned observable is one deployed record per kind.
+func runViewParameterizedByContextMoreWindows(ctx context.Context, engine *esper.Engine, caseScenario compat.Scenario, caseName string, env *esper.Environment, trace compat.Trace) (compat.Trace, error) {
+	intSize := func() esper.Expr { return esper.Property[int](esper.ContextInitiatingEvent(), "intSize") }
+	ts := esper.Field[viewParameterizedByContextBean, int64]("longPrimitive")
+	theString := esper.Field[viewParameterizedByContextBean, *string]("theString")
+	ip := esper.Field[viewParameterizedByContextBean, int32]("intPrimitive")
+
+	specs := []esper.WindowSpec{
+		esper.LengthBatchExpr(intSize()),
+		esper.TimeWindowExpr(intSize()),
+		esper.ExternallyTimedExpr(ts, intSize()),
+		esper.TimeBatchExpr(intSize()),
+		esper.ExternallyTimedBatchExpr(ts, intSize()),
+		esper.TimeLengthBatchExpr(intSize(), intSize()),
+		esper.TimeAccumExpr(intSize()),
+		esper.FirstLengthExpr(intSize()),
+		esper.FirstTimeExpr(intSize()),
+		esper.SortWindowExpr(intSize(), esper.Ascending(ip)),
+		esper.RankWindowExpr(intSize(), []esper.Expr{theString}, esper.Ascending(theString)),
+		esper.TimeOrderExpr(ts, intSize()),
+	}
+
+	deployedCount := 0
+	undeployedCount := 0
+	var current *esper.Deployment
+	for _, step := range caseScenario.Steps {
+		switch step.Op {
+		case "case":
+			continue
+		case "deployed":
+			if deployedCount == len(specs) {
+				return trace, fmt.Errorf("more-windows: unexpected deployed step beyond the twelve kinds")
+			}
+			plan, buildErr := env.Build(esper.From[viewParameterizedByContextBean](env, "SupportBean").
+				Window(specs[deployedCount]).
+				Query(esper.StatementName("s0"), esper.WithContext("CtxInitToTerm")))
+			if buildErr != nil {
+				return trace, buildErr
+			}
+			deployment, deployErr := engine.Deploy(ctx, plan)
+			if deployErr != nil {
+				return trace, deployErr
+			}
+			deployedCount++
+			current = deployment
+			trace.Records = append(trace.Records, compat.TraceRecord{
+				Case:      caseName,
+				Operation: "deployed",
+				Statement: step.Statement,
+			})
+		case "undeploy":
+			if current == nil {
+				return trace, fmt.Errorf("more-windows: undeploy without deployment")
+			}
+			if err := current.Undeploy(ctx); err != nil {
+				return trace, err
+			}
+			current = nil
+			undeployedCount++
+		case "send":
+			var payload map[string]any
+			if err := json.Unmarshal(step.Payload, &payload); err != nil {
+				return trace, fmt.Errorf("view-parameterized-by-context decode %s: %w", step.EventType, err)
+			}
+			if err := engine.SendRecord(ctx, step.EventType, payload); err != nil {
+				return trace, err
+			}
+		default:
+			return trace, fmt.Errorf("unsupported more-windows step op %q", step.Op)
+		}
+	}
+	if deployedCount != len(specs) || undeployedCount != len(specs) {
+		return trace, fmt.Errorf("more-windows: deployed=%d undeployed=%d, want 12/12", deployedCount, undeployedCount)
 	}
 	return trace, nil
 }

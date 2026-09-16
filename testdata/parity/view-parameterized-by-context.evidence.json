@@ -3,14 +3,16 @@
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaRuntimeIds": [
     "java-runtime-71761cb17e7d22393efc",
-    "java-runtime-de2ad7eb74b76b16867a"
+    "java-runtime-de2ad7eb74b76b16867a",
+    "java-runtime-6d60bed2a335972423d2"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewParameterizedByContext.java"
   ],
   "javaExecutions": [
     "ViewParameterizedByContextLengthWindow",
-    "ViewParameterizedByContextDocSample"
+    "ViewParameterizedByContextDocSample",
+    "ViewParameterizedByContextMoreWindows"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -603,6 +605,298 @@
         "op": "snapshot",
         "statement": "s0",
         "mode": "any"
+      },
+      {
+        "op": "case",
+        "case": "more-windows"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P1",
+          "intSize": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportContextInitEventWLength",
+        "payload": {
+          "id": "P2",
+          "intSize": 20
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "s0"
       }
     ]
   },
@@ -1749,6 +2043,78 @@
             }
           }
         ]
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
       }
     ]
   },
@@ -2895,6 +3261,78 @@
             }
           }
         ]
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
+      },
+      {
+        "case": "more-windows",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 0
       }
     ]
   },

@@ -1773,12 +1773,22 @@ func (KeepAllWindowSpec) windowSpec()         {}
 func (KeepAllWindowSpec) description() string { return "keep-all" }
 func (KeepAllWindowSpec) validate() error     { return nil }
 
-type LengthBatchWindowSpec struct{ Size int }
+type LengthBatchWindowSpec struct {
+	Size     int
+	SizeExpr Expr
+}
 
-func LengthBatch(size int) LengthBatchWindowSpec    { return LengthBatchWindowSpec{Size: size} }
-func (LengthBatchWindowSpec) windowSpec()           {}
-func (w LengthBatchWindowSpec) description() string { return fmt.Sprintf("length-batch(%d)", w.Size) }
+func LengthBatch(size int) LengthBatchWindowSpec { return LengthBatchWindowSpec{Size: size} }
+
+// LengthBatchExpr sizes the length-batch window by an expression evaluated
+// once per context partition (context-parameterized view sizes).
+func LengthBatchExpr(expr Expr) LengthBatchWindowSpec { return LengthBatchWindowSpec{SizeExpr: expr} }
+func (LengthBatchWindowSpec) windowSpec()             {}
+func (w LengthBatchWindowSpec) description() string   { return fmt.Sprintf("length-batch(%d)", w.Size) }
 func (w LengthBatchWindowSpec) validate() error {
+	if w.SizeExpr != nil {
+		return nil
+	}
 	if w.Size <= 0 {
 		return fmt.Errorf("esper: length-batch window size must be positive, got %d", w.Size)
 	}
@@ -1877,10 +1887,19 @@ type TimeBatchWindowSpec struct {
 	CalendarYears  int
 	CalendarMonths int
 	CalendarDays   int
+	// Expr evaluates to a duration when the batch period is
+	// context-parameterized (time_batch(context.miewl.intSize)).
+	Expr Expr
 }
 
 func TimeBatch(duration time.Duration) TimeBatchWindowSpec {
 	return TimeBatchWindowSpec{Duration: duration}
+}
+
+// TimeBatchExpr sizes the time-batch period by an expression evaluated once
+// per context partition (context-parameterized view sizes).
+func TimeBatchExpr(expr Expr) TimeBatchWindowSpec {
+	return TimeBatchWindowSpec{Expr: expr}
 }
 
 // TimeBatchForce builds a time-batch window with Esper's control-keyword
@@ -1916,6 +1935,9 @@ func (w TimeBatchWindowSpec) description() string {
 	return fmt.Sprintf("time-batch(%s,%s)", w.Duration, strings.Join(flags, ","))
 }
 func (w TimeBatchWindowSpec) validate() error {
+	if w.Expr != nil {
+		return nil
+	}
 	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
 	if (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: time-batch window duration must be positive, got %s", w.Duration)
@@ -1931,10 +1953,21 @@ type TimeLengthBatchWindowSpec struct {
 	CalendarYears  int
 	CalendarMonths int
 	CalendarDays   int
+	// DurationExpr/SizeExpr are the context-parameterized forms of the
+	// period and count parameters (time_length_batch(context.miewl.intSize,
+	// context.miewl.intSize)).
+	DurationExpr Expr
+	SizeExpr     Expr
 }
 
 func TimeLengthBatch(duration time.Duration, size int) TimeLengthBatchWindowSpec {
 	return TimeLengthBatchWindowSpec{Duration: duration, Size: size}
+}
+
+// TimeLengthBatchExpr builds a time-length batch window whose period and
+// count are context-parameterized expressions.
+func TimeLengthBatchExpr(durationExpr, sizeExpr Expr) TimeLengthBatchWindowSpec {
+	return TimeLengthBatchWindowSpec{DurationExpr: durationExpr, SizeExpr: sizeExpr}
 }
 
 // TimeLengthBatchForce builds a time-length batch window with Esper's control
@@ -1969,6 +2002,9 @@ func (w TimeLengthBatchWindowSpec) description() string {
 	return fmt.Sprintf("time-length-batch(%s,%d,%s)", w.Duration, w.Size, strings.Join(flags, ","))
 }
 func (w TimeLengthBatchWindowSpec) validate() error {
+	if w.SizeExpr != nil || w.DurationExpr != nil {
+		return nil
+	}
 	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
 	if w.Size <= 0 || (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: time-length-batch requires positive duration and size")
@@ -1990,12 +2026,22 @@ func (LastEventWindowSpec) windowSpec()         {}
 func (LastEventWindowSpec) description() string { return "last-event" }
 func (LastEventWindowSpec) validate() error     { return nil }
 
-type FirstLengthWindowSpec struct{ Size int }
+type FirstLengthWindowSpec struct {
+	Size     int
+	SizeExpr Expr
+}
 
-func FirstLength(size int) FirstLengthWindowSpec    { return FirstLengthWindowSpec{Size: size} }
-func (FirstLengthWindowSpec) windowSpec()           {}
-func (w FirstLengthWindowSpec) description() string { return fmt.Sprintf("first-length(%d)", w.Size) }
+func FirstLength(size int) FirstLengthWindowSpec { return FirstLengthWindowSpec{Size: size} }
+
+// FirstLengthExpr sizes the first-length window by an expression evaluated
+// once per context partition.
+func FirstLengthExpr(expr Expr) FirstLengthWindowSpec { return FirstLengthWindowSpec{SizeExpr: expr} }
+func (FirstLengthWindowSpec) windowSpec()             {}
+func (w FirstLengthWindowSpec) description() string   { return fmt.Sprintf("first-length(%d)", w.Size) }
 func (w FirstLengthWindowSpec) validate() error {
+	if w.SizeExpr != nil {
+		return nil
+	}
 	if w.Size <= 0 {
 		return fmt.Errorf("esper: first-length window size must be positive, got %d", w.Size)
 	}
@@ -2007,6 +2053,9 @@ type FirstTimeWindowSpec struct {
 	CalendarYears  int
 	CalendarMonths int
 	CalendarDays   int
+	// Expr evaluates to a duration when the admission period is
+	// context-parameterized (firsttime(context.miewl.intSize)).
+	Expr Expr
 }
 
 func FirstTime(duration time.Duration) FirstTimeWindowSpec {
@@ -2019,6 +2068,12 @@ func FirstTimeCalendar(years, months, days int) FirstTimeWindowSpec {
 	return FirstTimeWindowSpec{CalendarYears: years, CalendarMonths: months, CalendarDays: days}
 }
 
+// FirstTimeExpr sizes the firsttime admission period by an expression
+// evaluated once per context partition.
+func FirstTimeExpr(expr Expr) FirstTimeWindowSpec {
+	return FirstTimeWindowSpec{Expr: expr}
+}
+
 func (FirstTimeWindowSpec) windowSpec() {}
 func (w FirstTimeWindowSpec) description() string {
 	if w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0 {
@@ -2027,6 +2082,9 @@ func (w FirstTimeWindowSpec) description() string {
 	return "first-time(" + w.Duration.String() + ")"
 }
 func (w FirstTimeWindowSpec) validate() error {
+	if w.Expr != nil {
+		return nil
+	}
 	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
 	if (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: first-time window requires a positive duration")
@@ -2039,10 +2097,19 @@ type TimeAccumWindowSpec struct {
 	CalendarYears  int
 	CalendarMonths int
 	CalendarDays   int
+	// Expr evaluates to a duration when the accumulation period is
+	// context-parameterized (time_accum(context.miewl.intSize)).
+	Expr Expr
 }
 
 func TimeAccum(duration time.Duration) TimeAccumWindowSpec {
 	return TimeAccumWindowSpec{Duration: duration}
+}
+
+// TimeAccumExpr sizes the time-accum period by an expression evaluated once
+// per context partition.
+func TimeAccumExpr(expr Expr) TimeAccumWindowSpec {
+	return TimeAccumWindowSpec{Expr: expr}
 }
 
 // TimeAccumCalendar creates a time-accum window whose expiry deadline is
@@ -2059,6 +2126,9 @@ func (w TimeAccumWindowSpec) description() string {
 	return "time-accum(" + w.Duration.String() + ")"
 }
 func (w TimeAccumWindowSpec) validate() error {
+	if w.Expr != nil {
+		return nil
+	}
 	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
 	if (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: time-accum window requires a positive duration")
@@ -2298,6 +2368,9 @@ type ExternallyTimedWindowSpec struct {
 	CalendarYears   int
 	CalendarMonths  int
 	CalendarDays    int
+	// DurationExpr evaluates to a duration when the expiry period is
+	// context-parameterized (ext_timed(ts, context.miewl.intSize)).
+	DurationExpr Expr
 }
 
 type TimeOrderWindowSpec struct {
@@ -2306,10 +2379,19 @@ type TimeOrderWindowSpec struct {
 	CalendarYears  int
 	CalendarMonths int
 	CalendarDays   int
+	// DurationExpr evaluates to a duration when the ordering expiry period
+	// is context-parameterized (time_order(ts, context.miewl.intSize)).
+	DurationExpr Expr
 }
 
 func TimeOrder(timestamp Expr, duration time.Duration) TimeOrderWindowSpec {
 	return TimeOrderWindowSpec{Timestamp: timestamp, Duration: duration}
+}
+
+// TimeOrderExpr builds a time-order window whose expiry period is a
+// context-parameterized expression (in milliseconds).
+func TimeOrderExpr(timestamp, duration Expr) TimeOrderWindowSpec {
+	return TimeOrderWindowSpec{Timestamp: timestamp, DurationExpr: duration}
 }
 
 // TimeOrderCalendar creates an externally timestamp-ordered window whose
@@ -2333,11 +2415,26 @@ func (w TimeOrderWindowSpec) description() string {
 	return "time-order(" + w.Timestamp.Description() + "," + w.Duration.String() + ")"
 }
 func (w TimeOrderWindowSpec) validate() error {
+	if w.DurationExpr != nil {
+		return nil
+	}
 	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
 	if w.Timestamp == nil || (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: time-order window requires timestamp and positive duration")
 	}
 	return nil
+}
+
+// ExternallyTimedExpr builds an externally-timed window whose expiry period
+// is a context-parameterized expression (in milliseconds).
+func ExternallyTimedExpr(timestamp, duration Expr) ExternallyTimedWindowSpec {
+	return ExternallyTimedWindowSpec{Timestamp: timestamp, DurationExpr: duration}
+}
+
+// ExternallyTimedBatchExpr builds an externally-timed batch window whose
+// period is a context-parameterized expression (in milliseconds).
+func ExternallyTimedBatchExpr(timestamp, duration Expr) ExternallyTimedWindowSpec {
+	return ExternallyTimedWindowSpec{Timestamp: timestamp, DurationExpr: duration, Batch: true}
 }
 
 func ExternallyTimed(timestamp Expr, duration time.Duration) ExternallyTimedWindowSpec {
@@ -2388,6 +2485,9 @@ func (w ExternallyTimedWindowSpec) description() string {
 	return name + "(" + w.Timestamp.Description() + "," + w.Duration.String() + ")"
 }
 func (w ExternallyTimedWindowSpec) validate() error {
+	if w.DurationExpr != nil {
+		return nil
+	}
 	calendar := w.CalendarYears != 0 || w.CalendarMonths != 0 || w.CalendarDays != 0
 	if w.Timestamp == nil || (!calendar && w.Duration <= 0) || (calendar && (w.Duration != 0 || w.CalendarYears < 0 || w.CalendarMonths < 0 || w.CalendarDays < 0 || (w.CalendarYears == 0 && w.CalendarMonths == 0 && w.CalendarDays == 0))) {
 		return fmt.Errorf("esper: externally-timed window requires timestamp and positive duration")
@@ -2449,6 +2549,7 @@ func Descending(expr Expr) SortKey { return SortKey{Expr: expr, Descending: true
 
 type SortedWindowSpec struct {
 	Size              int
+	SizeExpr          Expr
 	Keys              []SortKey
 	Rank              bool
 	UniqueKeys        []Expr
@@ -2457,6 +2558,18 @@ type SortedWindowSpec struct {
 
 func SortWindow(size int, keys ...SortKey) SortedWindowSpec {
 	return SortedWindowSpec{Size: size, Keys: append([]SortKey(nil), keys...)}
+}
+
+// SortWindowExpr builds a sort window whose capacity is a
+// context-parameterized expression (sort(context.miewl.intSize, price)).
+func SortWindowExpr(size Expr, keys ...SortKey) SortedWindowSpec {
+	return SortedWindowSpec{SizeExpr: size, Keys: append([]SortKey(nil), keys...)}
+}
+
+// RankWindowExpr builds a rank window whose capacity is a
+// context-parameterized expression (rank(theString, context.miewl.intSize, theString)).
+func RankWindowExpr(size Expr, uniqueKeys []Expr, keys ...SortKey) SortedWindowSpec {
+	return SortedWindowSpec{SizeExpr: size, Keys: append([]SortKey(nil), keys...), Rank: true, UniqueKeys: uniqueKeys}
 }
 func RankWindow(size int, keys ...SortKey) SortedWindowSpec {
 	return SortedWindowSpec{Size: size, Keys: append([]SortKey(nil), keys...), Rank: true}
@@ -2515,7 +2628,10 @@ func (w SortedWindowSpec) description() string {
 	return fmt.Sprintf("%s(%s%d,%s)", name, unique, w.Size, strings.Join(parts, ","))
 }
 func (w SortedWindowSpec) validate() error {
-	if w.Size <= 0 || len(w.Keys) == 0 {
+	if w.SizeExpr == nil && w.Size <= 0 {
+		return fmt.Errorf("esper: sort/rank window requires positive size and at least one key")
+	}
+	if len(w.Keys) == 0 {
 		return fmt.Errorf("esper: sort/rank window requires positive size and at least one key")
 	}
 	if !w.Rank && len(w.UniqueKeys) > 0 {
