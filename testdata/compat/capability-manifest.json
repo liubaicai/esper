@@ -1217,7 +1217,15 @@
     "java-runtime-7c3c8427c5d48c24774e",
     "java-runtime-54b18a72ff7fa42b3afe",
     "java-runtime-ebfb2b66f2dd8778a08b",
-    "java-runtime-5d74da396c739c122464"
+    "java-runtime-5d74da396c739c122464",
+    "java-runtime-047b01d4e6e6e73101c3",
+    "java-runtime-f6dc738e9e1219068421",
+    "java-runtime-815886be170eed7aee20",
+    "java-runtime-7c4e54256aa53004caa5",
+    "java-runtime-b6a1986826894ec12fd1",
+    "java-runtime-66eefdbac64b7ab79a9b",
+    "java-runtime-3df0124bc42a5e107a8c",
+    "java-runtime-56e8b086b5eaf29a9494"
    ],
    "representativeScenarioIds": [
     "filter-window-aggregate-output",
@@ -15015,14 +15023,6 @@
    "id": "case.output-row-per-group",
    "javaRuntimeIds": [
     "java-runtime-ebcdaaea9afc00a686d0",
-    "java-runtime-047b01d4e6e6e73101c3",
-    "java-runtime-f6dc738e9e1219068421",
-    "java-runtime-815886be170eed7aee20",
-    "java-runtime-7c4e54256aa53004caa5",
-    "java-runtime-b6a1986826894ec12fd1",
-    "java-runtime-66eefdbac64b7ab79a9b",
-    "java-runtime-3df0124bc42a5e107a8c",
-    "java-runtime-56e8b086b5eaf29a9494",
     "java-runtime-b07a17ff039944570426",
     "java-runtime-7238514718862bc6b951",
     "java-runtime-95facebe857914d29fc6",
@@ -15037,14 +15037,6 @@
    ],
    "javaNames": [
     "ResultSetOutputFirstWhenThen",
-    "ResultSet1NoneNoHavingNoJoin",
-    "ResultSet2NoneNoHavingJoin",
-    "ResultSet3NoneHavingNoJoin",
-    "ResultSet4NoneHavingJoin",
-    "ResultSet5DefaultNoHavingNoJoin",
-    "ResultSet6DefaultNoHavingJoin",
-    "ResultSet7DefaultHavingNoJoin",
-    "ResultSet8DefaultHavingJoin",
     "ResultSetJoinSortWindow",
     "ResultSetLimitSnapshot",
     "ResultSetLimitSnapshotLimit",
@@ -43290,6 +43282,143 @@
     "ResultSet9AllNoHavingNoJoin, ResultSet10AllNoHavingJoin, ResultSet11AllHavingNoJoin and ResultSet12AllHavingJoin replayed through one shared scenario (94 records, 0 differences): grouped irstream output all every 1 second over #time(5.5 sec) with having sum(price) > 50 on the having pair, SupportBean#keepall join twins, order by symbol on the no-having pair, and all three SupportOutputLimitOpt hint variants on the having pair. Each execution runs twice per ResultAssertExecution - plain select then select irstream - over the shared ResultAssertInput virtual-time schedule. Output-all re-emits every group each interval including unchanged and emptied groups (MSFT's null-aggregate row at t=7200); under having, updated-but-failing groups still post their interval-start row as old while the new row is suppressed.",
     "Shared-core fixes: (1) applyAllEveryTime's grouped branch tracks last-generated rows with having visibility (allEveryOutputRows/allEveryOutputVisible/allEveryUpdatedKeys): the interval-start row posts as old only when it passed having, updated-but-failed groups emit no new row and mark the stored representative invisible, and emptied groups re-emit a null-aggregate row when the empty-group state passes having. (2) Java's OutputConditionTime/Crontab force-dispatches the listener callback with an empty pair at quiet boundaries (OutputStrategyUtil forceUpdate): applyAllEveryTime, applyLastEveryTime(+Grouped) and the OutputEveryTimePolicy paths now return a forced batch instead of swallowing the boundary, and finishOutput lets forced batches reach applyOutputAssignments. Parity traces keep the established convention of recording only payload-carrying callbacks - the Java oracles skip the same empty pairs and the compat recorders skip empty listener batches. (3) applyLastEveryTimeGrouped posts old rows only for keys whose interval-start row passed having (lastEveryOutputVisible), merges batches whose rows were all suppressed (updatedGroupKeys still invalidate stale pending rows and arm the schedule), and mergeLastOutputPending drops stale pending rows on the empty-incoming path with the ungrouped <all> key normalized."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-per-group-none",
+   "javaRuntimeIds": [
+    "java-runtime-047b01d4e6e6e73101c3",
+    "java-runtime-f6dc738e9e1219068421",
+    "java-runtime-815886be170eed7aee20",
+    "java-runtime-7c4e54256aa53004caa5"
+   ],
+   "javaStaticIds": [
+    "java-17d44b04969031bdfa95",
+    "java-3b39afd80726954a1e0c",
+    "java-21aef3310b0a2d8dc7a2",
+    "java-151b7aae6ccfb43d2917"
+   ],
+   "javaNames": [
+    "ResultSet1NoneNoHavingNoJoin",
+    "ResultSet2NoneNoHavingJoin",
+    "ResultSet3NoneHavingNoJoin",
+    "ResultSet4NoneHavingJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupNoneDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupNoneDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "row-per-group",
+    "grouped",
+    "having",
+    "time-window",
+    "join",
+    "order-by",
+    "virtual-time",
+    "dual-run",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-per-group-none.json",
+    "testdata/parity/resultset-output-limit-row-per-group-none.trace.json",
+    "testdata/parity/resultset-output-limit-row-per-group-none.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-047b01d4e6e6e73101c3",
+    "java-runtime-f6dc738e9e1219068421",
+    "java-runtime-815886be170eed7aee20",
+    "java-runtime-7c4e54256aa53004caa5"
+   ],
+   "representativeScenarioIds": [
+    "resultset-output-limit-row-per-group-none"
+   ],
+   "notes": [
+    "ResultSet1NoneNoHavingNoJoin, ResultSet2NoneNoHavingJoin, ResultSet3NoneHavingNoJoin and ResultSet4NoneHavingJoin replayed through one shared scenario (62 records, 0 differences): grouped row-per-group with NO output clause over #time(5.5 sec) — per-event immediate output including expiry-driven re-emission (Java ResultSetProcessorRowPerGroupImpl generates new rows for every key in keysAndEvents, oldData keys included), having sum(price) > 50 on the having pair, SupportBean#keepall join twins, order by symbol on the no-having pair. ResultAssertExecution dual-run (istream + irstream)."
+   ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-per-group-default",
+   "javaRuntimeIds": [
+    "java-runtime-b6a1986826894ec12fd1",
+    "java-runtime-66eefdbac64b7ab79a9b",
+    "java-runtime-3df0124bc42a5e107a8c",
+    "java-runtime-56e8b086b5eaf29a9494"
+   ],
+   "javaStaticIds": [
+    "java-999488ed531009909b94",
+    "java-62a8bd394618820c193e",
+    "java-335b33ab42a2888b6cc8",
+    "java-20b789466c2490afee52"
+   ],
+   "javaNames": [
+    "ResultSet5DefaultNoHavingNoJoin",
+    "ResultSet6DefaultNoHavingJoin",
+    "ResultSet7DefaultHavingNoJoin",
+    "ResultSet8DefaultHavingJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupDefaultDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "row-per-group",
+    "grouped",
+    "having",
+    "output-default",
+    "time-window",
+    "join",
+    "order-by",
+    "virtual-time",
+    "dual-run",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-per-group-default.json",
+    "testdata/parity/resultset-output-limit-row-per-group-default.trace.json",
+    "testdata/parity/resultset-output-limit-row-per-group-default.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-b6a1986826894ec12fd1",
+    "java-runtime-66eefdbac64b7ab79a9b",
+    "java-runtime-3df0124bc42a5e107a8c",
+    "java-runtime-56e8b086b5eaf29a9494"
+   ],
+   "representativeScenarioIds": [
+    "resultset-output-limit-row-per-group-default"
+   ],
+   "notes": [
+    "ResultSet5DefaultNoHavingNoJoin, ResultSet6DefaultNoHavingJoin, ResultSet7DefaultHavingNoJoin and ResultSet8DefaultHavingJoin replayed through one shared scenario (38 records, 0 differences): grouped row-per-group under output every 1 seconds over #time(5.5 sec) — buffered per-event delta rows (a group can appear twice per flush), expired groups emit null-valued new rows, schedule anchored at the first event (boundaries x200). having sum(price) > 50 on the having pair, SupportBean#keepall join twins, order by symbol on the no-having pair. ResultAssertExecution dual-run (istream + irstream)."
+   ]
   }
  ],
  "mappings": [
@@ -46336,15 +46465,23 @@
   {
    "capabilityId": "output.core",
    "caseId": "case.resultset-output-limit-row-per-group-all"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-row-per-group-none"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-row-per-group-default"
   }
  ],
  "summary": {
-  "inventoriedCases": 677,
-  "implementedCases": 675,
-  "differentialVerifiedCases": 303,
-  "differentialVerifiedRuntimeIds": 1126,
+  "inventoriedCases": 679,
+  "implementedCases": 677,
+  "differentialVerifiedCases": 305,
+  "differentialVerifiedRuntimeIds": 1134,
   "intentionallyDifferentCases": 28,
-  "representativeVerifiedCases": 110,
+  "representativeVerifiedCases": 112,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46356,9 +46493,9 @@
   "referencedJavaRuntimeIds": 3331,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 805,
-  "representativeScenarioTotal": 113,
-  "representativeScenarioPassing": 113,
-  "totalCases": 677,
+  "representativeScenarioTotal": 115,
+  "representativeScenarioPassing": 115,
+  "totalCases": 679,
   "totalCapabilities": 120
  }
 }

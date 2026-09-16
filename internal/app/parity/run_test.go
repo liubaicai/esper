@@ -21249,6 +21249,209 @@ func TestRunResultSetOutputLimitRowPerGroupAllDiffRejectsTraceMutations(t *testi
 	}
 }
 
+func TestRunResultSetOutputLimitRowPerGroupNoneDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-none.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-per-group-none.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-none.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-output-limit-row-per-group-none-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetOutputLimitRowPerGroupNoneDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "none-per-event-missing",
+			mutate: func(trace *compat.Trace) {
+				// The none-no-having-no-join istream record at t=200 is a
+				// per-event immediate emission (no output clause). Dropping
+				// IBM's row means a per-event update was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "none-no-having-no-join" && rec.Sequence == 1 {
+						rec.New = rec.New[1:]
+						return
+					}
+				}
+				panic("no none-no-having-no-join record 1")
+			},
+		},
+		{
+			name: "none-istream-old-leak",
+			mutate: func(trace *compat.Trace) {
+				// The first none-no-having-no-join record is an istream
+				// per-event emission: plain select must never deliver old
+				// rows.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "none-no-having-no-join" && rec.Sequence == 1 {
+						rec.Old = append([]compat.ResultRecord(nil), rec.New...)
+						return
+					}
+				}
+				panic("no none-no-having-no-join record 1")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-none.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-per-group-none.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-none.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-output-limit-row-per-group-none-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunResultSetOutputLimitRowPerGroupDefaultDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-default.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-per-group-default.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-default.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-output-limit-row-per-group-default-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "default-having-old-dropped",
+			mutate: func(trace *compat.Trace) {
+				// The default-having-no-join irstream flush at t=5200 posts
+				// IBM's interval-start row as old. Dropping the old row
+				// means updated groups lost their old emission.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "default-having-no-join" && rec.Sequence == 5 {
+						rec.Old = nil
+						return
+					}
+				}
+				panic("no default-having-no-join record 5")
+			},
+		},
+		{
+			name: "default-istream-old-leak",
+			mutate: func(trace *compat.Trace) {
+				// The first default-no-having-no-join record is an istream
+				// interval flush: plain select must never deliver old rows.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "default-no-having-no-join" && rec.Sequence == 1 {
+						rec.Old = append([]compat.ResultRecord(nil), rec.New...)
+						return
+					}
+				}
+				panic("no default-no-having-no-join record 1")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-default.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-per-group-default.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-default.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-output-limit-row-per-group-default-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunResultSetAggregateFirstLastWindowPrevNthDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-prev-nth.trace.json"),

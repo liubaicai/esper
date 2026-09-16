@@ -4276,6 +4276,38 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-output-limit-row-per-group-none" || *mode == "resultset-output-limit-row-per-group-none-diff" {
+		trace, err := runResultSetOutputLimitRowPerGroupNoneScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-row-per-group-none-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitRowPerGroupNoneDefaultJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowPerGroupNoneJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowPerGroupNoneDefaultJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitRowPerGroupNoneJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "resultset-output-limit-row-per-group-default" || *mode == "resultset-output-limit-row-per-group-default-diff" {
+		trace, err := runResultSetOutputLimitRowPerGroupDefaultScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-row-per-group-default-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitRowPerGroupNoneDefaultJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowPerGroupDefaultJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowPerGroupNoneDefaultJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitRowPerGroupDefaultJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-querytype-aggregate-grouped-having" || *mode == "resultset-querytype-aggregate-grouped-having-diff" {
 		trace, err := runResultsetQueryTypeAggregateGroupedHavingScenario(context.Background(), scenario)
 		if err != nil {

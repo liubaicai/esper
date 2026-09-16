@@ -20158,11 +20158,24 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 	// time-expiry batches suppress listener new rows (emitNew above), but
 	// the pending merge feeding output limits still needs the post-removal
 	// row for each expiry-affected group, so those rows are emitted into
-	// the batch for every explicit output-limit policy. The default
-	// OutputAllPolicy delivers batches directly to listeners and keeps the
-	// suppress-pure-expiry contract.
+	// the batch for every explicit output-limit policy. The row-per-group
+	// result shape (a grouped select carrying non-aggregate columns, e.g.
+	// `select symbol, sum(price) ... group by symbol` with no output
+	// clause) also re-emits the current row on pure expiry: Java
+	// ResultSetProcessorRowPerGroupImpl.processViewResult builds
+	// keysAndEvents from BOTH newData and oldData and generates new rows
+	// for every key (pinned by ResultSetOutputLimitRowPerGroup ords 1-4:
+	// IBM emits new{72} at t=5700, MSFT new{null} at t=6300, IBM+YAH at
+	// t=7000). The all-aggregate grouped shape (AggregateGrouped) keeps
+	// the suppress-pure-expiry contract exercised by the grouped
+	// time-window differential scenario.
+	rowPerGroupShape := len(definition.groupBy) > 0 && len(groupingSets) == 1 &&
+		!containsTableSource(plan.query.input, nil) && !containsNamedWindow(plan.query.input, nil) &&
+		aggregateDefinitionHasBareSelections(definition) &&
+		!aggregateDefinitionReadsNonKeyEventExceptContext(definition, r.engine.env, plan.query.contextName) &&
+		!aggregateDefinitionIsRowForEvent(definition)
 	outputLimitExpiryNew := len(definition.groupBy) > 0 && !emitNew && len(delta.oldEvents) > 0 &&
-		plan.query.output.Kind != OutputAllPolicy
+		(plan.query.output.Kind != OutputAllPolicy || rowPerGroupShape)
 
 	batch := ResultBatch{Time: now, forced: delta.forced}
 	batch.updatedGroupKeys = append(batch.updatedGroupKeys, affected...)

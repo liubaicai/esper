@@ -1130,6 +1130,64 @@ Active: Draft 4.434 ('resultset-outputlimit-row-per-group-all').
       now 20 IDs.
 
 ## Current work unit
+Active: Draft 4.435 ('resultset-outputlimit-row-per-group-none-default').
+
+- Unit selected: `ResultSetOutputLimitRowPerGroup.java` ords 1-8 — the
+  None/Default cluster. Contract frozen by agents NextJavaContract8 +
+  NextGoSurface8 (plain-message fallback after yield-schema failures):
+  ord1-4 NoneNoHaving/NoneHaving[Join] (no output clause, per-event
+  immediate output) and ord5-8 DefaultNoHaving/DefaultHaving[Join]
+  (`output every 1 seconds`, buffered per-event deltas, schedule anchored
+  at first event → boundaries x200). Runtime IDs 047b01d4e6e6e73101c3 /
+  f6dc738e9e1219068421 / 815886be170eed7aee20 / 7c4e54256aa53004caa5 /
+  b6a1986826894ec12fd1 / 66eefdbac64b7ab79a9b / 3df0124bc42a5e107a8c /
+  56e8b086b5eaf29a9494. All ResultAssertExecution dual-run on the shared
+  ResultAssertInput schedule; no hint variants.
+- [x] Assets authored by parity-asset-worker `FLWStarAssets` (same worker):
+      oracle (single file dispatching on scenario id to none/default spec
+      tables, keeps null/null skip) + run.sh + two scenarios (320 steps
+      each: 4 cases × dual-run) + runner (none omits WithOutput; default
+      uses OutputEveryTime(1s); OrderBy on no-having twins; Having
+      Greater(Sum>50) on having twins) + run.go wiring (two mode blocks)
+      + run_test pairs (2 scenarios × passing + mutations).
+- [x] **Engine fix (shared core, primary agent)**: worker's first replay
+      exposed a real gap — Go dropped the NEW row on pure-expiry batches
+      for the no-output-clause row-per-group shape (Java emits new+old:
+      IBM new{72}@5700, MSFT new{null}@6300, IBM+YAH@7000). Root cause:
+      `outputLimitExpiryNew` excluded `OutputAllPolicy`, but the
+      no-clause default IS OutputAllPolicy with nil outputState. Fix:
+      `rowPerGroupShape` predicate (grouped + bare non-aggregate
+      selections + non-table/named-window + non-row-per-event) widens
+      expiry-new emission to the row-per-group shape — Java
+      `ResultSetProcessorRowPerGroupImpl.processViewResult` builds
+      keysAndEvents from BOTH newData and oldData and generates new rows
+      per key. All-aggregate grouped shape keeps suppress-pure-expiry.
+- [x] Differential replay: none Java 62 / Go 62 passing/0; default
+      Java 38 / Go 38 passing/0. Regression sweep: 11 risky diffs
+      (grouped-time-window, row-per-group-having/-simple, orderby,
+      aggregate-join/-group-output, all five row-per-group output-limit
+      modes) all still passing/0.
+- [x] run_test pairs: four discriminating mutations
+      (none-per-event-missing, none-istream-old-leak,
+      default-having-old-dropped, default-istream-old-leak) — all rejected.
+- [x] Manifest: TWO new born-DV cases (none: 4 IDs, default: 4 IDs);
+      umbrella case.output-row-per-group split 20→12 IDs; output.core
+      +8 DV IDs (56). Summary: 679 cases / 677 implemented / 305 DV cases /
+      1134 DV runtime IDs / 3682 associations / referenced 3331 /
+      unreferenced 805. Roadmap + CHANGELOG recorded (Draft 4.435).
+- [x] Independent parity review (`ParityReview435`, read-only): OVERALL
+      PASS, no P0/P1/P2. Areas A-G all PASS — IDs/statics/umbrella split
+      verified; oracle EPLs byte-exact incl. whitespace quirks; expected
+      values re-derived from tryAssertion12/34/56/78; rowPerGroupShape
+      confirmed to match Java RowPerGroupImpl routing (AggregateGrouped
+      suppression preserved for non-key bare reads); evidence integrity
+      verified; 4 risky diffs spot-ran green. One P3 FIXED:
+      representativeScenarioTotal/Passing bumped 113→115 (union of
+      case-level representativeScenarioIds).
+- [x] Full local gates GREEN: `make check` exit 0 (parity 194.7s,
+      internal/esper 57.3s, compat 0.13s); gofmt + go vet clean.
+
+## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').
 
 - Unit: ViewParameterizedByContextMoreWindows (java-runtime-6d60bed2a335972423d2, the last
