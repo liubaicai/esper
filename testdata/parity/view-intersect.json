@@ -1,0 +1,661 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-intersect",
+ "description": "ViewIntersect ordinals 6/14/15/16/17/18: intersect composition with pattern, grouped time+unique+sort, subselect membership, firstunique+firstlength on-delete, and named-window time+unique retention with delete and expiry.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewIntersect.java",
+ "javaRuntimes": [
+  "java-runtime-edb2cfcf01622829e41e",
+  "java-runtime-bb2c317ddb0be1894e9b",
+  "java-runtime-2c83921c540e86f9eee2",
+  "java-runtime-f8abfbe10b8b71648894",
+  "java-runtime-dde215412ea6cd2bb327",
+  "java-runtime-57b98063fdef9954a959"
+ ],
+ "javaNames": [
+  "ViewIntersectPattern",
+  "ViewIntersectGroupTimeUnique",
+  "ViewIntersectSubselect",
+  "ViewIntersectFirstUniqueAndLengthOnDelete",
+  "ViewIntersectTimeWinNamedWindow",
+  "ViewIntersectTimeWinNamedWindowDelete"
+ ],
+ "javaStaticIds": [
+  "java-1445f7258ae3c32e2b2a",
+  "java-f8a8a4a254e62d6d6b33",
+  "java-36f61ab5bb30038999eb",
+  "java-2ea9d1646a01c330cc1c",
+  "java-b113051087b49ee063aa",
+  "java-3f0b421dec5e7c91ca42"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "pattern",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-edb2cfcf01622829e41e",
+   "executionName": "ViewIntersectPattern",
+   "observation": "listener+snapshot",
+   "epl": "@name('s0') select irstream a.p00||b.p10 as theString from pattern [every a=SupportBean_S0 -> b=SupportBean_S1]#unique(a.id)#unique(b.id) retain-intersection"
+  },
+  {
+   "case": "group-time-unique",
+   "ordinal": 14,
+   "runtimeId": "java-runtime-bb2c317ddb0be1894e9b",
+   "executionName": "ViewIntersectGroupTimeUnique",
+   "observation": "listener+snapshot",
+   "epl": "@name('s0') SELECT irstream * FROM SupportSensorEvent#groupwin(type)#time(1 hour)#unique(device)#sort(1, measurement desc) as high order by measurement asc"
+  },
+  {
+   "case": "subselect",
+   "ordinal": 15,
+   "runtimeId": "java-runtime-2c83921c540e86f9eee2",
+   "executionName": "ViewIntersectSubselect",
+   "observation": "listener",
+   "epl": "@name('s0') select * from SupportBean_S0 where p00 in (select theString from SupportBean#length(2)#unique(intPrimitive) retain-intersection)"
+  },
+  {
+   "case": "firstunique-length-ondelete",
+   "ordinal": 16,
+   "runtimeId": "java-runtime-f8abfbe10b8b71648894",
+   "executionName": "ViewIntersectFirstUniqueAndLengthOnDelete",
+   "observation": "listener+snapshot",
+   "epl": "create window MyWindowOne#firstunique(theString)#firstlength(3) as SupportBean;\ninsert into MyWindowOne select * from SupportBean;\non SupportBean_S0 delete from MyWindowOne where theString = p00;\n@name('s0') select irstream * from MyWindowOne"
+  },
+  {
+   "case": "timewin-namedwindow",
+   "ordinal": 17,
+   "runtimeId": "java-runtime-dde215412ea6cd2bb327",
+   "executionName": "ViewIntersectTimeWinNamedWindow",
+   "observation": "listener+snapshot",
+   "epl": "@name('s0') create window MyWindowTwo#time(10 sec)#unique(intPrimitive) retain-intersection as select * from SupportBean;\ninsert into MyWindowTwo select * from SupportBean;\non SupportBean_S0 delete from MyWindowTwo where intBoxed = id;\n"
+  },
+  {
+   "case": "timewin-namedwindow-delete",
+   "ordinal": 18,
+   "runtimeId": "java-runtime-57b98063fdef9954a959",
+   "executionName": "ViewIntersectTimeWinNamedWindowDelete",
+   "observation": "listener+snapshot",
+   "epl": "@name('s0') create window MyWindowThree#time(10 sec)#unique(intPrimitive) retain-intersection as select * from SupportBean;\ninsert into MyWindowThree select * from SupportBean\n;on SupportBean_S0 delete from MyWindowThree where intBoxed = id;\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "pattern"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 2,
+    "p10": "E2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10,
+    "p00": "E3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 20,
+    "p10": "E4"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E5"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 2,
+    "p10": "E6"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "case",
+   "case": "group-time-unique"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 1,
+    "type": "Temperature",
+    "device": "Device1",
+    "measurement": 5.0,
+    "confidence": 96.5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 2,
+    "type": "Temperature",
+    "device": "Device2",
+    "measurement": 7.0,
+    "confidence": 98.5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportSensorEvent",
+   "payload": {
+    "id": 3,
+    "type": "Temperature",
+    "device": "Device2",
+    "measurement": 4.0,
+    "confidence": 99.5
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "case",
+   "case": "subselect"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E3"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E4"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E5"
+   }
+  },
+  {
+   "op": "case",
+   "case": "firstunique-length-ondelete"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 99
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 99
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 98
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "case",
+   "case": "timewin-namedwindow"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:12Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:12.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:13Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:13.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:14Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "case",
+   "case": "timewin-namedwindow-delete"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "intBoxed": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "intBoxed": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 20
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3,
+    "intBoxed": 30
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 3,
+    "intBoxed": 40
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 4,
+    "intBoxed": 50
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E6",
+    "intPrimitive": 4,
+    "intBoxed": 50
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 50
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:11Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:12.999Z"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:13Z"
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T02:46:40Z"
+  }
+ ]
+}

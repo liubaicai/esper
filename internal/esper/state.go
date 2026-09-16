@@ -3921,10 +3921,34 @@ func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, un
 			}
 			delta.Old = append(delta.Old, stored.event)
 		}
+		if retention.Mode == IntersectWindowMode {
+			// Java's intersect views push each child's reported removals to
+			// all other views (IntersectAsymetricView oldEventsPerView
+			// fan-out): an event evicted from the intersection must leave
+			// every child, or a stale copy keeps consuming capacity — e.g.
+			// a unique-replaced event lingering in a firstlength child
+			// blocks later inserts.
+			removeFromNamedWindowCompositeChildrenLocked(state, delta.Old)
+		}
 		if admitted {
 			kept = append(kept, entry)
 		} else {
 			delta.New = nil
+			if retention.Mode == IntersectWindowMode {
+				// Java's intersect views forward the dropped incoming event
+				// as a removal to every child (IntersectAsymetricView pushes
+				// removalEvents to all views), so a first-X child that
+				// rejected the event frees the slot another child consumed.
+				// Without this a firstunique duplicate would keep occupying
+				// a firstlength slot and block later inserts.
+				removeFromNamedWindowCompositeChildrenLocked(state, []Event{event})
+				if len(delta.Old) > 0 {
+					// hasRemovestreamData folds removalEvents — the dropped
+					// incoming first, then the child removals — into the
+					// posted oldData.
+					delta.Old = append([]Event{event}, delta.Old...)
+				}
+			}
 		}
 		state.entries = kept
 	case UniqueWindowSpec:
@@ -4257,7 +4281,10 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 	case CompositeWindowSpec:
 		// Composite view stacks expire each child independently; an event
 		// leaves the window when it is no longer retained by the composite
-		// (every child for intersection, any child for union).
+		// (every child for intersection, any child for union). Intersect
+		// mode then pushes the expired events to every child (Java
+		// IntersectAsymetricView forwards removals to all views), so a
+		// stale copy cannot keep consuming another child's capacity.
 		if len(state.compositeChildren) != len(retention.Windows) {
 			return NamedWindowDelta{}
 		}
@@ -4274,6 +4301,9 @@ func expireNamedWindowState(state *namedWindowRuntime, at time.Time) NamedWindow
 			delta.Old = append(delta.Old, entry.event)
 		}
 		state.entries = kept
+		if retention.Mode == IntersectWindowMode {
+			removeFromNamedWindowCompositeChildrenLocked(state, delta.Old)
+		}
 		rebuildNamedWindowIndexesLocked(state)
 		return delta
 	case TimeWindowSpec:

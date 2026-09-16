@@ -331,12 +331,13 @@
     "internal/app/parity/time_window_long.go",
     "internal/esper/resultset_grouped_time_window_parity_test.go",
     "internal/app/parity/resultset_grouped_time_window.go",
-    "internal/esper/view_union_parity_test.go"
+    "internal/esper/view_union_parity_test.go",
+    "internal/esper/state.go",
+    "internal/app/parity/view_intersect.go"
    ],
    "phase": 2,
    "status": "implemented",
    "remaining": [
-    "complete Java view family and parameterized-context matrix",
     "reclaim hints, iterator/fragment metadata and shared Java/Go trace"
    ],
    "verification": [
@@ -356,7 +357,13 @@
     "java-runtime-62b4f6edf3c24229e8ac",
     "java-runtime-d00485a2855b2128289f",
     "java-runtime-9061246c4c67a2c25364",
-    "java-runtime-11c5505c0b19dd86671c"
+    "java-runtime-11c5505c0b19dd86671c",
+    "java-runtime-edb2cfcf01622829e41e",
+    "java-runtime-bb2c317ddb0be1894e9b",
+    "java-runtime-2c83921c540e86f9eee2",
+    "java-runtime-f8abfbe10b8b71648894",
+    "java-runtime-dde215412ea6cd2bb327",
+    "java-runtime-57b98063fdef9954a959"
    ],
    "representativeScenarioIds": [
     "filter-window-aggregate-output",
@@ -25525,6 +25532,68 @@
    ]
   },
   {
+   "id": "case.view-intersect-closure",
+   "javaRuntimeIds": [
+    "java-runtime-edb2cfcf01622829e41e",
+    "java-runtime-bb2c317ddb0be1894e9b",
+    "java-runtime-2c83921c540e86f9eee2",
+    "java-runtime-f8abfbe10b8b71648894",
+    "java-runtime-dde215412ea6cd2bb327",
+    "java-runtime-57b98063fdef9954a959"
+   ],
+   "javaStaticIds": [
+    "java-099d757b97d6b93b2878"
+   ],
+   "javaNames": [
+    "ViewIntersectPattern",
+    "ViewIntersectGroupTimeUnique",
+    "ViewIntersectSubselect",
+    "ViewIntersectFirstUniqueAndLengthOnDelete",
+    "ViewIntersectTimeWinNamedWindow",
+    "ViewIntersectTimeWinNamedWindowDelete"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewIntersect.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewIntersectDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewIntersectDiffRejectsTraceMutations",
+    "internal/esper/composite_window_test.go:TestNamedWindowIntersectUniqueFirstLengthEvictionParity"
+   ],
+   "tags": [
+    "correctness",
+    "view",
+    "intersect",
+    "pattern",
+    "grouped-unique",
+    "subselect",
+    "on-delete",
+    "named-window",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/view-intersect.json",
+    "testdata/parity/view-intersect.evidence.json",
+    "tools/java-oracle/ViewIntersectScenarioOracle.java",
+    "tools/java-oracle/run-view-intersect.sh"
+   ],
+   "notes": "Draft 4.427 closes ViewIntersect.java: the six remaining unreferenced executions replay pattern producer+consumer (length(2) intersect), grouped time+unique+sort, subselect membership, firstunique+firstlength named window with on-delete, and the two named-window time+unique variants. 57 records, 0 differences. Shared-core fix (internal/esper/state.go): the named-window composite insert in intersect mode now pushes child-reported evictions to every child, forwards a non-admitted incoming event as a removal to every child, and folds the dropped incoming into posted oldData when any child reported removals (Java IntersectAsymetricView removalEvents/oldEventsPerView fan-out); expire propagates the same way. Regression pinned by internal/esper/composite_window_test.go:TestNamedWindowIntersectUniqueFirstLengthEvictionParity.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-edb2cfcf01622829e41e",
+    "java-runtime-bb2c317ddb0be1894e9b",
+    "java-runtime-2c83921c540e86f9eee2",
+    "java-runtime-f8abfbe10b8b71648894",
+    "java-runtime-dde215412ea6cd2bb327",
+    "java-runtime-57b98063fdef9954a959"
+   ]
+  },
+  {
    "id": "case.expr-define-basic",
    "javaRuntimeIds": [
     "java-runtime-1d400e3572302c3bfe2e",
@@ -45768,13 +45837,17 @@
   {
    "capabilityId": "view.basic-windows",
    "caseId": "case.view-parameterized-by-context"
+  },
+  {
+   "capabilityId": "view.window-core",
+   "caseId": "case.view-intersect-closure"
   }
  ],
  "summary": {
-  "inventoriedCases": 669,
-  "implementedCases": 667,
-  "differentialVerifiedCases": 296,
-  "differentialVerifiedRuntimeIds": 1091,
+  "inventoriedCases": 670,
+  "implementedCases": 668,
+  "differentialVerifiedCases": 297,
+  "differentialVerifiedRuntimeIds": 1097,
   "intentionallyDifferentCases": 27,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
@@ -45784,13 +45857,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3669,
-  "referencedJavaRuntimeIds": 3318,
+  "runtimeAssociationCount": 3675,
+  "referencedJavaRuntimeIds": 3324,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 818,
+  "unreferencedJavaRuntimeIds": 812,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 669,
+  "totalCases": 670,
   "totalCapabilities": 120
  }
 }

@@ -60,6 +60,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include view-length-win-property-detail and view-length-win-property-detail-diff")
 		fmt.Fprintln(stderr, "runner modes include view-time-batch and view-time-batch-diff")
 		fmt.Fprintln(stderr, "runner modes include view-parameterized-by-context and view-parameterized-by-context-diff")
+		fmt.Fprintln(stderr, "runner modes include view-intersect and view-intersect-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-named-window-final-views and infra-named-window-final-views-diff")
 		flags.PrintDefaults()
 	}
@@ -278,6 +279,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultSetQueryTypeLocalGroupKeysScenario(file)
 	} else if *mode == "resultset-querytype-local-group-solution-pattern" || *mode == "resultset-querytype-local-group-solution-pattern-diff" {
 		scenario, err = loadResultSetQueryTypeLocalGroupSolutionScenario(file)
+	} else if *mode == "view-intersect" || *mode == "view-intersect-diff" {
+		scenario, err = loadViewIntersectScenario(file)
 	} else if *mode == "orderby-rowperevent-agg" || *mode == "orderby-rowperevent-agg-diff" {
 		scenario, err = loadOrderByRowPerEventAggScenario(file)
 	} else if *mode == "orderby-rowperevent-agg-join" || *mode == "orderby-rowperevent-agg-join-diff" {
@@ -3531,6 +3534,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, viewParameterizedByContextJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, viewParameterizedByContextJavaSources),
 				splitMetadata(*javaExecutions, viewParameterizedByContextJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "view-intersect" || *mode == "view-intersect-diff" {
+		trace, err := runViewIntersectScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-intersect-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, viewIntersectJavaRuntimeIDs()),
+				splitMetadata(*javaSourceFiles, viewIntersectJavaSources),
+				splitMetadata(*javaExecutions, viewIntersectJavaExecutions()), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

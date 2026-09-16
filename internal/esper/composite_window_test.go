@@ -108,3 +108,96 @@ type compositeArrayTrade struct {
 	One []int64 `esper:"one"`
 	Two []int64 `esper:"two"`
 }
+
+// TestNamedWindowIntersectUniqueFirstLengthEvictionParity pins the Java
+// IntersectAsymetricView contract on a named window with
+// #unique(intPrimitive)#firstlength(2) retain-intersection (verified against
+// Esper 9.0.0 @9e1b9f1cc9117fea4bf33ab043762c045d73839c):
+//
+//	E1@1, E2@2, E3@1 (unique replaces E1; firstlength is full and drops E3),
+//	E4@4.
+//
+// Java posts E3@1 as new=null old=[E3@1,E1@1] — the dropped incoming joins
+// oldData under hasRemovestreamData — and pushes both removals to every
+// child, so the evicted E1@1 frees the firstlength slot and E4@4 is
+// admitted (new=[E4@4], iterator [E2@2,E4@4]). Without the eviction
+// fan-out the stale E1@1 copy blocks E4@4 silently.
+func TestNamedWindowIntersectUniqueFirstLengthEvictionParity(t *testing.T) {
+	env := NewEnvironment()
+	type bean struct {
+		TheString    string `esper:"theString"`
+		IntPrimitive int    `esper:"intPrimitive"`
+	}
+	if _, err := RegisterStruct[bean](env, "SupportBean"); err != nil {
+		t.Fatal(err)
+	}
+	rowSchema, err := RegisterStruct[bean](env, "WRow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNamedWindow(env, "W", rowSchema,
+		NamedWindowRetention(IntersectWindows(
+			Unique(Field[bean, int]("intPrimitive")),
+			FirstLength(2),
+		))); err != nil {
+		t.Fatal(err)
+	}
+	engine := NewEngine(env)
+	defer func() { _ = engine.Close(context.Background()) }()
+	window, ok := engine.NamedWindow("W")
+	if !ok {
+		t.Fatal("named window W not found")
+	}
+	type delta struct {
+		newKeys []int
+		oldKeys []int
+	}
+	var deltas []delta
+	keys := func(events []Event) []int {
+		if len(events) == 0 {
+			return nil
+		}
+		out := make([]int, 0, len(events))
+		for _, event := range events {
+			row, ok := event.Underlying().(bean)
+			if !ok {
+				t.Fatalf("unexpected underlying %#v", event.Underlying())
+			}
+			out = append(out, row.IntPrimitive)
+		}
+		return out
+	}
+	if _, err := window.Subscribe(func(_ context.Context, d NamedWindowDelta) error {
+		deltas = append(deltas, delta{newKeys: keys(d.New), oldKeys: keys(d.Old)})
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	insert := func(theString string, intPrimitive int) {
+		t.Helper()
+		if err := engine.InsertNamedWindow(context.Background(), "W", bean{TheString: theString, IntPrimitive: intPrimitive}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert("E1", 1)
+	insert("E2", 2)
+	insert("E3", 1)
+	insert("E4", 4)
+
+	want := []delta{
+		{newKeys: []int{1}},
+		{newKeys: []int{2}},
+		{oldKeys: []int{1, 1}}, // dropped incoming E3@1 first, then evicted E1@1
+		{newKeys: []int{4}},
+	}
+	if !reflect.DeepEqual(deltas, want) {
+		t.Fatalf("deltas = %#v, want %#v", deltas, want)
+	}
+	snapshot, err := window.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := keys(snapshot); !reflect.DeepEqual(got, []int{2, 4}) {
+		t.Fatalf("window contents = %v, want [2 4]", got)
+	}
+}

@@ -15604,6 +15604,102 @@ func TestRunViewParameterizedByContextMoreWindowsRejectsTraceMutations(t *testin
 	}
 }
 
+func TestRunViewIntersectDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-intersect.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "view-intersect.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-intersect.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "view-intersect-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunViewIntersectDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "asymmetric-child-removal-missing",
+			mutate: func(trace *compat.Trace) {
+				// Record 22 is the firstunique-length-ondelete listener
+				// delivery of E3@3: it only fires because the earlier
+				// firstunique-dropped duplicate (the second E1@99) was
+				// forwarded as a removal to the firstlength child, freeing
+				// its slot. Dropping the row simulates the pre-fix
+				// behaviour where the dropped incoming event never left
+				// the other children.
+				trace.Records[22].New = nil
+			},
+		},
+		{
+			name: "namedwindow-unique-replacement-old-missing",
+			mutate: func(trace *compat.Trace) {
+				// Record 29 pairs the unique-key replacement: E3@1 evicts
+				// E1@1 as old data in the same delta.
+				trace.Records[29].Old = nil
+			},
+		},
+		{
+			name: "pattern-intersect-expiry-old-missing",
+			mutate: func(trace *compat.Trace) {
+				// Record 4 is the pattern case's third delivery: the
+				// length(2) child expels E1E2 as old data.
+				trace.Records[4].Old = nil
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-intersect.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "view-intersect.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-intersect.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "view-intersect-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunViewTimeBatchDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "view-time-batch.evidence.json"),

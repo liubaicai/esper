@@ -612,6 +612,68 @@ Active: Draft 4.412 ('resultset-querytype-local-group-keys').
          a speculative change now.
 
 ## Current work unit
+Active: Draft 4.427 ('view-intersect-closure').
+
+- Unit selected: `ViewIntersect.java` six unreferenced executions — ord6
+      `ViewIntersectPattern` (`java-runtime-edb2cfcf01622829e41e`), ord14
+      `ViewIntersectGroupTimeUnique` (`java-runtime-bb2c317ddb0be1894e9b`), ord15
+      `ViewIntersectSubselect` (`java-runtime-2c83921c540e86f9eee2`), ord16
+      `ViewIntersectFirstUniqueAndLengthOnDelete` (`java-runtime-f8abfbe10b8b71648894`),
+      ord17 `ViewIntersectTimeWinNamedWindow` (`java-runtime-dde215412ea6cd2bb327`), ord18
+      `ViewIntersectTimeWinNamedWindowDelete` (`java-runtime-57b98063fdef9954a959`). One file,
+      one semantic family (intersect composition with pattern/grouped-unique/subselect/
+      on-delete/named-window children); closes the file. Existing intersect cases
+      (`case.view-intersect-matrix`, `case.view-intersect-remaining`) are implemented-not-DV
+      and stay untouched.
+- [x] Read-only scouts dispatched concurrently (OMP batch): Java contract scout
+      (`VitalRaven`, java-oracle-scout) and Go surface scout (`PricklyPrawn`, scout).
+      Contract frozen: six executions, EPLs verbatim, epoch-initialized runtime,
+      listener+snapshot record protocol.
+- [x] Scenario `testdata/parity/view-intersect.json` (6 cases / 57 steps) + runner
+      `internal/app/parity/view_intersect.go` + run.go wiring; oracle
+      `tools/java-oracle/ViewIntersectScenarioOracle.java` + run script
+      (EPRuntimeSPI.initialize(0L) for epoch record times).
+- [x] ENGINE FIX (shared core): (a) `internal/esper/state.go` — named-window
+      composite insert in intersect mode now (i) pushes child-reported
+      evictions (delta.Old) to every child, (ii) forwards a non-admitted
+      incoming event as a removal to every child, and (iii) folds the dropped
+      incoming into posted oldData when any child reported removals
+      (hasRemovestreamData); expireNamedWindowState propagates expired events
+      to all intersect children the same way (Java IntersectAsymetricView
+      removalEvents/oldEventsPerView fan-out). Pre-fix a firstunique-dropped
+      duplicate (or a unique-replaced event) kept occupying a firstlength
+      slot and silently swallowed later inserts. (b) `internal/esper/runtime.go`
+      — stream-level intersect mirrors Java's split: IntersectDefaultView
+      posts the dropped incoming as new unconditionally and as old only when
+      a child expelled it; IntersectAsymetricView (compositeHasAsymmetricChild:
+      FirstUnique/FirstLength/FirstTime/FirstEvent) suppresses new and posts
+      it as old whenever any child reported removals.
+- [x] Differential replay: Java 57 records / Go 57 records, status passing /
+      0 differences (evidence testdata/parity/view-intersect.evidence.json).
+- [x] Independent parity review (agent ParityReview427) round 1: FAIL — one P2
+      + three P3s. P2: named-window composite insert forwarded only the dropped
+      incoming, not child-reported evictions (unique-replaced E1@1 stayed in
+      firstlength, blocking E4@4); same gap in expire path. FIXED per above +
+      new regression test TestNamedWindowIntersectUniqueFirstLengthEvictionParity
+      pinning the reviewer's Java-verified probe (old=[E3@1,E1@1], new=[E4@4],
+      iterator [E2,E4]). P3s: mutation comment corrected (freeing duplicate is
+      the second E1@99); case-level mode:"any" dropped from group-time-unique
+      (evidence regenerated, raw order now pinned); sameEvent value-equality vs
+      Java instance identity recorded as latent fidelity note. Reviewer re-check
+      found a P0 regression from my edit (TimeOrderWindowSpec expire case
+      swallowed) — restored verbatim, TestInfraNWViewsTimeOrder* green.
+      Final verdict: PASS.
+- [x] run_test family: TestRunViewIntersectDiffWritesPassingEvidence +
+      TestRunViewIntersectDiffRejectsTraceMutations (3 mutations, all rejected;
+      asymmetric-child-removal-missing pins the fix path at record 22).
+- [x] Manifest: NEW case.view-intersect-closure born-DV (6 runtime IDs, static
+      java-099d757b97d6b93b2878, mapping to view.window-core); view.window-core
+      DV list 11→17, remaining narrowed to reclaim-hints/iterator-fragment/
+      shared-trace; summary recomputed: 670 cases / 668 implemented / 297 DV
+      cases / 1097 DV runtime IDs / 3675 associations / referenced 3324 /
+      unreferenced 812. Roadmap + CHANGELOG recorded (Draft 4.427).
+
+## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').
 
 - Unit: ViewParameterizedByContextMoreWindows (java-runtime-6d60bed2a335972423d2, the last

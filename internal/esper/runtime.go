@@ -15697,6 +15697,42 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 				}
 				if !anyPending {
 					toClean = append(toClean, event)
+
+					// Mirror Java's intersect views for an incoming event that
+					// no child retained. IntersectDefaultView (no asymmetric
+					// child) posts the raw newData unconditionally and posts
+					// the children's removal events as oldData — the incoming
+					// event appears there only when a child expelled it (e.g.
+					// a sort window that drops the incoming event
+					// immediately). IntersectAsymetricView (first-X child)
+					// suppresses the insert stream for the dropped event and
+					// posts it as old whenever ANY child reported removals
+					// (hasRemovestreamData folds removalEvents — which always
+					// contains the dropped incoming — into oldData); a pure
+					// first-X duplicate drop with no other removals stays
+					// silent.
+					childSawOld := false
+					childExpelledIncoming := false
+					for _, childDelta := range childDeltas {
+						if len(childDelta.oldEvents) > 0 {
+							childSawOld = true
+						}
+						for _, expelled := range childDelta.oldEvents {
+							if sameEvent(expelled, event) {
+								childExpelledIncoming = true
+							}
+						}
+					}
+					if compositeHasAsymmetricChild(window) {
+						if childSawOld {
+							result.oldEvents = append(result.oldEvents, event)
+						}
+					} else {
+						result.newEvents = append(result.newEvents, event)
+						if childExpelledIncoming {
+							result.oldEvents = append(result.oldEvents, event)
+						}
+					}
 				}
 			}
 			for _, ev := range toClean {
@@ -16557,6 +16593,26 @@ func reconcileCompositeWindow(state *windowRuntimeState, spec CompositeWindowSpe
 	state.entries = active
 	_ = now
 	return result
+}
+
+// compositeHasAsymmetricChild reports whether any top-level child of the
+// composite is a first-X data window (FirstUnique/FirstLength/FirstTime/
+// FirstEvent), matching Java's AsymetricDataWindowViewForge detection in
+// IntersectViewFactoryForge. Asymmetric children suppress the insert stream
+// for events they drop, which changes how the intersect posts a non-retained
+// incoming event.
+func compositeHasAsymmetricChild(spec CompositeWindowSpec) bool {
+	for _, child := range spec.Windows {
+		switch typed := child.(type) {
+		case UniqueWindowSpec:
+			if typed.First {
+				return true
+			}
+		case FirstLengthWindowSpec, FirstTimeWindowSpec, FirstEventWindowSpec:
+			return true
+		}
+	}
+	return false
 }
 
 // storedWindowHistory exposes the retained events of a child view in the same
