@@ -14195,15 +14195,16 @@
     "aggregate",
     "filter"
    ],
-   "status": "implemented",
+   "status": "intentionally-different",
    "evidence": [
     "java-baseline",
     "go-unit"
    ],
-   "difference": "Go now covers the Java filtered scalar family (avedev/avg/min/max/median/stddev/sum), max/min-ever, distinct counting, null predicate exclusion, singleton stddev Null semantics, scalar/access aggregate reuse and stateful Leaving. The explicit SumExact/AvgExact/MinExact/MaxExact and LessExact family now covers filtered big.Int/big.Rat arithmetic without float64 rounding, including the Java BigInteger/BigDecimal window trace and large-integer boundary. The dedicated MathContext scenario now verifies compiler precision-2 HALF_UP rounding for unbounded BigDecimal average. Java named filter-parameter registration/syntax, BigDecimal scale policy, plugin methods, joins/tables and complete invalid-rule parity remain open.",
+   "difference": "Go now covers the Java filtered scalar family (avedev/avg/min/max/median/stddev/sum), max/min-ever, distinct counting, null predicate exclusion, singleton stddev Null semantics, scalar/access aggregate reuse and stateful Leaving. The explicit SumExact/AvgExact/MinExact/MaxExact and LessExact family now covers filtered big.Int/big.Rat arithmetic without float64 rounding, including the Java BigInteger/BigDecimal window trace and large-integer boundary. The dedicated MathContext scenario now verifies compiler precision-2 HALF_UP rounding for unbounded BigDecimal average. Java named filter-parameter registration/syntax, BigDecimal scale policy, plugin methods, joins/tables and complete invalid-rule parity remain open. ResultSetAggregateInvalid (java-runtime-619cdf3a6b43200abe95) is intentionally-different: the typed Go API makes both invalid shapes unrepresentable \u2014 count(*,intPrimitive) requires a non-bool filter (FilterAggregate's predicate is Expression[bool], rejected at compile time) and fmin(intPrimitive) without a filter is plain Min (valid); Java's EPCompileException prefix strings have no Go counterpart.",
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "intentionally-different"
    ]
   },
   {
@@ -46701,7 +46702,7 @@
   "implementedCases": 680,
   "differentialVerifiedCases": 308,
   "differentialVerifiedRuntimeIds": 1144,
-  "intentionallyDifferentCases": 28,
+  "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 115,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,

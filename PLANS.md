@@ -49,6 +49,36 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.439 ('resultset-aggregate-filtered-remainder').
+
+- [x] 4.439 pre-check: the ResultSetQueryTypeLocalGroupBy remainder (ords 12/22/24)
+      is ALREADY differential-verified via dedicated cases
+      (`case.resultset-querytype-local-group-by-solution-pattern`,
+      `case.resultset-querytype-local-group-closure`,
+      `case.resultset-querytype-local-group-by-keys`); the earlier unreferenced
+      survey was stale — the `case.aggregate-local-group` umbrella references
+      them. No-op; scouts BroadSwan/IndividualChameleon confirmed.
+- [x] Contract FROZEN by read-only scouts BrokenMollusk (Java) +
+      PersistentAlligator (Go). Ords 0/1/2 ALREADY differential-verified via
+      `case.resultset-aggregate-filtered-differential` and
+      `case.resultset-aggregate-filtered-all`. Only ord 4
+      `ResultSetAggregateInvalid` (`java-runtime-619cdf3a6b43200abe95`) was open.
+- [x] Ord 4 registered `intentionally-different` on `case.aggregate-filtered`:
+      the typed Go API makes both invalid shapes unrepresentable —
+      `count(*,intPrimitive)` needs a non-bool filter (FilterAggregate's
+      predicate is Expression[bool], rejected at compile time) and
+      `fmin(intPrimitive)` without a filter is plain `Min` (valid). Java's
+      EPCompileException prefix strings have no Go counterpart.
+- [x] Manifest validates; summary: 682 cases / 680 implemented / 308 DV /
+      1144 DV runtime IDs / 29 intentionally-different / 3692 associations /
+      799 unreferenced.
+- [x] Full local gates GREEN: `make check` exit 0 (parity 196.8s,
+      internal/esper 57.1s, compat 0.18s).
+- [x] Independent parity review (KeyMole, read-only): OVERALL PASS. Ord 4
+      invalid shapes confirmed unrepresentable; manifest/docs consistent.
+- [ ] Commit and push.
+
+## Current work unit
 Active: Draft 4.438 ('resultset-aggregate-remainder').
 
 - Unit: four unreferenced resultset executions —
@@ -90,7 +120,7 @@ Active: Draft 4.438 ('resultset-aggregate-remainder').
       note: null multi-key components — Java treats null as smallest and still
       enters contention; Go skips non-present keys (pre-existing convention,
       unexercised by this scenario). Not introduced by this diff.
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.438 committed and pushed as `0c26291f7`.
 
 ## Current work unit
 Active: Draft 4.437 ('rollup-having-orderby-grouping-func').
