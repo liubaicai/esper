@@ -49,6 +49,71 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.436 ('resultset-output-limit-row-per-group-first').
+
+- [x] Unit: `ResultSetOutputLimitRowPerGroup` ordinals 0/36/37/38 — the output-first
+      cluster over a named-window grouped source. ord0 FirstWhenThen
+      (`java-runtime-ebcdaaea9afc00a686d0`), ord36 FirstHavingJoinNoJoin
+      (`java-runtime-e499360495e769be65ec`), ord37 FirstCrontab
+      (`java-runtime-198f226a1080d3e02cf0`), ord38 FirstEveryNEvents
+      (`java-runtime-97e7a2a759efa357a2af`). Java commit
+      `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+- [x] Contract frozen from the Java source: each execution attaches the listener
+      after compileDeploy, uses a single s0 statement, assertPropsNew only (no
+      iterators, no old-stream delivery). first-having runs four EPL variants
+      (plain/join/order-by/order-by-join) as sequential deploy/undeploy cycles
+      inside one runtime. first-every-n deploys the variable in a separate `var`
+      module and the s0 in a third module (undeployModuleContaining leaves the
+      named window populated).
+- [x] Scenario `testdata/parity/resultset-output-limit-row-per-group-first.json`
+      (4 cases / 160 steps) with the EPLs taken verbatim from the Java source;
+      runner `internal/app/parity/resultset_output_limit_row_per_group_first.go`
+      + run.go wiring + normalizer (blanks `time` for the three wall-clock cases;
+      first-crontab keeps virtual times).
+- [x] Engine/API additions (shared core): `OutputFirstWhenPolicy`,
+      `OutputFirstAtPolicy`, `OutputFirstEveryEventsPolicy` public APIs in
+      `internal/esper/stream.go` + facade regeneration; `advance-time` before
+      deploy tolerated as a no-op (engine starts at 0).
+- [x] Java oracle `tools/java-oracle/ResultSetOutputLimitRowPerGroupFirstScenarioOracle.java`
+      + `run-resultset-output-limit-row-per-group-first.sh`; pinned trace
+      `testdata/parity/resultset-output-limit-row-per-group-first.trace.json`
+      (47 records, java 17.0.20).
+- [x] Differential replay: `-mode resultset-output-limit-row-per-group-first-diff`
+      reports status `passing` / 0 differences; evidence
+      `testdata/parity/resultset-output-limit-row-per-group-first.evidence.json`.
+- [x] Manifest/CHANGELOG facts: 680 cases / 678 implemented / 306 DV cases /
+      1138 DV runtime IDs / 3686 associations (referenced 3331, unreferenced 805);
+      capability `output.core` goRefs +1.
+- [x] Tests: `TestRunResultSetOutputLimitRowPerGroupFirstDiffWritesPassingEvidence`
+      + `TestRunResultSetOutputLimitRowPerGroupFirstDiffRejectsTraceMutations`
+      (3 mutations, all rejected).
+- [x] Independent parity review (agent ParityReview436, read-only): areas A/B/D/E
+      PASS, diff re-run exit 0 / passing / 0 differences / committed evidence
+      identical. One P1 FIXED: `applyFirstEveryEventsUngrouped` ignored
+      `policy.CountExpr` and merged new/old into one counter — rewritten to
+      Java `OutputConditionCount` semantics (variable rate re-read per update
+      with last-non-null retention, initial rate -1 fires every update,
+      separate new/old counters, the emitting update itself counts, and
+      having-filtered updates count once witnessed via `outputEventCounts`
+      input counts). Grouped-path `keyRate <= 0` guards removed (Java fires
+      every event for rate <= 0). Three P3s FIXED: duplicate Draft 4.436
+      section removed; `OutputFirstEveryNEventsExprPolicy` doc name corrected
+      to `OutputFirstEveryEventsPolicy` (CHANGELOG + PLANS); grouped `rateFor`
+      zero-default is equivalent to Java's -1 (both fire on first counted
+      event). Regression test
+      `TestOutputFirstEveryEventsExprUngroupedMatchesEsper` pins the ungrouped
+      variable-rate path including having-filtered counting.
+- [x] Post-fix re-validation: new test + all `TestOutputFirst*` green;
+      `-mode ...-diff` re-run exit 0, passing, 0 differences, evidence
+      byte-identical; `make check` exit 0 (parity 196.3s, internal/esper
+      57.6s); gofmt + `git diff --check` clean.
+- [x] Reviewer confirmation (same agent ParityReview436): OVERALL PASS, all five
+      areas PASS, no remaining P0/P1/P2; the reviewer re-ran the diff itself
+      (exit 0, passing, 0 differences, evidence byte-identical) and manually
+      traced the new regression test against Java semantics.
+- [ ] Commit and push.
+
+## Current work unit
 Active: Draft 4.406 ('resultset-querytype-local-group-ungrouped').
 
 - [x] Unit selected: `case.resultset-querytype-local-group-by-ungrouped` - ResultSetQueryTypeLocalGroupBy
@@ -1186,6 +1251,7 @@ Active: Draft 4.435 ('resultset-outputlimit-row-per-group-none-default').
       case-level representativeScenarioIds).
 - [x] Full local gates GREEN: `make check` exit 0 (parity 194.7s,
       internal/esper 57.3s, compat 0.13s); gofmt + go vet clean.
+
 
 ## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').

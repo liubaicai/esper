@@ -4885,11 +4885,31 @@ func OutputFirst(count int) OutputPolicy {
 	return internalengine.OutputFirst(count)
 }
 
+// OutputFirstAt emits each group's first visible result immediately, then the
+// first result arriving at or after each matching calendar instant. Unlike
+// OutputAt, the schedule is polled on event arrival per group — no timer
+// fires and no rows accumulate between boundaries. This is the chainable Go
+// form of Esper's "output first at (...)" policy.
+func OutputFirstAt(schedule CronSchedule) OutputPolicy {
+	return internalengine.OutputFirstAt(schedule)
+}
+
+const OutputFirstAtPolicy = internalengine.OutputFirstAtPolicy
+
 // OutputFirstEveryEvents emits the first visible result immediately, then
 // permits the next first result after count accepted input events. This is
 // the chainable Go form of Esper's "output first every N events" policy.
 func OutputFirstEveryEvents(count int) OutputPolicy {
 	return internalengine.OutputFirstEveryEvents(count)
+}
+
+// OutputFirstEveryEventsExpr emits the first visible result immediately, then
+// permits the next first result after count accepted input events, with the
+// count read from the expression at every update. Java's
+// OutputConditionPolledCount variable contract applies: a null value keeps
+// the previous rate instead of firing.
+func OutputFirstEveryEventsExpr(count Expr) OutputPolicy {
+	return internalengine.OutputFirstEveryEventsExpr(count)
 }
 
 const OutputFirstEveryEventsPolicy = internalengine.OutputFirstEveryEventsPolicy
@@ -4903,6 +4923,17 @@ func OutputFirstEveryTime(interval time.Duration) OutputPolicy {
 const OutputFirstEveryTimePolicy = internalengine.OutputFirstEveryTimePolicy
 
 const OutputFirstPolicy = internalengine.OutputFirstPolicy
+
+// OutputFirstWhen emits each group's visible result whenever the polled
+// condition evaluates true for that group, then runs the then-assignments.
+// Unlike OutputWhen, rows that fail the condition are dropped immediately
+// instead of buffered. This is the chainable Go form of Esper's
+// "output first when ... then ..." policy.
+func OutputFirstWhen(condition Expr, assignments ...OutputVariableAssignment) OutputPolicy {
+	return internalengine.OutputFirstWhen(condition, assignments...)
+}
+
+const OutputFirstWhenPolicy = internalengine.OutputFirstWhenPolicy
 
 func OutputLast() OutputPolicy {
 	return internalengine.OutputLast()

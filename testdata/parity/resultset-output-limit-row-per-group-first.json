@@ -1,0 +1,1389 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-output-limit-row-per-group-first",
+ "description": "ResultSetOutputLimitRowPerGroup ordinals 0/36/37/38: output first over a named-window grouped source",
+ "steps": [
+  {
+   "op": "case",
+   "case": "first-when-then"
+  },
+  {
+   "op": "deploy",
+   "case": "first-when-then",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "first-when-then",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-when-then",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "set-variable",
+   "case": "first-when-then",
+   "name": "varoutone",
+   "payload": true
+  },
+  {
+   "op": "send",
+   "case": "first-when-then",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "set-variable",
+   "case": "first-when-then",
+   "name": "varoutone",
+   "payload": true
+  },
+  {
+   "op": "send",
+   "case": "first-when-then",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-when-then",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 13
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-when-then",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 21
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "first-when-then"
+  },
+  {
+   "op": "case",
+   "case": "first-having"
+  },
+  {
+   "op": "deploy",
+   "case": "first-having",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": -6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 2
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "first-having"
+  },
+  {
+   "op": "deploy",
+   "case": "first-having",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": -6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 2
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "first-having"
+  },
+  {
+   "op": "deploy",
+   "case": "first-having",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": -6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 2
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "first-having"
+  },
+  {
+   "op": "deploy",
+   "case": "first-having",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean_A",
+   "payload": {
+    "id": "E2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": -10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": -6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-having",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2",
+    "volume": 0,
+    "price": 2
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "first-having"
+  },
+  {
+   "op": "case",
+   "case": "first-crontab"
+  },
+  {
+   "op": "advance-time",
+   "case": "first-crontab",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "first-crontab",
+   "statement": "all"
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "first-crontab",
+   "at": "1970-01-01T00:01:59.999Z"
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "first-crontab",
+   "at": "1970-01-01T00:02:00Z"
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 21
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "first-crontab",
+   "at": "1970-01-01T00:03:59.999Z"
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 22
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 13
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "first-crontab",
+   "at": "1970-01-01T00:04:00Z"
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 23
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-crontab",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 14
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "first-crontab"
+  },
+  {
+   "op": "case",
+   "case": "first-every-n"
+  },
+  {
+   "op": "deploy",
+   "case": "first-every-n",
+   "statement": "infra"
+  },
+  {
+   "op": "deploy",
+   "case": "first-every-n",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 13
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "volume": 0,
+    "price": 12
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "volume": 0,
+    "price": 11
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "S1",
+    "volume": 0,
+    "price": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 14
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "undeploy",
+   "case": "first-every-n",
+   "statement": "s0"
+  },
+  {
+   "op": "deploy",
+   "case": "first-every-n",
+   "statement": "s0-var"
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "set-variable",
+   "case": "first-every-n",
+   "name": "myvar_local",
+   "payload": 2
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 7
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-every-n",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "first-every-n"
+  }
+ ],
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java",
+ "javaRuntimes": [
+  "java-runtime-ebcdaaea9afc00a686d0",
+  "java-runtime-e499360495e769be65ec",
+  "java-runtime-198f226a1080d3e02cf0",
+  "java-runtime-97e7a2a759efa357a2af"
+ ],
+ "javaNames": [
+  "ResultSetOutputLimitRowPerGroup$ResultSetOutputFirstWhenThen",
+  "ResultSetOutputLimitRowPerGroup$ResultSetOutputFirstHavingJoinNoJoin",
+  "ResultSetOutputLimitRowPerGroup$ResultSetOutputFirstCrontab",
+  "ResultSetOutputLimitRowPerGroup$ResultSetOutputFirstEveryNEvents"
+ ],
+ "javaStaticIds": [
+  "java-7f81a475c41fed0a0174",
+  "java-54ea6581114dde53dd15",
+  "java-f46b70b32c0f05f9d1b1",
+  "java-494e8f25a4614f7880af"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "first-when-then",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-ebcdaaea9afc00a686d0",
+   "executionName": "ResultSetOutputLimitRowPerGroup$ResultSetOutputFirstWhenThen",
+   "observation": "listener",
+   "epl": "@name('s0') select theString, sum(intPrimitive) as value from MyWindow group by theString output first when varoutone then set varoutone = false"
+  },
+  {
+   "case": "first-having",
+   "ordinal": 36,
+   "runtimeId": "java-runtime-e499360495e769be65ec",
+   "executionName": "ResultSetOutputLimitRowPerGroup$ResultSetOutputFirstHavingJoinNoJoin",
+   "observation": "listener",
+   "epl": "@name('s0') select theString, sum(intPrimitive) as value from MyWindow group by theString having sum(intPrimitive) > 20 output first every 2 events"
+  },
+  {
+   "case": "first-crontab",
+   "ordinal": 37,
+   "runtimeId": "java-runtime-198f226a1080d3e02cf0",
+   "executionName": "ResultSetOutputLimitRowPerGroup$ResultSetOutputFirstCrontab",
+   "observation": "listener",
+   "epl": "@name('s0') select theString, sum(intPrimitive) as value from MyWindow group by theString output first at (*/2, *, *, *, *)"
+  },
+  {
+   "case": "first-every-n",
+   "ordinal": 38,
+   "runtimeId": "java-runtime-97e7a2a759efa357a2af",
+   "executionName": "ResultSetOutputLimitRowPerGroup$ResultSetOutputFirstEveryNEvents",
+   "observation": "listener",
+   "epl": "@name('s0') select theString, sum(intPrimitive) as value from MyWindow group by theString output first every 3 events"
+  }
+ ]
+}

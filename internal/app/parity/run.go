@@ -4308,6 +4308,23 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-output-limit-row-per-group-first" || *mode == "resultset-output-limit-row-per-group-first-diff" {
+		trace, err := runResultSetOutputLimitRowPerGroupFirstScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-output-limit-row-per-group-first-diff" {
+			return runDifferentialModeWithNormalizer(stdout, stderr, *javaTracePath, *evidencePath, resultsetOutputLimitRowPerGroupFirstJavaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetOutputLimitRowPerGroupFirstJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetOutputLimitRowPerGroupFirstJavaSources),
+				splitMetadata(*javaExecutions, resultsetOutputLimitRowPerGroupFirstJavaExecutions), scenario, trace,
+				normalizeResultSetOutputLimitRowPerGroupFirstTrace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-querytype-aggregate-grouped-having" || *mode == "resultset-querytype-aggregate-grouped-having-diff" {
 		trace, err := runResultsetQueryTypeAggregateGroupedHavingScenario(context.Background(), scenario)
 		if err != nil {

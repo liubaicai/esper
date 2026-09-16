@@ -133,3 +133,68 @@ func TestOutputFirstEveryTimeWithHavingMatchesEsper(t *testing.T) {
 		t.Fatal("zero first-every-time interval was accepted")
 	}
 }
+
+func TestOutputFirstEveryEventsExprUngroupedMatchesEsper(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	if err := env.RegisterVariable("myvar_local", 1); err != nil {
+		t.Fatal(err)
+	}
+	price := Field[runtimeTestTrade, float64]("price")
+	plan, err := env.Build(From[runtimeTestTrade](env, "Trade").Window(KeepAll()).Aggregate(
+		Alias("value", Sum[float64](price)),
+	).Having(Greater[float64](Sum[float64](price), Literal(0.0))).Query(
+		StatementName("output-first-every-events-expr"),
+		WithOutput(OutputFirstEveryEventsExpr(VariableRef[int]("myvar_local"))),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var values []float64
+	if _, err := deployment.Statements()[0].Subscribe(func(_ context.Context, batch ResultBatch) error {
+		for _, result := range batch.New {
+			row, ok := result.Row()
+			if !ok {
+				t.Fatalf("first-every-events-expr result is not a row: %#v", result)
+			}
+			values = append(values, row.Get("value").Any().(float64))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	send := func(value float64) {
+		t.Helper()
+		if err := engine.SendEvent(context.Background(), runtimeTestTrade{Price: value}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Java's OutputConditionCount re-reads the variable rate on every update
+	// and counts every update reaching the output view — including the
+	// emitting update itself and, once witnessed, updates whose row fails
+	// the having clause.
+	send(10) // first relevant result emits; the emitting update counts (rate 1)
+	send(20) // rate 1: emits
+	if err := engine.SetVariable(context.Background(), "myvar_local", 2); err != nil {
+		t.Fatal(err)
+	}
+	send(5)   // emits; count 1 < 2
+	send(1)   // count 2 >= 2: reset witnessed
+	send(3)   // emits; count 1
+	send(-60) // having fails (sum -21) but still counts: count 2 >= 2, reset
+	send(30)  // emits (sum 9); count 1
+	send(2)   // count 2 >= 2: reset witnessed
+	send(4)   // emits (sum 15)
+	want := []float64{10, 30, 35, 39, 9, 15}
+	if len(values) != len(want) {
+		t.Fatalf("first-every-events-expr values = %#v, want %#v", values, want)
+	}
+	for i := range want {
+		if values[i] != want[i] {
+			t.Fatalf("first-every-events-expr values = %#v, want %#v", values, want)
+		}
+	}
+}

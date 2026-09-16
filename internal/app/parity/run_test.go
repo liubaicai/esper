@@ -21452,6 +21452,124 @@ func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *t
 	}
 }
 
+func TestRunResultSetOutputLimitRowPerGroupFirstDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-first.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-per-group-first.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-first.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-output-limit-row-per-group-first-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetOutputLimitRowPerGroupFirstDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "first-when-then-missing",
+			mutate: func(trace *compat.Trace) {
+				// The first-when-then record 1 is the when-then emission
+				// after varoutone is set true. Dropping it means the
+				// condition-triggered first output was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "first-when-then" && rec.Sequence == 1 {
+						rec.New = nil
+						return
+					}
+				}
+				panic("no first-when-then record 1")
+			},
+		},
+		{
+			name: "first-crontab-old-leak",
+			mutate: func(trace *compat.Trace) {
+				// The first-crontab record 2 is the crontab-scheduled
+				// emission at t=2min. Plain select must never deliver old
+				// rows.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "first-crontab" && rec.Sequence == 2 {
+						rec.Old = append([]compat.ResultRecord(nil), rec.New...)
+						return
+					}
+				}
+				panic("no first-crontab record 2")
+			},
+		},
+		{
+			name: "first-every-n-variable-missing",
+			mutate: func(trace *compat.Trace) {
+				// The first-every-n record 7 is the every-N emission after
+				// myvar_local is set to 2. Dropping it means the
+				// variable-driven first output was lost.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "first-every-n" && rec.Sequence == 7 {
+						rec.New = nil
+						return
+					}
+				}
+				panic("no first-every-n record 7")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-first.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-per-group-first.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-first.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-output-limit-row-per-group-first-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunResultSetAggregateFirstLastWindowPrevNthDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-prev-nth.trace.json"),

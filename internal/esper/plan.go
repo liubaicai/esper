@@ -6796,8 +6796,8 @@ func validateOutputPolicy(policy OutputPolicy) error {
 	if policy.IntervalExpr != nil && policy.Interval != 0 {
 		return NewError(ErrorInvalidRule, "output interval expression and constant interval are mutually exclusive")
 	}
-	if policy.CountExpr != nil && policy.Kind != OutputLastEveryEventsPolicy {
-		return NewError(ErrorInvalidRule, "output count expression is only supported for last-every-events output")
+	if policy.CountExpr != nil && policy.Kind != OutputLastEveryEventsPolicy && policy.Kind != OutputFirstEveryEventsPolicy {
+		return NewError(ErrorInvalidRule, "output count expression is only supported for last-every-events or first-every-events output")
 	}
 	if policy.IntervalExpr != nil && policy.Kind != OutputEveryTimePolicy {
 		return NewError(ErrorInvalidRule, "output interval expression is only supported for every-time output")
@@ -6811,7 +6811,13 @@ func validateOutputPolicy(policy OutputPolicy) error {
 	if policy.IntervalExpr == nil && (policy.Kind == OutputEveryTimePolicy || policy.Kind == OutputFirstEveryTimePolicy || policy.Kind == OutputLastEveryTimePolicy || policy.Kind == OutputAllEveryTimePolicy) && policy.Interval <= 0 {
 		return NewError(ErrorInvalidRule, "time-based output interval must be positive")
 	}
-	if policy.Kind > OutputAllEveryEventsPolicy {
+	if policy.Kind == OutputFirstAtPolicy && policy.Cron == nil {
+		return NewError(ErrorInvalidRule, "output first-at requires a calendar schedule")
+	}
+	if policy.Kind == OutputFirstWhenPolicy && policy.When == nil {
+		return NewError(ErrorInvalidRule, "output first-when requires a condition")
+	}
+	if policy.Kind > OutputFirstWhenPolicy {
 		return NewError(ErrorInvalidRule, "unknown output policy")
 	}
 	switch policy.Termination {

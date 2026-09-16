@@ -2738,6 +2738,8 @@ const (
 	OutputLastEveryTimePolicy
 	OutputAllEveryTimePolicy
 	OutputAllEveryEventsPolicy
+	OutputFirstAtPolicy
+	OutputFirstWhenPolicy
 )
 
 type OutputAfterKind uint8
@@ -2810,6 +2812,34 @@ func OutputFirstEveryEvents(count int) OutputPolicy {
 // permits the next first result after interval on the engine's virtual clock.
 func OutputFirstEveryTime(interval time.Duration) OutputPolicy {
 	return OutputPolicy{Kind: OutputFirstEveryTimePolicy, Interval: interval}
+}
+
+// OutputFirstEveryEventsExpr emits the first visible result immediately, then
+// permits the next first result after count accepted input events, with the
+// count read from the expression at every update. Java's
+// OutputConditionPolledCount variable contract applies: a null value keeps
+// the previous rate instead of firing.
+func OutputFirstEveryEventsExpr(count Expr) OutputPolicy {
+	return OutputPolicy{Kind: OutputFirstEveryEventsPolicy, CountExpr: count}
+}
+
+// OutputFirstAt emits each group's first visible result immediately, then the
+// first result arriving at or after each matching calendar instant. Unlike
+// OutputAt, the schedule is polled on event arrival per group — no timer
+// fires and no rows accumulate between boundaries. This is the chainable Go
+// form of Esper's "output first at (...)" policy.
+func OutputFirstAt(schedule CronSchedule) OutputPolicy {
+	copySchedule := schedule
+	return OutputPolicy{Kind: OutputFirstAtPolicy, Cron: &copySchedule}
+}
+
+// OutputFirstWhen emits each group's visible result whenever the polled
+// condition evaluates true for that group, then runs the then-assignments.
+// Unlike OutputWhen, rows that fail the condition are dropped immediately
+// instead of buffered. This is the chainable Go form of Esper's
+// "output first when ... then ..." policy.
+func OutputFirstWhen(condition Expr, assignments ...OutputVariableAssignment) OutputPolicy {
+	return OutputPolicy{Kind: OutputFirstWhenPolicy, When: condition, Then: assignments}
 }
 
 // OutputLastEveryEvents emits the latest visible result after each count of
@@ -3918,6 +3948,9 @@ func outputDescription(policy OutputPolicy) string {
 		}
 	case OutputFirstEveryEventsPolicy:
 		base = fmt.Sprintf("first-every-events(%d)", policy.Count)
+		if policy.CountExpr != nil {
+			base = fmt.Sprintf("first-every-events-expr(%s)", policy.CountExpr.Description())
+		}
 	case OutputFirstEveryTimePolicy:
 		base = fmt.Sprintf("first-every-time(%s)", policy.Interval)
 	case OutputLastEveryEventsPolicy:
@@ -3935,8 +3968,20 @@ func outputDescription(policy OutputPolicy) string {
 		base = "last"
 	case OutputSnapshotPolicy:
 		base = "snapshot"
+	case OutputFirstAtPolicy:
+		base = fmt.Sprintf("first-at(%s)", policy.Cron.description())
+	case OutputFirstWhenPolicy:
+		parts := []string{policy.When.Description()}
+		for _, assignment := range policy.Then {
+			expression := "<nil>"
+			if assignment.Expr != nil {
+				expression = assignment.Expr.Description()
+			}
+			parts = append(parts, assignment.Name+"="+expression)
+		}
+		base = fmt.Sprintf("first-when(%s)", strings.Join(parts, ";"))
 	}
-	if policy.Cron != nil {
+	if policy.Cron != nil && policy.Kind != OutputFirstAtPolicy {
 		base = fmt.Sprintf("at(%s)->%s", policy.Cron.description(), base)
 	}
 	switch policy.After {
@@ -3949,7 +3994,7 @@ func outputDescription(policy OutputPolicy) string {
 		base = fmt.Sprintf("after-calendar(%dY%dM%dD)->%s", period.Years, period.Months, period.Days, base)
 	default:
 	}
-	if policy.When != nil {
+	if policy.When != nil && policy.Kind != OutputFirstWhenPolicy {
 		parts := []string{policy.When.Description()}
 		for _, assignment := range policy.Then {
 			expression := "<nil>"

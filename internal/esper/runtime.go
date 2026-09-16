@@ -6597,9 +6597,15 @@ type patternMatch struct {
 type outputRuntimeState struct {
 	firstEmitted           int
 	firstEverySeen         int
+	firstEverySeenOld      int
 	firstEveryWitnessed    bool
 	firstEveryCounts       map[string]int
+	firstEveryOldCounts    map[string]int
+	firstEveryRates        map[string]int64
 	firstEveryNext         map[string]time.Time
+	firstAtNext            map[string]time.Time
+	firstAtSchedule        resolvedCronSchedule
+	firstAtResolved        bool
 	lastEverySeen          int
 	lastEverySeenRemoved   int
 	lastEveryOutputRows    map[string]Result
@@ -7154,6 +7160,8 @@ func cloneOutputRuntimeState(source *outputRuntimeState) *outputRuntimeState {
 	result.whenPending = cloneResultBatchDeep(source.whenPending)
 	result.cronPending = cloneResultBatchDeep(source.cronPending)
 	result.firstEveryCounts = cloneIntMap(source.firstEveryCounts)
+	result.firstEveryOldCounts = cloneIntMap(source.firstEveryOldCounts)
+	result.firstEveryRates = cloneInt64Map(source.firstEveryRates)
 	result.lastEveryOutputRows = cloneResultMap(source.lastEveryOutputRows)
 	result.lastEveryOutputVisible = cloneBoolMap(source.lastEveryOutputVisible)
 	result.allEveryOutputRows = cloneResultMap(source.allEveryOutputRows)
@@ -10423,7 +10431,7 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		}
 		return ResultBatch{}
 	}
-	if policy.When != nil {
+	if policy.When != nil && policy.Kind != OutputFirstWhenPolicy {
 		if policy.Kind == OutputSnapshotPolicy && len(plans) > 0 && !batch.empty() {
 			// Java rebuilds a snapshot-when pending batch only from updates
 			// reaching the output view; a bare time advance with no events
@@ -10445,7 +10453,7 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 	if policy.When != nil && policy.Kind == OutputSnapshotPolicy {
 		return r.finishOutput(policy, batch, now, plans...)
 	}
-	if policy.Cron != nil {
+	if policy.Cron != nil && policy.Kind != OutputFirstAtPolicy {
 		return r.applyCronOutput(policy, batch, flush, now, plans...)
 	}
 	if policy.Kind == OutputAllPolicy {
@@ -10471,6 +10479,10 @@ func (r *statementRuntime) applyOutput(policy OutputPolicy, batch ResultBatch, f
 		return r.applyFirstEveryEvents(policy, batch, now, plans...)
 	case OutputFirstEveryTimePolicy:
 		return r.applyFirstEveryTime(policy, batch, now, plans...)
+	case OutputFirstAtPolicy:
+		return r.applyFirstAt(policy, batch, now, plans...)
+	case OutputFirstWhenPolicy:
+		return r.applyFirstWhen(policy, batch, now, plans...)
 	case OutputLastEveryEventsPolicy:
 		return r.applyLastEveryEvents(policy, batch, now, plans...)
 	case OutputLastEveryTimePolicy:
@@ -10661,68 +10673,127 @@ func (r *statementRuntime) applyFirstEveryEvents(policy OutputPolicy, batch Resu
 	return r.applyFirstEveryEventsUngrouped(policy, batch, now, plans...)
 }
 
-// applyFirstEveryEventsUngrouped mirrors Esper's OutputProcessViewConditionFirst:
-// the first relevant result emits immediately, then the global count includes
-// every accepted input event (having-filtered events count after the first
-// output), and the next relevant result after count events emits.
+// applyFirstEveryEventsUngrouped mirrors Esper's OutputProcessViewConditionFirst
+// with an OutputConditionCount: the first relevant result emits immediately,
+// then every update reaching the output view advances separate new/old
+// counters — including the emitting update itself and updates whose rows fail
+// the having clause once witnessed. When either counter reaches the rate the
+// condition fires and the next relevant result emits. A variable rate
+// (CountExpr) is re-read per update and keeps the last non-null value; Java's
+// initial rate is -1, so an unset variable fires on every update.
 func (r *statementRuntime) applyFirstEveryEventsUngrouped(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
 	state := r.outputState
-	count := len(batch.New) + len(batch.Old)
-	if batch.outputCountsSet {
-		count = int(batch.outputInserted) + int(batch.outputRemoved)
+	inserted, removed := outputEventCounts(batch)
+	rate := int64(policy.Count)
+	if policy.CountExpr != nil {
+		if value, ok := r.evalOutputRateValue(policy.CountExpr, now); ok {
+			state.eventRate = int64(value)
+			state.eventRateKnown = true
+		}
+		if !state.eventRateKnown {
+			rate = -1
+		} else {
+			rate = state.eventRate
+		}
 	}
+	var result ResultBatch
 	if !state.firstEveryWitnessed {
 		if batch.empty() {
 			return ResultBatch{}
 		}
 		state.firstEveryWitnessed = true
-		state.firstEverySeen = count
-		return r.finishOutput(policy, batch, now, plans...)
+		result = r.finishOutput(policy, batch, now, plans...)
 	}
-	state.firstEverySeen += count
-	if state.firstEverySeen >= policy.Count {
+	state.firstEverySeen += inserted
+	state.firstEverySeenOld += removed
+	if int64(state.firstEverySeen) >= rate || int64(state.firstEverySeenOld) >= rate {
 		state.firstEverySeen = 0
+		state.firstEverySeenOld = 0
 		state.firstEveryWitnessed = false
 	}
-	return ResultBatch{}
+	return result
 }
 
 // applyFirstEveryEventsGrouped mirrors Esper's per-group OutputConditionPolledCount:
-// each group's first event passes immediately, then every N subsequent events
-// for that group pass. Events that fail a grouped having clause do not count.
+// each input insert event calls updateOutputCondition(1,0) and each input
+// delete event calls updateOutputCondition(0,1) against the group's state.
+// The condition fires when either counter reaches the rate or on the group's
+// first counted event (isFirst); firing resets both counters. Events whose
+// group row fails the having clause are skipped before the condition runs.
+// A variable rate (CountExpr) is re-read per event, matching the
+// variableReader contract.
 func (r *statementRuntime) applyFirstEveryEventsGrouped(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
 	state := r.outputState
 	if state.firstEveryCounts == nil {
 		state.firstEveryCounts = make(map[string]int)
 	}
+	if state.firstEveryOldCounts == nil {
+		state.firstEveryOldCounts = make(map[string]int)
+	}
+	if state.firstEveryRates == nil {
+		state.firstEveryRates = make(map[string]int64)
+	}
 	visible := make(map[string]int, len(batch.New))
 	for index := range batch.New {
 		visible[outputGroupKey(batch.outputKeysNew, index)] = index
 	}
-	keys := batch.inputKeysNew
-	if len(keys) == 0 {
-		keys = append([]string(nil), batch.outputKeysNew...)
+	newKeys := batch.inputKeysNew
+	if len(newKeys) == 0 {
+		newKeys = append([]string(nil), batch.outputKeysNew...)
 	}
-	emit := make(map[string]struct{}, len(keys))
-	for _, key := range keys {
-		count, exists := state.firstEveryCounts[key]
-		if !exists {
-			state.firstEveryCounts[key] = 0
-			if _, ok := visible[key]; ok {
-				emit[key] = struct{}{}
-			}
-			continue
+	// oldData events are the input deletes (removedGroupKeys carries one
+	// entry per deleted event); they count via oldEventsCount. The having
+	// gate for deletes uses the pre-delete group row, approximated here by
+	// the post-update visible row.
+	oldKeys := batch.removedGroupKeys
+	rate := int64(policy.Count)
+	emit := make(map[string]struct{}, len(newKeys)+len(oldKeys))
+	rateFor := func(key string) int64 {
+		if policy.CountExpr == nil {
+			return rate
 		}
-		count++
-		if count >= policy.Count {
-			state.firstEveryCounts[key] = 0
-			if _, ok := visible[key]; ok {
-				emit[key] = struct{}{}
-			}
-			continue
+		if value, ok := r.evalOutputRateValue(policy.CountExpr, now); ok {
+			state.firstEveryRates[key] = int64(value)
 		}
-		state.firstEveryCounts[key] = count
+		return state.firstEveryRates[key]
 	}
+	fire := func(key string) {
+		state.firstEveryCounts[key] = 0
+		state.firstEveryOldCounts[key] = 0
+		if _, ok := visible[key]; ok {
+			emit[key] = struct{}{}
+		}
+	}
+	countNew := func(key string) {
+		keyRate := rateFor(key)
+		_, seenNew := state.firstEveryCounts[key]
+		_, seenOld := state.firstEveryOldCounts[key]
+		state.firstEveryCounts[key]++
+		if !seenNew && !seenOld || state.firstEveryCounts[key] >= int(keyRate) {
+			fire(key)
+		}
+	}
+	countOld := func(key string) {
+		keyRate := rateFor(key)
+		_, seenNew := state.firstEveryCounts[key]
+		_, seenOld := state.firstEveryOldCounts[key]
+		state.firstEveryOldCounts[key]++
+		if !seenNew && !seenOld || state.firstEveryOldCounts[key] >= int(keyRate) {
+			fire(key)
+		}
+	}
+	for _, key := range newKeys {
+		if _, ok := visible[key]; ok {
+			countNew(key)
+		}
+	}
+	for _, key := range oldKeys {
+		if _, ok := visible[key]; ok {
+			countOld(key)
+		}
+	}
+	selectsRemove := len(plans) > 0 &&
+		(plans[0].query.selector == SelectIRStream || plans[0].query.selector == SelectRStream)
 	result := ResultBatch{Time: batch.Time}
 	for index, item := range batch.New {
 		key := outputGroupKey(batch.outputKeysNew, index)
@@ -10736,7 +10807,19 @@ func (r *statementRuntime) applyFirstEveryEventsGrouped(policy OutputPolicy, bat
 	}
 	for index, item := range batch.Old {
 		key := outputGroupKey(batch.outputKeysOld, index)
+		if _, ok := emit[key]; ok && selectsRemove {
+			// Java emits the group's old row alongside the new row when the
+			// condition fires and the statement selects the remove stream.
+			result.Old = append(result.Old, item)
+			if len(batch.outputKeysOld) > index {
+				result.outputKeysOld = append(result.outputKeysOld, key)
+			}
+			continue
+		}
 		if _, seen := state.firstEveryCounts[key]; seen {
+			continue
+		}
+		if _, seen := state.firstEveryOldCounts[key]; seen {
 			continue
 		}
 		state.firstEveryCounts[key] = 0
@@ -10796,6 +10879,62 @@ func (r *statementRuntime) applyFirstEveryTime(policy OutputPolicy, batch Result
 				result.outputKeysOld = append([]string(nil), result.outputKeysNew...)
 			}
 		}
+	}
+	return r.finishOutput(policy, result, now, plans...)
+}
+
+// applyFirstAt mirrors Esper's per-group OutputConditionPolledCrontab: the
+// schedule is polled on event arrival, not driven by a timer. Each group's
+// first visible row emits immediately; later rows emit only when the group's
+// next scheduled occurrence is at or before the event time, then the
+// occurrence strictly after now is armed. No rows accumulate between
+// boundaries — unlike applyCronOutput there is no pending buffer.
+func (r *statementRuntime) applyFirstAt(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil || policy.Cron == nil || batch.empty() {
+		return ResultBatch{}
+	}
+	state := r.outputState
+	if !state.firstAtResolved {
+		resolved, err := policy.Cron.resolve(EvalContext{Now: now, Variables: r.variables})
+		if err != nil {
+			return ResultBatch{}
+		}
+		state.firstAtSchedule = resolved
+		state.firstAtResolved = true
+	}
+	if state.firstAtNext == nil {
+		state.firstAtNext = make(map[string]time.Time)
+	}
+	allow := func(key string) bool {
+		next, exists := state.firstAtNext[key]
+		if exists && now.Before(next) {
+			return false
+		}
+		next, err := state.firstAtSchedule.nextAfter(now)
+		if err != nil {
+			return false
+		}
+		state.firstAtNext[key] = next
+		return true
+	}
+	result := selectFirstOutputByGroup(batch, allow)
+	return r.finishOutput(policy, result, now, plans...)
+}
+
+// applyFirstWhen mirrors Esper's per-group OutputConditionPolledExpression:
+// the when condition is evaluated per group on every update; groups whose
+// condition holds emit their rows and run the then-assignments, groups that
+// fail drop their rows immediately (no buffering, unlike OutputWhen).
+func (r *statementRuntime) applyFirstWhen(policy OutputPolicy, batch ResultBatch, now time.Time, plans ...Plan) ResultBatch {
+	if r == nil || r.outputState == nil || policy.When == nil || batch.empty() {
+		return ResultBatch{}
+	}
+	allow := func(key string) bool {
+		return r.outputWhenMatches(policy.When, now)
+	}
+	result := selectFirstOutputByGroup(batch, allow)
+	if result.empty() {
+		return ResultBatch{}
 	}
 	return r.finishOutput(policy, result, now, plans...)
 }
@@ -12082,6 +12221,15 @@ func (r *statementRuntime) removeOutputGroupRow(key string) {
 	}
 	if r.outputState.firstEveryCounts != nil {
 		delete(r.outputState.firstEveryCounts, key)
+	}
+	if r.outputState.firstEveryOldCounts != nil {
+		delete(r.outputState.firstEveryOldCounts, key)
+	}
+	if r.outputState.firstEveryRates != nil {
+		delete(r.outputState.firstEveryRates, key)
+	}
+	if r.outputState.firstAtNext != nil {
+		delete(r.outputState.firstAtNext, key)
 	}
 }
 
