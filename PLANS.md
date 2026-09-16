@@ -49,6 +49,50 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.438 ('resultset-aggregate-remainder').
+
+- Unit: four unreferenced resultset executions —
+      `ResultSetAggregateFiltered` ord 3 `ResultSetAggregateFirstLastEver`,
+      `ResultSetAggregateSortedMinMaxBy` ord 5 `ResultSetAggregateMultipleCriteria`,
+      `ResultSetAggregateFilterNamedParameter` ord 19 `ResultSetAggregateAuditAndReuse`,
+      `ResultSetOrderBySimpleSortCollator` ord 0. Java commit
+      `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+- [x] Contract FROZEN by read-only scouts UnderlyingParrotfish (Java) +
+      HomelessJellyfish (Go). Scope narrowed to THREE executions:
+      `ResultSetAggregateFirstLastEver` (`java-runtime-47dee40e6fe320005f49`),
+      `ResultSetAggregateMultipleCriteria` (`java-runtime-dd3414775a8421e08a52`),
+      `ResultSetAggregateAuditAndReuse` (`java-runtime-c95393b13d253135c833`).
+      `ResultSetOrderBySimpleSortCollator` (`java-runtime-97855caf4970534092ae`)
+      DEFERRED — needs a French-locale collator on string sort keys (Go has no
+      collator API; Java relies on JVM default locale); separate feature unit.
+- [x] ENGINE WORK (shared core, primary agent): multi-criteria minby/maxby —
+      `aggregateByEverVariadic` silently dropped keys[1:]; now builds a
+      SortedMultiKey for len(keys)>1, and new `MinByMulti`/`MaxByMulti`/
+      `MinByEverMulti`/`MaxByEverMulti` accept heterogeneous `...Expr` keys.
+      Verified: lexicographic (symbol,price) min/max over #keepall.
+- [x] Assets (oracle + scenario + runner) via parity-asset-worker CulturalAnaconda;
+      run.go wiring + run_test family by primary.
+- [x] Differential replay: Java 15 records; Go 15 records. ZERO differences on
+      first replay — the multi-key fix plus FilterAggregate/SortedEvents paths
+      converged. Evidence `testdata/parity/resultset-aggregate-remainder.evidence.json`
+      status `passing`.
+- [x] Manifest: NEW case `case.resultset-aggregate-remainder` born-DV with the
+      3 IDs; mapping to `resultset.aggregate-group-by`; capability goRefs +1.
+      Summary: 682 cases / 680 implemented / 308 DV / 1144 DV runtime IDs /
+      3692 associations / 799 unreferenced. `ResultSetOrderBySimpleSortCollator`
+      (`java-runtime-97855caf4970534092ae`) stays unreferenced — French collator
+      is a separate locale feature unit.
+- [x] Full local gates GREEN: `make check` exit 0 (parity 196.6s,
+      internal/esper 57.4s, compat 0.16s).
+- [x] Independent parity review (PrintedFirefly, read-only): OVERALL PASS.
+      All three EPLs byte-exact; 15/15 records verified; diff re-run exit 0 /
+      passing / 0 differences; manifest/facade/docs consistent. One P3 latent
+      note: null multi-key components — Java treats null as smallest and still
+      enters contention; Go skips non-present keys (pre-existing convention,
+      unexercised by this scenario). Not introduced by this diff.
+- [ ] Commit and push.
+
+## Current work unit
 Active: Draft 4.437 ('rollup-having-orderby-grouping-func').
 
 - Unit: `ResultSetQueryTypeRollupHavingAndOrderBy` ords 0/1
@@ -126,7 +170,7 @@ Active: Draft 4.437 ('rollup-having-orderby-grouping-func').
       observations (groupingPresent-clearing inside nested prev/prior is an
       exotic unverified corner; pre-existing prevwindow-family grouping leak
       in grouped queries — not introduced by this diff).
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.437 committed and pushed.
 
 ## Current work unit
 Active: Draft 4.436 ('resultset-output-limit-row-per-group-first').

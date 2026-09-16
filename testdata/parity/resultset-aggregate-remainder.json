@@ -1,0 +1,243 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-aggregate-remainder",
+ "description": "ResultSetAggregateFiltered ordinal 3 (firstever/lastever/countever positional filters), ResultSetAggregateSortedMinMaxBy ordinal 5 (multi-criteria sorted plus multi-key minby/maxby/minbyever/maxbyever) and ResultSetAggregateFilterNamedParameter ordinal 19 (audit-and-reuse of identical filtered aggregates)",
+ "steps": [
+  {
+   "op": "case",
+   "case": "first-last-ever"
+  },
+  {
+   "op": "deploy",
+   "case": "first-last-ever",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "first-last-ever",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 100,
+    "boolPrimitive": false
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-last-ever",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 100,
+    "boolPrimitive": true
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-last-ever",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 200,
+    "boolPrimitive": true
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-last-ever",
+   "eventType": "SupportBean",
+   "payload": {
+    "intBoxed": 201,
+    "boolPrimitive": false
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "first-last-ever"
+  },
+  {
+   "op": "case",
+   "case": "multiple-criteria"
+  },
+  {
+   "op": "deploy",
+   "case": "multiple-criteria",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "D",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "D",
+    "intPrimitive": 19
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "multiple-criteria"
+  },
+  {
+   "op": "deploy",
+   "case": "multiple-criteria",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "intPrimitive": 10,
+    "longPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "P",
+    "intPrimitive": 5,
+    "longPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "intPrimitive": 9,
+    "longPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "intPrimitive": 11,
+    "longPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "X",
+    "intPrimitive": 11,
+    "longPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "multiple-criteria",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "X",
+    "intPrimitive": 0,
+    "longPrimitive": 6
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "multiple-criteria"
+  },
+  {
+   "op": "case",
+   "case": "audit-reuse"
+  },
+  {
+   "op": "deploy",
+   "case": "audit-reuse",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "audit-reuse",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "audit-reuse"
+  }
+ ],
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFiltered.java",
+ "javaSource2": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java",
+ "javaSource3": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java",
+ "javaRuntimes": [
+  "java-runtime-47dee40e6fe320005f49",
+  "java-runtime-dd3414775a8421e08a52",
+  "java-runtime-c95393b13d253135c833"
+ ],
+ "javaNames": [
+  "ResultSetAggregateFirstLastEver",
+  "ResultSetAggregateMultipleCriteria",
+  "ResultSetAggregateAuditAndReuse"
+ ],
+ "javaStaticIds": [
+  "java-3d2c17d4a26d35a0019b",
+  "java-553516b9d01c12a13172",
+  "java-0c29efb6d43971aba5c4"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "first-last-ever",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-47dee40e6fe320005f49",
+   "executionName": "ResultSetAggregateFirstLastEver",
+   "observation": "listener; Java runs the assertion twice (soda=true/false), one scenario pass covers both",
+   "epl": "@name('s0') select firstever(intBoxed,boolPrimitive) as c1, lastever(intBoxed,boolPrimitive) as c2, countever(*,boolPrimitive) as c3 from SupportBean#length(3)"
+  },
+  {
+   "case": "multiple-criteria",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-dd3414775a8421e08a52",
+   "executionName": "ResultSetAggregateMultipleCriteria",
+   "observation": "listener",
+   "epl": "@name('s0') select sorted(theString desc, intPrimitive desc) as c0,sorted(theString, intPrimitive) as c1,sorted(theString asc, intPrimitive asc) as c2,sorted(theString desc, intPrimitive asc) as c3 from SupportBean#keepall",
+   "eplB": "@name('s0') select maxbyever(intPrimitive, theString).longPrimitive as c0,minbyever(intPrimitive, theString).longPrimitive as c1,maxbyever(theString, intPrimitive).longPrimitive as c2,minbyever(theString, intPrimitive).longPrimitive as c3,maxby(intPrimitive, theString).longPrimitive as c4,minby(intPrimitive, theString).longPrimitive as c5,maxby(theString, intPrimitive).longPrimitive as c6,minby(theString, intPrimitive).longPrimitive as c7 from SupportBean#keepall"
+  },
+  {
+   "case": "audit-reuse",
+   "ordinal": 19,
+   "runtimeId": "java-runtime-c95393b13d253135c833",
+   "executionName": "ResultSetAggregateAuditAndReuse",
+   "observation": "listener",
+   "epl": "@name('s0') select sum(intPrimitive, filter:intPrimitive=1) as c0, sum(intPrimitive, filter:intPrimitive=1) as c1, window(*, filter:intPrimitive=1) as c2, window(*, filter:intPrimitive=1) as c3  from SupportBean#length(3)"
+  }
+ ]
+}

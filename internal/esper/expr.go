@@ -5703,7 +5703,9 @@ func MaxByEver[V any, K Ordered](value Expression[V], keys ...Expression[K]) Agg
 // minbyever() declaration for into-table compatibility diagnostics; its
 // evaluation yields Missing because the sort specification lives in the
 // column declaration, and such plans are rejected at Build time before any
-// evaluation when the target column is incompatible.
+// evaluation when the target column is incompatible. Multiple homogeneous
+// keys compare lexicographically via a SortedMultiKey, matching Esper's
+// multi-criteria minbyever/maxbyever.
 func aggregateByEverVariadic[V any, K Ordered](kind string, value Expression[V], keys []Expression[K], minimum bool) AggregateExpression[V] {
 	if len(keys) == 0 {
 		if value == nil {
@@ -5711,7 +5713,77 @@ func aggregateByEverVariadic[V any, K Ordered](kind string, value Expression[V],
 		}
 		return makeAggregateExpr[V](kind, intoTableEngineNames[kind]+"()", []*exprNode{value.node()}, func(EvalContext) Value { return Missing() })
 	}
-	return aggregateByEver[V, K](kind, value, keys[0], minimum)
+	if len(keys) == 1 {
+		return aggregateByEver[V, K](kind, value, keys[0], minimum)
+	}
+	exprs := make([]Expr, len(keys))
+	for index, key := range keys {
+		exprs[index] = key
+	}
+	return aggregateByEver[V, SortedMultiKey](kind, value, multiKeyExpression(exprs), minimum)
+}
+
+// MinByMulti returns the value expression from the row with the smallest
+// multi-criteria key. Keys compare lexicographically in declaration order,
+// matching Esper's minby(k1, k2, ...).
+func MinByMulti[V any](value Expression[V], keys ...Expr) AggregateExpression[V] {
+	return aggregateBy[V, SortedMultiKey]("min-by", value, multiKeyExpression(keys), true)
+}
+
+// MaxByMulti returns the value expression from the row with the largest
+// multi-criteria key, matching Esper's maxby(k1, k2, ...).
+func MaxByMulti[V any](value Expression[V], keys ...Expr) AggregateExpression[V] {
+	return aggregateBy[V, SortedMultiKey]("max-by", value, multiKeyExpression(keys), false)
+}
+
+// MinByEverMulti is the ever-variant of MinByMulti: the key minimizes over
+// every event ever seen by the aggregate group, matching Esper's
+// minbyever(k1, k2, ...).
+func MinByEverMulti[V any](value Expression[V], keys ...Expr) AggregateExpression[V] {
+	return aggregateByEver[V, SortedMultiKey]("min-by-ever", value, multiKeyExpression(keys), true)
+}
+
+// MaxByEverMulti is the ever-variant of MaxByMulti, matching Esper's
+// maxbyever(k1, k2, ...).
+func MaxByEverMulti[V any](value Expression[V], keys ...Expr) AggregateExpression[V] {
+	return aggregateByEver[V, SortedMultiKey]("max-by-ever", value, multiKeyExpression(keys), false)
+}
+
+// multiKeyExpression builds a heterogeneous multi-criteria key expression.
+// Each key evaluates against the same event; a Null component makes the
+// whole key Null, matching sortedMultiKeyExpression.
+func multiKeyExpression(keys []Expr) Expression[SortedMultiKey] {
+	children := make([]*exprNode, 0, len(keys))
+	descriptions := make([]string, 0, len(keys))
+	valid := len(keys) > 0
+	for _, key := range keys {
+		if key == nil {
+			children = append(children, nil)
+			valid = false
+			continue
+		}
+		children = append(children, key.node())
+		descriptions = append(descriptions, key.Description())
+	}
+	description := "multi-key(" + strings.Join(descriptions, ",") + ")"
+	node := &exprNode{kind: "multi-key", typ: typeOf[SortedMultiKey](), description: description, children: children}
+	if !valid {
+		node.configurationError = "multi-key requires at least one non-nil key expression"
+	}
+	return typedExpr[SortedMultiKey]{n: node, fn: func(ctx EvalContext) Value {
+		if !valid {
+			return Missing()
+		}
+		parts := make([]any, len(keys))
+		for index, key := range keys {
+			value := key.eval(ctx)
+			if !value.IsPresent() {
+				return Null()
+			}
+			parts[index] = value
+		}
+		return Present(NewSortedMultiKey(parts...))
+	}}
 }
 
 func aggregateBy[V any, K Ordered](kind string, value Expression[V], key Expression[K], minimum bool) AggregateExpression[V] {

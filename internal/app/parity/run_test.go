@@ -21452,6 +21452,125 @@ func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *t
 	}
 }
 
+func TestRunResultSetAggregateRemainderDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-remainder.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-remainder.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-remainder.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-remainder-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 3 {
+		t.Fatalf("runtime ids = %d, want 3", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetAggregateRemainderDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "first-ever-latch-mutated",
+			mutate: func(trace *compat.Trace) {
+				// first-last-ever record 3 c1 stays 100 (firstever latches
+				// the first filter-passing value). Mutating it breaks the
+				// ever-latch contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "first-last-ever" && rec.Sequence == 3 {
+						rec.New[0].Fields["c1"] = float64(200)
+						return
+					}
+				}
+				panic("no first-last-ever record 3")
+			},
+		},
+		{
+			name: "sorted-order-mutated",
+			mutate: func(trace *compat.Trace) {
+				// multiple-criteria record 4 c0 is the desc/desc sorted
+				// event array [D20,D19,C15,C10]. Swapping the first two
+				// elements breaks the multi-criteria order.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multiple-criteria" && rec.Sequence == 4 {
+						arr := rec.New[0].Fields["c0"].([]any)
+						arr[0], arr[1] = arr[1], arr[0]
+						return
+					}
+				}
+				panic("no multiple-criteria record 4")
+			},
+		},
+		{
+			name: "minby-tiebreak-mutated",
+			mutate: func(trace *compat.Trace) {
+				// multiple-criteria record 9 c3 is minbyever(theString,
+				// intPrimitive).longPrimitive = 3 (tie 'C' picks int 9).
+				// Mutating it breaks the heterogeneous tie-break.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multiple-criteria" && rec.Sequence == 9 {
+						rec.New[0].Fields["c3"] = float64(4)
+						return
+					}
+				}
+				panic("no multiple-criteria record 9")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-remainder.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-remainder.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-remainder.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-remainder-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunResultSetRollupHavingOrderByDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-rollup-having-orderby.trace.json"),

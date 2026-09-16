@@ -4450,7 +4450,8 @@
     "internal/app/parity/resultset_aggregate_minmax_named_window_wever.go",
     "internal/esper/expr.go",
     "internal/esper/runtime.go",
-    "internal/app/parity/resultset_querytype_row_per_event.go"
+    "internal/app/parity/resultset_querytype_row_per_event.go",
+    "internal/app/parity/resultset_aggregate_remainder.go"
    ],
    "phase": 2,
    "status": "differential-verified",
@@ -4514,7 +4515,10 @@
     "java-runtime-2667a7eadeb7a458d7ce",
     "java-runtime-f1fedff9a25cca57fefa",
     "java-runtime-7d0a94525b0038b397fd",
-    "java-runtime-840f1ca5610dd00d3ec0"
+    "java-runtime-840f1ca5610dd00d3ec0",
+    "java-runtime-47dee40e6fe320005f49",
+    "java-runtime-dd3414775a8421e08a52",
+    "java-runtime-c95393b13d253135c833"
    ],
    "representativeScenarioIds": [
     "output-policy-iterator",
@@ -43558,6 +43562,72 @@
    "notes": [
     "ResultSetQueryTypeHaving{join=false}/{join=true} and ResultSetQueryTypeGroupingFuncExpressionUse replayed through one shared scenario (16 records, 0 differences): per-level having over rollup including null-key discrimination, multiplicity-1 join equivalence, grouping()/grouping_id()/uncorrelated-subquery/declared-expression per grouping-set level, and stream-anchored prev/prior inside aggregate rows."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-remainder",
+   "javaRuntimeIds": [
+    "java-runtime-47dee40e6fe320005f49",
+    "java-runtime-dd3414775a8421e08a52",
+    "java-runtime-c95393b13d253135c833"
+   ],
+   "javaStaticIds": [
+    "java-3d2c17d4a26d35a0019b",
+    "java-553516b9d01c12a13172",
+    "java-0c29efb6d43971aba5c4"
+   ],
+   "javaNames": [
+    "ResultSetAggregateFirstLastEver",
+    "ResultSetAggregateMultipleCriteria",
+    "ResultSetAggregateAuditAndReuse"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFiltered.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateSortedMinMaxBy.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFilterNamedParameter.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateRemainderDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateRemainderDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "firstever",
+    "lastever",
+    "countever",
+    "sorted",
+    "minby",
+    "maxby",
+    "multi-criteria",
+    "filter",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-remainder.json",
+    "testdata/parity/resultset-aggregate-remainder.trace.json",
+    "testdata/parity/resultset-aggregate-remainder.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-47dee40e6fe320005f49",
+    "java-runtime-dd3414775a8421e08a52",
+    "java-runtime-c95393b13d253135c833"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-remainder"
+   ],
+   "notes": [
+    "ResultSetAggregateFirstLastEver, ResultSetAggregateMultipleCriteria and ResultSetAggregateAuditAndReuse replayed through one shared scenario (15 records, 0 differences): filtered ever-aggregates over a length window, four sorted() multi-criteria columns plus eight heterogeneous-key minby/maxby/minbyever/maxbyever columns, and duplicate filtered-aggregate reuse. FirstLastEver's soda dual-run is covered by one pass (compile path only)."
+   ]
   }
  ],
  "mappings": [
@@ -46620,15 +46690,19 @@
   {
    "capabilityId": "resultset.aggregate-dimensional",
    "caseId": "case.resultset-rollup-having-orderby"
+  },
+  {
+   "capabilityId": "resultset.aggregate-group-by",
+   "caseId": "case.resultset-aggregate-remainder"
   }
  ],
  "summary": {
-  "inventoriedCases": 681,
-  "implementedCases": 679,
-  "differentialVerifiedCases": 307,
-  "differentialVerifiedRuntimeIds": 1141,
+  "inventoriedCases": 682,
+  "implementedCases": 680,
+  "differentialVerifiedCases": 308,
+  "differentialVerifiedRuntimeIds": 1144,
   "intentionallyDifferentCases": 28,
-  "representativeVerifiedCases": 114,
+  "representativeVerifiedCases": 115,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46636,13 +46710,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3689,
-  "referencedJavaRuntimeIds": 3334,
+  "runtimeAssociationCount": 3692,
+  "referencedJavaRuntimeIds": 3337,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 802,
-  "representativeScenarioTotal": 117,
-  "representativeScenarioPassing": 117,
-  "totalCases": 681,
+  "unreferencedJavaRuntimeIds": 799,
+  "representativeScenarioTotal": 118,
+  "representativeScenarioPassing": 118,
+  "totalCases": 682,
   "totalCapabilities": 120
  }
 }

@@ -3734,6 +3734,18 @@ func MaxByEver[V any, K Ordered](value Expression[V], keys ...Expression[K]) Agg
 	return internalengine.MaxByEver[V, K](value, keys...)
 }
 
+// MaxByEverMulti is the ever-variant of MaxByMulti, matching Esper's
+// maxbyever(k1, k2, ...).
+func MaxByEverMulti[V any](value Expression[V], keys ...Expr) AggregateExpression[V] {
+	return internalengine.MaxByEverMulti[V](value, keys...)
+}
+
+// MaxByMulti returns the value expression from the row with the largest
+// multi-criteria key, matching Esper's maxby(k1, k2, ...).
+func MaxByMulti[V any](value Expression[V], keys ...Expr) AggregateExpression[V] {
+	return internalengine.MaxByMulti[V](value, keys...)
+}
+
 // MaxEver returns the maximum non-null value ever seen by the aggregate
 // group, including events that have since left the current data window.
 func MaxEver[T Ordered](expression Expression[T]) AggregateExpression[T] {
@@ -3830,6 +3842,20 @@ func MinBy[V any, K Ordered](value Expression[V], key Expression[K]) AggregateEx
 // specification from the table column declaration.
 func MinByEver[V any, K Ordered](value Expression[V], keys ...Expression[K]) AggregateExpression[V] {
 	return internalengine.MinByEver[V, K](value, keys...)
+}
+
+// MinByEverMulti is the ever-variant of MinByMulti: the key minimizes over
+// every event ever seen by the aggregate group, matching Esper's
+// minbyever(k1, k2, ...).
+func MinByEverMulti[V any](value Expression[V], keys ...Expr) AggregateExpression[V] {
+	return internalengine.MinByEverMulti[V](value, keys...)
+}
+
+// MinByMulti returns the value expression from the row with the smallest
+// multi-criteria key. Keys compare lexicographically in declaration order,
+// matching Esper's minby(k1, k2, ...).
+func MinByMulti[V any](value Expression[V], keys ...Expr) AggregateExpression[V] {
+	return internalengine.MinByMulti[V](value, keys...)
 }
 
 // MinEver returns the minimum non-null value ever seen by the aggregate
