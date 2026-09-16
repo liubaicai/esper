@@ -1,0 +1,282 @@
+{
+ "version": "esper-parity/v1",
+ "id": "resultset-output-limit-row-per-group-multikey",
+ "description": "ResultSetOutputLimitRowPerGroup ordinals 39-42: time-based output limiting over multi-key group-bys. first-multikey-warray groups by int[] array content under output first; all/last-multikey-warray group by (theString,longPrimitive) over #keepall under output all/last every 1s; snapshot-multikey-warray is an unwindowed grouped output snapshot every 10s.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java",
+ "javaRuntimes": [
+  "java-runtime-4b69198e8a2cc665a379",
+  "java-runtime-49a1acbfbe84da2b0479",
+  "java-runtime-80584d4ff67f59c3a260",
+  "java-runtime-dbe1c30970ff2232fc35"
+ ],
+ "javaNames": [
+  "ResultSetOutputFirstMultikeyWArray",
+  "ResultSetOutputAllMultikeyWArray",
+  "ResultSetOutputLastMultikeyWArray",
+  "ResultSetOutputSnapshotMultikeyWArray"
+ ],
+ "javaStaticIds": [
+  "java-39e2fdc131196d92b15d",
+  "java-cba1c76ffe6184d47ebe",
+  "java-bdaf5b6b201039c5ef97",
+  "java-5951c3e4b4396fc72e1a"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "first-multikey-warray",
+   "ordinal": 39,
+   "runtimeId": "java-runtime-4b69198e8a2cc665a379",
+   "executionName": "ResultSetOutputFirstMultikeyWArray",
+   "observation": "listener",
+   "epl": "@name('s0') select sum(value) as thesum from SupportEventWithIntArray group by array output first every 10 seconds"
+  },
+  {
+   "case": "all-multikey-warray",
+   "ordinal": 40,
+   "runtimeId": "java-runtime-49a1acbfbe84da2b0479",
+   "executionName": "ResultSetOutputAllMultikeyWArray",
+   "observation": "listener",
+   "epl": "@name('s0') select theString, longPrimitive, sum(intPrimitive) as thesum from SupportBean#keepall group by theString, longPrimitive output all every 1 seconds"
+  },
+  {
+   "case": "last-multikey-warray",
+   "ordinal": 41,
+   "runtimeId": "java-runtime-80584d4ff67f59c3a260",
+   "executionName": "ResultSetOutputLastMultikeyWArray",
+   "observation": "listener",
+   "epl": "@name('s0') select theString, longPrimitive, sum(intPrimitive) as thesum from SupportBean#keepall group by theString, longPrimitive output last every 1 seconds"
+  },
+  {
+   "case": "snapshot-multikey-warray",
+   "ordinal": 42,
+   "runtimeId": "java-runtime-dbe1c30970ff2232fc35",
+   "executionName": "ResultSetOutputSnapshotMultikeyWArray",
+   "observation": "listener",
+   "epl": "@name('s0') select theString as c0, longPrimitive as c1, sum(intPrimitive) as c2 from SupportBean group by theString, longPrimitive output snapshot every 10 seconds"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "first-multikey-warray"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "case": "first-multikey-warray",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E1",
+    "array": [
+     1,
+     2
+    ],
+    "value": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "first-multikey-warray",
+   "eventType": "SupportEventWithIntArray",
+   "payload": {
+    "id": "E1",
+    "array": [
+     1,
+     2
+    ],
+    "value": 10
+   }
+  },
+  {
+   "op": "case",
+   "case": "all-multikey-warray",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "case": "all-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "longPrimitive": 0,
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "all-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "longPrimitive": 1,
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "case": "all-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "longPrimitive": 0,
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "send",
+   "case": "all-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "longPrimitive": 0,
+    "intPrimitive": 13
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "case": "all-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "longPrimitive": 0,
+    "intPrimitive": 14
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "case",
+   "case": "last-multikey-warray",
+   "mode": "any"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "case": "last-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "longPrimitive": 0,
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "last-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "longPrimitive": 1,
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "case": "last-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "longPrimitive": 0,
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "send",
+   "case": "last-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "longPrimitive": 0,
+    "intPrimitive": 13
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "send",
+   "case": "last-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "longPrimitive": 0,
+    "intPrimitive": 14
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "case",
+   "case": "snapshot-multikey-warray"
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "send",
+   "case": "snapshot-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "longPrimitive": 0,
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "snapshot-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "longPrimitive": 1,
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "case": "snapshot-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "longPrimitive": 0,
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "send",
+   "case": "snapshot-multikey-warray",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "longPrimitive": 1,
+    "intPrimitive": 13
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:00:10Z"
+  }
+ ]
+}

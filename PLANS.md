@@ -864,6 +864,101 @@ Active: Draft 4.430 ('resultset-outputlimit-row-per-group-events').
       drained/having-failed groups; outputAtTermination old predicate;
       rstream interval-start carry (allEveryReps never populated for
       rstream); allEveryOld populated for non-row-per-group shapes.
+- [x] Shipped; Git owns identity — Draft 4.430 committed and pushed as
+      `085dd4850` (manifest 299 DV cases / 1108 DV runtime IDs / 805
+      unreferenced; umbrella case.output-row-per-group now 38 IDs).
+
+## Current work unit
+Active: Draft 4.431 ('resultset-outputlimit-row-per-group-multikey').
+
+- Unit selected: `ResultSetOutputLimitRowPerGroup.java` multikey tail ords
+      39-42 — ord39 `ResultSetOutputFirstMultikeyWArray`
+      (`java-runtime-4b69198e8a2cc665a379`, static `java-39e2fdc131196d92b15d`;
+      sum(value) group by int[] array, output first every 10 seconds — array
+      content-equality key, first fires immediately then suppresses), ord40
+      `ResultSetOutputAllMultikeyWArray` (`java-runtime-49a1acbfbe84da2b0479`,
+      static `java-cba1c76ffe6184d47ebe`; theString+longPrimitive keys over
+      #keepall, output all every 1s — re-emits all groups each interval,
+      anyOrder), ord41 `ResultSetOutputLastMultikeyWArray`
+      (`java-runtime-80584d4ff67f59c3a260`, static `java-bdaf5b6b201039c5ef97`;
+      same shape, output last — only updated groups), ord42
+      `ResultSetOutputSnapshotMultikeyWArray` (`java-runtime-dbe1c30970ff2232fc35`,
+      static `java-5951c3e4b4396fc72e1a`; UNWINDOWED SupportBean, output
+      snapshot every 10s, ORDER-SENSITIVE creation-order rows).
+- [x] Contract frozen from read-only scouts (OMP batch): Java contract scout
+      (`NextJavaContract4` — full step tables: advanceTime(0) before deploy,
+      milestone(0) no-ops, no irstream/old assertions, first output at first
+      interval boundary not t=0) and Go surface scout (`NextGoSurface4` —
+      NEW sibling file resultset_output_limit_row_per_group_multikey.go
+      (events runner lacks advance-time + forces WithOldStream); multikey
+      GroupBy + []int key via encodeKey %T:%#v already DV'd;
+      OutputFirstEveryTime/AllEveryTime/LastEveryTime/SnapshotEvery paths all
+      exist; residual risks: array-keyed output-first, unwindowed grouped
+      snapshot — verify via trace).
+- [x] Assets authored by parity-asset-worker `FLWStarAssets` (same worker):
+      oracle + run.sh + scenario (4 cases / 29 steps incl. 9 advance-time) +
+      runner + run.go wiring. Worker surfaced a residual: ord40 (no irstream)
+      emitted spurious old rows — applyAllEveryTime's grouped branch
+      synthesized old unconditionally.
+- [x] **Engine fix (shared core, primary agent)**: applyAllEveryTime grouped
+      branch now gates old-row synthesis on SelectIRStream/SelectRStream
+      (Java emits the remove stream only for irstream/rstream). applyLastEvery
+      TimeGrouped verified unaffected (uses real pending old rows).
+- [x] Differential replay: Java 6 records / Go 6 records, status passing / 0
+      differences (was 4/6 pre-fix). Checked-in Java trace md5
+      `3ab12ce4ecbaa797248637063742dbb7`. Events chain re-verified passing;
+      aggregate-multikey re-verified passing.
+- [x] run_test pair added: four discriminating mutations
+      (first-suppression-missing, all-unchanged-group-dropped,
+      last-stale-group-leak, snapshot-order-swap) — all rejected.
+- [x] Manifest: NEW case.resultset-output-limit-row-per-group-multikey
+      born-DV (4 IDs split from umbrella, now 34 IDs); output.core +4 DV IDs.
+      Summary: 674 cases / 672 implemented / 300 DV cases / 1112 DV runtime
+      IDs / 3682 associations / referenced 3331 / unreferenced 805. Roadmap +
+      CHANGELOG recorded (Draft 4.431).
+- [x] Independent parity review (agent ParityReview431): OVERALL PASS, no
+      P0/P1/P2. A-H all confirmed (IDs, values, gate semantics vs Java
+      isSelectRStream, evidence integrity, mutations, scheduling anchor,
+      blast radius = one runtime.go hunk). Two P3 latents recorded
+      (pre-existing, uncovered): applyLastEveryTimeGrouped rollup else-branch
+      synthesizes old unconditionally (Java gates on isSelectRStream);
+      applyFirstEveryTime having branch copies New->Old unconditionally for
+      grouped output-first-having (Java emits old only for non-istream).
+- [x] Shipped; Git owns identity - Draft 4.431 committed and pushed (manifest
+      300 DV cases / 1112 DV runtime IDs / 805 unreferenced; umbrella
+      case.output-row-per-group now 34 IDs).
+
+## Current work unit
+Active: Draft 4.432 ('resultset-outputlimit-row-per-group-last').
+
+- Unit selected: `ResultSetOutputLimitRowPerGroup.java` ords 13-16 — the
+  ResultAssertExecution virtual-time cluster: ord13 ResultSet13LastNoHavingNoJoin
+  (`java-runtime-930299a6192880bda3bc`), ord14 ResultSet14LastNoHavingJoin
+  (`java-runtime-79057f1ac92150b68e68`), ord15 ...WOrderBy
+  (`java-runtime-c30ea1262639b9008249`), ord16 ...JoinWOrderBy
+  (`java-runtime-101fbc773a180b386246`). All unreferenced except umbrella.
+- Contract (Go scout NextGoSurface5 + Java source): EPL `select symbol,
+  sum(price) from SupportMarketDataBean#time(5.5 sec) group by symbol output
+  last every 1 seconds`; ord14 adds `, SupportBean#keepall where
+  theString=symbol`; ords 15/16 add `order by symbol` (exact order; 13/14
+  anyOrder). ResultAssertExecution runs each EPL TWICE: plain select (istream,
+  old asserted null) then `select irstream`, undeployAll between. SupportBean
+  seeds (IBM/MSFT/YAH,0) sent unconditionally each run. ResultAssertInput
+  schedule: sends at 200/800/1500/2100/3500/4300/4900/5900; timer-only
+  advances at 1000/1200/2000/2200/2500/3000/3200/4000/4200/5000/5200/5700/
+  6000/6200/6300/7000/7200; outputs expected at 1200/2200/3200(null-null: no
+  callback)/4200/5200/6200/7200.
+- KNOWN ENGINE GAP (scout): applyLastEveryTimeGrouped plain row-per-group
+  branch emits merged delta olds (last-per-key); Java emits PREVIOUS-OUTPUT
+  rows per group (e.g. at 2200 IBM old=25 not 49; at 7200 old includes
+  emptied groups' retained outputs). Fix: route plain row-per-group through
+  the lastEveryOutputRows path (currently rollup-only) minus level ordering,
+  AND gate synthesized olds on SelectIRStream/SelectRStream (same shape as
+  the 4.431 fix — also closes the P3 rollup latent).
+- Runner: new file resultset_output_limit_row_per_group_last.go; deploy
+  variant 0 = istream (no WithOldStream), variant 1 = irstream; fresh
+  env+engine per case, WithStartTime(epoch), non-monotonic AdvanceTime OK.
+  Join precedent: resultset_aggregate_join.go (SupportBean#keepall twin).
 
 ## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').

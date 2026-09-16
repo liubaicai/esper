@@ -1150,7 +1150,8 @@
     "internal/app/parity/resultset_output_limit_changeset_opt.go",
     "internal/esper/output_changeset_test.go",
     "internal/app/parity/resultset_output_limit_row_per_group_events.go",
-    "internal/esper/runtime.go"
+    "internal/esper/runtime.go",
+    "internal/app/parity/resultset_output_limit_row_per_group_multikey.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1200,7 +1201,11 @@
     "java-runtime-c55c536922e604536dd8",
     "java-runtime-33f3e496a6431e2b7d10",
     "java-runtime-896a57e1bb14df31d330",
-    "java-runtime-897df7824f16ef7db1c9"
+    "java-runtime-897df7824f16ef7db1c9",
+    "java-runtime-4b69198e8a2cc665a379",
+    "java-runtime-49a1acbfbe84da2b0479",
+    "java-runtime-80584d4ff67f59c3a260",
+    "java-runtime-dbe1c30970ff2232fc35"
    ],
    "representativeScenarioIds": [
     "filter-window-aggregate-output",
@@ -1227,7 +1232,8 @@
     "resultset-aggregate-default",
     "resultset-aggregate-last",
     "resultset-aggregate-no-output",
-    "resultset-output-limit-row-per-group-events"
+    "resultset-output-limit-row-per-group-events",
+    "resultset-output-limit-row-per-group-multikey"
    ]
   },
   {
@@ -15027,11 +15033,7 @@
     "java-runtime-9ec92fc889874b973112",
     "java-runtime-e499360495e769be65ec",
     "java-runtime-198f226a1080d3e02cf0",
-    "java-runtime-97e7a2a759efa357a2af",
-    "java-runtime-4b69198e8a2cc665a379",
-    "java-runtime-49a1acbfbe84da2b0479",
-    "java-runtime-80584d4ff67f59c3a260",
-    "java-runtime-dbe1c30970ff2232fc35"
+    "java-runtime-97e7a2a759efa357a2af"
    ],
    "javaNames": [
     "ResultSetOutputFirstWhenThen",
@@ -15067,11 +15069,7 @@
     "ResultSetCrontabNumberSetVariations",
     "ResultSetOutputFirstHavingJoinNoJoin",
     "ResultSetOutputFirstCrontab",
-    "ResultSetOutputFirstEveryNEvents",
-    "ResultSetOutputFirstMultikeyWArray",
-    "ResultSetOutputAllMultikeyWArray",
-    "ResultSetOutputLastMultikeyWArray",
-    "ResultSetOutputSnapshotMultikeyWArray"
+    "ResultSetOutputFirstEveryNEvents"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
@@ -43000,6 +42998,79 @@
     "Shared-core fix: applyAllEveryEvents routed grouped bounded 'output all' through the per-event pending path; Java's ResultSetProcessorRowPerGroupOutputAllHelper emits one row per live group plus interval-start old rows for irstream. The row shape now follows the processor predicate (aggregateDefinitionReadsNonKeyEvent), and allEveryOld tracks each group's interval-start state.",
     "The Java executions deploy each hinted statement three times (default/ENABLE/DISABLE hint) with identical observable output; the scenario replays the send block per variant via deploy/undeploy-all ops."
    ]
+  },
+  {
+   "id": "case.resultset-output-limit-row-per-group-multikey",
+   "javaRuntimeIds": [
+    "java-runtime-4b69198e8a2cc665a379",
+    "java-runtime-49a1acbfbe84da2b0479",
+    "java-runtime-80584d4ff67f59c3a260",
+    "java-runtime-dbe1c30970ff2232fc35"
+   ],
+   "javaNames": [
+    "ResultSetOutputFirstMultikeyWArray",
+    "ResultSetOutputAllMultikeyWArray",
+    "ResultSetOutputLastMultikeyWArray",
+    "ResultSetOutputSnapshotMultikeyWArray"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupMultikeyDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetOutputLimitRowPerGroupMultikeyDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "output-limit",
+    "row-per-group",
+    "grouped",
+    "multikey",
+    "array-key",
+    "output-first",
+    "output-all",
+    "output-last",
+    "output-snapshot",
+    "virtual-time",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-output-limit-row-per-group-multikey.json",
+    "testdata/parity/resultset-output-limit-row-per-group-multikey.trace.json",
+    "testdata/parity/resultset-output-limit-row-per-group-multikey.evidence.json",
+    "tools/java-oracle/ResultSetOutputLimitRowPerGroupMultikeyScenarioOracle.java",
+    "tools/java-oracle/run-resultset-output-limit-row-per-group-multikey.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-4b69198e8a2cc665a379",
+    "java-runtime-49a1acbfbe84da2b0479",
+    "java-runtime-80584d4ff67f59c3a260",
+    "java-runtime-dbe1c30970ff2232fc35"
+   ],
+   "representativeScenarioIds": [
+    "resultset-output-limit-row-per-group-multikey"
+   ],
+   "notes": [
+    "ResultSetOutputFirstMultikeyWArray, ResultSetOutputAllMultikeyWArray, ResultSetOutputLastMultikeyWArray and ResultSetOutputSnapshotMultikeyWArray replayed through one shared scenario (6 records, 0 differences): time-based output limiting over multikey group-bys — int[] array content-equality key under output first every 10 seconds, theString+longPrimitive keys over #keepall under output all/last every 1 second (all re-emits every group, last only updated groups), and an unwindowed grouped output snapshot every 10 seconds emitting creation-order rows.",
+    "Shared-core fix: applyAllEveryTime's grouped branch synthesized old rows unconditionally; Java emits the remove stream only for irstream/rstream selectors. Old-row synthesis is now gated on the selector, fixing spurious old rows for non-irstream output-all.",
+    "The first output for all/last/snapshot fires at the first interval boundary after deployment, not at t=0; output first fires immediately on the first row then suppresses until interval end."
+   ]
   }
  ],
  "mappings": [
@@ -46030,15 +46101,19 @@
   {
    "capabilityId": "output.core",
    "caseId": "case.resultset-output-limit-row-per-group-events"
+  },
+  {
+   "capabilityId": "output.core",
+   "caseId": "case.resultset-output-limit-row-per-group-multikey"
   }
  ],
  "summary": {
-  "inventoriedCases": 673,
-  "implementedCases": 671,
-  "differentialVerifiedCases": 299,
-  "differentialVerifiedRuntimeIds": 1108,
+  "inventoriedCases": 674,
+  "implementedCases": 672,
+  "differentialVerifiedCases": 300,
+  "differentialVerifiedRuntimeIds": 1112,
   "intentionallyDifferentCases": 28,
-  "representativeVerifiedCases": 106,
+  "representativeVerifiedCases": 107,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46050,9 +46125,9 @@
   "referencedJavaRuntimeIds": 3331,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 805,
-  "representativeScenarioTotal": 109,
-  "representativeScenarioPassing": 109,
-  "totalCases": 673,
+  "representativeScenarioTotal": 110,
+  "representativeScenarioPassing": 110,
+  "totalCases": 674,
   "totalCapabilities": 120
  }
 }

@@ -1,0 +1,571 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-4b69198e8a2cc665a379",
+    "java-runtime-49a1acbfbe84da2b0479",
+    "java-runtime-80584d4ff67f59c3a260",
+    "java-runtime-dbe1c30970ff2232fc35"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/outputlimit/ResultSetOutputLimitRowPerGroup.java"
+  ],
+  "javaExecutions": [
+    "ResultSetOutputFirstMultikeyWArray",
+    "ResultSetOutputAllMultikeyWArray",
+    "ResultSetOutputLastMultikeyWArray",
+    "ResultSetOutputSnapshotMultikeyWArray"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-per-group-multikey",
+    "steps": [
+      {
+        "op": "case",
+        "case": "first-multikey-warray"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "case": "first-multikey-warray",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E1",
+          "array": [
+            1,
+            2
+          ],
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "first-multikey-warray",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E1",
+          "array": [
+            1,
+            2
+          ],
+          "value": 10
+        }
+      },
+      {
+        "op": "case",
+        "case": "all-multikey-warray",
+        "mode": "any"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "case": "all-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "longPrimitive": 0,
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "all-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "longPrimitive": 1,
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "all-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "longPrimitive": 0,
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "case": "all-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "longPrimitive": 0,
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "all-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "longPrimitive": 0,
+          "intPrimitive": 14
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "case",
+        "case": "last-multikey-warray",
+        "mode": "any"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "case": "last-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "longPrimitive": 0,
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "last-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "longPrimitive": 1,
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "last-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "longPrimitive": 0,
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "case": "last-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "longPrimitive": 0,
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:01Z"
+      },
+      {
+        "op": "send",
+        "case": "last-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "longPrimitive": 0,
+          "intPrimitive": 14
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:02Z"
+      },
+      {
+        "op": "case",
+        "case": "snapshot-multikey-warray"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "case": "snapshot-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "longPrimitive": 0,
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "snapshot-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "longPrimitive": 1,
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "snapshot-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "longPrimitive": 0,
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "case": "snapshot-multikey-warray",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "longPrimitive": 1,
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:10Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-per-group-multikey",
+    "records": [
+      {
+        "case": "first-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "thesum": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "all-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "A",
+              "thesum": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "C",
+              "thesum": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 1,
+              "theString": "B",
+              "thesum": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "all-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "A",
+              "thesum": 36
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "C",
+              "thesum": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 1,
+              "theString": "B",
+              "thesum": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "A",
+              "thesum": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "C",
+              "thesum": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 1,
+              "theString": "B",
+              "thesum": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "A",
+              "thesum": 36
+            }
+          }
+        ]
+      },
+      {
+        "case": "snapshot-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": 0,
+              "c2": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": 1,
+              "c2": 24
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-output-limit-row-per-group-multikey",
+    "records": [
+      {
+        "case": "first-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "thesum": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "all-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "A",
+              "thesum": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "C",
+              "thesum": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 1,
+              "theString": "B",
+              "thesum": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "all-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "A",
+              "thesum": 36
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "C",
+              "thesum": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 1,
+              "theString": "B",
+              "thesum": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:01Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "A",
+              "thesum": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "C",
+              "thesum": 13
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 1,
+              "theString": "B",
+              "thesum": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:02Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "longPrimitive": 0,
+              "theString": "A",
+              "thesum": 36
+            }
+          }
+        ]
+      },
+      {
+        "case": "snapshot-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:10Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "A",
+              "c1": 0,
+              "c2": 22
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "B",
+              "c1": 1,
+              "c2": 24
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

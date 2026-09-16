@@ -11054,23 +11054,29 @@ func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBa
 		})
 		newRows := make([]Result, 0, len(keys))
 		old := make([]Result, 0, len(keys))
+		selector := plans[0].query.selector
+		emitOld := selector == SelectIRStream || selector == SelectRStream
 		for _, key := range keys {
 			current, hasCurrent := currentByKey[key]
 			previous, hasPrevious := state.allEveryOutputRows[key]
 			if !hasCurrent {
 				current = lastEveryNullResult(previous, groupNames)
 			}
-			if hasPrevious {
-				old = append(old, previous)
-			} else {
-				old = append(old, lastEveryNullResult(current, groupNames))
+			if emitOld {
+				if hasPrevious {
+					old = append(old, previous)
+				} else {
+					old = append(old, lastEveryNullResult(current, groupNames))
+				}
 			}
 			newRows = append(newRows, current)
 		}
 		result.New = newRows
 		result.outputKeysNew = append([]string(nil), keys...)
-		result.Old = old
-		result.outputKeysOld = append([]string(nil), keys...)
+		if emitOld {
+			result.Old = old
+			result.outputKeysOld = append([]string(nil), keys...)
+		}
 		if state.allEveryOutputRows == nil {
 			state.allEveryOutputRows = make(map[string]Result)
 		}

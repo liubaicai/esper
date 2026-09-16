@@ -20692,6 +20692,143 @@ func TestRunResultSetOutputLimitRowPerGroupEventsDiffRejectsTraceMutations(t *te
 	}
 }
 
+func TestRunResultSetOutputLimitRowPerGroupMultikeyDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-multikey.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-per-group-multikey.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-multikey.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-output-limit-row-per-group-multikey-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetOutputLimitRowPerGroupMultikeyDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "first-suppression-missing",
+			mutate: func(trace *compat.Trace) {
+				// Record 0 is the only first-multikey-warray delivery:
+				// output first emits the first row then suppresses the
+				// second send inside the interval. A second record means
+				// suppression was lost.
+				for index := range trace.Records {
+					if trace.Records[index].Case == "first-multikey-warray" {
+						dup := trace.Records[index]
+						dup.Sequence++
+						trace.Records = append(trace.Records[:index+1], append([]compat.TraceRecord{dup}, trace.Records[index+1:]...)...)
+						return
+					}
+				}
+				panic("no first-multikey-warray record")
+			},
+		},
+		{
+			name: "all-unchanged-group-dropped",
+			mutate: func(trace *compat.Trace) {
+				// Record 2 is the second all-multikey-warray flush:
+				// `all` re-emits every group each interval, so B and C
+				// must appear unchanged alongside A's updated sum.
+				for index := range trace.Records {
+					if trace.Records[index].Case == "all-multikey-warray" && trace.Records[index].Sequence == 2 {
+						rec := &trace.Records[index]
+						rec.New = rec.New[:1]
+						return
+					}
+				}
+				panic("no all-multikey-warray record 2")
+			},
+		},
+		{
+			name: "last-stale-group-leak",
+			mutate: func(trace *compat.Trace) {
+				// Record 4 is the second last-multikey-warray flush:
+				// `last` emits only groups updated since the previous
+				// output — re-adding B means stale groups leaked.
+				for index := range trace.Records {
+					if trace.Records[index].Case == "last-multikey-warray" && trace.Records[index].Sequence == 2 {
+						trace.Records[index].New = append(trace.Records[index].New, compat.ResultRecord{
+							Kind:   "row",
+							Fields: map[string]any{"theString": "B", "longPrimitive": int64(1), "thesum": int64(11)},
+						})
+						return
+					}
+				}
+				panic("no last-multikey-warray record 2")
+			},
+		},
+		{
+			name: "snapshot-order-swap",
+			mutate: func(trace *compat.Trace) {
+				// Record 5 is the snapshot-multikey-warray flush: the
+				// assertion is order-sensitive (creation order A then B).
+				for index := range trace.Records {
+					if trace.Records[index].Case == "snapshot-multikey-warray" {
+						rec := &trace.Records[index]
+						rec.New[0], rec.New[1] = rec.New[1], rec.New[0]
+						return
+					}
+				}
+				panic("no snapshot-multikey-warray record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-multikey.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-output-limit-row-per-group-multikey.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-output-limit-row-per-group-multikey.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-output-limit-row-per-group-multikey-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunResultSetAggregateFirstLastWindowPrevNthDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-prev-nth.trace.json"),
