@@ -20459,6 +20459,120 @@ func TestRunResultSetAggregateFirstLastWindowCurrentDiffRejectsTraceMutations(t 
 	}
 }
 
+func TestRunResultSetAggregateFirstLastWindowStarDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-star.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-firstlastwindow-star.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-star.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-firstlastwindow-star-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 3 {
+		t.Fatalf("runtime ids = %d, want 3", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetAggregateFirstLastWindowStarDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "star-window-expiry",
+			mutate: func(trace *compat.Trace) {
+				// Record 3 is the post-expiry star delivery: windowstar
+				// must hold [E2,E3]; restoring E1 means the length-2
+				// window failed to expire.
+				for index := range trace.Records {
+					if trace.Records[index].Case == "star" && trace.Records[index].Sequence == 3 {
+						fields := trace.Records[index].New[0].Fields
+						fields["firststar"] = fields["firsteverstar"]
+						return
+					}
+				}
+				panic("no star record 3")
+			},
+		},
+		{
+			name: "unbounded-first-drift",
+			mutate: func(trace *compat.Trace) {
+				// Record 5 is the second unbounded send: first(theString)
+				// must stay pinned to E1 (ever semantics, no window).
+				for index := range trace.Records {
+					if trace.Records[index].Case == "unbounded-stream" && trace.Records[index].Sequence == 2 {
+						trace.Records[index].New[0].Fields["f1"] = "E2"
+						return
+					}
+				}
+				panic("no unbounded-stream record 2")
+			},
+		},
+		{
+			name: "on-select-last-decrease",
+			mutate: func(trace *compat.Trace) {
+				// Record 17 is the A1/1 + B1 trigger: last() must drop
+				// to 1 (most recent window insert) while max() stays 19.
+				for index := range trace.Records {
+					if trace.Records[index].Case == "last-max-on-select" && trace.Records[index].Sequence == 11 {
+						trace.Records[index].New[0].Fields["li"] = int64(19)
+						return
+					}
+				}
+				panic("no last-max-on-select record 11")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-star.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-firstlastwindow-star.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-star.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-firstlastwindow-star-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunResultSetAggregateFirstLastWindowPrevNthDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-firstlastwindow-prev-nth.trace.json"),

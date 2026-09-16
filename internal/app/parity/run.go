@@ -2290,6 +2290,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "resultset-aggregate-firstlastwindow-star" || *mode == "resultset-aggregate-firstlastwindow-star-diff" {
+		trace, err := runResultSetAggregateFirstLastWindowStarScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "resultset-aggregate-firstlastwindow-star-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, resultsetAggregateFirstLastWindowStarJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, resultsetAggregateFirstLastWindowStarJavaSources),
+				splitMetadata(*javaExecutions, resultsetAggregateFirstLastWindowStarJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-aggregate-default" || *mode == "resultset-aggregate-default-diff" {
 		trace, err := runResultSetAggregateDefaultScenario(context.Background(), scenario)
 		if err != nil {

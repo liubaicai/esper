@@ -718,6 +718,65 @@ Active: Draft 4.428 ('resultset-aggregate-count-sum-closure').
       the typed API); summary recomputed: 671 cases / 669 implemented / 297 DV
       cases / 1100 DV runtime IDs / 3679 associations / referenced 3328 /
       unreferenced 808. Roadmap + CHANGELOG recorded (Draft 4.428).
+- [x] Independent parity review (agent ParityReview428): OVERALL PASS, all
+      eight acceptance points confirmed (IDs, trace values vs Java assertions,
+      eplToModel fidelity, CountDistinct fallback keying, intdiff registration,
+      evidence integrity, mutation discrimination, twin-case sharing). Two P3s:
+      mutation comment corrected (record 66 is the duplicate-array send);
+      latent CountDistinct nil-slice/NaN fallback-keying divergences recorded
+      as pre-existing fidelity notes (not exercised by pinned payloads).
+- [x] Shipped; Git owns identity — Draft 4.428 committed and pushed as
+      `4c9ade39e` (ResultSetAggregateCountSum.java 13/13 executions referenced;
+      manifest 297 DV cases / 1100 DV runtime IDs / 808 unreferenced).
+
+## Current work unit
+Active: Draft 4.429 ('resultset-aggregate-firstlastwindow-star').
+
+- Unit selected: `ResultSetAggregateFirstLastWindow.java` three unreferenced
+      executions — ord0 `ResultSetAggregateStar`
+      (`java-runtime-00be68da7736fcafb968`, static `java-c867ed972dfaa61eaf41`;
+      first(*)/first(sb.*)/last(*)/last(sb.*)/window(*)/window(sb.*)/
+      firstever(*)/lastever(*) over SupportBean#length(2), E1/10 E2/20 E3/30,
+      bean-rendered event fields), ord2 `ResultSetAggregateUnboundedStream`
+      (`java-runtime-da477a833deb82cf0225`, static `java-459d25127c6b2a8d35c2`;
+      first/last of theString+sb.*+* with NO window = ever semantics, needs
+      doublePrimitive), ord20 `ResultSetAggregateLastMaxMixedOnSelect`
+      (`java-runtime-edb70b7eb3a9cd4217e8`, static `java-f1ef7fe95770df930d5f`;
+      keepall named window + filtered insert-into (like 'A%') + on-select
+      last(mw.intPrimitive)/max(mw.intPrimitive) per B% trigger — one
+      aggregate row per trigger, last() can decrease, max() monotonic).
+- [x] Contract frozen from read-only scouts (OMP batch): Java contract scout
+      (`NextJavaContract2`, java-oracle-scout — full step/assertion table) and
+      Go surface scout (`NextGoSurface2`, scout — NEW chain file
+      resultset-aggregate-firstlastwindow-star; APIs exist:
+      FirstEventValue/LastEventValue/WindowEvents/FirstEver[Event](EventValue)/
+      Last/Max/Like; GAPS: (1) on-select aggregate row — constant-key
+      SelectFromNamedWindowGroupBy may emit the single aggregate row, else
+      scoped engine change; (2) oracle must render EventBean/Map/array fields
+      or every star field diffs; (3) FirstEver[Event](EventValue[Event]())
+      needs a smoke check).
+- [x] Assets authored by parity-asset-worker `FLWStarAssets` (file-disjoint
+      lane): oracle ResultSetAggregateFirstLastWindowStarScenarioOracle.java
+      (normalize() copied from the local-group oracle — EventBean → row/fields,
+      EventBean[] → array, SupportBean bean branch, {"state":"null"}),
+      run-*.sh, scenario (3 cases / 33 steps), runner
+      resultset_aggregate_firstlastwindow_star.go + run.go wiring.
+      Smoke checks PASSED: FirstEver[Event](EventValue[Event]()) compiles and
+      evaluates; constant Literal(1) group key passes on-select validation and
+      yields the single aggregate row per trigger.
+- [x] Differential replay: Java 18 records / Go 18 records, status passing /
+      0 differences. Zero engine changes. Checked-in Java trace md5
+      `541d33444aa539ecf20ffd9016f2079e`.
+- [x] run_test pair added: TestRunResultSetAggregateFirstLastWindowStar{Writes
+      PassingEvidence,RejectsTraceMutations} — three discriminating mutations
+      (star-window-expiry @star seq3, unbounded-first-drift @unbounded seq2,
+      on-select-last-decrease @on-select seq11) all rejected.
+- [x] Manifest: NEW case.resultset-aggregate-firstlastwindow-star born-DV
+      (3 runtime IDs); capability resultset.aggregate-access +3 DV IDs (27)
+      + goRef + scenario. Summary: 672 cases / 670 implemented / 298 DV cases /
+      1103 DV runtime IDs / 3682 associations / referenced 3331 / unreferenced
+      805. ResultSetAggregateFirstLastWindow.java 25/25 executions referenced.
+      Roadmap + CHANGELOG recorded (Draft 4.429).
 
 ## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').

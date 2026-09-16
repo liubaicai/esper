@@ -1,0 +1,4640 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-00be68da7736fcafb968",
+    "java-runtime-da477a833deb82cf0225",
+    "java-runtime-edb70b7eb3a9cd4217e8"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateFirstLastWindow.java"
+  ],
+  "javaExecutions": [
+    "ResultSetAggregateStar",
+    "ResultSetAggregateUnboundedStream",
+    "ResultSetAggregateLastMaxMixedOnSelect"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-star",
+    "steps": [
+      {
+        "op": "case",
+        "case": "star"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "case",
+        "case": "unbounded-stream"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "doublePrimitive": 1.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "doublePrimitive": 2.0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "doublePrimitive": 3.0
+        }
+      },
+      {
+        "op": "case",
+        "case": "last-max-on-select"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 13
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 14
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 16
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 17
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 18
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 19
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Bx",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": -1
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-star",
+    "records": [
+      {
+        "case": "star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "lasteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "laststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "laststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "windowstar": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 10,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "windowstarsb": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 10,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "lasteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "laststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "laststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "windowstar": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 10,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 20,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "windowstarsb": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 10,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 20,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "firststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "lasteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 30,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "laststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 30,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "laststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 30,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "windowstar": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 20,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 30,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "windowstarsb": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 20,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 30,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbounded-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "f3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "l1": "E1",
+              "l2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "l3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbounded-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "f3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "l1": "E2",
+              "l2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 2,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 2,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "l3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 2,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 2,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbounded-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "f3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "l1": "E3",
+              "l2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 3,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 3,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "l3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 3,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 3,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 10,
+              "mi": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 11,
+              "mi": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 12,
+              "mi": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 13,
+              "mi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 14,
+              "mi": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 15,
+              "mi": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 16,
+              "mi": 16
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 17,
+              "mi": 17
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 18,
+              "mi": 18
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 19,
+              "mi": 19
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 1,
+              "mi": 19
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 2,
+              "mi": 19
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "resultset-aggregate-firstlastwindow-star",
+    "records": [
+      {
+        "case": "star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "lasteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "laststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "laststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "windowstar": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 10,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "windowstarsb": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 10,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "lasteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "laststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "laststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "windowstar": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 10,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 20,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "windowstarsb": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 10,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E1"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 20,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "star",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "firsteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 10,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "firststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "firststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 20,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "lasteverstar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 30,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "laststar": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 30,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "laststarsb": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 0,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 30,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "windowstar": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 20,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 30,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ],
+              "windowstarsb": [
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 20,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E2"
+                  },
+                  "kind": "row"
+                },
+                {
+                  "fields": {
+                    "bigDecimal": {
+                      "state": "null"
+                    },
+                    "bigInteger": {
+                      "state": "null"
+                    },
+                    "boolBoxed": {
+                      "state": "null"
+                    },
+                    "boolPrimitive": false,
+                    "byteBoxed": {
+                      "state": "null"
+                    },
+                    "bytePrimitive": 0,
+                    "charBoxed": {
+                      "state": "null"
+                    },
+                    "charPrimitive": "\u0000",
+                    "doubleBoxed": {
+                      "state": "null"
+                    },
+                    "doublePrimitive": 0,
+                    "enumValue": {
+                      "state": "null"
+                    },
+                    "floatBoxed": {
+                      "state": "null"
+                    },
+                    "floatPrimitive": 0,
+                    "intBoxed": {
+                      "state": "null"
+                    },
+                    "intPrimitive": 30,
+                    "longBoxed": {
+                      "state": "null"
+                    },
+                    "longPrimitive": 0,
+                    "shortBoxed": {
+                      "state": "null"
+                    },
+                    "shortPrimitive": 0,
+                    "theString": "E3"
+                  },
+                  "kind": "row"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbounded-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "f3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "l1": "E1",
+              "l2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "l3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbounded-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "f3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "l1": "E2",
+              "l2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 2,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 2,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              },
+              "l3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 2,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 2,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E2"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "unbounded-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "f1": "E1",
+              "f2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "f3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 1,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 1,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "l1": "E3",
+              "l2": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 3,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 3,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              },
+              "l3": {
+                "fields": {
+                  "bigDecimal": {
+                    "state": "null"
+                  },
+                  "bigInteger": {
+                    "state": "null"
+                  },
+                  "boolBoxed": {
+                    "state": "null"
+                  },
+                  "boolPrimitive": false,
+                  "byteBoxed": {
+                    "state": "null"
+                  },
+                  "bytePrimitive": 0,
+                  "charBoxed": {
+                    "state": "null"
+                  },
+                  "charPrimitive": "\u0000",
+                  "doubleBoxed": {
+                    "state": "null"
+                  },
+                  "doublePrimitive": 3,
+                  "enumValue": {
+                    "state": "null"
+                  },
+                  "floatBoxed": {
+                    "state": "null"
+                  },
+                  "floatPrimitive": 0,
+                  "intBoxed": {
+                    "state": "null"
+                  },
+                  "intPrimitive": 3,
+                  "longBoxed": {
+                    "state": "null"
+                  },
+                  "longPrimitive": 0,
+                  "shortBoxed": {
+                    "state": "null"
+                  },
+                  "shortPrimitive": 0,
+                  "theString": "E3"
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 10,
+              "mi": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 11,
+              "mi": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 12,
+              "mi": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 13,
+              "mi": 13
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 14,
+              "mi": 14
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 15,
+              "mi": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 16,
+              "mi": 16
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 17,
+              "mi": 17
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 18,
+              "mi": 18
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 19,
+              "mi": 19
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 1,
+              "mi": 19
+            }
+          }
+        ]
+      },
+      {
+        "case": "last-max-on-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "li": 2,
+              "mi": 19
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
