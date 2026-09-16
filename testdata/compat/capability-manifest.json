@@ -29439,7 +29439,10 @@
     "java-runtime-9ca872971349f850d32e",
     "java-runtime-ef1afacfc1fb429a8bef",
     "java-runtime-5fd3d359929d94deba32",
-    "java-runtime-d2a92c1b89214be184e4"
+    "java-runtime-d2a92c1b89214be184e4",
+    "java-runtime-a9af0eeb0ed82e3ac363",
+    "java-runtime-d52c75b9bcbbb9806320",
+    "java-runtime-8d52ec09b7ee23463eed"
    ],
    "javaNames": [
     "ResultSetAggregateCountSimple",
@@ -29450,7 +29453,10 @@
     "ResultSetAggregateGroupByCountNestedAggregationAvg",
     "ResultSetAggregateCountOneView",
     "ResultSetAggregateCountJoin",
-    "ResultSetAggregateSumNamedWindowRemoveGroup"
+    "ResultSetAggregateSumNamedWindowRemoveGroup",
+    "ResultSetAggregateCountOneViewCompile",
+    "ResultSetAggregateCountDistinctGrouped",
+    "ResultSetAggregateCountDistinctMultikeyWArray"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateCountSum.java"
@@ -29498,11 +29504,38 @@
     "java-runtime-9ca872971349f850d32e",
     "java-runtime-ef1afacfc1fb429a8bef",
     "java-runtime-5fd3d359929d94deba32",
-    "java-runtime-d2a92c1b89214be184e4"
+    "java-runtime-d2a92c1b89214be184e4",
+    "java-runtime-a9af0eeb0ed82e3ac363",
+    "java-runtime-d52c75b9bcbbb9806320",
+    "java-runtime-8d52ec09b7ee23463eed"
    ],
    "representativeScenarioIds": [
     "resultset-aggregate-count-sum"
-   ]
+   ],
+   "notes": "Draft 4.428 extends the chain to 12 of 13 executions: count-one-view-compile (eplToModel twin of count-one-view, same grouped count/distinct semantics), count-distinct-grouped (unwindowed grouped count(distinct price)), and count-distinct-multikey-warray (count(distinct int[]) + count(distinct {intOne,intTwo}) over SupportEventWithManyArray#length(3) — array content equality and tuple distinct). 70 records, 0 differences. Ord 12 ResultSetAggregateCountSumInvalid is registered intentionally-different under case.resultset-aggregate-count-sum-invalid."
+  },
+  {
+   "id": "case.resultset-aggregate-count-sum-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-43aefbafe9af60b5168b"
+   ],
+   "javaStaticIds": [
+    "java-e1b20a2b1091836f24fb"
+   ],
+   "javaNames": [
+    "ResultSetAggregateCountSumInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateCountSum.java"
+   ],
+   "status": "intentionally-different",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "difference": "Compile-rejection diagnostics only: five tryInvalidCompile probes assert the message prefix 'Failed to validate select-clause expression 'XXX': Implicit conversion from datatype 'null' to numeric is not allowed for aggregation function '' for avg(null), avg(distinct null), median(null), sum(null) and stddev(null). The typed Go API cannot express a null-literal aggregate argument — every aggregate takes a typed Expression[T] — so the rejected shape is structurally absent by construction; no observable event-stream behavior exists to compare.",
+   "notes": "Registered alongside the count-sum closure unit (Draft 4.428); mirrors the resultset-querytype-local-group-invalid approved-difference precedent."
   },
   {
    "id": "case.resultset-aggregate-group-output",
@@ -45841,14 +45874,18 @@
   {
    "capabilityId": "view.window-core",
    "caseId": "case.view-intersect-closure"
+  },
+  {
+   "capabilityId": "resultset.aggregate-group-by",
+   "caseId": "case.resultset-aggregate-count-sum-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 670,
-  "implementedCases": 668,
+  "inventoriedCases": 671,
+  "implementedCases": 669,
   "differentialVerifiedCases": 297,
-  "differentialVerifiedRuntimeIds": 1097,
-  "intentionallyDifferentCases": 27,
+  "differentialVerifiedRuntimeIds": 1100,
+  "intentionallyDifferentCases": 28,
   "representativeVerifiedCases": 104,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
@@ -45857,13 +45894,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3675,
-  "referencedJavaRuntimeIds": 3324,
+  "runtimeAssociationCount": 3679,
+  "referencedJavaRuntimeIds": 3328,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 812,
+  "unreferencedJavaRuntimeIds": 808,
   "representativeScenarioTotal": 107,
   "representativeScenarioPassing": 107,
-  "totalCases": 670,
+  "totalCases": 671,
   "totalCapabilities": 120
  }
 }

@@ -10,7 +10,10 @@
     "java-runtime-9ca872971349f850d32e",
     "java-runtime-ef1afacfc1fb429a8bef",
     "java-runtime-5fd3d359929d94deba32",
-    "java-runtime-d2a92c1b89214be184e4"
+    "java-runtime-d2a92c1b89214be184e4",
+    "java-runtime-a9af0eeb0ed82e3ac363",
+    "java-runtime-d52c75b9bcbbb9806320",
+    "java-runtime-8d52ec09b7ee23463eed"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateCountSum.java"
@@ -24,7 +27,10 @@
     "ResultSetAggregateGroupByCountNestedAggregationAvg",
     "ResultSetAggregateCountOneView",
     "ResultSetAggregateCountJoin",
-    "ResultSetAggregateSumNamedWindowRemoveGroup"
+    "ResultSetAggregateSumNamedWindowRemoveGroup",
+    "ResultSetAggregateCountOneViewCompile",
+    "ResultSetAggregateCountDistinctGrouped",
+    "ResultSetAggregateCountDistinctMultikeyWArray"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -594,6 +600,190 @@
           "symbol": "DELL",
           "volume": 53,
           "price": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "count-one-view-compile"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 50,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": null,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 25,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 25,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "DELL",
+          "volume": 25,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": 1,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": null,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": null,
+          "price": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "IBM",
+          "volume": null,
+          "price": 0
+        }
+      },
+      {
+        "op": "case",
+        "case": "count-distinct-grouped"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "ONE",
+          "volume": 0,
+          "price": 100
+        }
+      },
+      {
+        "op": "case",
+        "case": "count-distinct-multikey-warray"
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:00:00Z"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            2
+          ],
+          "intTwo": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            3
+          ],
+          "intTwo": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            4
+          ],
+          "intTwo": [
+            1
+          ]
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventWithManyArray",
+        "payload": {
+          "id": "id",
+          "intOne": [
+            1,
+            3
+          ],
+          "intTwo": [
+            2
+          ]
         }
       }
     ]
@@ -2034,6 +2224,426 @@
             }
           }
         ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 0,
+              "countDistVol": 0,
+              "countVol": 0,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 2,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 2,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 3,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 0,
+              "countDistVol": 0,
+              "countVol": 0,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 3,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 0,
+              "countDistVol": 0,
+              "countVol": 0,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 0,
+              "countVol": 0,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countDistinctPrice": 1,
+              "symbol": "ONE"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countDistinctPrice": 0,
+              "symbol": "ONE"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3,
+              "c1": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": 3
+            }
+          }
+        ]
       }
     ]
   },
@@ -3470,6 +4080,426 @@
               "cnt": 2,
               "symbol": "DELL",
               "val": 2.5
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 0,
+              "countDistVol": 0,
+              "countVol": 0,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 2,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 2,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 3,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 0,
+              "countDistVol": 0,
+              "countVol": 0,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 3,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 2,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 0,
+              "countDistVol": 0,
+              "countVol": 0,
+              "symbol": "DELL"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 2,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 1,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "DELL"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-one-view-compile",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 0,
+              "countVol": 0,
+              "symbol": "IBM"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countAll": 3,
+              "countDistVol": 1,
+              "countVol": 1,
+              "symbol": "IBM"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-grouped",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "countDistinctPrice": 1,
+              "symbol": "ONE"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "countDistinctPrice": 0,
+              "symbol": "ONE"
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3,
+              "c1": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "count-distinct-multikey-warray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": 3
             }
           }
         ]

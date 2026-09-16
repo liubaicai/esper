@@ -80,7 +80,8 @@ public final class ResultSetAggregateCountSumScenarioOracle {
         trace.add("records", records);
 
         String[] cases = {"count-one-view", "count-join", "count-simple", "sum-named-window-remove-group",
-                "count-plus-star", "count-having", "sum-having", "count-one-view-om", "nested-avg"};
+                "count-plus-star", "count-having", "sum-having", "count-one-view-om", "nested-avg",
+                "count-one-view-compile", "count-distinct-grouped", "count-distinct-multikey-warray"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -124,6 +125,11 @@ public final class ResultSetAggregateCountSumScenarioOracle {
         Map<String, Object> bType = new HashMap<>();
         bType.put("id", String.class);
         configuration.getCommon().addEventType("SupportBean_B", bType);
+        Map<String, Object> manyArrayType = new HashMap<>();
+        manyArrayType.put("id", String.class);
+        manyArrayType.put("intOne", int[].class);
+        manyArrayType.put("intTwo", int[].class);
+        configuration.getCommon().addEventType("SupportEventWithManyArray", manyArrayType);
 
         EPRuntime runtime = EPRuntimeProvider.getRuntime("parity-count-sum-" + caseName, configuration);
         ((EPRuntimeSPI) runtime).initialize(0L);
@@ -156,6 +162,24 @@ public final class ResultSetAggregateCountSumScenarioOracle {
                     throw new IllegalStateException("count-one-view-om model toEPL mismatch: " + model.toEPL());
                 }
                 model.setAnnotations(java.util.Collections.singletonList(AnnotationPart.nameAnnotation("s0")));
+                Module module = new Module();
+                module.getItems().add(new ModuleItem(model));
+                module.setModuleText(model.toEPL());
+                compiled = EPCompilerProvider.getCompiler().compile(module,
+                        new CompilerArguments(runtime.getRuntimePath()));
+            } else if ("count-one-view-compile".equals(caseName)) {
+                // ResultSetAggregateCountOneViewCompile: same statement as
+                // count-one-view but compiled through eplToModel (the Java
+                // execution uses env.eplToModelCompileDeploy).
+                String epl = "@name('s0') select irstream symbol, " +
+                        "count(*) as countAll, " +
+                        "count(distinct volume) as countDistVol, " +
+                        "count(volume) as countVol" +
+                        " from SupportMarketDataBean#length(3) " +
+                        "where symbol=\"DELL\" or symbol=\"IBM\" or symbol=\"GE\" " +
+                        "group by symbol";
+                EPStatementObjectModel model = EPCompilerProvider.getCompiler().eplToModel(epl, configuration);
+                model = SerializableObjectCopier.copyMayFail(model);
                 Module module = new Module();
                 module.getItems().add(new ModuleItem(model));
                 module.setModuleText(model.toEPL());
@@ -198,6 +222,12 @@ public final class ResultSetAggregateCountSumScenarioOracle {
                 } else if ("nested-avg".equals(caseName)) {
                     epl = "@name('s0') select symbol, count(*) as cnt, avg(count(*)) as val from SupportMarketDataBean#length(3)" +
                             "group by symbol order by symbol asc";
+                } else if ("count-distinct-grouped".equals(caseName)) {
+                    epl = "@name('s0') select irstream symbol, count(distinct price) as countDistinctPrice " +
+                            "from SupportMarketDataBean group by symbol";
+                } else if ("count-distinct-multikey-warray".equals(caseName)) {
+                    epl = "@name('s0') select count(distinct intOne) as c0, count(distinct {intOne, intTwo}) as c1 " +
+                            "from SupportEventWithManyArray#length(3)";
                 } else {
                     throw new IllegalArgumentException("unsupported case " + caseName);
                 }
@@ -250,6 +280,7 @@ public final class ResultSetAggregateCountSumScenarioOracle {
         }
     }
 
+
     private static void send(EPRuntime runtime, JsonObject step) {
         String eventType = step.getString("eventType", "");
         JsonObject payload = step.get("payload").asObject();
@@ -271,10 +302,22 @@ public final class ResultSetAggregateCountSumScenarioOracle {
             event.put("id", payload.getString("id", null));
         } else if ("SupportBean_B".equals(eventType)) {
             event.put("id", payload.getString("id", null));
+        } else if ("SupportEventWithManyArray".equals(eventType)) {
+            event.put("id", payload.getString("id", null));
+            event.put("intOne", intArray(payload.get("intOne").asArray()));
+            event.put("intTwo", intArray(payload.get("intTwo").asArray()));
         } else {
             throw new IllegalArgumentException("unsupported event type " + eventType);
         }
         runtime.getEventService().sendEventMap(event, eventType);
+    }
+
+    private static int[] intArray(JsonArray array) {
+        int[] values = new int[array.size()];
+        for (int i = 0; i < array.size(); i++) {
+            values[i] = array.get(i).asInt();
+        }
+        return values;
     }
 
     private static final class TraceWriter implements UpdateListener {

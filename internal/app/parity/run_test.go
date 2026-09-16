@@ -9966,6 +9966,31 @@ func TestRunResultSetAggregateCountSumDiffRejectsTraceMutations(t *testing.T) {
 				})
 			},
 		},
+		{
+			name: "array-content-distinct-leak",
+			mutate: func(trace *compat.Trace) {
+				// Record 66 is the duplicate-array send: count(distinct
+				// intOne) must stay 1 because [1,2] equals [1,2] by content.
+				trace.Records[66].New[0].Fields["c0"] = int64(2)
+			},
+		},
+		{
+			name: "tuple-distinct-expiry-drift",
+			mutate: func(trace *compat.Trace) {
+				// Record 69 is the post-expiry send: c0 drops to 2 (the
+				// expired [1,2] leaves the distinct set) while c1 stays 3
+				// (the new tuple ([1,3],[2]) is distinct).
+				trace.Records[69].New[0].Fields["c1"] = int64(2)
+			},
+		},
+		{
+			name: "grouped-distinct-zeroed",
+			mutate: func(trace *compat.Trace) {
+				// Record 64 is the unwindowed grouped count(distinct price)
+				// delivery: the new group posts 1, not 0.
+				trace.Records[64].New[0].Fields["countDistinctPrice"] = int64(0)
+			},
+		},
 	}
 
 	for _, test := range tests {

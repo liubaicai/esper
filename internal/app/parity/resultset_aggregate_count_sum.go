@@ -43,6 +43,12 @@ type countSumNamedWindowRow struct {
 	LongPrimitive int64  `esper:"longPrimitive"`
 }
 
+type countSumManyArray struct {
+	ID     string `esper:"id"`
+	IntOne []int  `esper:"intOne"`
+	IntTwo []int  `esper:"intTwo"`
+}
+
 const resultsetAggregateCountSumJavaCommit = "9e1b9f1cc9117fea4bf33ab043762c045d73839c"
 
 var resultsetAggregateCountSumJavaSources = []string{
@@ -60,6 +66,9 @@ var (
 		"java-runtime-ef1afacfc1fb429a8bef", // ResultSetAggregateCountOneView
 		"java-runtime-5fd3d359929d94deba32", // ResultSetAggregateCountJoin
 		"java-runtime-d2a92c1b89214be184e4", // ResultSetAggregateSumNamedWindowRemoveGroup
+		"java-runtime-a9af0eeb0ed82e3ac363", // ResultSetAggregateCountOneViewCompile
+		"java-runtime-d52c75b9bcbbb9806320", // ResultSetAggregateCountDistinctGrouped
+		"java-runtime-8d52ec09b7ee23463eed", // ResultSetAggregateCountDistinctMultikeyWArray
 	}
 	resultsetAggregateCountSumJavaExecutions = []string{
 		"ResultSetAggregateCountSimple",
@@ -71,6 +80,9 @@ var (
 		"ResultSetAggregateCountOneView",
 		"ResultSetAggregateCountJoin",
 		"ResultSetAggregateSumNamedWindowRemoveGroup",
+		"ResultSetAggregateCountOneViewCompile",
+		"ResultSetAggregateCountDistinctGrouped",
+		"ResultSetAggregateCountDistinctMultikeyWArray",
 	}
 )
 
@@ -95,6 +107,9 @@ func runResultSetAggregateCountSumScenario(ctx context.Context, scenario compat.
 		"sum-having",
 		"count-one-view-om",
 		"nested-avg",
+		"count-one-view-compile",
+		"count-distinct-grouped",
+		"count-distinct-multikey-warray",
 	}
 	traces := make([]compat.Trace, 0, len(caseOrder))
 	for _, caseName := range caseOrder {
@@ -138,6 +153,9 @@ func runResultSetAggregateCountSumCase(ctx context.Context, scenario compat.Scen
 	if _, err := esper.RegisterStruct[countSumTriggerB](env, "SupportBean_B"); err != nil {
 		return compat.Trace{}, err
 	}
+	if _, err := esper.RegisterStruct[countSumManyArray](env, "SupportEventWithManyArray"); err != nil {
+		return compat.Trace{}, err
+	}
 
 	var engine *esper.Engine
 	var statement *esper.Statement
@@ -170,7 +188,7 @@ func runResultSetAggregateCountSumCase(ctx context.Context, scenario compat.Scen
 	}
 
 	switch caseName {
-	case "count-one-view", "count-one-view-om":
+	case "count-one-view", "count-one-view-om", "count-one-view-compile":
 		symbol := esper.Field[countSumMarket, string]("symbol")
 		volume := esper.Field[countSumMarket, *int64]("volume")
 		grouped := esper.From[countSumMarket](env, "SupportMarketDataBean").
@@ -328,6 +346,32 @@ func runResultSetAggregateCountSumCase(ctx context.Context, scenario compat.Scen
 		if err := buildAndDeploy(query); err != nil {
 			return compat.Trace{}, err
 		}
+	case "count-distinct-grouped":
+		symbol := esper.Field[countSumMarket, string]("symbol")
+		price := esper.Field[countSumMarket, float64]("price")
+		query := esper.From[countSumMarket](env, "SupportMarketDataBean").
+			GroupBy(symbol).
+			Select(
+				esper.Alias("symbol", symbol),
+				esper.Alias("countDistinctPrice", esper.CountDistinct[any](price)),
+			).
+			Query(esper.StatementName("s0"), esper.WithOldStream())
+		if err := buildAndDeploy(query); err != nil {
+			return compat.Trace{}, err
+		}
+	case "count-distinct-multikey-warray":
+		intOne := esper.Field[countSumManyArray, []int]("intOne")
+		intTwo := esper.Field[countSumManyArray, []int]("intTwo")
+		query := esper.From[countSumManyArray](env, "SupportEventWithManyArray").
+			Window(esper.LengthWindow(3)).
+			Aggregate(
+				esper.Alias("c0", esper.CountDistinct[any](intOne)),
+				esper.Alias("c1", esper.CountDistinct[any](esper.ArrayOf[any](intOne, intTwo))),
+			).
+			Query(esper.StatementName("s0"))
+		if err := buildAndDeploy(query); err != nil {
+			return compat.Trace{}, err
+		}
 	default:
 		return compat.Trace{}, fmt.Errorf("unsupported resultset-aggregate-count-sum case %q", caseName)
 	}
@@ -356,6 +400,12 @@ func decodeResultSetAggregateCountSumPayload(step compat.Step) (any, error) {
 		var value countSumStringBean
 		if err := json.Unmarshal(step.Payload, &value); err != nil {
 			return nil, fmt.Errorf("decode SupportBeanString: %w", err)
+		}
+		return value, nil
+	case "SupportEventWithManyArray":
+		var value countSumManyArray
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode SupportEventWithManyArray: %w", err)
 		}
 		return value, nil
 	case "SupportBean":

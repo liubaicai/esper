@@ -695,6 +695,29 @@ Active: Draft 4.428 ('resultset-aggregate-count-sum-closure').
       resultset-aggregate-count-sum chain; pitfall: DistinctAggregate counts
       Null as a distinct key where Java count(distinct) skips nulls — safe for
       pinned non-null payloads).
+- [x] Scenario extended (testdata/parity/resultset-aggregate-count-sum.json,
+      94 steps): count-one-view-compile mirrors count-one-view's send sequence;
+      count-distinct-grouped sends ONE market event; count-distinct-multikey-warray
+      sends five SupportEventWithManyArray payloads. Oracle extended: eplToModel
+      compile branch for count-one-view-compile, two new EPLs verbatim,
+      SupportEventWithManyArray map type with int[] properties.
+- [x] Go runner extended (internal/app/parity/resultset_aggregate_count_sum.go):
+      countSumManyArray type + registration + decoder; count-one-view-compile
+      shares the count-one-view query; count-distinct-grouped uses
+      GroupBy+Select+WithOldStream; count-distinct-multikey-warray uses
+      CountDistinct[any] over intOne and ArrayOf[any](intOne,intTwo) — fallback
+      deep-print keying covers non-comparable arrays, null-skip matches Java.
+- [x] Differential replay: Java 70 records / Go 70 records, status passing /
+      0 differences. Zero engine changes.
+- [x] run_test family extended: three new discriminating mutations
+      (array-content-distinct-leak @65, tuple-distinct-expiry-drift @69,
+      grouped-distinct-zeroed @64) — all rejected; existing mutations intact.
+- [x] Manifest: case.resultset-aggregate-count-sum +3 runtime IDs (12/13);
+      NEW case.resultset-aggregate-count-sum-invalid intentionally-different
+      for ord12 (null-literal aggregate compile rejections unrepresentable in
+      the typed API); summary recomputed: 671 cases / 669 implemented / 297 DV
+      cases / 1100 DV runtime IDs / 3679 associations / referenced 3328 /
+      unreferenced 808. Roadmap + CHANGELOG recorded (Draft 4.428).
 
 ## Current work unit
 Active: Draft 4.426 ('more-windows-expression-sizes').
