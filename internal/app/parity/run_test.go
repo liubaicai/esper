@@ -21553,6 +21553,141 @@ func TestRunEPLOtherForGroupDeliveryDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunEPLOtherSelectExprDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-select-expr.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-other-select-expr.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-select-expr.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-other-select-expr-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 6 {
+		t.Fatalf("runtime ids = %d, want 6", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunEPLOtherSelectExprDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "precedence-value-mutated",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "precedence-no-column-name" && rec.Sequence == 1 {
+						rec.New[0].Fields["3*2+1"] = float64(99)
+						return
+					}
+				}
+				panic("no precedence record 1")
+			},
+		},
+		{
+			name: "graph-select-nested-mutated",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "graph-select" && rec.Sequence == 1 {
+						rec.New[0].Fields["nested.nestedValue"] = "mutated"
+						return
+					}
+				}
+				panic("no graph-select record 1")
+			},
+		},
+		{
+			name: "keywords-count-mutated",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "keywords-allowed" && rec.Sequence == 4 {
+						rec.New[0].Fields["count"] = float64(99)
+						return
+					}
+				}
+				panic("no keywords record 4")
+			},
+		},
+		{
+			name: "escape-string-row-mutated",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "escape-string" && rec.Sequence == 1 {
+						rec.New[0].Fields["theString"] = "mutated"
+						return
+					}
+				}
+				panic("no escape-string record 1")
+			},
+		},
+		{
+			name: "window-stats-row-mutated",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "window-stats" && rec.Sequence == 1 {
+						rec.New[0].Fields["result"] = float64(99)
+						return
+					}
+				}
+				panic("no window-stats record 1")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-select-expr.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-select-expr.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-select-expr.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-select-expr-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunEPLOtherPatternQueriesDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-queries.trace.json"),

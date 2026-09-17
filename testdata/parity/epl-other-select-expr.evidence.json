@@ -1,0 +1,1640 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-7222e4dfd73a239bf53c",
+    "java-runtime-a1605a2ba0d017fa91f1",
+    "java-runtime-bc47c8b86afd9b19f5c6",
+    "java-runtime-446476d182df93abd788",
+    "java-runtime-d01d8e953908acc44955",
+    "java-runtime-5371694959860be64ff6"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExpr.java"
+  ],
+  "javaExecutions": [
+    "EPLOtherPrecedenceNoColumnName",
+    "EPLOtherGraphSelect",
+    "EPLOtherKeywordsAllowed",
+    "EPLOtherEscapeString",
+    "EPLOtherGetEventType",
+    "EPLOtherWindowStats"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-select-expr",
+    "steps": [
+      {
+        "op": "case",
+        "case": "precedence-no-column-name"
+      },
+      {
+        "op": "deploy",
+        "case": "precedence-no-column-name",
+        "statement": "s0",
+        "epl": "@name('s0') select 3*2+1 from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "precedence-no-column-name",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "precedence-no-column-name"
+      },
+      {
+        "op": "deploy",
+        "case": "precedence-no-column-name",
+        "statement": "s0",
+        "epl": "@name('s0') select (3*2)+1 from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "precedence-no-column-name",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "precedence-no-column-name"
+      },
+      {
+        "op": "deploy",
+        "case": "precedence-no-column-name",
+        "statement": "s0",
+        "epl": "@name('s0') select 3*(2+1) from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "precedence-no-column-name",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "precedence-no-column-name"
+      },
+      {
+        "op": "case",
+        "case": "graph-select"
+      },
+      {
+        "op": "deploy",
+        "case": "graph-select",
+        "statement": "insert",
+        "epl": "@public insert into MyStream select nested from SupportBeanComplexProps"
+      },
+      {
+        "op": "deploy",
+        "case": "graph-select",
+        "statement": "s0",
+        "epl": "@name('s0') select nested.nestedValue, nested.nestedNested.nestedNestedValue from MyStream"
+      },
+      {
+        "op": "send",
+        "case": "graph-select",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "graph-select"
+      },
+      {
+        "op": "case",
+        "case": "keywords-allowed"
+      },
+      {
+        "op": "deploy",
+        "case": "keywords-allowed",
+        "statement": "s0",
+        "epl": "@name('s0') select count,escape,every,sum,avg,max,min,coalesce,median,stddev,avedev,events,first,last,unidirectional,pattern,sql,metadatasql,prev,prior,weekday,lastweekday,cast,snapshot,variable,window,left,right,full,outer,join from SupportBeanKeywords"
+      },
+      {
+        "op": "types",
+        "case": "keywords-allowed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "keywords-allowed",
+        "eventType": "SupportBeanKeywords",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "keywords-allowed"
+      },
+      {
+        "op": "deploy",
+        "case": "keywords-allowed",
+        "statement": "s0",
+        "epl": "@name('s0') select escape as stddev, count(*) as count, last from SupportBeanKeywords"
+      },
+      {
+        "op": "types",
+        "case": "keywords-allowed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "keywords-allowed",
+        "eventType": "SupportBeanKeywords",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "keywords-allowed"
+      },
+      {
+        "op": "case",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString=\"A'B\")"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A'B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString='A\\'B')"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A'B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString='A\\u0027B')"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A'B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString='A\"B')"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A\"B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString='A\\\"B')"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A\"B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString='A\\u0022B')"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A\"B",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "A'B",
+        "epl": "@Name('A\\'B') @Description(\"A\\\"B\") select * from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "escape-string",
+        "statement": "A'B"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select 'volume' as field1, \"sleep\" as field2, \"\\u0041\" as unicodeA from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString='John\\'s')"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "John's",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString='John\\u0027s')"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "John's",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString like \"Quote \\\"Hello\\\"\")"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Quote \"Hello\"",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "deploy",
+        "case": "escape-string",
+        "statement": "s0",
+        "epl": "@name('s0') select * from SupportBean(theString like \"Quote \\u0022Hello\\u0022\")"
+      },
+      {
+        "op": "send",
+        "case": "escape-string",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "Quote \"Hello\"",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "escape-string"
+      },
+      {
+        "op": "case",
+        "case": "get-event-type"
+      },
+      {
+        "op": "deploy",
+        "case": "get-event-type",
+        "statement": "s0",
+        "epl": "@name('s0') select theString, boolBoxed aBool, 3*intPrimitive, floatBoxed+floatPrimitive result from SupportBean#length(3)  where boolBoxed = true"
+      },
+      {
+        "op": "deployed",
+        "case": "get-event-type",
+        "statement": "s0"
+      },
+      {
+        "op": "types",
+        "case": "get-event-type",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "get-event-type"
+      },
+      {
+        "op": "case",
+        "case": "window-stats"
+      },
+      {
+        "op": "deploy",
+        "case": "window-stats",
+        "statement": "s0",
+        "epl": "@name('s0') select theString, boolBoxed as aBool, 3*intPrimitive, floatBoxed+floatPrimitive as result from SupportBean#length(3)  where boolBoxed = true"
+      },
+      {
+        "op": "send",
+        "case": "window-stats",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "boolBoxed": false,
+          "intPrimitive": 0,
+          "floatPrimitive": 0.0,
+          "floatBoxed": 0.0
+        }
+      },
+      {
+        "op": "send",
+        "case": "window-stats",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "boolBoxed": false,
+          "intPrimitive": 0,
+          "floatPrimitive": 0.0,
+          "floatBoxed": 0.0
+        }
+      },
+      {
+        "op": "send",
+        "case": "window-stats",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "c",
+          "boolBoxed": true,
+          "intPrimitive": 3,
+          "floatPrimitive": 10.0,
+          "floatBoxed": 20.0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "window-stats"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-select-expr",
+    "records": [
+      {
+        "case": "precedence-no-column-name",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "3*2+1": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "precedence-no-column-name",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "3*2+1": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "precedence-no-column-name",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "3*(2+1)": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "graph-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "nested.nestedNested.nestedNestedValue": "nestedNestedValue",
+              "nested.nestedValue": "nestedValue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keywords-allowed",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "count",
+            "type": "Integer"
+          },
+          {
+            "name": "escape",
+            "type": "Integer"
+          },
+          {
+            "name": "every",
+            "type": "Integer"
+          },
+          {
+            "name": "sum",
+            "type": "Integer"
+          },
+          {
+            "name": "avg",
+            "type": "Integer"
+          },
+          {
+            "name": "max",
+            "type": "Integer"
+          },
+          {
+            "name": "min",
+            "type": "Integer"
+          },
+          {
+            "name": "coalesce",
+            "type": "Integer"
+          },
+          {
+            "name": "median",
+            "type": "Integer"
+          },
+          {
+            "name": "stddev",
+            "type": "Integer"
+          },
+          {
+            "name": "avedev",
+            "type": "Integer"
+          },
+          {
+            "name": "events",
+            "type": "Integer"
+          },
+          {
+            "name": "first",
+            "type": "Integer"
+          },
+          {
+            "name": "last",
+            "type": "Integer"
+          },
+          {
+            "name": "unidirectional",
+            "type": "Integer"
+          },
+          {
+            "name": "pattern",
+            "type": "Integer"
+          },
+          {
+            "name": "sql",
+            "type": "Integer"
+          },
+          {
+            "name": "metadatasql",
+            "type": "Integer"
+          },
+          {
+            "name": "prev",
+            "type": "Integer"
+          },
+          {
+            "name": "prior",
+            "type": "Integer"
+          },
+          {
+            "name": "weekday",
+            "type": "Integer"
+          },
+          {
+            "name": "lastweekday",
+            "type": "Integer"
+          },
+          {
+            "name": "cast",
+            "type": "Integer"
+          },
+          {
+            "name": "snapshot",
+            "type": "Integer"
+          },
+          {
+            "name": "variable",
+            "type": "Integer"
+          },
+          {
+            "name": "window",
+            "type": "Integer"
+          },
+          {
+            "name": "left",
+            "type": "Integer"
+          },
+          {
+            "name": "right",
+            "type": "Integer"
+          },
+          {
+            "name": "full",
+            "type": "Integer"
+          },
+          {
+            "name": "outer",
+            "type": "Integer"
+          },
+          {
+            "name": "join",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "keywords-allowed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avedev": 1,
+              "avg": 1,
+              "cast": 1,
+              "coalesce": 1,
+              "count": 1,
+              "escape": 1,
+              "events": 1,
+              "every": 1,
+              "first": 1,
+              "full": 1,
+              "join": 1,
+              "last": 1,
+              "lastweekday": 1,
+              "left": 1,
+              "max": 1,
+              "median": 1,
+              "metadatasql": 1,
+              "min": 1,
+              "outer": 1,
+              "pattern": 1,
+              "prev": 1,
+              "prior": 1,
+              "right": 1,
+              "snapshot": 1,
+              "sql": 1,
+              "stddev": 1,
+              "sum": 1,
+              "unidirectional": 1,
+              "variable": 1,
+              "weekday": 1,
+              "window": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "keywords-allowed",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "stddev",
+            "type": "Integer"
+          },
+          {
+            "name": "count",
+            "type": "Long"
+          },
+          {
+            "name": "last",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "keywords-allowed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "count": 1,
+              "last": 1,
+              "stddev": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A'B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A'B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A'B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A\"B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A\"B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A\"B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "deployed",
+        "statement": "A'B",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "field1": "volume",
+              "field2": "sleep",
+              "unicodeA": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "John's"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "John's"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "Quote \"Hello\""
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "Quote \"Hello\""
+            }
+          }
+        ]
+      },
+      {
+        "case": "get-event-type",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "get-event-type",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "theString",
+            "type": "String"
+          },
+          {
+            "name": "aBool",
+            "type": "Boolean"
+          },
+          {
+            "name": "3*intPrimitive",
+            "type": "Integer"
+          },
+          {
+            "name": "result",
+            "type": "Float"
+          }
+        ]
+      },
+      {
+        "case": "window-stats",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "3*intPrimitive": 9,
+              "aBool": true,
+              "result": 30,
+              "theString": "c"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-select-expr",
+    "records": [
+      {
+        "case": "precedence-no-column-name",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "3*2+1": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "precedence-no-column-name",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "3*2+1": 7
+            }
+          }
+        ]
+      },
+      {
+        "case": "precedence-no-column-name",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "3*(2+1)": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "graph-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "nested.nestedNested.nestedNestedValue": "nestedNestedValue",
+              "nested.nestedValue": "nestedValue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keywords-allowed",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "count",
+            "type": "Integer"
+          },
+          {
+            "name": "escape",
+            "type": "Integer"
+          },
+          {
+            "name": "every",
+            "type": "Integer"
+          },
+          {
+            "name": "sum",
+            "type": "Integer"
+          },
+          {
+            "name": "avg",
+            "type": "Integer"
+          },
+          {
+            "name": "max",
+            "type": "Integer"
+          },
+          {
+            "name": "min",
+            "type": "Integer"
+          },
+          {
+            "name": "coalesce",
+            "type": "Integer"
+          },
+          {
+            "name": "median",
+            "type": "Integer"
+          },
+          {
+            "name": "stddev",
+            "type": "Integer"
+          },
+          {
+            "name": "avedev",
+            "type": "Integer"
+          },
+          {
+            "name": "events",
+            "type": "Integer"
+          },
+          {
+            "name": "first",
+            "type": "Integer"
+          },
+          {
+            "name": "last",
+            "type": "Integer"
+          },
+          {
+            "name": "unidirectional",
+            "type": "Integer"
+          },
+          {
+            "name": "pattern",
+            "type": "Integer"
+          },
+          {
+            "name": "sql",
+            "type": "Integer"
+          },
+          {
+            "name": "metadatasql",
+            "type": "Integer"
+          },
+          {
+            "name": "prev",
+            "type": "Integer"
+          },
+          {
+            "name": "prior",
+            "type": "Integer"
+          },
+          {
+            "name": "weekday",
+            "type": "Integer"
+          },
+          {
+            "name": "lastweekday",
+            "type": "Integer"
+          },
+          {
+            "name": "cast",
+            "type": "Integer"
+          },
+          {
+            "name": "snapshot",
+            "type": "Integer"
+          },
+          {
+            "name": "variable",
+            "type": "Integer"
+          },
+          {
+            "name": "window",
+            "type": "Integer"
+          },
+          {
+            "name": "left",
+            "type": "Integer"
+          },
+          {
+            "name": "right",
+            "type": "Integer"
+          },
+          {
+            "name": "full",
+            "type": "Integer"
+          },
+          {
+            "name": "outer",
+            "type": "Integer"
+          },
+          {
+            "name": "join",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "keywords-allowed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avedev": 1,
+              "avg": 1,
+              "cast": 1,
+              "coalesce": 1,
+              "count": 1,
+              "escape": 1,
+              "events": 1,
+              "every": 1,
+              "first": 1,
+              "full": 1,
+              "join": 1,
+              "last": 1,
+              "lastweekday": 1,
+              "left": 1,
+              "max": 1,
+              "median": 1,
+              "metadatasql": 1,
+              "min": 1,
+              "outer": 1,
+              "pattern": 1,
+              "prev": 1,
+              "prior": 1,
+              "right": 1,
+              "snapshot": 1,
+              "sql": 1,
+              "stddev": 1,
+              "sum": 1,
+              "unidirectional": 1,
+              "variable": 1,
+              "weekday": 1,
+              "window": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "keywords-allowed",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "stddev",
+            "type": "Integer"
+          },
+          {
+            "name": "count",
+            "type": "Long"
+          },
+          {
+            "name": "last",
+            "type": "Integer"
+          }
+        ]
+      },
+      {
+        "case": "keywords-allowed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "count": 1,
+              "last": 1,
+              "stddev": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A'B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A'B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A'B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A\"B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A\"B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "A\"B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "deployed",
+        "statement": "A'B",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "field1": "volume",
+              "field2": "sleep",
+              "unicodeA": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "John's"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "John's"
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "Quote \"Hello\""
+            }
+          }
+        ]
+      },
+      {
+        "case": "escape-string",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "boolBoxed": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intPrimitive": 1,
+              "theString": "Quote \"Hello\""
+            }
+          }
+        ]
+      },
+      {
+        "case": "get-event-type",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "get-event-type",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "value": [
+          {
+            "name": "theString",
+            "type": "String"
+          },
+          {
+            "name": "aBool",
+            "type": "Boolean"
+          },
+          {
+            "name": "3*intPrimitive",
+            "type": "Integer"
+          },
+          {
+            "name": "result",
+            "type": "Float"
+          }
+        ]
+      },
+      {
+        "case": "window-stats",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "3*intPrimitive": 9,
+              "aBool": true,
+              "result": 30,
+              "theString": "c"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

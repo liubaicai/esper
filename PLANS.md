@@ -49,6 +49,38 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.445 ('epl-other-select-expr').
+
+- [x] Contract freeze via read-only scouts MagicRaven (Java) + HushedShrimp (Go).
+- [x] Assets + runner + differential replay: scenario `testdata/parity/epl-other-select-expr.json`
+ (6 cases / 72 steps), Java oracle `tools/java-oracle/EPLOtherSelectExprScenarioOracle.java` +
+ `run-epl-other-select-expr.sh`, Go runner `internal/app/parity/epl_other_select_expr.go` +
+ run.go wiring. Java 23 records / Go 23 records, 0 differences.
+- [x] Runtime IDs corrected post-scout: inventory shows all six executions share static id
+ `java-02b24f8edc7d5c4f5cba` with per-execution runtime ids
+ `java-runtime-7222e4dfd73a239bf53c` (ord0), `a1605a2ba0d017fa91f1` (ord1),
+ `bc47c8b86afd9b19f5c6` (ord2), `446476d182df93abd788` (ord3), `d01d8e953908acc44955` (ord4),
+ `5371694959860be64ff6` (ord5). Scout's initial IDs were static ids with a java-runtime- prefix —
+ fixed in runner + manifest before evidence generation.
+- [x] Go notes: EPL auto-column names pinned via explicit Alias() matching the EPL-derived name;
+ `count(*)` in a plain Select is non-aggregate (always 0) so the keywords case routes through
+ `Aggregate`; graph select uses `Property()` chains over a `RegisterMap` MyStream schema with
+ `WithNestedPropertySchema`; listener only attached on `s0` deploys (producer insert statements
+ get no listener, matching Java's per-statement listener attachment).
+- [x] Tests: `TestRunEPLOtherSelectExprDiffWritesPassingEvidence` + 5 trace mutations green.
+- [x] Manifest: new `case.epl-other-select-expr` + `epl.other.select-expr` capability (both
+ differential-verified, 6 runtime IDs); summary recomputed — 687 cases / 685 implemented /
+ 313 DV cases / 1169 DV runtime IDs / 3717 associations / 121 capabilities (39 DV).
+- [x] Full local gates GREEN: `make check` exit 0 (parity 196.8s, internal/esper 56.9s,
+ compat manifest validation passes).
+- [x] Independent parity review (agent DelightfulMarten, read-only): PASS with one P1 —
+ `undeploy-all` only tore down the last deployment, leaking the graph-select producer insert
+ deployment across cases. FIXED: runner now tracks all deployments and undeploys every one;
+ diff re-run still passing/0 differences. Two nits noted (stale duplicate PLANS block — removed;
+ scenario per-execution javaStaticIds convention matches siblings).
+- [ ] Commit/push.
+
+## Current work unit
 Active: Draft 4.444 ('epl-other-for-group-delivery').
 
 - [x] Contract FROZEN by read-only scouts GeographicalSwallow (Java, full
@@ -92,7 +124,7 @@ Active: Draft 4.444 ('epl-other-for-group-delivery').
 - [x] Post-fix re-validation: `make check` exit 0 (parity 201s,
       internal/esper 57s), diff still passing / 0 differences, run_test
       family green.
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.444 committed and pushed as `b0dafe084`.
 ## Current work unit
 Active: Draft 4.443 ('epl-other-pattern-queries').
 

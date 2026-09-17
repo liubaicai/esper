@@ -4325,6 +4325,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "epl-other-select-expr" || *mode == "epl-other-select-expr-diff" {
+		trace, err := runEplOtherSelectExprScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-other-select-expr-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, eplOtherSelectExprJavaCommit,
+				splitMetadata(*javaRuntimeIDs, eplOtherSelectExprJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplOtherSelectExprJavaSources),
+				splitMetadata(*javaExecutions, eplOtherSelectExprJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "epl-other-for-group-delivery" || *mode == "epl-other-for-group-delivery-diff" {
 		trace, err := runEplOtherForGroupDeliveryScenario(context.Background(), scenario)
 		if err != nil {
