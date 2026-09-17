@@ -2852,6 +2852,26 @@ func FirstUniqueBy(keys ...Expr) UniqueWindowSpec {
 	return internalengine.FirstUniqueBy(keys...)
 }
 
+// ForDiscreteDelivery mirrors Esper's `for discrete_delivery`: every output
+// row is delivered as its own listener/subscriber callback, so a batch of N
+// rows produces N single-row deliveries. New and old rows are paired
+// index-wise; when one stream is longer its extra rows are delivered alone.
+// Passing expressions is a build-time error, matching Esper's rejection of
+// `for discrete_delivery(expr)`.
+func ForDiscreteDelivery(expressions ...Expr) QueryOption {
+	return internalengine.ForDiscreteDelivery(expressions...)
+}
+
+// ForGroupedDelivery mirrors Esper's `for grouped_delivery(expr,...)`: output
+// rows are bucketed by group-key equality and each group is delivered as one
+// listener/subscriber callback carrying all of the group's rows. Group order
+// follows the first appearance of each key in the (possibly order-by-sorted)
+// output row sequence; rows within a group keep that sequence's order. Group
+// keys are compared by content, so array-typed keys use deep equality.
+func ForGroupedDelivery(expressions ...Expr) QueryOption {
+	return internalengine.ForGroupedDelivery(expressions...)
+}
+
 // From creates a typed source. The source name is explicit in normal use; an
 // empty name falls back to the Go type name for small examples.
 func From[T any](env *Environment, sourceName string) Stream[T] {

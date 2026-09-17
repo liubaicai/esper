@@ -49,6 +49,51 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.444 ('epl-other-for-group-delivery').
+
+- [x] Contract FROZEN by read-only scouts GeographicalSwallow (Java, full
+      contract via IRC) + AboveCentipede (Go, yield failed; transcript shows
+      complete survey). SIX executions: ords 0 `EPLOtherInvalid` (7
+      tryInvalidCompile cases), 1 `EPLOtherSubscriberOnly` (discrete +
+      grouped subscriber), 2 `EPLOtherDiscreteDelivery` (listener discrete +
+      empty-batch suppression), 3 `EPLOtherGroupDelivery` (grouped listener,
+      order-by, multi-key, SODA), 4 `EPLOtherGroupDeliveryMultikeyWArraySingleArray`
+      (int[] deep-equality group key), 5 `EPLOtherGroupDeliveryMultikeyWArrayTwoField`
+      (multi-field group key). Full contract in the GeographicalSwallow IRC
+      message.
+- [x] **Shared-core feature implemented**: `ForDiscreteDelivery()` /
+      `ForGroupedDelivery(exprs...)` QueryOptions + `dispatchDeliveryMode`
+      splitting in `dispatchSync` (per-row for discrete, per-group-key for
+      grouped). Build-time `validateDeliveryFields` rejects unknown
+      group-key fields. Unwindowed `output all every` accumulation added
+      (was a gap: unwindowed streams had no retained state to snapshot).
+- [x] Assets authored by parity-asset-worker TopCaribou (yield failed; files
+      verified on disk): `tools/java-oracle/EPLOtherForGroupDeliveryScenarioOracle.java`
+      + `run-epl-other-for-group-delivery.sh`, `testdata/parity/epl-other-for-group-delivery.json`
+      (6 cases / 86 steps). Two fixes by primary agent: `allowSubscriber=true`
+      in oracle config, `*string` for enumValue null.
+- [x] Differential replay: Java 32 records; Go 32 records. ZERO differences.
+      `compile-rejected` records carry no `value` (Java `errorPrefix` dropped
+      by diff); fluent-verifiable probes (3/4/5) assert internally.
+- [x] run.go wiring + run_test family (passing + 2 trace mutations) green.
+- [x] Manifest: NEW `case.epl-other-for-group-delivery` born-DV with 6
+      runtime IDs; capability `eplother.stream-selector` goRefs extended.
+      686 cases / 684 implemented / 312 DV / 1163 DV runtime IDs / 3711
+      associations / referenced 3347 / unreferenced 789.
+- [x] Independent parity review (agent OverwhelmingNewt, read-only): PASS
+      with findings. Yield mechanism rejected structured output (same harness
+      issue); transcript shows complete review. FOUR findings fixed:
+      (1) discrete delivery sends all-new-then-all-old (not index-paired) —
+      `dispatchDiscrete` rewritten; (2) manifest `javaStaticIds` was copied
+      from pattern-queries — corrected to `java-49b703a73b938557e3c1`;
+      (3) evidence `javaRuntimeIds` had a stale placeholder — regenerated;
+      (4) three Query constructors (pattern.go, rowrecog.go, trigger.go)
+      silently dropped deliveryMode/deliveryExprs — wired through.
+- [x] Post-fix re-validation: `make check` exit 0 (parity 201s,
+      internal/esper 57s), diff still passing / 0 differences, run_test
+      family green.
+- [ ] Commit and push.
+## Current work unit
 Active: Draft 4.443 ('epl-other-pattern-queries').
 
 - [x] 4.443 pre-check: the ResultSetAggregateMedianAndDeviation +
@@ -94,7 +139,7 @@ Active: Draft 4.443 ('epl-other-pattern-queries').
       findings.
 - [x] Full local gates GREEN: `make check` exit 0 (parity 200s,
       internal/esper 57s). gofmt clean, `git diff --check` clean.
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.443 committed and pushed as `c5c74734a`.
 
 ## Current work unit
 Active: Draft 4.442 ('view-first-last-event').

@@ -333,6 +333,8 @@ func (q RowRecogQuery) Query(options ...QueryOption) Query {
 		statementPrioritySet:       spec.statementPrioritySet,
 		statementDrop:              spec.statementDrop,
 		subscriberDisallowed:       spec.subscriberDisallowed,
+		deliveryMode:               spec.deliveryMode,
+		deliveryExprs:              append([]Expr(nil), spec.deliveryExprs...),
 	}
 }
 

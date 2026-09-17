@@ -4577,7 +4577,11 @@
     "EPLOtherIStreamRStreamConfigSelectorRStream"
    ],
    "goRefs": [
-    "internal/esper/view_parity_test.go"
+    "internal/esper/view_parity_test.go",
+    "internal/app/parity/epl_other_for_group_delivery.go",
+    "internal/esper/stream.go",
+    "internal/esper/runtime.go",
+    "internal/esper/plan.go"
    ],
    "phase": 2,
    "status": "implemented",
@@ -4608,7 +4612,13 @@
     "java-runtime-ccc0bd023a72659c1a43",
     "java-runtime-d268f6c45cd4375e9c1c",
     "java-runtime-dccd7d03c70875f69975",
-    "java-runtime-f7193a89174e1e9c9ca0"
+    "java-runtime-f7193a89174e1e9c9ca0",
+    "java-runtime-739ab323159d5359d1d4",
+    "java-runtime-a89ce4feaab75c0bebc5",
+    "java-runtime-1b0fc79aaff7449c2c6e",
+    "java-runtime-6238688d054ca4ece96e",
+    "java-runtime-8cf7563abbca0f451537",
+    "java-runtime-1a7765c6b98eb79db7ce"
    ]
   },
   {
@@ -43835,6 +43845,73 @@
    "notes": [
     "EPLOtherWhereOM, EPLOtherWhereCompile, EPLOtherWhere and EPLOtherAggregation replayed through one shared scenario (6 records, 0 differences): every-or pattern with a tag-field where clause and cross-match sum aggregation. Ords 0/1 are SODA-OM compile-path variants of ord 2's semantics covered by one pass. Ords 4/5 (pattern #time/#length windows) deferred \u2014 they need a standalone pattern-window surface."
    ]
+  },
+  {
+   "id": "case.epl-other-for-group-delivery",
+   "javaRuntimeIds": [
+    "java-runtime-739ab323159d5359d1d4",
+    "java-runtime-a89ce4feaab75c0bebc5",
+    "java-runtime-1b0fc79aaff7449c2c6e",
+    "java-runtime-6238688d054ca4ece96e",
+    "java-runtime-8cf7563abbca0f451537",
+    "java-runtime-1a7765c6b98eb79db7ce"
+   ],
+   "javaStaticIds": [
+    "java-49b703a73b938557e3c1"
+   ],
+   "javaNames": [
+    "EPLOtherInvalid",
+    "EPLOtherSubscriberOnly",
+    "EPLOtherDiscreteDelivery",
+    "EPLOtherGroupDelivery",
+    "EPLOtherGroupDeliveryMultikeyWArraySingleArray",
+    "EPLOtherGroupDeliveryMultikeyWArrayTwoField"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherForGroupDelivery.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEPLOtherForGroupDeliveryDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEPLOtherForGroupDeliveryDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "epl",
+    "for-clause",
+    "grouped-delivery",
+    "discrete-delivery",
+    "output-limit",
+    "context",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-for-group-delivery.json",
+    "testdata/parity/epl-other-for-group-delivery.trace.json",
+    "testdata/parity/epl-other-for-group-delivery.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-739ab323159d5359d1d4",
+    "java-runtime-a89ce4feaab75c0bebc5",
+    "java-runtime-1b0fc79aaff7449c2c6e",
+    "java-runtime-6238688d054ca4ece96e",
+    "java-runtime-8cf7563abbca0f451537",
+    "java-runtime-1a7765c6b98eb79db7ce"
+   ],
+   "representativeScenarioIds": [
+    "epl-other-for-group-delivery"
+   ],
+   "notes": [
+    "EPLOtherForGroupDelivery ords 0-5 replayed through one shared scenario (32 records, 0 differences): seven tryInvalidCompile probes, subscriber-only discrete+grouped over #time_batch(1), listener discrete + empty-batch suppression under output-all-every, grouped listener over order-by and multi-key, and context-terminated grouped snapshots keyed on int[] and (intPrimitive,longPrimitive). Shared-core additions: ForDiscreteDelivery/ForGroupedDelivery QueryOptions + dispatch splitting, Build-time for-clause field validation, and unwindowed output-all-every accumulation."
+   ]
   }
  ],
  "mappings": [
@@ -46913,15 +46990,19 @@
   {
    "capabilityId": "pattern.basic",
    "caseId": "case.epl-other-pattern-queries"
+  },
+  {
+   "capabilityId": "eplother.stream-selector",
+   "caseId": "case.epl-other-for-group-delivery"
   }
  ],
  "summary": {
-  "inventoriedCases": 685,
-  "implementedCases": 683,
-  "differentialVerifiedCases": 311,
-  "differentialVerifiedRuntimeIds": 1157,
+  "inventoriedCases": 686,
+  "implementedCases": 684,
+  "differentialVerifiedCases": 312,
+  "differentialVerifiedRuntimeIds": 1163,
   "intentionallyDifferentCases": 29,
-  "representativeVerifiedCases": 118,
+  "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46929,13 +47010,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3705,
-  "referencedJavaRuntimeIds": 3341,
+  "runtimeAssociationCount": 3711,
+  "referencedJavaRuntimeIds": 3347,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 795,
-  "representativeScenarioTotal": 121,
-  "representativeScenarioPassing": 121,
-  "totalCases": 685,
+  "unreferencedJavaRuntimeIds": 789,
+  "representativeScenarioTotal": 122,
+  "representativeScenarioPassing": 122,
+  "totalCases": 686,
   "totalCapabilities": 120
  }
 }

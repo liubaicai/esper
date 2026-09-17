@@ -768,6 +768,8 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		statementDrop:              spec.statementDrop,
 		subscriberDisallowed:       spec.subscriberDisallowed,
 		eventPrecedence:            spec.eventPrecedence,
+		deliveryMode:               spec.deliveryMode,
+		deliveryExprs:              append([]Expr(nil), spec.deliveryExprs...),
 	}
 }
 
@@ -1393,6 +1395,8 @@ func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments
 		statementDrop:        spec.statementDrop,
 		subscriberDisallowed: spec.subscriberDisallowed,
 		eventPrecedence:      spec.eventPrecedence,
+		deliveryMode:         spec.deliveryMode,
+		deliveryExprs:        append([]Expr(nil), spec.deliveryExprs...),
 	}
 }
 
@@ -1601,6 +1605,8 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 		statementDrop:              spec.statementDrop,
 		subscriberDisallowed:       spec.subscriberDisallowed,
 		eventPrecedence:            spec.eventPrecedence,
+		deliveryMode:               spec.deliveryMode,
+		deliveryExprs:              append([]Expr(nil), spec.deliveryExprs...),
 	}
 }
 
@@ -3050,6 +3056,8 @@ type querySpec struct {
 	updatePrioritySet          bool
 	updateDrop                 bool
 	eventPrecedence            Expr
+	deliveryMode               deliveryKind
+	deliveryExprs              []Expr
 }
 
 // QueryOption configures statement metadata and output policy. Options are
@@ -3106,6 +3114,41 @@ func WithSelfSubselectPreeval(enabled bool) QueryOption {
 // statement iteration.
 func WithIterableUnbound() QueryOption {
 	return func(spec *querySpec) { spec.iterableUnbound = true }
+}
+
+// deliveryKind selects how output rows reach listeners and subscribers.
+type deliveryKind int
+
+const (
+	deliveryDefault  deliveryKind = iota // one callback per output batch
+	deliveryDiscrete                     // one callback per output row
+	deliveryGrouped                      // one callback per group-key bucket
+)
+
+// ForDiscreteDelivery mirrors Esper's `for discrete_delivery`: every output
+// row is delivered as its own listener/subscriber callback, so a batch of N
+// rows produces N single-row deliveries. New and old rows are paired
+// index-wise; when one stream is longer its extra rows are delivered alone.
+// Passing expressions is a build-time error, matching Esper's rejection of
+// `for discrete_delivery(expr)`.
+func ForDiscreteDelivery(expressions ...Expr) QueryOption {
+	return func(spec *querySpec) {
+		spec.deliveryMode = deliveryDiscrete
+		spec.deliveryExprs = append([]Expr(nil), expressions...)
+	}
+}
+
+// ForGroupedDelivery mirrors Esper's `for grouped_delivery(expr,...)`: output
+// rows are bucketed by group-key equality and each group is delivered as one
+// listener/subscriber callback carrying all of the group's rows. Group order
+// follows the first appearance of each key in the (possibly order-by-sorted)
+// output row sequence; rows within a group keep that sequence's order. Group
+// keys are compared by content, so array-typed keys use deep equality.
+func ForGroupedDelivery(expressions ...Expr) QueryOption {
+	return func(spec *querySpec) {
+		spec.deliveryMode = deliveryGrouped
+		spec.deliveryExprs = append([]Expr(nil), expressions...)
+	}
 }
 
 // StatementAudit enables typed runtime audit categories for the statement.
@@ -3302,7 +3345,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, selfSubselectPosteval: spec.selfSubselectPosteval, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, limitExpr: spec.limitExpr, offsetExpr: spec.offsetExpr, limitExprSet: spec.limitExprSet, offsetExprSet: spec.offsetExprSet, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, selfSubselectPosteval: spec.selfSubselectPosteval, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, limitExpr: spec.limitExpr, offsetExpr: spec.offsetExpr, limitExprSet: spec.limitExprSet, offsetExprSet: spec.offsetExprSet, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence, deliveryMode: spec.deliveryMode, deliveryExprs: append([]Expr(nil), spec.deliveryExprs...)}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -3368,6 +3411,8 @@ type Query struct {
 	statementDrop              bool
 	subscriberDisallowed       bool
 	eventPrecedence            Expr
+	deliveryMode               deliveryKind
+	deliveryExprs              []Expr
 }
 
 func (q Query) Name() string   { return q.name }

@@ -638,6 +638,12 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	}
 	e.buildMu.Lock()
 	defer e.buildMu.Unlock()
+	if query.deliveryMode == deliveryGrouped && len(query.deliveryExprs) == 0 {
+		return Plan{}, NewError(ErrorInvalidRule, "grouped delivery requires one or more grouping expressions")
+	}
+	if query.deliveryMode == deliveryDiscrete && len(query.deliveryExprs) != 0 {
+		return Plan{}, NewError(ErrorInvalidRule, "discrete delivery does not allow grouping expressions")
+	}
 	if query.discardPartialsOnMatch || query.suppressOverlappingMatches {
 		if query.pattern == nil {
 			return Plan{}, NewError(ErrorInvalidRule, "pattern consumption policies require a pattern query")
@@ -791,6 +797,17 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	resultSchema, err := e.resultSchema(query)
 	if err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "projection", err)
+	}
+	deliverySchema := resultSchema
+	if !deliverySchema.valid() && query.input != nil {
+		if source, sourceErr := sourceNode(query.input); sourceErr == nil {
+			if resolved, resolveErr := e.sourceSchema(source); resolveErr == nil {
+				deliverySchema = resolved
+			}
+		}
+	}
+	if err := validateDeliveryFields(query.deliveryExprs, deliverySchema); err != nil {
+		return Plan{}, WrapError(ErrorInvalidRule, "for-clause", err)
 	}
 	if err := e.validateIntoTable(query); err != nil {
 		return Plan{}, WrapError(ErrorInvalidRule, "into-table", err)
@@ -1549,6 +1566,39 @@ func validateEventPrecedenceFields(node *exprNode, output Schema, scope string) 
 	}
 	for _, child := range node.children {
 		if err := validateEventPrecedenceFields(child, output, scope); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateDeliveryFields checks that every grouped-delivery expression names a
+// property of the output event type, mirroring Esper's for-clause expression
+// validation. Non-field expressions (literals, computed values) are allowed:
+// they evaluate per row at dispatch time.
+func validateDeliveryFields(exprs []Expr, output Schema) error {
+	if !output.valid() {
+		return nil
+	}
+	for _, expr := range exprs {
+		if err := validateDeliveryFieldNode(expr.node(), output); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateDeliveryFieldNode(node *exprNode, output Schema) error {
+	if node == nil {
+		return nil
+	}
+	if node.kind == "field" {
+		if _, ok := output.Property(node.fieldName); !ok {
+			return NewError(ErrorInvalidRule, fmt.Sprintf("for-clause expression %q is not a property of the output event type %q", node.fieldName, output.Name()))
+		}
+	}
+	for _, child := range node.children {
+		if err := validateDeliveryFieldNode(child, output); err != nil {
 			return err
 		}
 	}

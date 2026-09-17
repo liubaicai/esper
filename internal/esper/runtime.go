@@ -6059,6 +6059,118 @@ func (s *Statement) dispatch(ctx context.Context, batch ResultBatch) error {
 }
 
 func (s *Statement) dispatchSync(ctx context.Context, batch ResultBatch) error {
+	if s.plan.query.deliveryMode != deliveryDefault {
+		return s.dispatchDeliveryMode(ctx, batch)
+	}
+	return s.deliverBatch(ctx, batch)
+}
+
+// dispatchDeliveryMode splits one output batch into per-row (discrete) or
+// per-group (grouped) deliveries, mirroring Esper's `for discrete_delivery`
+// and `for grouped_delivery(expr,...)` for-clauses. Each sub-batch flows
+// through the normal subscriber/listener/sink path.
+func (s *Statement) dispatchDeliveryMode(ctx context.Context, batch ResultBatch) error {
+	switch s.plan.query.deliveryMode {
+	case deliveryDiscrete:
+		return s.dispatchDiscrete(ctx, batch)
+	case deliveryGrouped:
+		return s.dispatchGrouped(ctx, batch)
+	default:
+		return s.deliverBatch(ctx, batch)
+	}
+}
+
+// dispatchDiscrete delivers each output row as its own callback, matching
+// Esper's discrete-delivery split: all insert rows are delivered first (each
+// as a single-row new batch), then all remove rows (each as a single-row old
+// batch). The streams are never paired index-wise.
+func (s *Statement) dispatchDiscrete(ctx context.Context, batch ResultBatch) error {
+	for _, row := range batch.New {
+		sub := ResultBatch{New: []Result{row}, Sequence: batch.Sequence, Time: batch.Time, forced: batch.forced,
+			outputCountsSet: batch.outputCountsSet, outputInserted: batch.outputInserted, outputRemoved: batch.outputRemoved}
+		if err := s.deliverBatch(ctx, sub); err != nil {
+			return err
+		}
+	}
+	for _, row := range batch.Old {
+		sub := ResultBatch{Old: []Result{row}, Sequence: batch.Sequence, Time: batch.Time, forced: batch.forced,
+			outputCountsSet: batch.outputCountsSet, outputInserted: batch.outputInserted, outputRemoved: batch.outputRemoved}
+		if err := s.deliverBatch(ctx, sub); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// dispatchGrouped buckets output rows by group-key equality and delivers one
+// callback per group. Group order follows the first appearance of each key in
+// the (possibly order-by-sorted) row sequence; rows within a group keep that
+// sequence's order. New and old rows are grouped independently so each
+// group's callback carries both its insert and remove rows.
+func (s *Statement) dispatchGrouped(ctx context.Context, batch ResultBatch) error {
+	exprs := s.plan.query.deliveryExprs
+	if len(exprs) == 0 {
+		return s.deliverBatch(ctx, batch)
+	}
+	type group struct {
+		key string
+		new []Result
+		old []Result
+	}
+	groups := make([]*group, 0, 4)
+	byKey := make(map[string]*group)
+	bucket := func(rows []Result, isNew bool) {
+		for _, row := range rows {
+			values := make([]any, 0, len(exprs))
+			for _, expr := range exprs {
+				values = append(values, expr.eval(EvalContext{Event: resultEvalEvent(row), Now: batch.Time}).Any())
+			}
+			key := encodeKey(values)
+			g, ok := byKey[key]
+			if !ok {
+				g = &group{key: key}
+				byKey[key] = g
+				groups = append(groups, g)
+			}
+			if isNew {
+				g.new = append(g.new, row)
+			} else {
+				g.old = append(g.old, row)
+			}
+		}
+	}
+	bucket(batch.New, true)
+	bucket(batch.Old, false)
+	for _, g := range groups {
+		sub := ResultBatch{New: g.new, Old: g.old, Sequence: batch.Sequence, Time: batch.Time, forced: batch.forced,
+			outputCountsSet: batch.outputCountsSet, outputInserted: batch.outputInserted, outputRemoved: batch.outputRemoved}
+		if err := s.deliverBatch(ctx, sub); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// resultEvalEvent wraps a Result as an Event so group-key expressions can
+// read its fields through the standard Field/Get path. Rows are exposed as a
+// map-underlying event so schema.get resolves field names directly.
+func resultEvalEvent(row Result) Event {
+	if event, ok := row.Event(); ok {
+		return event
+	}
+	if r, ok := row.Row(); ok {
+		underlying := make(map[string]Value, len(r.schema.fields))
+		for index, field := range r.schema.fields {
+			if index < len(r.values) {
+				underlying[field.Name] = r.values[index]
+			}
+		}
+		return Event{schema: r.schema, underlying: underlying}
+	}
+	return Event{}
+}
+
+func (s *Statement) deliverBatch(ctx context.Context, batch ResultBatch) error {
 	if s.plan.query.selector == SelectRStream && len(batch.Old) > 0 && len(batch.New) == 0 {
 		// Remove-only (rstream) statements expose the outgoing/evicted rows
 		// as insert data: the listener's New channel carries the remove
@@ -11252,6 +11364,33 @@ func (r *statementRuntime) applyAllEveryTime(policy OutputPolicy, batch ResultBa
 	}
 	if aggregateGroupedRowPerEvent {
 		return r.applyAllEveryTimeAggregateGrouped(policy, batch, flush, now, plans...)
+	}
+	// Unwindowed sources have no retained state to snapshot: `output all
+	// every` accumulates the arriving rows and emits them at the interval
+	// boundary, mirroring Esper's output-all view over a plain stream.
+	unwindowed := len(plans) > 0 && plans[0].query.aggregate == nil && plans[0].query.join == nil &&
+		plans[0].query.rowRecog == nil && !containsNamedWindow(plans[0].query.input, nil) &&
+		!containsTableSource(plans[0].query.input, nil) && len(streamWindowNodes(plans[0].query.input)) == 0
+	if unwindowed {
+		if !batch.empty() {
+			if state.pending == nil {
+				copyBatch := batch.clone()
+				state.pending = &copyBatch
+			} else {
+				state.pending.New = append(state.pending.New, batch.New...)
+				state.pending.Old = append(state.pending.Old, batch.Old...)
+			}
+			if state.nextOutputAt.IsZero() {
+				state.nextOutputAt = now.Add(policy.Interval)
+			}
+		}
+		if !flush || state.nextOutputAt.IsZero() || now.Before(state.nextOutputAt) || state.pending == nil {
+			return ResultBatch{}
+		}
+		result := state.pending.clone()
+		state.pending = nil
+		state.nextOutputAt = now.Add(policy.Interval)
+		return r.finishOutput(policy, result, now, plans...)
 	}
 	if !batch.empty() && state.nextOutputAt.IsZero() {
 		state.nextOutputAt = now.Add(policy.Interval)

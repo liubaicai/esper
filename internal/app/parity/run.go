@@ -4325,6 +4325,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "epl-other-for-group-delivery" || *mode == "epl-other-for-group-delivery-diff" {
+		trace, err := runEplOtherForGroupDeliveryScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-other-for-group-delivery-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, eplOtherForGroupDeliveryJavaCommit,
+				splitMetadata(*javaRuntimeIDs, eplOtherForGroupDeliveryJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplOtherForGroupDeliveryJavaSources),
+				splitMetadata(*javaExecutions, eplOtherForGroupDeliveryJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "epl-other-pattern-queries" || *mode == "epl-other-pattern-queries-diff" {
 		trace, err := runEplOtherPatternQueriesScenario(context.Background(), scenario)
 		if err != nil {

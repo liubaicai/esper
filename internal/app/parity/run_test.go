@@ -21452,6 +21452,107 @@ func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *t
 	}
 }
 
+func TestRunEPLOtherForGroupDeliveryDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-for-group-delivery.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-other-for-group-delivery.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-for-group-delivery.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-other-for-group-delivery-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 6 {
+		t.Fatalf("runtime ids = %d, want 6", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunEPLOtherForGroupDeliveryDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "grouped-delivery-group-mutated",
+			mutate: func(trace *compat.Trace) {
+				// group-delivery record 1 is the intPrimitive=1 group
+				// {E1,E3}. Mutating a row breaks the grouped-delivery
+				// bucketing contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "group-delivery" && rec.Sequence == 1 {
+						rec.New[0].Fields["theString"] = "E9"
+						return
+					}
+				}
+				panic("no group-delivery record 1")
+			},
+		},
+		{
+			name: "discrete-delivery-row-mutated",
+			mutate: func(trace *compat.Trace) {
+				// discrete-delivery record 2 is the single-row callback for
+				// E2. Mutating it breaks the per-row delivery contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "discrete-delivery" && rec.Sequence == 2 {
+						rec.New[0].Fields["intPrimitive"] = float64(99)
+						return
+					}
+				}
+				panic("no discrete-delivery record 2")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-for-group-delivery.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-for-group-delivery.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-for-group-delivery.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-for-group-delivery-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunEPLOtherPatternQueriesDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-queries.trace.json"),

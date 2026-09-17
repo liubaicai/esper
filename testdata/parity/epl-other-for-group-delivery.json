@@ -1,0 +1,686 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-other-for-group-delivery",
+ "description": "EPLOtherForGroupDelivery ordinals 0-5: seven tryInvalidCompile probes (ord 0), subscriber-only discrete and grouped delivery over #time_batch(1) (ord 1), listener discrete delivery plus empty-batch suppression (ord 2), grouped listener delivery over order-by and multi-key with a SODA phase (ord 3), and context-terminated grouped snapshots keyed on int[] (ord 4) and (intPrimitive,longPrimitive) (ord 5)",
+ "steps": [
+  {
+   "op": "case",
+   "case": "invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "for-eof",
+   "epl": "select * from SupportBean for ",
+   "expectError": "Incorrect syntax near end-of-input ('for' is a reserved keyword) expecting an identifier but found end-of-input at line 1 column 29"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "for-other-keyword",
+   "epl": "select * from SupportBean for other_keyword",
+   "expectError": "Expected any of the [grouped_delivery, discrete_delivery] for-clause keywords after reserved keyword 'for'"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "grouped-no-expr",
+   "epl": "select * from SupportBean for grouped_delivery",
+   "expectError": "The for-clause with the grouped_delivery keyword requires one or more grouping expressions"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "grouped-empty-expr",
+   "epl": "select * from SupportBean for grouped_delivery()",
+   "expectError": "The for-clause with the grouped_delivery keyword requires one or more grouping expressions"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "grouped-unknown-prop",
+   "epl": "select * from SupportBean for grouped_delivery(dummy)",
+   "expectError": "Failed to validate for-clause expression 'dummy': Property named 'dummy' is not valid in any stream"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "discrete-with-expr",
+   "epl": "select * from SupportBean for discrete_delivery(dummy)",
+   "expectError": "The for-clause with the discrete_delivery keyword does not allow grouping expressions"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "discrete-then-grouped",
+   "epl": "select * from SupportBean for discrete_delivery for grouped_delivery(intPrimitive)",
+   "expectError": "Incorrect syntax near 'for' (a reserved keyword) at line 1 column 48 "
+  },
+  {
+   "op": "case",
+   "case": "subscriber-only"
+  },
+  {
+   "op": "advance-time",
+   "case": "subscriber-only",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "subscriber-only",
+   "statement": "s0",
+   "epl": "@name('s0') select irstream theString,intPrimitive from SupportBean#time_batch(1) for discrete_delivery"
+  },
+  {
+   "op": "send",
+   "case": "subscriber-only",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "subscriber-only",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "subscriber-only",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "subscriber-only",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "subscriber-only"
+  },
+  {
+   "op": "deploy",
+   "case": "subscriber-only",
+   "statement": "s0",
+   "epl": "@name('s0') select irstream theString,intPrimitive from SupportBean#time_batch(1) for grouped_delivery(intPrimitive)"
+  },
+  {
+   "op": "send",
+   "case": "subscriber-only",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "subscriber-only",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "subscriber-only",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "subscriber-only",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "subscriber-only"
+  },
+  {
+   "op": "case",
+   "case": "discrete-delivery"
+  },
+  {
+   "op": "advance-time",
+   "case": "discrete-delivery",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "discrete-delivery",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportBean#time_batch(1) for discrete_delivery"
+  },
+  {
+   "op": "send",
+   "case": "discrete-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "discrete-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "discrete-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "discrete-delivery",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "discrete-delivery"
+  },
+  {
+   "op": "deploy",
+   "case": "discrete-delivery",
+   "statement": "s0",
+   "epl": "@name('s0') SELECT *  FROM ObjectEvent OUTPUT ALL EVERY 1 seconds for discrete_delivery"
+  },
+  {
+   "op": "send",
+   "case": "discrete-delivery",
+   "eventType": "ObjectEvent",
+   "payload": {}
+  },
+  {
+   "op": "advance-time",
+   "case": "discrete-delivery",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "advance-time",
+   "case": "discrete-delivery",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "discrete-delivery"
+  },
+  {
+   "op": "case",
+   "case": "group-delivery"
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "group-delivery",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportBean#time_batch(1) for grouped_delivery (intPrimitive)"
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "group-delivery"
+  },
+  {
+   "op": "deploy",
+   "case": "group-delivery",
+   "statement": "s0",
+   "epl": "@name('s0') select * from SupportBean#time_batch(1) order by intPrimitive desc for grouped_delivery (intPrimitive)"
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery",
+   "at": "1970-01-01T00:00:02Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "group-delivery"
+  },
+  {
+   "op": "deploy",
+   "case": "group-delivery",
+   "statement": "s0",
+   "epl": "@name('s0') select theString, doubleBoxed, enumValue from SupportBean#time_batch(1) order by theString, doubleBoxed, enumValue for grouped_delivery(doubleBoxed, enumValue)"
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "doubleBoxed": 10,
+    "enumValue": "ENUM_VALUE_2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "doubleBoxed": 11,
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "doubleBoxed": 9,
+    "enumValue": "ENUM_VALUE_2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "doubleBoxed": 10,
+    "enumValue": "ENUM_VALUE_2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "doubleBoxed": 10,
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E6",
+    "doubleBoxed": 10,
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E7",
+    "doubleBoxed": 11,
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E8",
+    "doubleBoxed": 10,
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery",
+   "at": "1970-01-01T00:00:03Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "group-delivery"
+  },
+  {
+   "op": "deploy",
+   "case": "group-delivery",
+   "statement": "s0",
+   "epl": "@name('s0') select theString, doubleBoxed, enumValue from SupportBean#time_batch(1) order by theString, doubleBoxed, enumValue for grouped_delivery(doubleBoxed, enumValue)"
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "doubleBoxed": 10,
+    "enumValue": "ENUM_VALUE_2"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "doubleBoxed": 11,
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "doubleBoxed": 11,
+    "enumValue": "ENUM_VALUE_1"
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery",
+   "at": "1970-01-01T00:00:04Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "group-delivery"
+  },
+  {
+   "op": "case",
+   "case": "group-delivery-array-key"
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery-array-key",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "group-delivery-array-key",
+   "statement": "s0",
+   "epl": "create context MyContext start @now end after 1 second;\n@name('s0') context MyContext select * from SupportEventWithManyArray#keepall output snapshot when terminated for grouped_delivery (intOne)"
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-array-key",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E1",
+    "intOne": [1, 2]
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-array-key",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E2",
+    "intOne": [1, 3]
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-array-key",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E3",
+    "intOne": [1, 2]
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-array-key",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E4",
+    "intOne": [1, 4]
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-array-key",
+   "eventType": "SupportEventWithManyArray",
+   "payload": {
+    "id": "E5",
+    "intOne": [1, 4]
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery-array-key",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "group-delivery-array-key"
+  },
+  {
+   "op": "case",
+   "case": "group-delivery-two-field-key"
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery-two-field-key",
+   "at": "1970-01-01T00:00:00Z"
+  },
+  {
+   "op": "deploy",
+   "case": "group-delivery-two-field-key",
+   "statement": "s0",
+   "epl": "create context MyContext start @now end after 1 second;\n@name('s0') context MyContext select * from SupportBean#keepall output snapshot when terminated for grouped_delivery (intPrimitive, longPrimitive)"
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-two-field-key",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-two-field-key",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-two-field-key",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 1,
+    "longPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-two-field-key",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 2,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "group-delivery-two-field-key",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 1,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "advance-time",
+   "case": "group-delivery-two-field-key",
+   "at": "1970-01-01T00:00:01Z"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "group-delivery-two-field-key"
+  }
+ ],
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherForGroupDelivery.java",
+ "javaRuntimes": [
+  "java-runtime-739ab323159d5359d1d4",
+  "java-runtime-a89ce4feaab75c0bebc5",
+  "java-runtime-1b0fc79aaff7449c2c6e",
+  "java-runtime-6238688d054ca4ece96e",
+  "java-runtime-8cf7563abbca0f451537",
+  "java-runtime-1a7765c6b98eb79db7ce"
+ ],
+ "javaNames": [
+  "EPLOtherInvalid",
+  "EPLOtherSubscriberOnly",
+  "EPLOtherDiscreteDelivery",
+  "EPLOtherGroupDelivery",
+  "EPLOtherGroupDeliveryMultikeyWArraySingleArray",
+  "EPLOtherGroupDeliveryMultikeyWArrayTwoField"
+ ],
+ "javaStaticIds": [
+  "java-49b703a73b938557e3c1",
+  "java-49b703a73b938557e3c1",
+  "java-49b703a73b938557e3c1",
+  "java-49b703a73b938557e3c1",
+  "java-49b703a73b938557e3c1",
+  "java-49b703a73b938557e3c1"
+ ],
+ "javaFlags": [
+  "OBSERVEROPS",
+  "SERDEREQUIRED"
+ ],
+ "cases": [
+  {
+   "case": "invalid",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-739ab323159d5359d1d4",
+   "executionName": "EPLOtherInvalid",
+   "observation": "compile-only; seven tryInvalidCompile probes with prefix-matched messages",
+   "epl": "select * from SupportBean for "
+  },
+  {
+   "case": "subscriber-only",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-a89ce4feaab75c0bebc5",
+   "executionName": "EPLOtherSubscriberOnly",
+   "observation": "subscriber; discrete then grouped delivery observed through a SupportSubscriberMRD-shaped update(Object[][],Object[][]) subscriber, emitted as listener records",
+   "epl": "@name('s0') select irstream theString,intPrimitive from SupportBean#time_batch(1) for discrete_delivery"
+  },
+  {
+   "case": "discrete-delivery",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-1b0fc79aaff7449c2c6e",
+   "executionName": "EPLOtherDiscreteDelivery",
+   "observation": "listener; discrete delivery plus empty-batch suppression under output all every 1 seconds",
+   "epl": "@name('s0') select * from SupportBean#time_batch(1) for discrete_delivery"
+  },
+  {
+   "case": "group-delivery",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-6238688d054ca4ece96e",
+   "executionName": "EPLOtherGroupDelivery",
+   "observation": "listener; grouped delivery over order-by and multi-key; the fourth deploy is the SODA eplToModel compile-path variant of the third",
+   "epl": "@name('s0') select * from SupportBean#time_batch(1) for grouped_delivery (intPrimitive)"
+  },
+  {
+   "case": "group-delivery-array-key",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-8cf7563abbca0f451537",
+   "executionName": "EPLOtherGroupDeliveryMultikeyWArraySingleArray",
+   "observation": "listener; grouped delivery keyed on int[] deep equality under a start-now/end-after-1-second context snapshot",
+   "epl": "create context MyContext start @now end after 1 second;\n@name('s0') context MyContext select * from SupportEventWithManyArray#keepall output snapshot when terminated for grouped_delivery (intOne)"
+  },
+  {
+   "case": "group-delivery-two-field-key",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-1a7765c6b98eb79db7ce",
+   "executionName": "EPLOtherGroupDeliveryMultikeyWArrayTwoField",
+   "observation": "listener; grouped delivery keyed on (intPrimitive,longPrimitive) under a start-now/end-after-1-second context snapshot",
+   "epl": "create context MyContext start @now end after 1 second;\n@name('s0') context MyContext select * from SupportBean#keepall output snapshot when terminated for grouped_delivery (intPrimitive, longPrimitive)"
+  }
+ ]
+}

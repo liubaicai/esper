@@ -724,6 +724,8 @@ func (q TriggerQuery) Query(options ...QueryOption) Query {
 		statementDrop:              spec.statementDrop,
 		subscriberDisallowed:       spec.subscriberDisallowed,
 		eventPrecedence:            spec.eventPrecedence,
+		deliveryMode:               spec.deliveryMode,
+		deliveryExprs:              append([]Expr(nil), spec.deliveryExprs...),
 	}
 }
 
