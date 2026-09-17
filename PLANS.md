@@ -49,6 +49,45 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.449 ('infra-namedwindow-on-delete-silent').
+
+- [x] Contract frozen (`.omp/contract-449.md`): `InfraNamedWindowOnDelete.java` ordinals 5/6
+ `InfraNamedWindowSilentDeleteOnDelete` (`java-runtime-38dd6f716920e46075c7`) and
+ `InfraNamedWindowSilentDeleteOnDeleteMany` (`java-runtime-6bce45980de6b3f7aa9f`), shared
+ static `java-06bf0eb71230b3119293`, no flags. Deferred: ord 1 (STATICHOOK), ords 2–4
+ (assertIndexCount needs implicit-index inference — separate unit).
+- [x] Engine fix (shared core): `HintSilentDelete` existed in statement_metadata.go but was
+ never consumed. `queueNamedWindowDeltaLocked` now strips `delta.Old` from the direct
+ named-window dispatch only when the delta owner is a named-window delete trigger
+ carrying `@hint('silent_delete')` whose target is that window
+ (`statementIsSilentDeleteOf`: trigger target/action + catalogKey match), mirroring Java
+ `OnExprViewNamedWindowDelete.clearDeliveriesRemoveStream` — the hint is ignored on every
+ other statement kind and on deltas of other windows.
+- [x] Scenario `testdata/parity/infra-namedwindow-on-delete-silent.json` (2 cases / 27 steps);
+ oracle `tools/java-oracle/InfraNamedWindowOnDeleteSilentScenarioOracle.java` +
+ `run-infra-namedwindow-on-delete-silent.sh`; Java trace 32 records at commit
+ `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+- [x] Runner `internal/app/parity/infra_namedwindow_on_delete_silent.go` + run.go wiring:
+ the Java 'create' statement's own listener maps to
+ `FromNamedWindow(...).CreateNamedWindowQuery(WithOldStream())` (direct child); insert-into
+ via `OnEvent(...).InsertIntoNamedWindow(CopyMatchingFields())`; on-delete trigger via
+ `OnEvent(...).DeleteFromNamedWindow`; count via `FromNamedWindow(...).Query`. Each case on
+ a fresh env+engine (undeployAll boundary: the named window lives in the environment).
+- [x] Differential replay: 32/32 records, 0 differences; evidence
+ `testdata/parity/infra-namedwindow-on-delete-silent.evidence.json` status=passing.
+- [x] Six-test family green (replay, evidence, checked-in-evidence consistency, 6 trace
+ mutations, 9 raw-scenario mutations, runtime-ID mapping, trace shape incl. the
+ create-listener expiry-IR-pair assertion).
+- [x] Parity review (agent ParityReview449): initial FAIL — P2 strip scope too broad
+ (any hinted statement/any window), P1 missing checked-in-evidence test, 4 P3s. All
+ fixed: scope gated to named-window delete triggers targeting the delta's window;
+ sixth test added; dead assertion loop replaced with the real expiry-pair check; dead
+ code removed; deploy EPL pinned byte-exact; contract-449 mapping typo corrected.
+- [x] Manifest: new `case.infra-namedwindow-on-delete-silent` born-DV with the 2 runtime IDs
+ (previously unreferenced); summary 691 cases / 689 implemented / 317 DV / 1192 DV runtime
+ IDs / 3740 associations / 760 unreferenced.
+
+## Previous work unit
 Active: Draft 4.448 ('infra-nwtable-on-update').
 
 - [x] Contract freeze via read-only scouts NextJavaContract448b (Java) + NextGoSurface448b (Go):

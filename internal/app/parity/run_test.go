@@ -60141,6 +60141,367 @@ func TestRunInfraNWTableOnUpdateRejectsMalformedRawScenario(t *testing.T) {
 	}
 }
 
+func TestRunInfraNWOnDeleteSilentDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWOnDeleteSilentID,
+		"-scenario", filepath.Join(root, infraNWOnDeleteSilentID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraNWOnDeleteSilentTrace(t, trace)
+}
+
+func TestRunInfraNWOnDeleteSilentDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraNWOnDeleteSilentID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWOnDeleteSilentID + "-diff",
+		"-scenario", filepath.Join(root, infraNWOnDeleteSilentID+".json"),
+		"-java-trace", filepath.Join(root, infraNWOnDeleteSilentID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraNWOnDeleteSilentJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWOnDeleteSilentJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNWOnDeleteSilentSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWOnDeleteSilentJavaExecutions) {
+		t.Fatalf("evidence metadata = %#v", evidence)
+	}
+}
+
+func TestRunInfraNWOnDeleteSilentDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "silent-delete-create-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "silent-delete" && rec.Operation == "listener" && rec.Statement == "create" && rec.Sequence == 2 {
+						rec.New[0].Fields["theString"] = "Z9"
+						return
+					}
+				}
+				panic("no silent-delete create record 2")
+			},
+		},
+		{
+			name: "silent-delete-count-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "silent-delete" && rec.Operation == "listener" && rec.Statement == "count" && rec.Sequence == 5 {
+						rec.New[0].Fields["cnt"] = json.Number("9")
+						return
+					}
+				}
+				panic("no silent-delete count record 5")
+			},
+		},
+		{
+			name: "silent-delete-delete-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "silent-delete" && rec.Operation == "listener" && rec.Statement == "delete" && rec.Sequence == 1 {
+						rec.New[0].Fields["intPrimitive"] = json.Number("9")
+						return
+					}
+				}
+				panic("no silent-delete delete record 1")
+			},
+		},
+		{
+			name: "silent-delete-many-delete-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					r := &trace.Records[index]
+					if r.Case == "silent-delete-many" && r.Operation == "listener" && r.Statement == "delete" && r.Sequence == 1 {
+						r.New[0].Fields["theString"] = "Z9"
+						return
+					}
+				}
+				panic("no silent-delete-many delete record 1")
+			},
+		},
+		{
+			name: "silent-delete-many-count-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "silent-delete-many" && rec.Operation == "listener" && rec.Statement == "count" && rec.Sequence == 5 {
+						rec.New[0].Fields["cnt"] = json.Number("9")
+						return
+					}
+				}
+				panic("no silent-delete-many count record 5")
+			},
+		},
+		{
+			name: "deployed-sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "silent-delete" && rec.Operation == "deployed" && rec.Statement == "delete" {
+						rec.Sequence = 99
+						return
+					}
+				}
+				panic("no silent-delete deployed delete record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(root, infraNWOnDeleteSilentID+".trace.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			trace, err := compat.LoadTrace(strings.NewReader(string(data)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(&trace)
+			mutatedPath := filepath.Join(t.TempDir(), "mutated.trace.json")
+			mutated, err := json.Marshal(trace)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(mutatedPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraNWOnDeleteSilentID + "-diff",
+				"-scenario", filepath.Join(root, infraNWOnDeleteSilentID+".json"),
+				"-java-trace", mutatedPath,
+				"-evidence", filepath.Join(t.TempDir(), "evidence.json"),
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("mutated trace %q unexpectedly passed", test.name)
+			}
+		})
+	}
+}
+
+func TestRunInfraNWOnDeleteSilentCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraNWOnDeleteSilentID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraNWOnDeleteSilentID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraNWOnDeleteSilentID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != infraNWOnDeleteSilentJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWOnDeleteSilentJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNWOnDeleteSilentSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWOnDeleteSilentJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertInfraNWOnDeleteSilentTrace(t, javaTrace)
+	assertInfraNWOnDeleteSilentTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, infraNWOnDeleteSilentID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatalf("checked-in scenario differs from evidence scenario")
+	}
+}
+
+func TestRunInfraNWOnDeleteSilentRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWOnDeleteSilentID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "silent-delete"`), []byte(`"case": "silent-delete", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-38dd6f716920e46075c7"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "hint-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`@hint('silent_delete')`), []byte(`@hint('silent_delete2')`), 1)
+		}},
+		{name: "delete-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`delete from MyWindow where p00 = theString`), []byte(`delete from MyWindow where p00 = p01`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1",`), []byte(`"theString": "E1", "extra": 0,`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_S0"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"p00": "E4"`), []byte(`"p00": "E9"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraNWOnDeleteSilentID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraNWOnDeleteSilentRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWOnDeleteSilentID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, infraNWOnDeleteSilentJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, infraNWOnDeleteSilentJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != infraNWOnDeleteSilentJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, infraNWOnDeleteSilentJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertInfraNWOnDeleteSilentTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraNWOnDeleteSilentID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 32 {
+		t.Fatalf("trace records = %d, want 32", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"silent-delete":      {"deployed": 4, "listener": 14},
+		"silent-delete-many": {"deployed": 4, "listener": 10},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+	// The silent-delete semantics: the create (direct-child) listener never
+	// observes a delete. Its only Old row is the length-2 expiry IR pair
+	// (new=E4/old=E2 at sequence 4 of the silent-delete case); every other
+	// create record carries new rows only.
+	for _, record := range trace.Records {
+		if record.Operation != "listener" || record.Statement != "create" {
+			continue
+		}
+		if record.Case == "silent-delete" && record.Sequence == 4 {
+			if len(record.New) != 1 || len(record.Old) != 1 ||
+				record.New[0].Fields["theString"] != "E4" || record.Old[0].Fields["theString"] != "E2" {
+				t.Fatalf("create expiry record = %#v", record)
+			}
+			continue
+		}
+		if len(record.Old) != 0 {
+			t.Fatalf("create record %s/%d unexpectedly carries old rows: %#v", record.Case, record.Sequence, record.Old)
+		}
+	}
+}
+
 func TestRunInfraNWTableOnUpdateRuntimeIDMappingMatchesScenario(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	data, err := os.ReadFile(filepath.Join(root, infraNWTableOnUpdateID+".json"))

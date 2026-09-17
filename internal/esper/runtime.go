@@ -5319,6 +5319,39 @@ func (e *Engine) queueDirectNamedWindowDispatchesLocked(ctx context.Context, now
 	return nil
 }
 
+// statementHasHint reports whether the statement carries the given built-in
+// hint (e.g. @hint('silent_delete')).
+func statementHasHint(statement *Statement, kind StatementHintKind) bool {
+	if statement == nil {
+		return false
+	}
+	for _, hint := range statement.plan.query.statementMetadata.hints {
+		if hint.kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// statementIsSilentDeleteOf reports whether the statement is an on-delete
+// trigger carrying @hint('silent_delete') whose target is the given named
+// window. The hint is ignored on every other statement kind, matching Java
+// where OnExprViewNamedWindowDelete is its sole consumer.
+func statementIsSilentDeleteOf(statement *Statement, window *NamedWindow) bool {
+	if statement == nil || window == nil || !statementHasHint(statement, HintSilentDelete) {
+		return false
+	}
+	trigger := statement.plan.query.trigger
+	if trigger == nil || trigger.target != triggerTargetNamedWindow {
+		return false
+	}
+	if trigger.action != triggerDeleteTable && trigger.action != triggerDeleteAllTable {
+		return false
+	}
+	definition := window.state.def
+	return catalogKey(trigger.moduleName, trigger.table) == catalogKey(definition.moduleName, definition.name)
+}
+
 func namedWindowDeltaMatchesStatementFilter(statement *Statement, delta NamedWindowDelta, now time.Time, variables map[string]Value) bool {
 	if statement == nil {
 		return false
@@ -5456,7 +5489,19 @@ func (e *Engine) queueNamedWindowDeltaLocked(ctx context.Context, now time.Time,
 		return nil
 	}
 	e.recordNamedWindowMetricInputLocked(window, delta)
-	if err := e.queueDirectNamedWindowDispatchesLocked(ctx, now, window, delta, variables); err != nil {
+	// Java's @hint('silent_delete') on an on-delete statement removes the
+	// deleted events from the named window's own-statement delivery
+	// (OnExprViewNamedWindowDelete.clearDeliveriesRemoveStream): the direct
+	// create-window child sees the delta without its remove stream while
+	// tail-view consumers and the on-delete output still observe it. Java
+	// reads the hint only on the on-delete statement and clears deliveries
+	// only on that delete's target window, so the strip is gated on the
+	// owner being a named-window delete trigger whose target is this window.
+	directDelta := delta
+	if len(delta.Old) > 0 && statementIsSilentDeleteOf(owner, window) {
+		directDelta.Old = nil
+	}
+	if err := e.queueDirectNamedWindowDispatchesLocked(ctx, now, window, directDelta, variables); err != nil {
 		return err
 	}
 	e.pendingNamedWindowConsumerDeltas = append(e.pendingNamedWindowConsumerDeltas, namedWindowConsumerDelta{

@@ -1,0 +1,224 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-namedwindow-on-delete-silent",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnDelete.java",
+  "javaRuntimes": [
+    "java-runtime-38dd6f716920e46075c7",
+    "java-runtime-6bce45980de6b3f7aa9f"
+  ],
+  "javaNames": [
+    "InfraNamedWindowSilentDeleteOnDelete",
+    "InfraNamedWindowSilentDeleteOnDeleteMany"
+  ],
+  "javaStaticIds": [
+    "java-06bf0eb71230b3119293",
+    "java-06bf0eb71230b3119293"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "silent-delete",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-38dd6f716920e46075c7",
+      "executionName": "InfraNamedWindowSilentDeleteOnDelete",
+      "observation": "listener; silent delete over the length(2) window: create sees inserts and the length-2 expiry IR pair but never the silent deletes, delete publishes deleted rows as new data, count still observes every delta",
+      "epl": "@name('create') create window MyWindow#length(2) as SupportBean;\ninsert into MyWindow select * from SupportBean;\n@name('delete') @hint('silent_delete') on SupportBean_S0 delete from MyWindow where p00 = theString;\n@name('count') select count(*) as cnt from MyWindow;"
+    },
+    {
+      "case": "silent-delete-many",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-6bce45980de6b3f7aa9f",
+      "executionName": "InfraNamedWindowSilentDeleteOnDeleteMany",
+      "observation": "listener; silent delete-all over the groupwin(theString)#length(2) window: delete publishes all four rows as new data, count drops to zero, create stays silent",
+      "epl": "@name('create') create window MyWindow#groupwin(theString)#length(2) as SupportBean;\ninsert into MyWindow select * from SupportBean;\n@name('delete') @hint('silent_delete') on SupportBean_S0 delete from MyWindow;\n@name('count') select count(*) as cnt from MyWindow;"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "silent-delete"
+    },
+    {
+      "op": "deploy",
+      "case": "silent-delete",
+      "statement": "module",
+      "epl": "@name('create') create window MyWindow#length(2) as SupportBean;\ninsert into MyWindow select * from SupportBean;\n@name('delete') @hint('silent_delete') on SupportBean_S0 delete from MyWindow where p00 = theString;\n@name('count') select count(*) as cnt from MyWindow;"
+    },
+    {
+      "op": "deployed",
+      "case": "silent-delete",
+      "statement": "create"
+    },
+    {
+      "op": "deployed",
+      "case": "silent-delete",
+      "statement": "insert"
+    },
+    {
+      "op": "deployed",
+      "case": "silent-delete",
+      "statement": "delete"
+    },
+    {
+      "op": "deployed",
+      "case": "silent-delete",
+      "statement": "count"
+    },
+    {
+      "op": "send",
+      "case": "silent-delete",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E4",
+        "intPrimitive": 4
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E4"
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "E3"
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "EX"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "silent-delete"
+    },
+    {
+      "op": "case",
+      "case": "silent-delete-many"
+    },
+    {
+      "op": "deploy",
+      "case": "silent-delete-many",
+      "statement": "module",
+      "epl": "@name('create') create window MyWindow#groupwin(theString)#length(2) as SupportBean;\ninsert into MyWindow select * from SupportBean;\n@name('delete') @hint('silent_delete') on SupportBean_S0 delete from MyWindow;\n@name('count') select count(*) as cnt from MyWindow;"
+    },
+    {
+      "op": "deployed",
+      "case": "silent-delete-many",
+      "statement": "create"
+    },
+    {
+      "op": "deployed",
+      "case": "silent-delete-many",
+      "statement": "insert"
+    },
+    {
+      "op": "deployed",
+      "case": "silent-delete-many",
+      "statement": "delete"
+    },
+    {
+      "op": "deployed",
+      "case": "silent-delete-many",
+      "statement": "count"
+    },
+    {
+      "op": "send",
+      "case": "silent-delete-many",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete-many",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 2
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete-many",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete-many",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "B",
+        "intPrimitive": 4
+      }
+    },
+    {
+      "op": "send",
+      "case": "silent-delete-many",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "silent-delete-many"
+    }
+  ],
+  "description": "InfraNamedWindowOnDelete silent-delete semantics: @hint('silent_delete') strips the deleted rows from the named window's own-statement delivery while the on-delete output (deleted rows as new data) and tail-view consumers still observe the delta, over a length(2) window and a groupwin(theString)#length(2) window (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnDelete.java)."
+}
