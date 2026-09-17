@@ -49,6 +49,41 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.447 ('infra-nwtable-on-delete').
+
+- [x] Contract freeze via read-only scouts NextJavaContract447 (Java) + NextGoSurface447 (Go):
+ InfraNWTableOnDelete ordinals 0-5, six executions — where-clause deletes (trigger id vs
+ row a/b scoping, concat + range predicates), pattern-triggered delete-all, event-triggered
+ delete-all publishing deleted rows as new data. No flags, no virtual time.
+- [x] Assets by parity-asset-worker OracleAssets447: scenario
+ `testdata/parity/infra-nwtable-on-delete.json` (6 cases / 144 steps), oracle
+ `tools/java-oracle/InfraNWTableOnDeleteScenarioOracle.java` + run script.
+- [x] Runner `internal/app/parity/infra_nwtable_on_delete.go` + run.go wiring; strict loader
+ pins metadata, per-op field whitelists, and full step shape (deploy EPL byte-exact, send
+ payloads canonical, snapshot/faf reads).
+- [x] **Engine fixes (shared core)**: (1) mutation-trigger deferral now covers
+ `triggerDeleteAllTable`, and deferred trigger batches merge with consumer-wave dispatches
+ by statement deployment order in BOTH the send loop and the routed-event loop (Java
+ interleaves trigger-mutation notifications by deployment order); (2) FAF aggregate queries
+ mark the delta forced so ungrouped aggregates return a row over an empty source
+ (count(*)=0).
+- [x] Differential replay: Java 106 records / Go 106 records, 0 differences. Six-test
+ family green (6 trace mutations + 9 raw-scenario mutations rejected).
+- [x] Manifest: new born-DV `case.infra-nwtable-on-delete` (6 runtime IDs) mapped to
+ `trigger.table-named-window` (goRefs +1, DV IDs +6). Summary: 689 cases / 687 implemented
+ / 315 DV cases / 1184 DV runtime IDs / 3732 associations (referenced 3368, unref 768).
+- [x] Independent parity review (ParityReview447): initial FAIL with P0 + P1 + P2 + 2xP3, all fixed
+ and CONFIRM PASS. P0 was real: `delta.forced` on ALL FAF aggregates emitted a spurious
+ empty-group row when having rejected the actual state over a non-empty source
+ (`having count(*)=0` over 5 rows returned {c0:0} vs Java 0 rows) - fixed by gating the
+ forced empty-group block on `len(affected)==0`; regression test
+ `internal/esper/faf_having_parity_test.go`. P1: statement binding prefers name-match with
+ single-statement fallback for anonymous deletes. P2: case op requires exactly {op,case}.
+ P3: dead helper removed, unused param dropped, go.trace.json added to manifest evidence.
+- [x] Full local gates GREEN after every fix: `make check` exit 0 (parity 198s,
+ internal/esper 56s), diff re-run passing/0 differences, six-test family green.
+
+## Previous work unit
 Active: Draft 4.446 ('epl-other-plan-in-keyword').
 
 - [x] Contract freeze via read-only scouts ChiefWalrus (Java) + DisastrousClam (Go):
@@ -82,7 +117,7 @@ Active: Draft 4.446 ('epl-other-plan-in-keyword').
  pins and manifest arithmetic all independently re-derived. P2/P3 findings fixed and confirmed:
  case-op mode value pinned (eplOtherPlanInKeywordCaseModes + case-mode-drift mutation), step
  count 261, mutation counts 6+10, manifest javaStaticIds added.
-- [ ] Commit/push.
+- [x] Shipped; Git owns identity. Draft 4.446 committed and pushed as `d9640097c`.
 
 ## Current work unit
 Active: Draft 4.445 ('epl-other-select-expr').

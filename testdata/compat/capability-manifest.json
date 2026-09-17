@@ -1468,7 +1468,8 @@
         "internal/app/parity/time_window_long.go",
         "internal/esper/expr.go",
         "internal/app/parity/infra_table_into_table.go",
-        "internal/esper/into_table_agg_compatibility_test.go"
+        "internal/esper/into_table_agg_compatibility_test.go",
+        "internal/app/parity/infra_nwtable_on_delete.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1495,7 +1496,13 @@
         "java-runtime-6ee6e846c37d6ad8b769",
         "java-runtime-e8d546810d8419632df9",
         "java-runtime-ded301fd8afee9d9cfbd",
-        "java-runtime-fa61d002dc3374573126"
+        "java-runtime-fa61d002dc3374573126",
+        "java-runtime-6d190be4d9e8b76b11f3",
+        "java-runtime-992fcd3db7f15b8254cd",
+        "java-runtime-2ab09353c939b15ee52e",
+        "java-runtime-e795679c4403d309f805",
+        "java-runtime-11809b3f1d90b37d52b8",
+        "java-runtime-b7a9b1b53c0009e7d347"
       ],
       "representativeScenarioIds": [
         "named-window-mutation",
@@ -44104,6 +44111,77 @@
         "java-runtime-fb1e28fea28321f53bd1",
         "java-runtime-36887b719198c76fca9d"
       ]
+    },
+    {
+      "id": "case.infra-nwtable-on-delete",
+      "javaRuntimeIds": [
+        "java-runtime-6d190be4d9e8b76b11f3",
+        "java-runtime-992fcd3db7f15b8254cd",
+        "java-runtime-2ab09353c939b15ee52e",
+        "java-runtime-e795679c4403d309f805",
+        "java-runtime-11809b3f1d90b37d52b8",
+        "java-runtime-b7a9b1b53c0009e7d347"
+      ],
+      "javaNames": [
+        "InfraDeleteCondition{namedWindow=true}",
+        "InfraDeleteCondition{namedWindow=false}",
+        "InfraDeletePattern{namedWindow=true}",
+        "InfraDeletePattern{namedWindow=false}",
+        "InfraDeleteAll{namedWindow=true}",
+        "InfraDeleteAll{namedWindow=false}"
+      ],
+      "javaStaticIds": [
+        "java-eb28fd3f17513a399ac9",
+        "java-eb28fd3f17513a399ac9",
+        "java-132a1f9e7f2c434a19e9",
+        "java-132a1f9e7f2c434a19e9",
+        "java-e3aeca986a0cfee60dc7",
+        "java-e3aeca986a0cfee60dc7"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnDelete.java"
+      ],
+      "goTests": [
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnDeleteDirectReplay",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnDeleteDiffWritesPassingEvidence",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnDeleteDiffRejectsTraceMutations",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnDeleteCheckedInEvidenceMatchesTraceAndReplay",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnDeleteRejectsMalformedRawScenario",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnDeleteRuntimeIDMappingMatchesScenario"
+      ],
+      "tags": [
+        "correctness",
+        "infra",
+        "named-window",
+        "table",
+        "on-delete",
+        "trigger",
+        "pattern",
+        "differential"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "testdata/parity/infra-nwtable-on-delete.json",
+        "testdata/parity/infra-nwtable-on-delete.trace.json",
+        "testdata/parity/infra-nwtable-on-delete.go.trace.json",
+        "testdata/parity/infra-nwtable-on-delete.evidence.json",
+        "tools/java-oracle/InfraNWTableOnDeleteScenarioOracle.java",
+        "tools/java-oracle/run-infra-nwtable-on-delete.sh"
+      ],
+      "notes": "InfraNWTableOnDelete ordinals 0-5 born-differential: where-clause deletes scoped to trigger-event vs infra-row properties (concat and range predicates), pattern-triggered unconditional delete-all (Go materializes the pattern via insert-into + OnRecord trigger), and event-triggered delete-all publishing deleted rows as new data. Java/Go 106 records each, 0 differences. Two shared-core fixes: (1) mutation-trigger deferral now covers triggerDeleteAllTable and merges deferred trigger batches with consumer-wave dispatches by statement deployment order in both the send loop and the routed-event loop (Java delivers trigger-mutation notifications interleaved by deployment order); (2) fire-and-forget aggregate queries mark the delta forced so ungrouped aggregates return a row over an empty source (count(*)=0).",
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-6d190be4d9e8b76b11f3",
+        "java-runtime-992fcd3db7f15b8254cd",
+        "java-runtime-2ab09353c939b15ee52e",
+        "java-runtime-e795679c4403d309f805",
+        "java-runtime-11809b3f1d90b37d52b8",
+        "java-runtime-b7a9b1b53c0009e7d347"
+      ]
     }
   ],
   "mappings": [
@@ -47194,13 +47272,17 @@
     {
       "capabilityId": "join.basic",
       "caseId": "case.epl-other-plan-in-keyword"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-nwtable-on-delete"
     }
   ],
   "summary": {
-    "inventoriedCases": 688,
-    "implementedCases": 686,
-    "differentialVerifiedCases": 314,
-    "differentialVerifiedRuntimeIds": 1178,
+    "inventoriedCases": 689,
+    "implementedCases": 687,
+    "differentialVerifiedCases": 315,
+    "differentialVerifiedRuntimeIds": 1184,
     "intentionallyDifferentCases": 29,
     "representativeVerifiedCases": 119,
     "nfrVerifiedCases": 0,
@@ -47210,13 +47292,13 @@
     "intentionallyDifferentCapabilities": 8,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 3726,
-    "referencedJavaRuntimeIds": 3362,
+    "runtimeAssociationCount": 3732,
+    "referencedJavaRuntimeIds": 3368,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 774,
+    "unreferencedJavaRuntimeIds": 768,
     "representativeScenarioTotal": 122,
     "representativeScenarioPassing": 122,
-    "totalCases": 688,
+    "totalCases": 689,
     "totalCapabilities": 121
   }
 }

@@ -463,6 +463,10 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 		delta = mergeDelta(delta, inserted)
 	}
 	if plan.query.aggregate != nil {
+		// A fire-and-forget query is a snapshot read of current state: Java
+		// returns the aggregate row even over an empty source (count(*)=0),
+		// which is the forced-boundary contract in aggregateBatch.
+		delta.forced = true
 		batch, aggregateErr := runtime.aggregateBatch(delta, plan, now)
 		if aggregateErr != nil {
 			return QueryResult{}, aggregateErr

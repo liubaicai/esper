@@ -119,6 +119,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableSubqFilteredCorrelScenario(file)
 	} else if *mode == "epl-other-plan-in-keyword" || *mode == "epl-other-plan-in-keyword-diff" {
 		scenario, err = loadEplOtherPlanInKeywordScenario(file)
+	} else if *mode == "infra-nwtable-on-delete" || *mode == "infra-nwtable-on-delete-diff" {
+		scenario, err = loadInfraNWTableOnDeleteScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-from-clause-method-variable" || *mode == "epl-from-clause-method-variable-diff" {
@@ -379,6 +381,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableSubqUncorrelJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableSubqUncorrelJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableSubqUncorrelJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-on-delete" || *mode == "infra-nwtable-on-delete-diff" {
+		trace, err := runInfraNWTableOnDeleteScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-on-delete-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableOnDeleteJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableOnDeleteJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableOnDeleteJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableOnDeleteJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

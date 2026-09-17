@@ -4083,7 +4083,7 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 			if triggerDefinition := statement.plan.query.trigger; triggerDefinition != nil &&
 				triggerDefinition.target == triggerTargetNamedWindow {
 				switch triggerDefinition.action {
-				case triggerDeleteTable, triggerUpdateTable, triggerMergeTable:
+				case triggerDeleteTable, triggerDeleteAllTable, triggerUpdateTable, triggerMergeTable:
 					mutationTrigger = true
 				}
 			}
@@ -4114,10 +4114,19 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 			}
 		}
 		if len(deferredTriggerDispatches) > 0 && len(e.pendingNamedWindowConsumerDeltas) > 0 {
+			// Java delivers window-consumer notifications raised by a trigger
+			// mutation in statement deployment order, interleaved with the
+			// trigger's own output (a consumer deployed before the trigger
+			// fires first; one deployed after it fires last). Flush the
+			// consumer wave, then merge the deferred trigger batches back by
+			// deployment order instead of appending them unconditionally.
+			consumerStart := len(dispatches)
 			if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, &variables, &dispatches); err != nil {
 				e.mu.Unlock()
 				return err
 			}
+			dispatches = mergeDispatchesByDeploymentOrder(dispatches[:consumerStart], dispatches[consumerStart:], deferredTriggerDispatches)
+			deferredTriggerDispatches = nil
 		}
 		dispatches = append(dispatches, deferredTriggerDispatches...)
 		// Java dispatches the inbound event's statement outputs before draining the
@@ -5656,6 +5665,8 @@ func (e *Engine) processPendingRoutedEventsUntilBoundaryLocked(ctx context.Conte
 		}
 		e.recordRuntimeInputLocked()
 		matched := false
+		var deferredTriggerDispatchesStorage [2]statementDispatch
+		deferredTriggerDispatches := deferredTriggerDispatchesStorage[:0]
 		routedOrder := e.updateStatementsFirstLocked()
 		var acceptedNames map[string]struct{}
 		if len(routedOrder) > 1 {
@@ -5694,10 +5705,23 @@ func (e *Engine) processPendingRoutedEventsUntilBoundaryLocked(ctx context.Conte
 			if err := e.applyStatementOutputAssignmentsLocked(ctx, statement, &variables); err != nil {
 				return false, err
 			}
+			mutationTrigger := false
+			if triggerDefinition := statement.plan.query.trigger; triggerDefinition != nil &&
+				triggerDefinition.target == triggerTargetNamedWindow {
+				switch triggerDefinition.action {
+				case triggerDeleteTable, triggerDeleteAllTable, triggerUpdateTable, triggerMergeTable:
+					mutationTrigger = true
+				}
+			}
+			if changed && !mutationTrigger {
+				*dispatches = append(*dispatches, statementDispatch{statement: statement, batch: batch})
+			}
 			if !changed {
 				continue
 			}
-			*dispatches = append(*dispatches, statementDispatch{statement: statement, batch: batch})
+			if mutationTrigger {
+				deferredTriggerDispatches = append(deferredTriggerDispatches, statementDispatch{statement: statement, batch: batch})
+			}
 			if err := e.queueStatementRoutesLocked(statement, batch, now); err != nil {
 				return false, err
 			}
@@ -5705,6 +5729,18 @@ func (e *Engine) processPendingRoutedEventsUntilBoundaryLocked(ctx context.Conte
 				break
 			}
 		}
+		if len(deferredTriggerDispatches) > 0 && len(e.pendingNamedWindowConsumerDeltas) > 0 {
+			// Same deployment-order merge as the send loop: consumers raised
+			// by the trigger mutation interleave with the trigger output by
+			// statement deployment order.
+			consumerStart := len(*dispatches)
+			if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, &variables, dispatches); err != nil {
+				return false, err
+			}
+			*dispatches = mergeDispatchesByDeploymentOrder((*dispatches)[:consumerStart], (*dispatches)[consumerStart:], deferredTriggerDispatches)
+			deferredTriggerDispatches = nil
+		}
+		*dispatches = append(*dispatches, deferredTriggerDispatches...)
 		if unmatchedEvents != nil && !matched {
 			*unmatchedEvents = append(*unmatchedEvents, current.event)
 		}
@@ -20777,10 +20813,13 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			r.removeOutputGroupRow(key)
 		}
 	}
-	if delta.forced && len(newEntries) == 0 && len(oldEntries) == 0 && len(definition.groupBy) == 0 {
-		// force_update/start_eager boundaries deliver an empty aggregate row
-		// (Esper's assertPrice(null) contract): the aggregate evaluates over
-		// the empty group and every projection column is present.
+	if delta.forced && len(affected) == 0 && len(newEntries) == 0 && len(oldEntries) == 0 && len(definition.groupBy) == 0 {
+		// force_update/start_eager boundaries and fire-and-forget snapshot
+		// reads deliver an empty aggregate row (Esper's assertPrice(null)
+		// contract) only when no group was touched this batch: the aggregate
+		// evaluates over the empty group and every projection column is
+		// present. When a group WAS affected but having rejected its state,
+		// Java emits no row - the empty-group fallback must not fire.
 		values, visible := evaluateEmptyAggregateGroup(definition, now, r.variables)
 		if visible && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 			newEntries = append(newEntries, aggregateResultEntry{
@@ -23042,4 +23081,27 @@ func contextErr(ctx context.Context) error {
 	default:
 		return nil
 	}
+}
+
+// mergeDispatchesByDeploymentOrder merges deferred trigger batches into the
+// combined pre-trigger and consumer-wave dispatch list by statement
+// deployment order, preserving each input's internal order. Java delivers
+// trigger-mutation notifications in deployment order across consumers and
+// the trigger statement itself.
+func mergeDispatchesByDeploymentOrder(head, consumers, triggers []statementDispatch) []statementDispatch {
+	merged := append(append([]statementDispatch(nil), head...), consumers...)
+	for _, trigger := range triggers {
+		position := len(merged)
+		for index, dispatch := range merged {
+			if dispatch.statement != nil && trigger.statement != nil &&
+				dispatch.statement.deploymentOrder > trigger.statement.deploymentOrder {
+				position = index
+				break
+			}
+		}
+		merged = append(merged, statementDispatch{})
+		copy(merged[position+1:], merged[position:])
+		merged[position] = trigger
+	}
+	return merged
 }
