@@ -1,6 +1,7 @@
 package esper
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"math"
@@ -98,10 +99,12 @@ type exprNode struct {
 	// that can run user code keep the generic execution path.
 	pureBuiltin bool
 	// multiMatch evaluates Java's per-slot filter delivery for membership
-	// predicates whose candidates include slice-valued expressions: every
-	// matching array element and every matching scalar candidate contributes
-	// one result slot. Only the In/InSlice builders set it, and only when at
-	// least one candidate is slice-valued; nil keeps single-boolean delivery.
+	// predicates: every matching candidate slot contributes one result row.
+	// The In/InOf/InSlice builders set it when the candidate list can produce
+	// more than one slot (duplicate literals, slice/array/map or
+	// runtime-evaluated candidates), and And/Or propagate the child counts
+	// (product for conjunction, sum for disjunction); nil keeps
+	// single-boolean delivery.
 	multiMatch func(EvalContext) int
 }
 
@@ -2186,7 +2189,14 @@ func In[T comparable](value Expression[T], candidates ...Expression[T]) Expressi
 		}
 		return Present(false)
 	})
-	if hasSliceCandidate(candidates) {
+	// Java compiles every IN-list element into its own filter entry, so a
+	// matching event delivers once per matching slot — including duplicate
+	// constants (in (3,1,3) fires twice at 3) and slice elements alike. The
+	// per-slot path is only needed when the list can produce more than one
+	// slot: duplicate literals, slice candidates, or runtime-evaluated
+	// candidates. Distinct literal lists stay single-boolean so the
+	// stateless fast path still applies.
+	if inListCanMultiMatch(candidates) {
 		node := expression.node()
 		node.multiMatch = func(ctx EvalContext) int {
 			current := value.eval(ctx)
@@ -2207,30 +2217,153 @@ func In[T comparable](value Expression[T], candidates ...Expression[T]) Expressi
 	return expression
 }
 
-// hasSliceCandidate reports whether any candidate expression declares a
-// slice or array type, the trigger for Java's per-slot IN delivery.
-func hasSliceCandidate[T any](candidates []Expression[T]) bool {
+// inListCanMultiMatch reports whether a typed IN candidate list can deliver
+// more than one slot for a single event: a slice/array candidate expands per
+// element, a non-literal candidate is evaluated at runtime and may equal the
+// left value alongside a literal twin, and duplicate literals each keep their
+// own Java filter entry.
+func inListCanMultiMatch[T any](candidates []Expression[T]) bool {
+	seen := make(map[any]struct{}, len(candidates))
 	for _, candidate := range candidates {
 		if candidate == nil {
 			continue
 		}
+		node := candidate.node()
+		if node == nil {
+			return true
+		}
+		if node.kind == "null" {
+			// A null candidate never matches, so it cannot add a slot.
+			continue
+		}
+		if node.kind != "literal" {
+			return true
+		}
 		if typ := candidate.Type(); typ != nil && (typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array) {
 			return true
 		}
+		// Literal[any]([]int{...}) hides a collection behind an interface
+		// type; inspect the stored value's runtime kind as well, unwrapping
+		// pointer literals the way appendInValues does at eval time.
+		if raw := reflect.ValueOf(node.literalValue); raw.IsValid() {
+			for raw.Kind() == reflect.Pointer || raw.Kind() == reflect.Interface {
+				if raw.IsNil() {
+					break
+				}
+				raw = raw.Elem()
+			}
+			if raw.IsValid() && (raw.Kind() == reflect.Slice || raw.Kind() == reflect.Array || raw.Kind() == reflect.Map) {
+				return true
+			}
+		}
+		key := literalIdentityKey(node.literalValue)
+		if _, dup := seen[key]; dup {
+			return true
+		}
+		seen[key] = struct{}{}
 	}
 	return false
+}
+
+// literalIdentityKey renders a literal candidate's value into a comparable
+// key so duplicate detection follows the same numeric coercion the runtime
+// equality check applies (1 and 1.0 are the same filter entry). Non-numeric
+// values fall back to a type-tagged string rendering because some literal
+// types (big.Int, slices) are not hashable.
+func literalIdentityKey(value any) any {
+	// All finite numerics share one big.Rat keyspace so coercion-equal
+	// duplicates are detected across int/float/big/json.Number spellings
+	// (1, 1.0, big.NewInt(1) and json.Number("1") are the same filter entry).
+	if r := literalRatKey(value); r != nil {
+		return "num:" + r.RatString()
+	}
+	return fmt.Sprintf("%T|%v", value, value)
+}
+
+// literalRatKey converts a literal value to *big.Rat when it belongs to a
+// numeric domain; non-numeric and non-finite values return nil.
+func literalRatKey(value any) *big.Rat {
+	switch v := value.(type) {
+	case int:
+		return big.NewRat(int64(v), 1)
+	case int8:
+		return big.NewRat(int64(v), 1)
+	case int16:
+		return big.NewRat(int64(v), 1)
+	case int32:
+		return big.NewRat(int64(v), 1)
+	case int64:
+		return big.NewRat(v, 1)
+	case uint:
+		return new(big.Rat).SetUint64(uint64(v))
+	case uint8:
+		return new(big.Rat).SetUint64(uint64(v))
+	case uint16:
+		return new(big.Rat).SetUint64(uint64(v))
+	case uint32:
+		return new(big.Rat).SetUint64(uint64(v))
+	case uint64:
+		return new(big.Rat).SetUint64(v)
+	case float32:
+		return literalRatFromFloat(float64(v))
+	case float64:
+		return literalRatFromFloat(v)
+	case big.Int:
+		return new(big.Rat).SetInt(&v)
+	case *big.Int:
+		if v == nil {
+			return nil
+		}
+		return new(big.Rat).SetInt(v)
+	case big.Rat:
+		return &v
+	case *big.Rat:
+		return v
+	case json.Number:
+		if r, ok := new(big.Rat).SetString(v.String()); ok {
+			return r
+		}
+		return nil
+	default:
+		return nil
+	}
+}
+
+func literalRatFromFloat(value float64) *big.Rat {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return nil
+	}
+	return new(big.Rat).SetFloat64(value)
 }
 
 // membershipSlotMatches counts how many slots one candidate value
 // contributes for the current scalar: slice and array candidates expand to
 // one slot per equal element, scalar candidates contribute at most one.
 func membershipSlotMatches(current Value, candidate Value) int {
-	value := candidate.Any()
-	items := reflect.ValueOf(value)
+	items := reflect.ValueOf(candidate.Any())
+	// Mirror appendInValues: interface and pointer layers unwrap before the
+	// collection-kind dispatch so a *[]T or *map[K]V candidate expands to
+	// per-element/key slots exactly like the boolean eval path.
+	for items.IsValid() && (items.Kind() == reflect.Interface || items.Kind() == reflect.Pointer) {
+		if items.IsNil() {
+			return 0
+		}
+		items = items.Elem()
+	}
 	if items.IsValid() && (items.Kind() == reflect.Slice || items.Kind() == reflect.Array) {
 		count := 0
 		for index := range items.Len() {
 			if equalValuesUnwrapped(current, Present(items.Index(index).Interface())) {
+				count++
+			}
+		}
+		return count
+	}
+	if items.IsValid() && items.Kind() == reflect.Map {
+		count := 0
+		iter := items.MapRange()
+		for iter.Next() {
+			if equalValuesUnwrapped(current, Present(iter.Key().Interface())) {
 				count++
 			}
 		}
@@ -2243,9 +2376,11 @@ func membershipSlotMatches(current Value, candidate Value) int {
 }
 
 // predicateMatchSlots returns how many result slots a stream-filter
-// predicate produces for one event. Membership predicates with slice-valued
-// candidates deliver once per matching candidate slot (Java's per-element
-// IN delivery); every other predicate is a single boolean slot.
+// predicate produces for one event. Membership predicates whose candidate
+// list can produce multiple slots (duplicate literals, slice/array/map or
+// runtime-evaluated candidates) deliver once per matching candidate slot
+// (Java's per-element IN delivery); every other predicate is a single
+// boolean slot.
 func predicateMatchSlots(predicate Expr, ctx EvalContext) int {
 	if predicate == nil {
 		return 0
@@ -2258,20 +2393,6 @@ func predicateMatchSlots(predicate Expr, ctx EvalContext) int {
 		return 1
 	}
 	return 0
-}
-
-// hasSliceCandidateExprs is the untyped-candidate variant of
-// hasSliceCandidate used by the InOf builder family.
-func hasSliceCandidateExprs(candidates []Expr) bool {
-	for _, candidate := range candidates {
-		if candidate == nil {
-			continue
-		}
-		if typ := candidate.Type(); typ != nil && (typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array) {
-			return true
-		}
-	}
-	return false
 }
 
 // InSlice checks whether a scalar expression is contained in a slice-valued
@@ -2512,7 +2633,7 @@ func compareExpression[T any](kind, symbol string, left, right Expression[T], pr
 }
 
 func And(left, right Expression[bool]) Expression[bool] {
-	return makeExpr[bool]("and", "("+left.Description()+" and "+right.Description()+")", []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
+	expression := makeExpr[bool]("and", "("+left.Description()+" and "+right.Description()+")", []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
 		leftValue := left.eval(ctx)
 		leftBool, leftOK := boolValue(leftValue)
 		if leftOK && !leftBool {
@@ -2528,10 +2649,26 @@ func And(left, right Expression[bool]) Expression[bool] {
 		}
 		return Null()
 	})
+	// Java pairs every matching IN-list entry with the sibling condition, so
+	// an AND of per-slot children delivers the product of their slot counts.
+	if left.node().multiMatch != nil || right.node().multiMatch != nil {
+		expression.node().multiMatch = func(ctx EvalContext) int {
+			leftSlots := predicateMatchSlots(left, ctx)
+			if leftSlots == 0 {
+				return 0
+			}
+			rightSlots := predicateMatchSlots(right, ctx)
+			if rightSlots == 0 {
+				return 0
+			}
+			return leftSlots * rightSlots
+		}
+	}
+	return expression
 }
 
 func Or(left, right Expression[bool]) Expression[bool] {
-	return makeExpr[bool]("or", "("+left.Description()+" or "+right.Description()+")", []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
+	expression := makeExpr[bool]("or", "("+left.Description()+" or "+right.Description()+")", []*exprNode{left.node(), right.node()}, func(ctx EvalContext) Value {
 		leftValue := left.eval(ctx)
 		leftBool, leftOK := boolValue(leftValue)
 		if leftOK && leftBool {
@@ -2547,6 +2684,14 @@ func Or(left, right Expression[bool]) Expression[bool] {
 		}
 		return Null()
 	})
+	// Java splits a disjunction into separate filter specs, so each matching
+	// branch contributes its own slots.
+	if left.node().multiMatch != nil || right.node().multiMatch != nil {
+		expression.node().multiMatch = func(ctx EvalContext) int {
+			return predicateMatchSlots(left, ctx) + predicateMatchSlots(right, ctx)
+		}
+	}
+	return expression
 }
 
 func Not(value Expression[bool]) Expression[bool] {

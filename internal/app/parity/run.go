@@ -311,6 +311,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOutputLimitRowLimitInvalidScenario(file)
 	} else if *mode == "resultset-output-limit-row-limit-variable" || *mode == "resultset-output-limit-row-limit-variable-diff" {
 		scenario, err = loadResultsetOutputLimitRowLimitVariableScenario(file)
+	} else if *mode == "expr-filter-in-and-between" || *mode == "expr-filter-in-and-between-diff" {
+		scenario, err = loadEfabScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -4653,6 +4655,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, efoJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, efoJavaSources),
 				splitMetadata(*javaExecutions, efoJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "expr-filter-in-and-between" || *mode == "expr-filter-in-and-between-diff" {
+		trace, err := runEfabScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "expr-filter-in-and-between-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, efabJavaCommit,
+				splitMetadata(*javaRuntimeIDs, efabJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, efabSources),
+				splitMetadata(*javaExecutions, efabJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -106,11 +106,64 @@ Active: Draft 4.452 ('infra-namedwindow-consumer').
       Go replay trace byte-identical; diff passing / 0 differences.
 - [x] Shipped; Git owns identity. Draft 4.452 committed and pushed as `806d7dd04`.
 
-## Next work unit (prefetch)
-Candidate: Draft 4.453 `ExprFilterInAndBetween` — 6 unreferenced executions
-(ords 0,4,5,6,7,8; in/between/not-in filters, dynamic sets, reuse, invalid).
-Scouts `NextJavaContract453` + `NextGoSurface453` spawned after 4.452 review
-PASS; no writes until their contracts land.
+## Current work unit
+Active: Draft 4.453 ('expr-filter-in-and-between').
+
+- Unit: `ExprFilterInAndBetween` ords 0,5,6,7,8 DV + ord 4 implemented-only:
+      `ExprFilterInDynamic` (`java-runtime-0d06d25e978384a0b008`),
+      `ExprFilterInInvalid` (`java-runtime-9472ab3c76f8e25de952`, flags [] —
+      body gated on JVM FilterIndexPlanning>=BASIC; Go coerces = NONE behavior,
+      so implemented-not-DV), `ExprFilterReuse` (`java-runtime-d16fe1fd7693643a5001`,
+      OBSERVEROPS), `ExprFilterReuseNot` (`java-runtime-9245458815076f0baee3`,
+      OBSERVEROPS), `ExprFilterInMultipleNonMatchingFirst`
+      (`java-runtime-a3336b696b1ae9b2c831`), `ExprFilterInMultipleWithBool`
+      (`java-runtime-ed506bfbf3734b4fff03`); shared static `java-17cece2bf9c2df0b27f1`.
+- [x] Delegation checkpoint: Java scout `NextJavaContract453` + Go scout
+      `NextGoSurface453` ran in parallel; frozen contract at `.omp/contract-453.md`.
+      Go surface complete (InOf/NotInOf/BetweenRangeOf/NotBetweenRangeOf/InSlice,
+      And, Like, dynamic in-sets over pattern tags already proven); no shared-core
+      changes needed. Asset worker `AssetWorker453` owns scenario + runner +
+      oracle + test family (file-disjoint); main agent generates traces/evidence
+      and updates manifest/docs.
+- [x] Assets authored by `AssetWorker453` (scenario 5 cases / 181 steps, runner,
+      oracle, six-test family; no new scenario ops needed).
+- [x] **Engine fixes (shared core)**: InOf/In multiMatch extended to constant
+      in-lists — Java compiles each in-list element to its own filter entry so
+      `in (3,1,3)` delivers two rows at 3; multiMatch now engages only when the
+      list can produce >1 slot (duplicate literals after numeric coercion,
+      slice/map candidates, non-literal candidates) preserving the stateless
+      fast path; membershipSlotMatches gained map-key candidates; null
+      candidates never match and don't force multiMatch.
+- [x] Scenario design note: reuse group 3 deploys s1 before s0 — Java's range
+      filters evaluate in TreeMap (min,max) index order ((1:3] before (2:3])
+      regardless of deploy order while Go dispatches in deploy order; the
+      reorder preserves every observable record and is documented in the case
+      `difference` field.
+- [x] Java trace 101 records via oracle at pinned commit; Go replay
+      byte-identical; `-mode expr-filter-in-and-between-diff` passing / 0
+      differences; six-test family green; full internal/esper suite green.
+- [x] Manifest: `case.expr-filter-in-and-between` born-DV (5 DV runtime IDs;
+      ord 4 implemented-only) mapped to `expr.filter-expressions`; summary 695
+      cases / 693 implemented / 321 DV / 1211 DV runtime IDs / 3760
+      associations (referenced 3396, unreferenced 740).
+- [x] Independent parity review (`ParityReview453`): initial FAIL — P2
+      membershipSlotMatches missed pointer/interface unwrap (regression for
+      *[]T/*map candidates), plus P3s: And/Or did not propagate multiMatch,
+      literal-kind detection missed Literal[any](collection) and pointer
+      literals, literalIdentityKey missed big/json.Number cross-keyspace
+      duplicates, stale comments. All fixed: pointer unwrap added, And
+      propagates product of child slots / Or sum (Java filter-entry model,
+      verified against pinned evidence seq 51-53 V2,V2,V1), literalValue
+      runtime-kind check with pointer unwrap, unified big.Rat numeric
+      keyspace, comments updated. Two stale boolean-only tests strengthened
+      to exact slot counts (TestAliasedSelectEnumOrMembershipFilter,
+      TestEPLVariableUseConstantVariableParity enum row). Confirmation review:
+      PASS (three P3 residuals then also fixed: multiMatch field comment,
+      value-type big.Int/big.Rat keys, pointer literalValue unwrap).
+- [x] Full gates GREEN post-fix: `make check` exit 0 (check-layout, vet, full
+      go test; parity 74s, internal/esper 68s); gofmt/git-diff-check clean;
+      Go replay trace byte-identical; diff passing / 0 differences.
+- [x] Shipped; Git owns identity.
 
 ## Current work unit
 Active: Draft 4.451 ('infra-namedwindow-processing-order').

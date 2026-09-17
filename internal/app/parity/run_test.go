@@ -60514,6 +60514,417 @@ func assertInfraNWConsumerTrace(t *testing.T, trace compat.Trace) {
 		t.Fatalf("lengthwin sums = %v", sums)
 	}
 }
+func TestRunEfabDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", efabID,
+		"-scenario", filepath.Join(root, efabID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEfabTrace(t, trace)
+}
+
+func TestRunEfabDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), efabID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", efabID + "-diff",
+		"-scenario", filepath.Join(root, efabID+".json"),
+		"-java-trace", filepath.Join(root, efabID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != efabJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, efabJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{efabSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, efabJavaExecutions) {
+		t.Fatalf("evidence metadata = %#v", evidence)
+	}
+}
+
+func TestRunEfabCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, efabID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, efabID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, efabID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != efabJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, efabJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{efabSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, efabJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEfabTrace(t, javaTrace)
+	assertEfabTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, efabID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatalf("checked-in scenario differs from evidence scenario")
+	}
+}
+
+func TestRunEfabDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "dynamic-tag-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "in-dynamic-pattern" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["b"].(map[string]any)["intPrimitive"] = json.Number("99")
+						return
+					}
+				}
+				panic("no in-dynamic-pattern listener record")
+			},
+		},
+		{
+			name: "reuse-intboxed-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "in-reuse-undeploy" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["intBoxed"] = json.Number("4")
+						return
+					}
+				}
+				panic("no in-reuse-undeploy listener record")
+			},
+		},
+		{
+			name: "notin-statement-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "not-in-reuse-undeploy" && rec.Operation == "listener" {
+						rec.Statement = "wrong"
+						return
+					}
+				}
+				panic("no not-in-reuse-undeploy listener record")
+			},
+		},
+		{
+			name: "nonmatching-statement-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "in-multiple-nonmatching-first" && rec.Operation == "listener" {
+						rec.Statement = "A"
+						return
+					}
+				}
+				panic("no in-multiple-nonmatching-first listener record")
+			},
+		},
+		{
+			name: "withbool-field-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "in-multiple-with-bool" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["theString"] = "X"
+						return
+					}
+				}
+				panic("no in-multiple-with-bool listener record")
+			},
+		},
+		{
+			name: "deployed-sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "in-reuse-undeploy" && rec.Operation == "deployed" && rec.Statement == "s0" {
+						rec.Sequence = 99
+						return
+					}
+				}
+				panic("no in-reuse-undeploy deployed record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join(root, efabID+".trace.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			trace, err := compat.LoadTrace(strings.NewReader(string(data)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(&trace)
+			mutatedPath := filepath.Join(t.TempDir(), "mutated.trace.json")
+			mutated, err := json.Marshal(trace)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(mutatedPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", efabID + "-diff",
+				"-scenario", filepath.Join(root, efabID+".json"),
+				"-java-trace", mutatedPath,
+				"-evidence", filepath.Join(t.TempDir(), "evidence.json"),
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("mutated trace %q unexpectedly passed", test.name)
+			}
+		})
+	}
+}
+
+func TestRunEfabRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, efabID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "in-dynamic-pattern"`), []byte(`"case": "in-dynamic-pattern", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-0d06d25e978384a0b008"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "deploy-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`intBoxed in [2:4]`), []byte(`intBoxed in [2:5]`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"intBoxed": 3`), []byte(`"intBoxed": 4`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBeanNumeric"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "statement-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"statement": "s0"`), []byte(`"statement": "s9"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", efabID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEfabRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, efabID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, efabJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, efabJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != efabJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, efabJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertEfabTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != efabID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 101 {
+		t.Fatalf("trace records = %d, want 101", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"in-dynamic-pattern":            {"deployed": 2, "listener": 5},
+		"in-reuse-undeploy":             {"deployed": 20, "listener": 36},
+		"not-in-reuse-undeploy":         {"deployed": 11, "listener": 21},
+		"in-multiple-nonmatching-first": {"deployed": 2, "listener": 1},
+		"in-multiple-with-bool":         {"deployed": 2, "listener": 1},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+	// in-dynamic-pattern: phase A fires on intPrimitive 10 and 20, phase B on
+	// theString a, b, c; each delivery is one new-only row carrying the a/b
+	// pattern tags as plain property maps.
+	var intPrimitives, theStrings []any
+	for _, record := range trace.Records {
+		if record.Case != "in-dynamic-pattern" || record.Operation != "listener" {
+			continue
+		}
+		if record.Statement != "s0" || len(record.New) != 1 || len(record.Old) != 0 ||
+			len(record.New[0].Fields) != 2 {
+			t.Fatalf("in-dynamic-pattern delivery = %#v", record)
+		}
+		tag, ok := record.New[0].Fields["b"].(map[string]any)
+		if !ok {
+			t.Fatalf("in-dynamic-pattern b tag = %#v", record.New[0].Fields["b"])
+		}
+		intPrimitives = append(intPrimitives, tag["intPrimitive"])
+		theStrings = append(theStrings, tag["theString"])
+	}
+	nullMarker := map[string]any{"state": "null"}
+	if !reflect.DeepEqual(intPrimitives,
+		[]any{json.Number("10"), json.Number("20"), json.Number("0"), json.Number("0"), json.Number("0")}) {
+		t.Fatalf("in-dynamic-pattern intPrimitives = %v", intPrimitives)
+	}
+	if !reflect.DeepEqual(theStrings,
+		[]any{nullMarker, nullMarker, "a", "b", "c"}) {
+		t.Fatalf("in-dynamic-pattern theStrings = %v", theStrings)
+	}
+	// in-reuse-undeploy / not-in-reuse-undeploy: every listener delivery is the
+	// intBoxed=3 bean; undeployed statements stop firing, so the per-group
+	// listener counts shrink as s0..sn-1 are removed. Java delivers the event
+	// once per duplicated in-list constant (in (3,1,3) fires twice at 3), so
+	// a delivery may carry more than one new row.
+	for _, record := range trace.Records {
+		if (record.Case != "in-reuse-undeploy" && record.Case != "not-in-reuse-undeploy") ||
+			record.Operation != "listener" {
+			continue
+		}
+		if len(record.New) == 0 || len(record.Old) != 0 {
+			t.Fatalf("reuse delivery = %#v", record)
+		}
+		for _, row := range record.New {
+			if row.Fields["intBoxed"] != json.Number("3") {
+				t.Fatalf("reuse delivery = %#v", record)
+			}
+		}
+	}
+	// in-multiple-nonmatching-first: B fires once, A never.
+	// in-multiple-with-bool: s2 fires once, s1 never.
+	singles := map[string]struct {
+		statement string
+		intPrim   json.Number
+	}{
+		"in-multiple-nonmatching-first": {"B", json.Number("0")},
+		"in-multiple-with-bool":         {"s2", json.Number("1")},
+	}
+	for caseName, expected := range singles {
+		var fired []compat.TraceRecord
+		for _, record := range trace.Records {
+			if record.Case == caseName && record.Operation == "listener" {
+				fired = append(fired, record)
+			}
+		}
+		if len(fired) != 1 || fired[0].Statement != expected.statement ||
+			len(fired[0].New) != 1 ||
+			fired[0].New[0].Fields["theString"] != "A" ||
+			fired[0].New[0].Fields["intPrimitive"] != expected.intPrim {
+			t.Fatalf("%s deliveries = %#v", caseName, fired)
+		}
+	}
+}
 
 func TestRunInfraNWProcessingOrderDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")

@@ -131,7 +131,7 @@ func inExpression(kind string, value Expr, negate bool, candidates ...Expr) Expr
 		}
 		return Present(false)
 	}}
-	if !negate && kind == "in-of" && hasSliceCandidateExprs(candidates) {
+	if !negate && kind == "in-of" && inExprListCanMultiMatch(candidates) {
 		node.multiMatch = func(ctx EvalContext) int {
 			if value == nil {
 				return 0
@@ -405,4 +405,46 @@ func joinExpressionParts(parts []string, separator string) string {
 		result += part
 	}
 	return result
+}
+
+// inExprListCanMultiMatch is the untyped-candidate variant of
+// inListCanMultiMatch used by the InOf builder family.
+func inExprListCanMultiMatch(candidates []Expr) bool {
+	seen := make(map[any]struct{}, len(candidates))
+	for _, candidate := range candidates {
+		if candidate == nil {
+			continue
+		}
+		node := candidate.node()
+		if node == nil {
+			return true
+		}
+		if node.kind == "null" {
+			// A null candidate never matches, so it cannot add a slot.
+			continue
+		}
+		if node.kind != "literal" {
+			return true
+		}
+		if typ := candidate.Type(); typ != nil && (typ.Kind() == reflect.Slice || typ.Kind() == reflect.Array) {
+			return true
+		}
+		if raw := reflect.ValueOf(node.literalValue); raw.IsValid() {
+			for raw.Kind() == reflect.Pointer || raw.Kind() == reflect.Interface {
+				if raw.IsNil() {
+					break
+				}
+				raw = raw.Elem()
+			}
+			if raw.IsValid() && (raw.Kind() == reflect.Slice || raw.Kind() == reflect.Array || raw.Kind() == reflect.Map) {
+				return true
+			}
+		}
+		key := literalIdentityKey(node.literalValue)
+		if _, dup := seen[key]; dup {
+			return true
+		}
+		seen[key] = struct{}{}
+	}
+	return false
 }

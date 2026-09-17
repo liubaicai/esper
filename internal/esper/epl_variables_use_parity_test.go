@@ -540,6 +540,10 @@ func TestEPLVariableUseEPRuntimeParity(t *testing.T) {
 type variableUseOperatorRow struct {
 	bean variableUseConstantBean
 	want bool
+	// slots overrides the boolean want with an exact per-slot delivery count
+	// (Java compiles each IN-list element to its own filter entry, so a value
+	// matching two candidates delivers two rows).
+	slots int
 }
 
 func variableUseIntRow(value int32, want bool) variableUseOperatorRow {
@@ -638,7 +642,9 @@ func TestEPLVariableUseConstantVariableParity(t *testing.T) {
 			if err := engine.SendEvent(ctx, row.bean); err != nil {
 				t.Fatalf("%s row %d: %v", description, index, err)
 			}
-			if row.want {
+			if row.slots > 0 {
+				fired += row.slots
+			} else if row.want {
 				fired++
 			}
 			if len(*results) != fired {
@@ -866,17 +872,16 @@ func TestEPLVariableUseConstantVariableParity(t *testing.T) {
 	if err := env.RegisterVariable("var_enumarr", []variableUseConstantEnum{variableUseEnumValueTwo, variableUseEnumValueOne}, ConstantVariable()); err != nil {
 		t.Fatal(err)
 	}
-	// Boolean-outcome pin only: Java compiles this membership to flattened
-	// filter slots [V2,V1,V2], so ENUM_VALUE_2 DELIVERS TWICE at runtime.
-	// Per-slot delivery-count fidelity is pinned by
-	// TestMembershipMultiMatchPerCandidateSlot and the scenario evidence
-	// (final listener rows seq 51,52,53 = V2,V2,V1).
+	// Java compiles this membership to flattened filter slots [V2,V1,V2], so
+	// ENUM_VALUE_2 DELIVERS TWICE at runtime — the Or decomposition now
+	// propagates per-slot counts, matching the scenario evidence (final
+	// listener rows seq 51,52,53 = V2,V2,V1).
 	enumArr := VariableRef[[]variableUseConstantEnum]("var_enumarr")
 	tryOperator("enumValue in (var_enumarr, var_enumone)",
 		Or(InSlice[variableUseConstantEnum](enumValue, enumArr), In[variableUseConstantEnum](enumValue, enumOne)),
 		[]variableUseOperatorRow{
 			variableUseEnumRow(variableUseEnumValueThree, false),
-			variableUseEnumRow(variableUseEnumValueTwo, true),
+			{bean: variableUseConstantBean{TheString: "S", IntPrimitive: 1, EnumValue: variableUseEnumValueTwo}, want: true, slots: 2},
 			variableUseEnumRow(variableUseEnumValueOne, true),
 		})
 

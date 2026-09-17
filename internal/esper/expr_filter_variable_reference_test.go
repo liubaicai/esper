@@ -347,11 +347,15 @@ func TestAliasedSelectEnumOrMembershipFilter(t *testing.T) {
 	}
 	sends := []struct {
 		value string
-		want  bool
+		want  int
 	}{
-		{"ENUM_VALUE_3", false},
-		{"ENUM_VALUE_2", true}, // var_enumarr element + var_enumone scalar arm
-		{"ENUM_VALUE_1", true}, // var_enumarr second element
+		{"ENUM_VALUE_3", 0},
+		// Java splits the disjunction into per-candidate filter entries:
+		// ENUM_VALUE_2 matches the var_enumarr element AND the var_enumone
+		// scalar arm, delivering two rows (same per-slot semantics as
+		// TestMembershipMultiMatchPerCandidateSlot).
+		{"ENUM_VALUE_2", 2},
+		{"ENUM_VALUE_1", 1}, // var_enumarr second element
 	}
 	fired := 0
 	for index, send := range sends {
@@ -361,11 +365,9 @@ func TestAliasedSelectEnumOrMembershipFilter(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("map send row %d: %v", index, err)
 		}
-		if send.want {
-			fired++
-		}
+		fired += send.want
 		if len(*got) != fired {
-			t.Fatalf("row %d (%s): results = %d, want fired = %v", index, send.value, len(*got), send.want)
+			t.Fatalf("row %d (%s): results = %d, want %d slots", index, send.value, len(*got), send.want)
 		}
 	}
 }

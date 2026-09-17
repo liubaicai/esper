@@ -15803,8 +15803,10 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 					Now:                  now,
 					Variables:            r.variables,
 				}
-				// Membership predicates with slice-valued candidates deliver one
-				// pipeline copy per matching candidate slot (Java's per-element
+				// Membership predicates whose candidate list can produce
+				// multiple slots (duplicate literals, slice/array/map or
+				// runtime-evaluated candidates) deliver one pipeline copy per
+				// matching candidate slot (Java's per-element
 				// IN delivery); every other predicate is a single boolean slot.
 				// Boundary: honored on this primary stream-filter insertion path
 				// only — pattern guards, split-stream branches and named-window/

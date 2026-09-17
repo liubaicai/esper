@@ -1,0 +1,1216 @@
+{
+  "version": "esper-parity/v1",
+  "id": "expr-filter-in-and-between",
+  "description": "ExprFilterInAndBetween in/not-in/between filter semantics (pinned 9e1b9f1cc9117fea4bf33ab043762c045d73839c): dynamic in-sets over pattern tags (ord 0), the tryReuse deploy/send/undeployModuleContaining protocol over 8 in-groups (ord 5) and 4 not-in groups (ord 6), and deploy-order-sensitive multi-statement filters with like clauses (ords 7-8). Ord 4 (ExprFilterInInvalid) is a compile-failure-only execution gated on JVM filter index planning and carries no scenario case. Java milestones are ordering markers with no virtual time and are implicit in the step order; assertListenerInvoked/NotInvoked/assertEventNew map to listener record presence/absence in the trace (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterInAndBetween.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/expr/filter/ExprFilterInAndBetween.java",
+  "javaRuntimes": [
+    "java-runtime-0d06d25e978384a0b008",
+    "java-runtime-d16fe1fd7693643a5001",
+    "java-runtime-9245458815076f0baee3",
+    "java-runtime-a3336b696b1ae9b2c831",
+    "java-runtime-ed506bfbf3734b4fff03"
+  ],
+  "javaNames": [
+    "ExprFilterInDynamic",
+    "ExprFilterReuse",
+    "ExprFilterReuseNot",
+    "ExprFilterInMultipleNonMatchingFirst",
+    "ExprFilterInMultipleWithBool"
+  ],
+  "javaStaticIds": [
+    "java-17cece2bf9c2df0b27f1",
+    "java-17cece2bf9c2df0b27f1",
+    "java-17cece2bf9c2df0b27f1",
+    "java-17cece2bf9c2df0b27f1",
+    "java-17cece2bf9c2df0b27f1"
+  ],
+  "javaFlags": [
+    "OBSERVEROPS"
+  ],
+  "cases": [
+    {
+      "case": "in-dynamic-pattern",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-0d06d25e978384a0b008",
+      "executionName": "ExprFilterInDynamic",
+      "observation": "listener; two sequential deployments of a dynamic in-set over pattern tags: a=SupportBeanNumeric -> every b=SupportBean(intPrimitive in (a.intOne, a.intTwo)) then a=SupportBean_S0 -> every b=SupportBean(theString in (a.p00, a.p01, a.p02)); the undeployAll between phases keeps the s0 listener sequence running (2 fires in phase A, 3 in phase B)",
+      "epl": "@name('s0') select * from pattern [a=SupportBeanNumeric -> every b=SupportBean(intPrimitive in (a.intOne, a.intTwo))]\n@name('s0') select * from pattern [a=SupportBean_S0 -> every b=SupportBean(theString in (a.p00, a.p01, a.p02))]\n"
+    },
+    {
+      "case": "in-reuse-undeploy",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-d16fe1fd7693643a5001",
+      "executionName": "ExprFilterReuse",
+      "observation": "listener; ExprFilterReuse tryReuse protocol over 8 groups: each statement deploys as its own module, one send fires every listener, then undeployModuleContaining removes s0..sn-1 one at a time with a send after each so only the surviving listeners fire; a final send fires none",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in [2:4]);\n@name('s1')select * from SupportBean(intBoxed in [2:4]);\n@name('s0')select * from SupportBean(intBoxed in (1, 2, 3));\n@name('s1')select * from SupportBean(intBoxed in (1, 2, 3));\n@name('s0')select * from SupportBean(intBoxed in (2:3]);\n@name('s1')select * from SupportBean(intBoxed in (1:3]);\n@name('s0')select * from SupportBean(intBoxed in (2, 3, 4));\n@name('s1')select * from SupportBean(intBoxed in (1, 3));\n@name('s0')select * from SupportBean(intBoxed in (2, 3, 4));\n@name('s1')select * from SupportBean(intBoxed in (1, 3));\n@name('s2')select * from SupportBean(intBoxed in (8, 3));\n@name('s0')select * from SupportBean(intBoxed in (3, 1, 3));\n@name('s1')select * from SupportBean(intBoxed in (3, 3));\n@name('s2')select * from SupportBean(intBoxed in (1, 3));\n@name('s0')select * from SupportBean(boolPrimitive=false, intBoxed in (1, 2, 3));\n@name('s1')select * from SupportBean(boolPrimitive=false, intBoxed in (3, 4));\n@name('s2')select * from SupportBean(boolPrimitive=false, intBoxed in (3));\n@name('s0')select * from SupportBean(intBoxed in (1, 2, 3), longPrimitive >= 0);\n@name('s1')select * from SupportBean(intBoxed in (3, 4), intPrimitive >= 0);\n@name('s2')select * from SupportBean(intBoxed in (3), bytePrimitive < 1);\n"
+    },
+    {
+      "case": "not-in-reuse-undeploy",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-9245458815076f0baee3",
+      "executionName": "ExprFilterReuseNot",
+      "observation": "listener; ExprFilterReuseNot tryReuse protocol over 4 groups of not-in/not-between filters (including reversed-bound not between 0 and -3 and open-both-ends not in (3:4)); same deploy/send/undeploy cadence as in-reuse-undeploy",
+      "epl": "@name('s0')select * from SupportBean(intBoxed not in [1:2]);\n@name('s1')select * from SupportBean(intBoxed not in [1:2]);\n@name('s0')select * from SupportBean(intBoxed in (3, 1, 3));\n@name('s1')select * from SupportBean(intBoxed not in (2, 1));\n@name('s2')select * from SupportBean(intBoxed not between 0 and -3);\n@name('s0')select * from SupportBean(intBoxed not in (1, 4, 5));\n@name('s1')select * from SupportBean(intBoxed not in (1, 4, 5));\n@name('s2')select * from SupportBean(intBoxed not in (4, 5, 1));\n@name('s0')select * from SupportBean(intBoxed not in (3:4));\n@name('s1')select * from SupportBean(intBoxed not in [1:3));\n@name('s2')select * from SupportBean(intBoxed not in (1,1,1,33));\n"
+    },
+    {
+      "case": "in-multiple-nonmatching-first",
+      "ordinal": 7,
+      "runtimeId": "java-runtime-a3336b696b1ae9b2c831",
+      "executionName": "ExprFilterInMultipleNonMatchingFirst",
+      "observation": "listener; deploy order matters: the non-matching statement A (intPrimitive in (0,0,1) and theString like 'X%') deploys before matching B (intPrimitive in (0,1) and theString like 'A%'); one send delivers exactly one new event to B and nothing to A",
+      "epl": "@name('A') select * from SupportBean(intPrimitive in (0,0,1) and theString like 'X%')\n@name('B') select * from SupportBean(intPrimitive in (0,1) and theString like 'A%')\n"
+    },
+    {
+      "case": "in-multiple-with-bool",
+      "ordinal": 8,
+      "runtimeId": "java-runtime-ed506bfbf3734b4fff03",
+      "executionName": "ExprFilterInMultipleWithBool",
+      "observation": "listener; s1 (intPrimitive in (0) and theString like 'X%') deploys before s2 (intPrimitive in (0,1) and theString like 'A%'); one send delivers exactly one new event to s2 and nothing to s1",
+      "epl": "@name('s1') select * from SupportBean(intPrimitive in (0) and theString like 'X%')\n@name('s2') select * from SupportBean(intPrimitive in (0,1) and theString like 'A%')\n"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "in-dynamic-pattern"
+    },
+    {
+      "op": "deploy",
+      "case": "in-dynamic-pattern",
+      "statement": "s0",
+      "epl": "@name('s0') select * from pattern [a=SupportBeanNumeric -> every b=SupportBean(intPrimitive in (a.intOne, a.intTwo))]"
+    },
+    {
+      "op": "deployed",
+      "case": "in-dynamic-pattern",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBeanNumeric",
+      "payload": {
+        "intOne": 10,
+        "intTwo": 20
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 11
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "intPrimitive": 20
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "in-dynamic-pattern"
+    },
+    {
+      "op": "deploy",
+      "case": "in-dynamic-pattern",
+      "statement": "s0",
+      "epl": "@name('s0') select * from pattern [a=SupportBean_S0 -> every b=SupportBean(theString in (a.p00, a.p01, a.p02))]"
+    },
+    {
+      "op": "deployed",
+      "case": "in-dynamic-pattern",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "a",
+        "p01": "b",
+        "p02": "c",
+        "p03": "d"
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "a"
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "x"
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "b"
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "c"
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-dynamic-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "d"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "in-dynamic-pattern"
+    },
+    {
+      "op": "case",
+      "case": "in-reuse-undeploy"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in [2:4])"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed in [2:4])"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in (1, 2, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed in (1, 2, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed in (1:3])"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in (2:3])"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in (2, 3, 4))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed in (1, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in (2, 3, 4))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed in (1, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s2",
+      "epl": "@name('s2')select * from SupportBean(intBoxed in (8, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in (3, 1, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed in (3, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s2",
+      "epl": "@name('s2')select * from SupportBean(intBoxed in (1, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(boolPrimitive=false, intBoxed in (1, 2, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(boolPrimitive=false, intBoxed in (3, 4))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s2",
+      "epl": "@name('s2')select * from SupportBean(boolPrimitive=false, intBoxed in (3))"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in (1, 2, 3), longPrimitive >= 0)"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed in (3, 4), intPrimitive >= 0)"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s2",
+      "epl": "@name('s2')select * from SupportBean(intBoxed in (3), bytePrimitive < 1)"
+    },
+    {
+      "op": "deployed",
+      "case": "in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "case",
+      "case": "not-in-reuse-undeploy"
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed not in [1:2])"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed not in [1:2])"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed in (3, 1, 3))"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed not in (2, 1))"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2",
+      "epl": "@name('s2')select * from SupportBean(intBoxed not between 0 and -3)"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed not in (1, 4, 5))"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed not in (1, 4, 5))"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2",
+      "epl": "@name('s2')select * from SupportBean(intBoxed not in (4, 5, 1))"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0",
+      "epl": "@name('s0')select * from SupportBean(intBoxed not in (3:4))"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1",
+      "epl": "@name('s1')select * from SupportBean(intBoxed not in [1:3))"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2",
+      "epl": "@name('s2')select * from SupportBean(intBoxed not in (1,1,1,33))"
+    },
+    {
+      "op": "deployed",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s1"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "not-in-reuse-undeploy",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "send",
+      "case": "not-in-reuse-undeploy",
+      "eventType": "SupportBean",
+      "payload": {
+        "intBoxed": 3
+      }
+    },
+    {
+      "op": "case",
+      "case": "in-multiple-nonmatching-first"
+    },
+    {
+      "op": "deploy",
+      "case": "in-multiple-nonmatching-first",
+      "statement": "A",
+      "epl": "@name('A') select * from SupportBean(intPrimitive in (0,0,1) and theString like 'X%')"
+    },
+    {
+      "op": "deployed",
+      "case": "in-multiple-nonmatching-first",
+      "statement": "A"
+    },
+    {
+      "op": "deploy",
+      "case": "in-multiple-nonmatching-first",
+      "statement": "B",
+      "epl": "@name('B') select * from SupportBean(intPrimitive in (0,1) and theString like 'A%')"
+    },
+    {
+      "op": "deployed",
+      "case": "in-multiple-nonmatching-first",
+      "statement": "B"
+    },
+    {
+      "op": "send",
+      "case": "in-multiple-nonmatching-first",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "in-multiple-nonmatching-first"
+    },
+    {
+      "op": "case",
+      "case": "in-multiple-with-bool"
+    },
+    {
+      "op": "deploy",
+      "case": "in-multiple-with-bool",
+      "statement": "s1",
+      "epl": "@name('s1') select * from SupportBean(intPrimitive in (0) and theString like 'X%')"
+    },
+    {
+      "op": "deployed",
+      "case": "in-multiple-with-bool",
+      "statement": "s1"
+    },
+    {
+      "op": "deploy",
+      "case": "in-multiple-with-bool",
+      "statement": "s2",
+      "epl": "@name('s2') select * from SupportBean(intPrimitive in (0,1) and theString like 'A%')"
+    },
+    {
+      "op": "deployed",
+      "case": "in-multiple-with-bool",
+      "statement": "s2"
+    },
+    {
+      "op": "send",
+      "case": "in-multiple-with-bool",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "A",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "in-multiple-with-bool"
+    }
+  ]
+}
