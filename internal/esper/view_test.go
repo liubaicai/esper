@@ -180,6 +180,40 @@ func TestMultiKeyUniqueWindowsUseAllKeyValues(t *testing.T) {
 	}
 }
 
+func TestUniqueChainedWindowPropagatesEviction(t *testing.T) {
+	env, engine := newRuntimeTest(t)
+	symbol := Field[runtimeTestTrade, string]("symbol")
+	// A unique replacement must evict the displaced event from the outer
+	// length window's retained state, matching Java's child-view oldData
+	// propagation through the parent view chain. LengthWindow(2) forces the
+	// outer window to evict on the third send: pre-fix the stale A1 is still
+	// in retained state and gets double-reported (Old=[A1,A1]); post-fix the
+	// outer window holds only {B1} before A2 arrives, so Old=[A1] exactly once.
+	_, batches := deployViewTest(t, env, engine,
+		From[runtimeTestTrade](env, "Trade").Window(Unique(symbol)).Window(LengthWindow(2)),
+		"unique-chain-length")
+	for _, trade := range []runtimeTestTrade{{Symbol: "A", Price: 1}, {Symbol: "B", Price: 1}, {Symbol: "A", Price: 2}} {
+		if err := engine.SendEvent(context.Background(), trade); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(*batches) != 3 {
+		t.Fatalf("batches = %d, want 3", len(*batches))
+	}
+	// Third send: A2 replaces A1 in the unique window; the outer length(2)
+	// window must report A1 as removed exactly once and retain {B1, A2}.
+	last := (*batches)[2]
+	if len(last.New) != 1 || len(last.Old) != 1 {
+		t.Fatalf("last batch new=%d old=%d, want 1/1", len(last.New), len(last.Old))
+	}
+	if got := last.Old[0].Get("symbol").Any(); got != "A" {
+		t.Fatalf("evicted symbol = %v, want A", got)
+	}
+	if got := last.Old[0].Get("price").Any(); got != 1.0 {
+		t.Fatalf("evicted price = %v, want 1", got)
+	}
+}
+
 func TestUniqueWindowUsesArrayKeyContent(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterStruct[groupArrayTrade](env, "GroupArrayTrade"); err != nil {

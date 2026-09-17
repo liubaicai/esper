@@ -15506,6 +15506,12 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		// current event is routed, so a reclaimed group does not observe the
 		// triggering event.
 		r.sweepReclaimViewGroups(node, node.window, state, now)
+		// Inner-window evictions (e.g. a unique replacement) must leave the
+		// outer window's retained state too: Java propagates the child view's
+		// oldData removal through the parent view chain.
+		for _, evicted := range inputDelta.oldEvents {
+			removeFromWindowState(node.window, state, evicted, now, r.variables)
+		}
 		for _, candidate := range inputDelta.newEvents {
 			delta, addErr := r.addToWindow(node.window, state, candidate, now)
 			if addErr != nil {

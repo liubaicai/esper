@@ -49,6 +49,35 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.440 ('view-unique').
+
+- [x] Contract FROZEN by read-only scouts ExuberantTarantula (Java) +
+      BusyPrawn (Go). All five ViewUnique executions ALREADY
+      differential-verified via `case.view-unique` (33 records/side, 0 diffs).
+- [x] ENGINE FIX (shared core): chained `.Window(Unique).Window(Length/Time)`
+      did not propagate inner unique evictions into the outer window's
+      retained state — `streamWindow` now calls `removeFromWindowState` for
+      each `inputDelta.oldEvents`, matching Java's child-view oldData
+      propagation through the parent view chain. Verified: A1,B1,A2 over
+      unique(symbol)+length(10) yields outer state {B1,A2} with A1 reported
+      as old. Regression test `TestUniqueChainedWindowPropagatesEviction`
+      uses `LengthWindow(2)` so the outer window evicts on the third send:
+      pre-fix the stale A1 is double-reported (Old=[A1,A1]); post-fix
+      Old=[A1] exactly once. Verified failing pre-fix via git stash.
+- [x] Engine suite green after the fix (`go test ./internal/esper/` 56.3s).
+- [x] Full local gates GREEN: `make check` exit 0 (parity 193.4s,
+      internal/esper 57.6s, compat 0.16s); engine suite re-run after the
+      strengthened test 56.6s.
+- [x] Independent parity review (StraightforwardCamel, read-only): initial
+      FAIL on a vacuous regression test (P2); strengthened to
+      `LengthWindow(2)` so the stale event is double-reported pre-fix;
+      verified failing pre-fix via git stash. Re-review PASS. One P3
+      informational: Go propagates oldData unconditionally while Java's
+      plain LengthWindowView ignores it for single-data-window chains —
+      exotic, no DV coverage, not blocking.
+- [ ] Commit and push.
+
+## Current work unit
 Active: Draft 4.439 ('resultset-aggregate-filtered-remainder').
 
 - [x] 4.439 pre-check: the ResultSetQueryTypeLocalGroupBy remainder (ords 12/22/24)
@@ -76,7 +105,7 @@ Active: Draft 4.439 ('resultset-aggregate-filtered-remainder').
       internal/esper 57.1s, compat 0.18s).
 - [x] Independent parity review (KeyMole, read-only): OVERALL PASS. Ord 4
       invalid shapes confirmed unrepresentable; manifest/docs consistent.
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.439 committed and pushed as `322fd5a6a`.
 
 ## Current work unit
 Active: Draft 4.438 ('resultset-aggregate-remainder').
