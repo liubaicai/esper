@@ -13,7 +13,12 @@ import (
 	"time"
 )
 
-const maxRoutedEventsPerSend = 1024
+// maxRoutedEventsPerSend bounds the routed events a single send may trigger.
+// It exists to fail runaway insert-into cycles; legitimate batch releases
+// (expression-batch windows flushing thousands of buffered rows through an
+// insert-into chain) may route far more than a few hundred events, so the
+// bound is generous rather than tight.
+const maxRoutedEventsPerSend = 1 << 20
 
 // unixEpoch is the virtual clock's default start instant.
 var unixEpoch = time.Unix(0, 0).UTC()
@@ -5170,9 +5175,12 @@ func (e *Engine) takeRoutedQueueBoundaryLocked() routedQueueBoundary {
 	if e == nil {
 		return routedQueueBoundary{}
 	}
+	// Swap the queues out rather than copying them: the boundary is taken
+	// once per dispatch work item while the pending queue may already hold a
+	// large routed batch, so copying made batch flushes quadratic.
 	boundary := routedQueueBoundary{
-		front: append([]routedEvent(nil), e.pendingFrontRoutedEvents...),
-		back:  append([]routedEvent(nil), e.pendingRoutedEvents...),
+		front: e.pendingFrontRoutedEvents,
+		back:  e.pendingRoutedEvents,
 	}
 	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
@@ -5181,15 +5189,14 @@ func (e *Engine) takeRoutedQueueBoundaryLocked() routedQueueBoundary {
 
 func mergeRoutedQueues(preferred, existing []routedEvent) []routedEvent {
 	if len(preferred) == 0 {
-		return append([]routedEvent(nil), existing...)
+		return existing
 	}
 	if len(existing) == 0 {
-		return append([]routedEvent(nil), preferred...)
+		return preferred
 	}
-	merged := make([]routedEvent, 0, len(preferred)+len(existing))
-	for _, event := range preferred {
-		merged = insertRoutedEventSorted(merged, event)
-	}
+	// The preferred queue is already precedence-sorted; inserting the
+	// (usually small) nested set into it avoids rebuilding the whole queue.
+	merged := preferred
 	for _, event := range existing {
 		merged = insertRoutedEventSorted(merged, event)
 	}
@@ -5200,8 +5207,8 @@ func (e *Engine) restoreRoutedQueueBoundaryLocked(boundary routedQueueBoundary) 
 	if e == nil {
 		return
 	}
-	nestedFront := append([]routedEvent(nil), e.pendingFrontRoutedEvents...)
-	nestedBack := append([]routedEvent(nil), e.pendingRoutedEvents...)
+	nestedFront := e.pendingFrontRoutedEvents
+	nestedBack := e.pendingRoutedEvents
 	// A front route produced by a callback preempts the older outer front
 	// queue. Ordinary back routes retain FIFO order, so outer work stays first.
 	e.pendingFrontRoutedEvents = mergeRoutedQueues(nestedFront, boundary.front)
@@ -6425,19 +6432,23 @@ func joinDeltaEvents(delta joinDelta, receivedAt time.Time) eventDelta {
 }
 
 type windowRuntimeState struct {
-	entries      []storedEvent
-	pendingNew   []storedEvent
-	arrival      []Event
-	started      bool
-	start        time.Time
-	scheduleAt   time.Time
-	externalAt   time.Time
-	keyed        map[string]storedEvent
-	keyOrder     []string
-	groups       map[string]*windowRuntimeState
-	groupOrder   []string
-	children     []*windowRuntimeState
-	lastActivity time.Time
+	entries    []storedEvent
+	pendingNew []storedEvent
+	// pendingNewEvents caches the event projection of pendingNew so
+	// expression-batch trigger evaluation does not rebuild it per event
+	// (a 10000-row current_count trigger made the rebuild quadratic).
+	pendingNewEvents []Event
+	arrival          []Event
+	started          bool
+	start            time.Time
+	scheduleAt       time.Time
+	externalAt       time.Time
+	keyed            map[string]storedEvent
+	keyOrder         []string
+	groups           map[string]*windowRuntimeState
+	groupOrder       []string
+	children         []*windowRuntimeState
+	lastActivity     time.Time
 	// timeWindowExprResolved/resolvedTimeWindowDuration hold the deployment-time
 	// snapshot of an expression-sized time window (time(<variable>) /
 	// time(<parameter>)), mirroring Esper's view-creation evaluation.
@@ -7147,6 +7158,7 @@ func cloneWindowRuntimeState(source *windowRuntimeState, seen map[*windowRuntime
 	seen[source] = &result
 	result.entries = cloneStoredEvents(source.entries)
 	result.pendingNew = cloneStoredEvents(source.pendingNew)
+	result.pendingNewEvents = append([]Event(nil), source.pendingNewEvents...)
 	result.arrival = append([]Event(nil), source.arrival...)
 	result.keyOrder = append([]string(nil), source.keyOrder...)
 	if source.keyed != nil {
@@ -13828,16 +13840,52 @@ func (r *statementRuntime) processNamedWindowDelta(plan Plan, now time.Time, del
 	return r.applyOutput(plan.query.output, batch, false, now, plan), nil
 }
 
-// queryUsesPreviousAccess reports whether any projection expression reads
-// previous or prior event access. Named-window consumers then maintain the
-// arrival history those expressions evaluate against.
+// queryUsesPreviousAccess reports whether any projection, ordering, output or
+// stream-node expression reads previous or prior event access. Named-window
+// consumers then maintain the arrival history those expressions evaluate
+// against, and window deltas keep the per-event history map that order-by
+// keys and stream predicates resolve through historyForEvent.
 func queryUsesPreviousAccess(query Query) bool {
 	for _, selection := range query.selections {
 		if selection.Expr != nil && expressionContainsPreviousAccess(selection.Expr.node()) {
 			return true
 		}
 	}
-	return false
+	for _, key := range query.orderBy {
+		if key.Expr != nil && expressionContainsPreviousAccess(key.Expr.node()) {
+			return true
+		}
+	}
+	for _, expr := range []Expr{query.output.When, query.output.TerminationWhen} {
+		if expr != nil && expressionContainsPreviousAccess(expr.node()) {
+			return true
+		}
+	}
+	if query.aggregate != nil {
+		for _, expr := range []Expr{query.aggregate.where} {
+			if expr != nil && expressionContainsPreviousAccess(expr.node()) {
+				return true
+			}
+		}
+		if query.aggregate.having != nil && expressionContainsPreviousAccess(query.aggregate.having.node()) {
+			return true
+		}
+	}
+	if query.join != nil {
+		for _, expr := range []Expr{query.joinWhere, query.joinHaving} {
+			if expr != nil && expressionContainsPreviousAccess(expr.node()) {
+				return true
+			}
+		}
+	}
+	usesAccess := false
+	_ = visitStreamNodeExpressions(query.input, func(expr Expr) error {
+		if expr != nil && expressionContainsPreviousAccess(expr.node()) {
+			usesAccess = true
+		}
+		return nil
+	})
+	return usesAccess
 }
 
 func queryUsesPriorAccess(query Query) bool {
@@ -13846,7 +13894,39 @@ func queryUsesPriorAccess(query Query) bool {
 			return true
 		}
 	}
-	return false
+	for _, key := range query.orderBy {
+		if key.Expr != nil && expressionContainsPriorAccess(key.Expr.node()) {
+			return true
+		}
+	}
+	for _, expr := range []Expr{query.output.When, query.output.TerminationWhen} {
+		if expr != nil && expressionContainsPriorAccess(expr.node()) {
+			return true
+		}
+	}
+	if query.aggregate != nil {
+		if query.aggregate.where != nil && expressionContainsPriorAccess(query.aggregate.where.node()) {
+			return true
+		}
+		if query.aggregate.having != nil && expressionContainsPriorAccess(query.aggregate.having.node()) {
+			return true
+		}
+	}
+	if query.join != nil {
+		for _, expr := range []Expr{query.joinWhere, query.joinHaving} {
+			if expr != nil && expressionContainsPriorAccess(expr.node()) {
+				return true
+			}
+		}
+	}
+	usesAccess := false
+	_ = visitStreamNodeExpressions(query.input, func(expr Expr) error {
+		if expr != nil && expressionContainsPriorAccess(expr.node()) {
+			usesAccess = true
+		}
+		return nil
+	})
+	return usesAccess
 }
 
 func expressionContainsPriorAccess(node *exprNode) bool {
@@ -14961,13 +15041,13 @@ func (r *statementRuntime) expireWindowDeltas(now time.Time) (eventDelta, map[*s
 		state := r.windows[node]
 		delta := r.expireWindowState(node.window, state, now)
 		delta.history = windowHistory(node.window, state)
-		if windowHistoryByEventRequired(node.window) {
+		if windowHistoryByEventRequired(node.window) && queryUsesPreviousAccess(r.query) {
 			delta.historyByEvent = windowHistoryByEvent(node.window, state)
 		}
-		if len(delta.priorByEvent) == 0 && windowUsesArrivalPrior(node.window) {
+		if len(delta.priorByEvent) == 0 && windowUsesArrivalPrior(node.window) && queryUsesPreviousAccess(r.query) {
 			delta.priorByEvent = windowPriorAccessByEvent(node.window, state)
 		}
-		if windowUsesPreviousAccess(node.window) {
+		if windowUsesPreviousAccess(node.window) && queryUsesPreviousAccess(r.query) {
 			delta.previousByEvent = windowPreviousAccessByEvent(node.window, state)
 			if delta.previousByEvent == nil {
 				delta.previousByEvent = make(map[string][]Event)
@@ -15784,34 +15864,36 @@ func (r *statementRuntime) insert(node *streamNode, event Event, now time.Time) 
 		}
 		r.windows[node] = state
 		result.history = windowHistory(node.window, state)
-		if windowHistoryByEventRequired(node.window) {
+		if windowHistoryByEventRequired(node.window) && queryUsesPreviousAccess(r.query) {
 			result.historyByEvent = windowHistoryByEvent(node.window, state)
 		}
-		if _, batch := node.window.(ExpressionBatchWindowSpec); batch && len(result.newEvents) > 0 {
+		if _, batch := node.window.(ExpressionBatchWindowSpec); batch && len(result.newEvents) > 0 && queryUsesPreviousAccess(r.query) {
 			// Esper's expression batch view posts the completed batch as one
 			// new-data array and PREV-family expressions resolve against the
 			// batch order: each row sees the batch prefix through itself.
 			result.historyByEvent = make(map[string][]Event, len(result.newEvents))
 			for index, event := range result.newEvents {
-				result.historyByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents[:index+1]...)
+				// Prefix histories share the newEvents backing array; the
+				// delta is rebuilt per update so consumers only read it.
+				result.historyByEvent[eventIdentity(event)] = result.newEvents[: index+1 : index+1]
 			}
 		}
-		if isLengthOrTimeBatchWindow(node.window) && len(result.newEvents) > 0 {
+		if isLengthOrTimeBatchWindow(node.window) && len(result.newEvents) > 0 && queryUsesPreviousAccess(r.query) {
 			// Java's batch views release the completed batch through one
 			// IStreamRelativeAccess per agent instance: plain prev anchors
 			// per row to the batch prefix through the row, while
 			// prevtail/prevcount/prevwindow read the whole flushed batch for
 			// every released row; rows outside the released batch (old rows
 			// at the next flush, undelivered rows) have no accessor and
-			// resolve nothing.
+			// resolve nothing. Prefixes share the newEvents backing array.
 			result.historyByEvent = make(map[string][]Event, len(result.newEvents))
 			result.prevBatchByEvent = make(map[string][]Event, len(result.newEvents))
 			for index, event := range result.newEvents {
-				result.historyByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents[:index+1]...)
-				result.prevBatchByEvent[eventIdentity(event)] = append([]Event(nil), result.newEvents...)
+				result.historyByEvent[eventIdentity(event)] = result.newEvents[: index+1 : index+1]
+				result.prevBatchByEvent[eventIdentity(event)] = result.newEvents
 			}
 		}
-		if windowUsesPreviousAccess(node.window) {
+		if windowUsesPreviousAccess(node.window) && queryUsesPreviousAccess(r.query) {
 			result.previousByEvent = windowPreviousAccessByEvent(node.window, state)
 			if result.previousByEvent == nil {
 				result.previousByEvent = make(map[string][]Event)
@@ -15966,11 +16048,11 @@ func (r *statementRuntime) remove(node *streamNode, event Event, now time.Time) 
 			}
 		}
 		result.history = windowHistory(node.window, state)
-		if windowHistoryByEventRequired(node.window) {
+		if windowHistoryByEventRequired(node.window) && queryUsesPreviousAccess(r.query) {
 			result.historyByEvent = windowHistoryByEvent(node.window, state)
 		}
-		result.previousByEvent = windowPreviousAccessByEvent(node.window, state)
-		if windowUsesPreviousAccess(node.window) {
+		if windowUsesPreviousAccess(node.window) && queryUsesPreviousAccess(r.query) {
+			result.previousByEvent = windowPreviousAccessByEvent(node.window, state)
 			if result.previousByEvent == nil {
 				result.previousByEvent = make(map[string][]Event)
 			}
@@ -16275,6 +16357,7 @@ func removeFromWindowState(spec WindowSpec, state *windowRuntimeState, event Eve
 	for index, stored := range state.pendingNew {
 		if sameEvent(stored.event, event) {
 			state.pendingNew = append(state.pendingNew[:index], state.pendingNew[index+1:]...)
+			state.pendingNewEvents = append(state.pendingNewEvents[:index], state.pendingNewEvents[index+1:]...)
 			return false
 		}
 	}
@@ -16564,6 +16647,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		return result, nil
 	case LengthBatchWindowSpec:
 		state.pendingNew = append(state.pendingNew, stored)
+		state.pendingNewEvents = append(state.pendingNewEvents, event)
 		return flushLengthBatch(state, state.exprSizeValue), nil
 	case TimeBatchWindowSpec:
 		if !state.started {
@@ -16572,6 +16656,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 			state.scheduleAt = timeBatchBoundary(window, state.exprDurationValue, state.start)
 		}
 		state.pendingNew = append(state.pendingNew, stored)
+		state.pendingNewEvents = append(state.pendingNewEvents, event)
 		return eventDelta{}, nil
 	case TimeLengthBatchWindowSpec:
 		if !state.started {
@@ -16583,6 +16668,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 			state.start = timeLengthBatchDeadline(window, state.exprDurationValue, now)
 		}
 		state.pendingNew = append(state.pendingNew, stored)
+		state.pendingNewEvents = append(state.pendingNewEvents, event)
 		if len(state.pendingNew) >= state.exprSizeValue {
 			result := flushPendingBatch(state)
 			state.start = timeLengthBatchDeadline(window, state.exprDurationValue, now)
@@ -16618,6 +16704,7 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 				state.scheduleAt = nextExternallyTimedBoundary(state.scheduleAt, externalAt, window, state.exprDurationValue)
 			}
 			state.pendingNew = append(state.pendingNew, storedEvent{event: event, receivedAt: externalAt})
+			state.pendingNewEvents = append(state.pendingNewEvents, event)
 			state.externalAt = externalAt
 			return result, nil
 		}
@@ -16692,25 +16779,28 @@ func (r *statementRuntime) addToWindow(spec WindowSpec, state *windowRuntimeStat
 		}
 		return result, nil
 	case ExpressionBatchWindowSpec:
-		candidate := append(append([]storedEvent(nil), state.pendingNew...), stored)
-		if !windowPredicate(window.Trigger, candidate, now, r.variables, 0) {
-			state.pendingNew = candidate
+		// Append the candidate in place and evaluate the trigger over the
+		// extended batch; truncate back when it does not fire. Copying
+		// pendingNew per event made large batches (e.g. a 10000-row
+		// current_count trigger) quadratic.
+		state.pendingNew = append(state.pendingNew, stored)
+		state.pendingNewEvents = append(state.pendingNewEvents, event)
+		if !windowPredicateEvents(window.Trigger, state.pendingNewEvents, now, r.variables, 0) {
 			return eventDelta{}, nil
 		}
 		if window.IncludeTrigger {
-			state.pendingNew = candidate
 			return flushPendingBatch(state), nil
 		}
 		// The trigger event starts the next batch. The preceding pending
 		// events are emitted now, while the trigger remains pending.
-		pending := state.pendingNew
-		state.pendingNew = nil
+		state.pendingNew = state.pendingNew[:len(state.pendingNew)-1]
+		state.pendingNewEvents = state.pendingNewEvents[:len(state.pendingNewEvents)-1]
 		result := eventDelta{}
-		if len(pending) > 0 {
-			state.pendingNew = pending
+		if len(state.pendingNew) > 0 {
 			result = flushPendingBatch(state)
 		}
 		state.pendingNew = []storedEvent{stored}
+		state.pendingNewEvents = []Event{event}
 		return result, nil
 	case UniqueWindowSpec:
 		if state.keyed == nil {
@@ -16886,6 +16976,7 @@ func flushPendingBatch(state *windowRuntimeState) eventDelta {
 	}
 	state.entries = append([]storedEvent(nil), state.pendingNew...)
 	state.pendingNew = nil
+	state.pendingNewEvents = nil
 	return result
 }
 
@@ -17079,7 +17170,7 @@ func (r *statementRuntime) expireWindowState(spec WindowSpec, state *windowRunti
 		// The engine's time-expire path doubles as that callback boundary for
 		// the chain API; a true trigger flushes the currently accumulating
 		// batch as new data and the previous batch as old data.
-		if windowPredicate(window.Trigger, state.pendingNew, now, r.variables, 0) {
+		if windowPredicateEvents(window.Trigger, state.pendingNewEvents, now, r.variables, 0) {
 			result = mergeDelta(result, flushPendingBatch(state))
 		}
 	}
@@ -17654,7 +17745,10 @@ func windowHistoryByEvent(spec WindowSpec, state *windowRuntimeState) map[string
 			child := state.groups[key]
 			history := windowHistory(window.Inner, child)
 			for _, event := range history {
-				result[eventIdentity(event)] = append([]Event(nil), history...)
+				// Every retained event sees the same full history; share the
+				// slice instead of copying it per event (quadratic on large
+				// batches).
+				result[eventIdentity(event)] = history
 			}
 		}
 		return result
@@ -17665,7 +17759,7 @@ func windowHistoryByEvent(spec WindowSpec, state *windowRuntimeState) map[string
 	}
 	result := make(map[string][]Event, len(history))
 	for _, event := range history {
-		result[eventIdentity(event)] = append([]Event(nil), history...)
+		result[eventIdentity(event)] = history
 	}
 	return result
 }
@@ -17749,6 +17843,16 @@ func windowPredicate(expression Expression[bool], entries []storedEvent, now tim
 	for _, stored := range entries {
 		group = append(group, stored.event)
 	}
+	return windowPredicateEvents(expression, group, now, variables, expiredCount)
+}
+
+// windowPredicateEvents evaluates an expression-window predicate over a
+// pre-built event group; callers that keep a cached event projection
+// (expression-batch pendingNewEvents) avoid the per-event rebuild.
+func windowPredicateEvents(expression Expression[bool], group []Event, now time.Time, variables map[string]Value, expiredCount int64) bool {
+	if expression == nil {
+		return false
+	}
 	var current Event
 	if len(group) > 0 {
 		current = group[len(group)-1]
@@ -17756,7 +17860,7 @@ func windowPredicate(expression Expression[bool], entries []storedEvent, now tim
 	value := expression.eval(EvalContext{
 		Event:              current,
 		Group:              group,
-		WindowReference:    append([]Event(nil), group...),
+		WindowReference:    group,
 		WindowExpiredCount: expiredCount,
 		Now:                now,
 		Variables:          variables,

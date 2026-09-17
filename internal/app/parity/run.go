@@ -129,6 +129,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWOnDeleteIndexesScenario(file)
 	} else if *mode == "infra-namedwindow-processing-order" || *mode == "infra-namedwindow-processing-order-diff" {
 		scenario, err = loadInfraNWProcessingOrderScenario(file)
+	} else if *mode == "infra-namedwindow-consumer" || *mode == "infra-namedwindow-consumer-diff" {
+		scenario, err = loadInfraNWConsumerScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-from-clause-method-variable" || *mode == "epl-from-clause-method-variable-diff" {
@@ -453,6 +455,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWProcessingOrderJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWProcessingOrderSources),
 				splitMetadata(*javaExecutions, infraNWProcessingOrderJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-namedwindow-consumer" || *mode == "infra-namedwindow-consumer-diff" {
+		trace, err := runInfraNWConsumerScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-namedwindow-consumer-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWConsumerJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWConsumerJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWConsumerSources),
+				splitMetadata(*javaExecutions, infraNWConsumerJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

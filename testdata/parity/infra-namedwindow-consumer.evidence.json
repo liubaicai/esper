@@ -1,0 +1,751 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-c2d6b88fc4d77c643aab",
+    "java-runtime-a707367e42b2736c2fcb",
+    "java-runtime-229ba7f65962eb4594a1"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowConsumer.java"
+  ],
+  "javaExecutions": [
+    "InfraNamedWindowConsumerKeepAll",
+    "InfraNamedWindowConsumerLengthWin",
+    "InfraNamedWindowConsumerWBatch"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-consumer",
+    "steps": [
+      {
+        "op": "case",
+        "case": "keepall"
+      },
+      {
+        "op": "deploy",
+        "case": "keepall",
+        "statement": "create",
+        "epl": "@Name('create') create window MyWindow.win:keepall() as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "keepall",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "keepall",
+        "statement": "insert",
+        "epl": "@Name('insert') insert into MyWindow select * from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "keepall",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "keepall",
+        "statement": "select",
+        "epl": "@Name('select') select irstream * from MyWindow"
+      },
+      {
+        "op": "deployed",
+        "case": "keepall",
+        "statement": "select"
+      },
+      {
+        "op": "send",
+        "case": "keepall",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "keepall",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "keepall"
+      },
+      {
+        "op": "case",
+        "case": "lengthwin"
+      },
+      {
+        "op": "deploy",
+        "case": "lengthwin",
+        "statement": "create",
+        "epl": "create window MyWindow#length(2) as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "lengthwin",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "lengthwin",
+        "statement": "insert",
+        "epl": "insert into MyWindow select * from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "lengthwin",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "lengthwin",
+        "statement": "s0",
+        "epl": "@name('s0') select theString as c0, sum(intPrimitive) as c1 from MyWindow"
+      },
+      {
+        "op": "deployed",
+        "case": "lengthwin",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "lengthwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "lengthwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "lengthwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 25
+        }
+      },
+      {
+        "op": "send",
+        "case": "lengthwin",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 26
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "lengthwin"
+      },
+      {
+        "op": "case",
+        "case": "wbatch"
+      },
+      {
+        "op": "deploy",
+        "case": "wbatch",
+        "statement": "schema-incoming",
+        "epl": "@buseventtype @public create schema IncomingEvent(id int)"
+      },
+      {
+        "op": "deployed",
+        "case": "wbatch",
+        "statement": "schema-incoming"
+      },
+      {
+        "op": "deploy",
+        "case": "wbatch",
+        "statement": "schema-retained",
+        "epl": "create schema RetainedEvent(id int)"
+      },
+      {
+        "op": "deployed",
+        "case": "wbatch",
+        "statement": "schema-retained"
+      },
+      {
+        "op": "deploy",
+        "case": "wbatch",
+        "statement": "insert-retained",
+        "epl": "insert into RetainedEvent select * from IncomingEvent#expr_batch(current_count \u003e= 10000)"
+      },
+      {
+        "op": "deployed",
+        "case": "wbatch",
+        "statement": "insert-retained"
+      },
+      {
+        "op": "deploy",
+        "case": "wbatch",
+        "statement": "create-window",
+        "epl": "create window RetainedEventWindow#keepall as RetainedEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "wbatch",
+        "statement": "create-window"
+      },
+      {
+        "op": "deploy",
+        "case": "wbatch",
+        "statement": "insert-window",
+        "epl": "insert into RetainedEventWindow select * from RetainedEvent"
+      },
+      {
+        "op": "deployed",
+        "case": "wbatch",
+        "statement": "insert-window"
+      },
+      {
+        "op": "send-batch",
+        "case": "wbatch",
+        "eventType": "IncomingEvent",
+        "payload": {
+          "id": 1
+        },
+        "count": 10000
+      },
+      {
+        "op": "undeploy-all",
+        "case": "wbatch"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-consumer",
+    "records": [
+      {
+        "case": "keepall",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "keepall",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "keepall",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "keepall",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 10,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keepall",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 10,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "lengthwin",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lengthwin",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lengthwin",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lengthwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "lengthwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "lengthwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3",
+              "c1": 45
+            }
+          }
+        ]
+      },
+      {
+        "case": "lengthwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4",
+              "c1": 51
+            }
+          }
+        ]
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "schema-incoming",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "schema-retained",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "insert-retained",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "create-window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "insert-window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-consumer",
+    "records": [
+      {
+        "case": "keepall",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "keepall",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "keepall",
+        "operation": "deployed",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "keepall",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 10,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "keepall",
+        "operation": "listener",
+        "statement": "select",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 10,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "lengthwin",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lengthwin",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lengthwin",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "lengthwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E1",
+              "c1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "lengthwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E2",
+              "c1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "lengthwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E3",
+              "c1": 45
+            }
+          }
+        ]
+      },
+      {
+        "case": "lengthwin",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "E4",
+              "c1": 51
+            }
+          }
+        ]
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "schema-incoming",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "schema-retained",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "insert-retained",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "create-window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wbatch",
+        "operation": "deployed",
+        "statement": "insert-window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

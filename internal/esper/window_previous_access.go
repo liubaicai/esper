@@ -33,8 +33,11 @@ func windowPreviousAccessByEvent(spec WindowSpec, state *windowRuntimeState) map
 		}
 		result := make(map[string][]Event, len(history))
 		for identity, events := range history {
-			reverseEvents(events)
-			result[identity] = events
+			// historyByEvent shares one backing slice across identities, so
+			// the newest-first order must be materialized on a copy.
+			reversed := append([]Event(nil), events...)
+			reverseEvents(reversed)
+			result[identity] = reversed
 		}
 		return result
 	default:

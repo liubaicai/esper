@@ -93,6 +93,18 @@ func (s Scenario) Validate() error {
 			if len(step.Payload) == 0 {
 				return fmt.Errorf("compat: step %d send has no payload", i)
 			}
+		case "send-batch":
+			// send-batch replays one payload count times; hosts use it for
+			// large identical-send sequences (e.g. expression-batch windows).
+			if strings.TrimSpace(step.EventType) == "" {
+				return fmt.Errorf("compat: step %d send-batch has no eventType", i)
+			}
+			if len(step.Payload) == 0 {
+				return fmt.Errorf("compat: step %d send-batch has no payload", i)
+			}
+			if step.Count == nil || *step.Count <= 0 {
+				return fmt.Errorf("compat: step %d send-batch has no positive count", i)
+			}
 		case "set-variable":
 			if strings.TrimSpace(step.Name) == "" {
 				return fmt.Errorf("compat: step %d set-variable has no name", i)

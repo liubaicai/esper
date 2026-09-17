@@ -1,0 +1,261 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-namedwindow-consumer",
+  "description": "InfraNamedWindowConsumer named-window consumer semantics: keepall irstream select, length-window aggregate consumer, and an expr_batch insert-into chain (ords 0-2). listener records capture the irstream select's per-insert new rows and the aggregate consumer's per-update new/old pairs (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowConsumer.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowConsumer.java",
+  "javaRuntimes": [
+    "java-runtime-c2d6b88fc4d77c643aab",
+    "java-runtime-a707367e42b2736c2fcb",
+    "java-runtime-229ba7f65962eb4594a1"
+  ],
+  "javaNames": [
+    "InfraNamedWindowConsumerKeepAll",
+    "InfraNamedWindowConsumerLengthWin",
+    "InfraNamedWindowConsumerWBatch"
+  ],
+  "javaStaticIds": [
+    "java-04f7e86e470bf275affa",
+    "java-04f7e86e470bf275affa",
+    "java-04f7e86e470bf275affa"
+  ],
+  "javaFlags": [
+    "EXCLUDEWHENINSTRUMENTED"
+  ],
+  "cases": [
+    {
+      "case": "keepall",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-c2d6b88fc4d77c643aab",
+      "executionName": "InfraNamedWindowConsumerKeepAll",
+      "observation": "listener; a keepall named window feeds an irstream select consumer that observes each insert as a new-only row carrying the full SupportBean shape",
+      "epl": "@Name('create') create window MyWindow.win:keepall() as SupportBean;\n@Name('insert') insert into MyWindow select * from SupportBean;\n@Name('select') select irstream * from MyWindow;\n"
+    },
+    {
+      "case": "lengthwin",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-a707367e42b2736c2fcb",
+      "executionName": "InfraNamedWindowConsumerLengthWin",
+      "observation": "listener; a length(2) named window feeds an aggregate consumer that re-evaluates per window update, binding theString to the triggering event and sum(intPrimitive) over the retained rows, delivered as one new/old pair per update",
+      "epl": "create window MyWindow#length(2) as SupportBean;\ninsert into MyWindow select * from SupportBean;\n@name('s0') select theString as c0, sum(intPrimitive) as c1 from MyWindow;\n"
+    },
+    {
+      "case": "wbatch",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-229ba7f65962eb4594a1",
+      "executionName": "InfraNamedWindowConsumerWBatch",
+      "observation": "deployed; an expr_batch(current_count >= 10000) view buffers 10000 IncomingEvent sends then releases them through insert-into into a keepall named window; the execution attaches no listener so only deployment markers are observable",
+      "epl": "@buseventtype @public create schema IncomingEvent(id int);\ncreate schema RetainedEvent(id int);\ninsert into RetainedEvent select * from IncomingEvent#expr_batch(current_count >= 10000);\ncreate window RetainedEventWindow#keepall as RetainedEvent;\ninsert into RetainedEventWindow select * from RetainedEvent;\n"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "keepall"
+    },
+    {
+      "op": "deploy",
+      "case": "keepall",
+      "statement": "create",
+      "epl": "@Name('create') create window MyWindow.win:keepall() as SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "keepall",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "keepall",
+      "statement": "insert",
+      "epl": "@Name('insert') insert into MyWindow select * from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "keepall",
+      "statement": "insert"
+    },
+    {
+      "op": "deploy",
+      "case": "keepall",
+      "statement": "select",
+      "epl": "@Name('select') select irstream * from MyWindow"
+    },
+    {
+      "op": "deployed",
+      "case": "keepall",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "case": "keepall",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "case": "keepall",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "keepall"
+    },
+    {
+      "op": "case",
+      "case": "lengthwin"
+    },
+    {
+      "op": "deploy",
+      "case": "lengthwin",
+      "statement": "create",
+      "epl": "create window MyWindow#length(2) as SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "lengthwin",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "lengthwin",
+      "statement": "insert",
+      "epl": "insert into MyWindow select * from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "lengthwin",
+      "statement": "insert"
+    },
+    {
+      "op": "deploy",
+      "case": "lengthwin",
+      "statement": "s0",
+      "epl": "@name('s0') select theString as c0, sum(intPrimitive) as c1 from MyWindow"
+    },
+    {
+      "op": "deployed",
+      "case": "lengthwin",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "lengthwin",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "case": "lengthwin",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 20
+      }
+    },
+    {
+      "op": "send",
+      "case": "lengthwin",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 25
+      }
+    },
+    {
+      "op": "send",
+      "case": "lengthwin",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E4",
+        "intPrimitive": 26
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "lengthwin"
+    },
+    {
+      "op": "case",
+      "case": "wbatch"
+    },
+    {
+      "op": "deploy",
+      "case": "wbatch",
+      "statement": "schema-incoming",
+      "epl": "@buseventtype @public create schema IncomingEvent(id int)"
+    },
+    {
+      "op": "deployed",
+      "case": "wbatch",
+      "statement": "schema-incoming"
+    },
+    {
+      "op": "deploy",
+      "case": "wbatch",
+      "statement": "schema-retained",
+      "epl": "create schema RetainedEvent(id int)"
+    },
+    {
+      "op": "deployed",
+      "case": "wbatch",
+      "statement": "schema-retained"
+    },
+    {
+      "op": "deploy",
+      "case": "wbatch",
+      "statement": "insert-retained",
+      "epl": "insert into RetainedEvent select * from IncomingEvent#expr_batch(current_count >= 10000)"
+    },
+    {
+      "op": "deployed",
+      "case": "wbatch",
+      "statement": "insert-retained"
+    },
+    {
+      "op": "deploy",
+      "case": "wbatch",
+      "statement": "create-window",
+      "epl": "create window RetainedEventWindow#keepall as RetainedEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "wbatch",
+      "statement": "create-window"
+    },
+    {
+      "op": "deploy",
+      "case": "wbatch",
+      "statement": "insert-window",
+      "epl": "insert into RetainedEventWindow select * from RetainedEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "wbatch",
+      "statement": "insert-window"
+    },
+    {
+      "op": "send-batch",
+      "case": "wbatch",
+      "eventType": "IncomingEvent",
+      "payload": {
+        "id": 1
+      },
+      "count": 10000
+    },
+    {
+      "op": "undeploy-all",
+      "case": "wbatch"
+    }
+  ]
+}
