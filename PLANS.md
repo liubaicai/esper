@@ -2704,6 +2704,10 @@ Active: Draft 4.450 ('infra-namedwindow-on-delete-indexes').
       on a schema quirk, so the verdict was recovered from the transcript).
 - [x] Post-confirmation full gates GREEN: `make check` exit 0 (parity 199s,
       internal/esper 56s).
+- [x] Shipped; Git owns identity. Draft 4.450 committed and pushed as `755b7f05b`.
+- [x] N+1 prefetch launched: `InfraNamedWindowProcessingOrder` (7 unreferenced
+      executions, same infra.namedwindow subdomain) - Java contract scout
+      `NextJavaContract451` + Go surface scout `NextGoSurface451` (read-only).
 
 ## Current work unit
 Active: Draft 4.413 ('resultset-querytype-local-group-solution-pattern').
