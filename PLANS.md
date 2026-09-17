@@ -49,7 +49,32 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
-Active: Draft 4.449 ('infra-namedwindow-on-delete-silent').
+Active: Draft 4.450 ('infra-namedwindow-on-delete-indexes') — contract frozen, not started.
+
+- Frozen by read-only scouts JavaContract450 + GoSurface450 (full reports in message log):
+ remaining `InfraNamedWindowOnDelete.java` ordinals 1–4. Ord 0 already DV
+ (`case.named-window-mutation-firstunique`); ords 5/6 DV via 4.449.
+- Ord 1 `InfraStaggeredNamedWindow` (`java-runtime-0dcb2b72f505c7931a45`, STATICHOOK —
+ no consumer in the repo, record-only no-op): cross-window delete `on MyWindowSTAG
+ delete from MyWindowSTAGTwo where a1 = a2`; replayable now
+ (`OnRecord(FromNamedWindow).DeleteFromNamedWindow`); representation matrix /
+ StatementType.ON_DELETE / matchesClass are approved-difference candidates with
+ precedents.
+- Ords 2–4 coercion-index executions (`java-runtime-c4c336036fdd92d803f7`,
+ `a58ae70ca908579af50a`, `2d6d018e91b5664f3734`): every EPL shape replayable
+ (EqualOf/BetweenOf/LessOrEqualOf/NotBetweenOf/And/Like, filtered triggers,
+ select-* on-select, per-statement undeploy) EXCEPT `assertIndexCount` — the single
+ engine gap: Go creates no implicit indexes for trigger where clauses and exposes
+ no index-count observable. Index identity = ordered hash props + ordered range
+ props + coercion type (IndexMultiKey/IndexedPropDesc); reuse rules: same
+ prop+coercion reuses, different coercion or different prop order creates new,
+ between→range prop, `<=`/`not between` create no index, undeploy drops the
+ owning statement's index, on-select also creates implicit indexes.
+- New beans needed: SupportBeanTwo, SupportBean_ST0.
+
+## Previous work unit
+Shipped: Draft 4.449 ('infra-namedwindow-on-delete-silent') committed and pushed as
+`b7b81d10e`; Git owns identity.
 
 - [x] Contract frozen (`.omp/contract-449.md`): `InfraNamedWindowOnDelete.java` ordinals 5/6
  `InfraNamedWindowSilentDeleteOnDelete` (`java-runtime-38dd6f716920e46075c7`) and
@@ -87,8 +112,8 @@ Active: Draft 4.449 ('infra-namedwindow-on-delete-silent').
  (previously unreferenced); summary 691 cases / 689 implemented / 317 DV / 1192 DV runtime
  IDs / 3740 associations / 760 unreferenced.
 
-## Previous work unit
-Active: Draft 4.448 ('infra-nwtable-on-update').
+## Prior shipped unit
+Draft 4.448 ('infra-nwtable-on-update').
 
 - [x] Contract freeze via read-only scouts NextJavaContract448b (Java) + NextGoSurface448b (Go):
  InfraNWTableOnUpdate ords 0/1/4/5/6/7 — where-clause updates (IR pairs), self-correlated
