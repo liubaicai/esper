@@ -21452,6 +21452,127 @@ func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *t
 	}
 }
 
+func TestRunViewFirstLastEventDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "view-first-last-event.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "view-first-last-event.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-first-last-event.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "view-first-last-event-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 6 {
+		t.Fatalf("runtime ids = %d, want 6", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunViewFirstLastEventDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "firstevent-silent-drop-mutated",
+			mutate: func(trace *compat.Trace) {
+				// firstevent-scene-one has exactly 1 listener record (E1);
+				// E2/E3 are silently dropped. Adding a record for E2 breaks
+				// the silent-drop contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "firstevent-scene-one" && rec.Operation == "listener" {
+						mutated := *rec
+						mutated.Sequence = 99
+						mutated.New[0].Fields["c0"] = "E2"
+						trace.Records = append(trace.Records[:index+1:index+1], mutated)
+						return
+					}
+				}
+				panic("no firstevent-scene-one listener record")
+			},
+		},
+		{
+			name: "lastevent-ir-pair-mutated",
+			mutate: func(trace *compat.Trace) {
+				// lastevent-scene-one record 2 (E2) carries old={E1,1}.
+				// Mutating the old row breaks the IR-pair contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "lastevent-scene-one" && rec.Sequence == 2 && rec.Operation == "listener" {
+						rec.Old[0].Fields["c1"] = float64(99)
+						return
+					}
+				}
+				panic("no lastevent-scene-one record 2")
+			},
+		},
+		{
+			name: "firstlength-capacity-mutated",
+			mutate: func(trace *compat.Trace) {
+				// firstlength-scene-one's last snapshot after E3/E4 drops
+				// still shows {E1,E2}. Mutating it breaks the capacity
+				// contract. Snapshot records carry no sequence; target the
+				// last snapshot for the case.
+				for index := len(trace.Records) - 1; index >= 0; index-- {
+					rec := &trace.Records[index]
+					if rec.Case == "firstlength-scene-one" && rec.Operation == "snapshot" {
+						rec.New[0].Fields["c0"] = "E3"
+						return
+					}
+				}
+				panic("no firstlength-scene-one snapshot")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "view-first-last-event.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "view-first-last-event.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "view-first-last-event.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "view-first-last-event-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunResultSetAggregateMethodRemainderDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-method-remainder.trace.json"),

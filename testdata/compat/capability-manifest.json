@@ -4319,7 +4319,8 @@
     "internal/esper/view_unique_parity_test.go",
     "internal/esper/view_length_batch_parity_test.go",
     "internal/esper/view_union_parity_test.go",
-    "internal/esper/view_time_win_parity_test.go"
+    "internal/esper/view_time_win_parity_test.go",
+    "internal/app/parity/view_first_last_event.go"
    ],
    "phase": 2,
    "status": "implemented",
@@ -4375,7 +4376,13 @@
     "java-runtime-5e01b6f92f8d8bc5851e",
     "java-runtime-71761cb17e7d22393efc",
     "java-runtime-de2ad7eb74b76b16867a",
-    "java-runtime-6d60bed2a335972423d2"
+    "java-runtime-6d60bed2a335972423d2",
+    "java-runtime-607d915be914a5dce34f",
+    "java-runtime-5c32ea97d29ecbe957cb",
+    "java-runtime-d99cd0eba0b2e2ca64ba",
+    "java-runtime-2389705da83584b445a1",
+    "java-runtime-260c9f5af6a4a10d5c80",
+    "java-runtime-af419392d33ae4b948d8"
    ]
   },
   {
@@ -43692,6 +43699,76 @@
    "notes": [
     "ResultSetAggregateRateDataNonWindowed, ResultSetAggregateRateDataWindowed and ResultSetAggregateLeaving replayed through one shared scenario (21 records, 0 differences): virtual-time rate(10) ever-points with the delta==interval prune boundary, timestamp-property rate over length(3) with the leaving-timestamp denominator, and the sticky leaving() flag. The soda dual-runs are covered by one pass each (compile path only)."
    ]
+  },
+  {
+   "id": "case.view-first-last-event",
+   "javaRuntimeIds": [
+    "java-runtime-607d915be914a5dce34f",
+    "java-runtime-5c32ea97d29ecbe957cb",
+    "java-runtime-d99cd0eba0b2e2ca64ba",
+    "java-runtime-2389705da83584b445a1",
+    "java-runtime-260c9f5af6a4a10d5c80",
+    "java-runtime-af419392d33ae4b948d8"
+   ],
+   "javaStaticIds": [
+    "java-9c592c8d69c0251839f3",
+    "java-b74c5027c5e9385c91fc",
+    "java-1c8907d6332b94606e35"
+   ],
+   "javaNames": [
+    "ViewFirstEventSceneOne",
+    "ViewFirstEventMarketData",
+    "ViewFirstLengthSceneOne",
+    "ViewFirstLengthMarketData",
+    "ViewLastEventSceneOne",
+    "ViewLastEventMarketData"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstEvent.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstLength.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLastEvent.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunViewFirstLastEventDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunViewFirstLastEventDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "view",
+    "firstevent",
+    "firstlength",
+    "lastevent",
+    "irstream",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/view-first-last-event.json",
+    "testdata/parity/view-first-last-event.trace.json",
+    "testdata/parity/view-first-last-event.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-607d915be914a5dce34f",
+    "java-runtime-5c32ea97d29ecbe957cb",
+    "java-runtime-d99cd0eba0b2e2ca64ba",
+    "java-runtime-2389705da83584b445a1",
+    "java-runtime-260c9f5af6a4a10d5c80",
+    "java-runtime-af419392d33ae4b948d8"
+   ],
+   "representativeScenarioIds": [
+    "view-first-last-event"
+   ],
+   "notes": [
+    "ViewFirstEvent, ViewFirstLength and ViewLastEvent replayed through one shared scenario (38 records, 0 differences): firstevent/firstlength admit-then-silently-drop (no listener invocation, no remove stream), lastevent posts new+old IR pairs. Snapshot steps cover the iterator assertions."
+   ]
   }
  ],
  "mappings": [
@@ -46762,15 +46839,19 @@
   {
    "capabilityId": "resultset.aggregate-group-by",
    "caseId": "case.resultset-aggregate-method-remainder"
+  },
+  {
+   "capabilityId": "view.basic-windows",
+   "caseId": "case.view-first-last-event"
   }
  ],
  "summary": {
-  "inventoriedCases": 683,
-  "implementedCases": 681,
-  "differentialVerifiedCases": 309,
-  "differentialVerifiedRuntimeIds": 1147,
+  "inventoriedCases": 684,
+  "implementedCases": 682,
+  "differentialVerifiedCases": 310,
+  "differentialVerifiedRuntimeIds": 1153,
   "intentionallyDifferentCases": 29,
-  "representativeVerifiedCases": 116,
+  "representativeVerifiedCases": 117,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46778,13 +46859,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3695,
+  "runtimeAssociationCount": 3701,
   "referencedJavaRuntimeIds": 3337,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 799,
-  "representativeScenarioTotal": 119,
-  "representativeScenarioPassing": 119,
-  "totalCases": 683,
+  "representativeScenarioTotal": 120,
+  "representativeScenarioPassing": 120,
+  "totalCases": 684,
   "totalCapabilities": 120
  }
 }

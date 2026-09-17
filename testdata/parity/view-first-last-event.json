@@ -1,0 +1,499 @@
+{
+ "version": "esper-parity/v1",
+ "id": "view-first-last-event",
+ "description": "ViewFirstEvent ordinals 0/1 (firstevent silent drops), ViewFirstLength ordinals 0/1 (firstlength capacity drops) and ViewLastEvent ordinals 0/1 (lastevent insert/remove pairs), all under irstream with iterator snapshots",
+ "steps": [
+  {
+   "op": "case",
+   "case": "firstevent-scene-one"
+  },
+  {
+   "op": "deploy",
+   "case": "firstevent-scene-one",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "case": "firstevent-scene-one",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "firstevent-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstevent-scene-one",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "case": "firstevent-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstevent-scene-one",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "case": "firstevent-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "firstevent-scene-one"
+  },
+  {
+   "op": "case",
+   "case": "firstevent-marketdata"
+  },
+  {
+   "op": "deploy",
+   "case": "firstevent-marketdata",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "firstevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "firstevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstevent-marketdata",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "firstevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E3"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstevent-marketdata",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "firstevent-marketdata"
+  },
+  {
+   "op": "case",
+   "case": "firstlength-scene-one"
+  },
+  {
+   "op": "deploy",
+   "case": "firstlength-scene-one",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "case": "firstlength-scene-one",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "firstlength-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstlength-scene-one",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "case": "firstlength-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstlength-scene-one",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "case": "firstlength-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "case": "firstlength-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstlength-scene-one",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "firstlength-scene-one"
+  },
+  {
+   "op": "case",
+   "case": "firstlength-marketdata"
+  },
+  {
+   "op": "deploy",
+   "case": "firstlength-marketdata",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "firstlength-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstlength-marketdata",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "firstlength-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstlength-marketdata",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "firstlength-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E3"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstlength-marketdata",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "firstlength-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E4"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "firstlength-marketdata",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "firstlength-marketdata"
+  },
+  {
+   "op": "case",
+   "case": "lastevent-scene-one"
+  },
+  {
+   "op": "deploy",
+   "case": "lastevent-scene-one",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "case": "lastevent-scene-one",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "lastevent-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "lastevent-scene-one",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "case": "lastevent-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "lastevent-scene-one",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "case": "lastevent-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "lastevent-scene-one",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "case": "lastevent-scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "lastevent-scene-one"
+  },
+  {
+   "op": "case",
+   "case": "lastevent-marketdata"
+  },
+  {
+   "op": "deploy",
+   "case": "lastevent-marketdata",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "lastevent-marketdata",
+   "statement": "s0",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E3"
+   }
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E4"
+   }
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E5"
+   }
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E6"
+   }
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E7"
+   }
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E8"
+   }
+  },
+  {
+   "op": "send",
+   "case": "lastevent-marketdata",
+   "eventType": "SupportMarketDataBean",
+   "payload": {
+    "symbol": "E9"
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "lastevent-marketdata"
+  }
+ ],
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstEvent.java",
+ "javaSource2": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewFirstLength.java",
+ "javaSource3": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/view/ViewLastEvent.java",
+ "javaRuntimes": [
+  "java-runtime-607d915be914a5dce34f",
+  "java-runtime-5c32ea97d29ecbe957cb",
+  "java-runtime-d99cd0eba0b2e2ca64ba",
+  "java-runtime-2389705da83584b445a1",
+  "java-runtime-260c9f5af6a4a10d5c80",
+  "java-runtime-af419392d33ae4b948d8"
+ ],
+ "javaNames": [
+  "ViewFirstEventSceneOne",
+  "ViewFirstEventMarketData",
+  "ViewFirstLengthSceneOne",
+  "ViewFirstLengthMarketData",
+  "ViewLastEventSceneOne",
+  "ViewLastEventMarketData"
+ ],
+ "javaStaticIds": [
+  "java-9c592c8d69c0251839f3",
+  "java-9c592c8d69c0251839f3",
+  "java-b74c5027c5e9385c91fc",
+  "java-b74c5027c5e9385c91fc",
+  "java-1c8907d6332b94606e35",
+  "java-1c8907d6332b94606e35"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "firstevent-scene-one",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-607d915be914a5dce34f",
+   "executionName": "ViewFirstEventSceneOne",
+   "observation": "listener+snapshot",
+   "epl": "@Name('s0') select irstream theString as c0, intPrimitive as c1 from SupportBean#firstevent()"
+  },
+  {
+   "case": "firstevent-marketdata",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-5c32ea97d29ecbe957cb",
+   "executionName": "ViewFirstEventMarketData",
+   "observation": "listener+snapshot",
+   "epl": "@name('s0') select irstream * from SupportMarketDataBean#firstevent()"
+  },
+  {
+   "case": "firstlength-scene-one",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-d99cd0eba0b2e2ca64ba",
+   "executionName": "ViewFirstLengthSceneOne",
+   "observation": "listener+snapshot",
+   "epl": "@Name('s0') select irstream theString as c0 from SupportBean#firstlength(2)"
+  },
+  {
+   "case": "firstlength-marketdata",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-2389705da83584b445a1",
+   "executionName": "ViewFirstLengthMarketData",
+   "observation": "listener+snapshot",
+   "epl": "@name('s0') select irstream * from  SupportMarketDataBean#firstlength(3)"
+  },
+  {
+   "case": "lastevent-scene-one",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-260c9f5af6a4a10d5c80",
+   "executionName": "ViewLastEventSceneOne",
+   "observation": "listener+snapshot",
+   "epl": "@Name('s0') select irstream theString as c0, intPrimitive as c1 from SupportBean#lastevent()"
+  },
+  {
+   "case": "lastevent-marketdata",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-af419392d33ae4b948d8",
+   "executionName": "ViewLastEventMarketData",
+   "observation": "listener+snapshot",
+   "epl": "@name('s0') select irstream * from  SupportMarketDataBean#lastevent()"
+  }
+ ]
+}

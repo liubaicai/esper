@@ -4325,6 +4325,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "view-first-last-event" || *mode == "view-first-last-event-diff" {
+		trace, err := runViewFirstLastEventScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "view-first-last-event-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, viewFirstLastEventJavaCommit,
+				splitMetadata(*javaRuntimeIDs, viewFirstLastEventJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, viewFirstLastEventJavaSources),
+				splitMetadata(*javaExecutions, viewFirstLastEventJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "resultset-aggregate-method-remainder" || *mode == "resultset-aggregate-method-remainder-diff" {
 		trace, err := runResultSetAggregateMethodRemainderScenario(context.Background(), scenario)
 		if err != nil {

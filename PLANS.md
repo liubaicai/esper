@@ -49,6 +49,36 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.442 ('view-first-last-event').
+
+- [x] Contract FROZEN by read-only scouts LonelyPiranha (Java) +
+      DependentGazelle (Go). All six executions implemented but NOT
+      differential-verified. Go surface supports all three views
+      (FirstEvent/FirstLength/LastEvent) with correct retention and IR-stream
+      semantics. Three edge caveats noted (intersect re-admit, unconditional
+      oldEvents passthrough, named-window composite whitelist) — outside
+      this unit's scope.
+- [x] Assets (oracle + scenario + runner) via parity-asset-worker SmoothMarlin;
+      run.go wiring + run_test family by primary. Oracle script needed a
+      classpath fix (missing `-cp "$classpath"` and locale flags).
+- [x] Differential replay: Java 38 records; Go 38 records. ZERO differences —
+      firstevent/firstlength silent drops and lastevent IR pairs converged.
+      Evidence `testdata/parity/view-first-last-event.evidence.json` status
+      `passing`.
+- [x] Manifest: NEW case `case.view-first-last-event` born-DV with the 6 IDs;
+      mapping to `view.basic-windows`; capability goRefs +1. Summary: 684
+      cases / 682 implemented / 310 DV / 1153 DV runtime IDs / 3701
+      associations / 799 unreferenced.
+- [x] Full local gates GREEN: `make check` exit 0 (parity 202.4s,
+      internal/esper 57.8s, compat 0.18s).
+- [x] Independent parity review (DelightedStingray, read-only): OVERALL PASS.
+      All six EPLs byte-exact (incl. double-space `from` and capital-N
+      `@Name`); 38/38 records verified; diff re-run exit 0 / passing / 0
+      differences; silent-drop and IR-pair semantics confirmed. Two P3
+      informational notes only.
+- [ ] Commit and push.
+
+## Current work unit
 Active: Draft 4.441 ('resultset-aggregate-method-remainder').
 
 - [x] Contract FROZEN by read-only scouts LevelCoral (Java) +
@@ -78,7 +108,7 @@ Active: Draft 4.441 ('resultset-aggregate-method-remainder').
       One P3 informational: Go runner skips empty listener batches while the
       Java writer would emit a field-less record — unreachable in these
       unidirectional aggregate scenarios.
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.441 committed and pushed as `aafbf994b`.
 
 ## Current work unit
 Active: Draft 4.440 ('view-unique').
