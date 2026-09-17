@@ -59059,3 +59059,444 @@ func assertResultSetQueryTypeLocalGroupClosureTrace(t *testing.T, trace compat.T
 		}
 	}
 }
+
+func TestRunEplOtherPlanInKeywordDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherPlanInKeywordID,
+		"-scenario", filepath.Join(root, eplOtherPlanInKeywordID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEplOtherPlanInKeywordTrace(t, trace)
+}
+
+func TestRunEplOtherPlanInKeywordDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eplOtherPlanInKeywordID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherPlanInKeywordID + "-diff",
+		"-scenario", filepath.Join(root, eplOtherPlanInKeywordID+".json"),
+		"-java-trace", filepath.Join(root, eplOtherPlanInKeywordID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != eplOtherPlanInKeywordJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplOtherPlanInKeywordJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{eplOtherPlanInKeywordSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplOtherPlanInKeywordJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertEplOtherPlanInKeywordTrace(t, evidence.JavaTrace)
+	assertEplOtherPlanInKeywordTrace(t, evidence.GoTrace)
+}
+
+func TestRunEplOtherPlanInKeywordDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "join-s1-id-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multi-idx-join" && rec.Sequence == 1 {
+						rec.New[0].Fields["s1"].(map[string]any)["fields"].(map[string]any)["id"] = json.Number("999")
+						return
+					}
+				}
+				panic("no multi-idx-join record 1")
+			},
+		},
+		{
+			name: "table-positional-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multi-idx-table" && rec.Sequence == 1 {
+						rec.New[0].Fields["s1"].([]any)[0] = json.Number("999")
+						return
+					}
+				}
+				panic("no multi-idx-table record 1")
+			},
+		},
+		{
+			name: "subquery-c1-null-to-value",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multi-idx-subquery" && rec.Sequence == 1 {
+						rec.New[0].Fields["c1"] = []any{json.Number("101")}
+						return
+					}
+				}
+				panic("no multi-idx-subquery record 1")
+			},
+		},
+		{
+			name: "subquery-c1-value-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "single-idx-subquery" && rec.Sequence == 3 {
+						rec.New[0].Fields["c1"] = []any{json.Number("999")}
+						return
+					}
+				}
+				panic("no single-idx-subquery record 3")
+			},
+		},
+		{
+			name: "constants-row-dropped",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "single-idx-constants" && rec.Sequence == 2 {
+						rec.New = rec.New[:1]
+						return
+					}
+				}
+				panic("no single-idx-constants record 2")
+			},
+		},
+		{
+			name: "deployed-sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "plan-2stream" && rec.Operation == "deployed" && rec.Sequence == 13 {
+						rec.Sequence = 99
+						return
+					}
+				}
+				panic("no plan-2stream deployed record 13")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, eplOtherPlanInKeywordID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eplOtherPlanInKeywordID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eplOtherPlanInKeywordID + "-diff",
+				"-scenario", filepath.Join(root, eplOtherPlanInKeywordID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEplOtherPlanInKeywordCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eplOtherPlanInKeywordID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eplOtherPlanInKeywordID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eplOtherPlanInKeywordID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != eplOtherPlanInKeywordJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, eplOtherPlanInKeywordJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{eplOtherPlanInKeywordSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, eplOtherPlanInKeywordJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertEplOtherPlanInKeywordTrace(t, javaTrace)
+	assertEplOtherPlanInKeywordTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, eplOtherPlanInKeywordID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		eplOtherPlanInKeywordJavaCommit,
+		eplOtherPlanInKeywordJavaRuntimeIDs,
+		[]string{eplOtherPlanInKeywordSource},
+		eplOtherPlanInKeywordJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplOtherPlanInKeywordID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertEplOtherPlanInKeywordTrace(t, replayed)
+}
+
+func TestRunEplOtherPlanInKeywordRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eplOtherPlanInKeywordID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "not-in"`), []byte(`"case": "not-in", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-cf29d6b68db89aa0b8a8"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "join-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`where p00 in (p10, p11) and p01 in (p12, p13)`), []byte(`where p00 in (p10, p11) and p01 in (p12)`), 1)
+		}},
+		{name: "create-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`create window S1Window#keepall as SupportBean_S1`), []byte(`create window S1Window#keepall as SupportBean_Z`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"p10": "a", "p11": "b", "p12": "c", "p13": "d"`), []byte(`"p10": "a", "p11": "b", "p12": "c", "p13": "d", "extra": 0`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_S1"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"id": 101, "p10": "a"`), []byte(`"id": 999, "p10": "a"`), 1)
+		}},
+		{name: "case-mode-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "multi-idx-join", "mode": "any"`), []byte(`"case": "multi-idx-join", "mode": "bogus"`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", eplOtherPlanInKeywordID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunEplOtherPlanInKeywordRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", eplOtherPlanInKeywordID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version       string   `json:"version"`
+		ID            string   `json:"id"`
+		Description   string   `json:"description"`
+		JavaCommit    string   `json:"javaCommit"`
+		JavaSource    string   `json:"javaSource"`
+		JavaRuntimes  []string `json:"javaRuntimes"`
+		JavaNames     []string `json:"javaNames"`
+		JavaStaticIDs []string `json:"javaStaticIds"`
+		JavaFlags     []string `json:"javaFlags"`
+		Cases         []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+			Observation   string `json:"observation"`
+			EPL           string `json:"epl"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != eplOtherPlanInKeywordID ||
+		document.Description != eplOtherPlanInKeywordDescription ||
+		document.JavaCommit != eplOtherPlanInKeywordJavaCommit ||
+		document.JavaSource != eplOtherPlanInKeywordSource ||
+		!reflect.DeepEqual(document.JavaRuntimes, eplOtherPlanInKeywordJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, eplOtherPlanInKeywordJavaExecutions) ||
+		!reflect.DeepEqual(document.JavaStaticIDs, eplOtherPlanInKeywordJavaStaticIDs) ||
+		!reflect.DeepEqual(document.JavaFlags, []string{"INVALIDITY"}) ||
+		len(document.Cases) != len(eplOtherPlanInKeywordCases) {
+		t.Fatalf("scenario metadata = %#v", document)
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != eplOtherPlanInKeywordCases[index] ||
+			entry.Ordinal != eplOtherPlanInKeywordOrdinals[index] ||
+			entry.RuntimeID != eplOtherPlanInKeywordCaseRuntimeIDs[index] ||
+			entry.ExecutionName != eplOtherPlanInKeywordCaseExecutions[index] ||
+			entry.Observation == "" || entry.EPL == "" {
+			t.Fatalf("scenario case %d metadata = %#v", index, entry)
+		}
+	}
+}
+
+func assertEplOtherPlanInKeywordTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eplOtherPlanInKeywordID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 114 {
+		t.Fatalf("trace records = %d, want 114", len(trace.Records))
+	}
+	listenerCounts := map[string]int{}
+	deployedCounts := map[string]int{}
+	for _, record := range trace.Records {
+		switch record.Operation {
+		case "listener":
+			listenerCounts[record.Case]++
+		case "deployed":
+			deployedCounts[record.Case]++
+		default:
+			t.Fatalf("unexpected operation %q", record.Operation)
+		}
+	}
+	wantListeners := map[string]int{
+		"multi-idx-join": 11, "multi-idx-window": 11, "multi-idx-table": 11,
+		"multi-idx-subquery": 15, "single-idx-join": 9, "single-idx-window": 9,
+		"single-idx-table": 9, "single-idx-subquery": 15,
+		"single-idx-constants": 2, "multi-idx-constants": 2,
+	}
+	if !reflect.DeepEqual(listenerCounts, wantListeners) {
+		t.Fatalf("listener counts = %#v, want %#v", listenerCounts, wantListeners)
+	}
+	wantDeployed := map[string]int{
+		"not-in": 1, "multi-idx-subquery": 1, "single-idx-subquery": 1,
+		"plan-3stream": 4, "plan-2stream": 13,
+	}
+	if !reflect.DeepEqual(deployedCounts, wantDeployed) {
+		t.Fatalf("deployed counts = %#v, want %#v", deployedCounts, wantDeployed)
+	}
+	nullState := map[string]any{"state": "null"}
+	for _, record := range trace.Records {
+		if record.Operation != "listener" {
+			continue
+		}
+		switch record.Case {
+		case "multi-idx-subquery":
+			// c1 is the selectFrom collection: null on no match, sorted ids
+			// otherwise; sequence 1 (p00=a,p01=x) matches nothing.
+			if record.Sequence == 1 {
+				if value := record.New[0].Fields["c1"]; !reflect.DeepEqual(value, nullState) {
+					t.Fatalf("multi-idx-subquery record 1 c1 = %#v, want null", value)
+				}
+			}
+			if record.Sequence == 13 {
+				want := []any{json.Number("101"), json.Number("102"), json.Number("103")}
+				if value := record.New[0].Fields["c1"]; !reflect.DeepEqual(value, want) {
+					t.Fatalf("multi-idx-subquery record 13 c1 = %#v, want %v", value, want)
+				}
+			}
+		case "multi-idx-table":
+			// The table-side alias renders as a positional array.
+			if record.Sequence == 1 {
+				want := []any{json.Number("101"), "a", "b", "c", "d"}
+				if value := record.New[0].Fields["s1"]; !reflect.DeepEqual(value, want) {
+					t.Fatalf("multi-idx-table record 1 s1 = %#v, want %v", value, want)
+				}
+			}
+		case "single-idx-table":
+			if record.Sequence == 1 {
+				want := []any{json.Number("100"), "a", "c", nullState, nullState}
+				if value := record.New[0].Fields["s0"]; !reflect.DeepEqual(value, want) {
+					t.Fatalf("single-idx-table record 1 s0 = %#v, want %v", value, want)
+				}
+			}
+		}
+	}
+}

@@ -117,6 +117,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableSubqCorrelJoinScenario(file)
 	} else if *mode == "infra-nwtable-subq-filtered-correl" || *mode == "infra-nwtable-subq-filtered-correl-diff" {
 		scenario, err = loadInfraNWTableSubqFilteredCorrelScenario(file)
+	} else if *mode == "epl-other-plan-in-keyword" || *mode == "epl-other-plan-in-keyword-diff" {
+		scenario, err = loadEplOtherPlanInKeywordScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-from-clause-method-variable" || *mode == "epl-from-clause-method-variable-diff" {
@@ -4335,6 +4337,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplOtherSelectExprJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplOtherSelectExprJavaSources),
 				splitMetadata(*javaExecutions, eplOtherSelectExprJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-other-plan-in-keyword" || *mode == "epl-other-plan-in-keyword-diff" {
+		trace, err := runEplOtherPlanInKeywordScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-other-plan-in-keyword-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, eplOtherPlanInKeywordJavaCommit,
+				splitMetadata(*javaRuntimeIDs, eplOtherPlanInKeywordJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplOtherPlanInKeywordJavaSources),
+				splitMetadata(*javaExecutions, eplOtherPlanInKeywordJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

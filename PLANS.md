@@ -49,6 +49,42 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.446 ('epl-other-plan-in-keyword').
+
+- [x] Contract freeze via read-only scouts ChiefWalrus (Java) + DisastrousClam (Go):
+ EPLOtherPlanInKeywordQuery ordinals 0-8, nine executions over SupportBean_S0/S1/S2 —
+ not-in deploy-only, multi-idx/single-idx unidirectional joins, keepall named-window and
+ primary-key table surfaces via on-trigger, multirow subqueries with selectFrom
+ collections (+ coercion-absence deploy-only probe), constant-expression in-joins, and
+ deploy-only plan-3stream (4 cycles) / plan-2stream (13 cycles). Every statement carries
+ the byte-exact INTERNAL_QUERY_PLAN @Hook annotation (compile-time no-op mirror).
+- [x] Scenario `testdata/parity/epl-other-plan-in-keyword.json` (13 cases / 261 steps),
+ oracle `tools/java-oracle/EPLOtherPlanInKeywordScenarioOracle.java` + run script,
+ runner `internal/app/parity/epl_other_plan_in_keyword.go` + run.go wiring.
+- [x] Differential replay: Java 114 records / Go 114 records, 0 differences, zero engine
+ change. Checked-in `.trace.json` holds the canonicalized Java trace (mode:"any" cases
+ sort rows by canonical fields) matching `evidence.javaTrace`, per the established
+ `epl-other-distinct` convention.
+- [x] Strict scenario loader `loadEplOtherPlanInKeywordScenario`: duplicate-key
+ rejection, pinned metadata/cases/runtime IDs, per-op step field whitelists, payload
+ field whitelists per event type, and full step-shape pinning (deploy EPL byte-exact,
+ send event types + canonical payloads, undeploy-all terminators).
+- [x] Six-test family green: direct replay, passing evidence, 6 trace mutations
+ rejected, checked-in evidence matches trace+replay, 10 malformed-raw-scenario
+ mutations rejected, runtime-ID mapping.
+- [x] Manifest: new born-DV `case.epl-other-plan-in-keyword` (9 runtime IDs) mapped to
+ `join.basic` (goRefs +1, DV IDs +9). Summary: 688 cases / 686 implemented / 314 DV
+ cases / 1178 DV runtime IDs / 3726 associations (referenced 3362, unreferenced 774).
+- [x] Roadmap/CHANGELOG entries added; `make check` green (parity 200s, internal/esper 57s,
+ compat manifest validator included).
+- [x] Independent parity review (agent ParityReview446): OVERALL PASS, no P0/P1; runtime IDs,
+ EPL byte-fidelity (44 deploy EPLs), 114-record contract, evidence regeneration, strict-loader
+ pins and manifest arithmetic all independently re-derived. P2/P3 findings fixed and confirmed:
+ case-op mode value pinned (eplOtherPlanInKeywordCaseModes + case-mode-drift mutation), step
+ count 261, mutation counts 6+10, manifest javaStaticIds added.
+- [ ] Commit/push.
+
+## Current work unit
 Active: Draft 4.445 ('epl-other-select-expr').
 
 - [x] Contract freeze via read-only scouts MagicRaven (Java) + HushedShrimp (Go).
@@ -78,7 +114,7 @@ Active: Draft 4.445 ('epl-other-select-expr').
  deployment across cases. FIXED: runner now tracks all deployments and undeploys every one;
  diff re-run still passing/0 differences. Two nits noted (stale duplicate PLANS block — removed;
  scenario per-execution javaStaticIds convention matches siblings).
-- [ ] Commit/push.
+- [x] Shipped; Git owns identity. Draft 4.445 committed and pushed as `f4b4e3336`.
 
 ## Current work unit
 Active: Draft 4.444 ('epl-other-for-group-delivery').

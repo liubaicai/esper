@@ -1719,7 +1719,8 @@
         "internal/esper/deployment_restart_parity_test.go",
         "internal/app/parity/deployment_restart.go",
         "internal/esper/unidirectional_join_parity_test.go",
-        "internal/app/parity/unidirectional_join.go"
+        "internal/app/parity/unidirectional_join.go",
+        "internal/app/parity/epl_other_plan_in_keyword.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1738,7 +1739,16 @@
         "java-runtime-4aa869a9f1905a65ab3a",
         "java-runtime-7885da47c76db1ebb5f7",
         "java-runtime-4ae08580480e15494fea",
-        "java-runtime-b89b3e49bf5d655c3bb6"
+        "java-runtime-b89b3e49bf5d655c3bb6",
+        "java-runtime-cf29d6b68db89aa0b8a8",
+        "java-runtime-c982eaac78b6fd1b45ae",
+        "java-runtime-c5daa1f63378ab985abd",
+        "java-runtime-dd7da2447d43068347ff",
+        "java-runtime-d1bd81d5833b3bb70b20",
+        "java-runtime-b537100e9c81481cfe31",
+        "java-runtime-8607ff3a12954cbb6373",
+        "java-runtime-fb1e28fea28321f53bd1",
+        "java-runtime-36887b719198c76fca9d"
       ],
       "representativeScenarioIds": [
         "join-length-window",
@@ -44010,6 +44020,90 @@
       "notes": [
         "EPLOtherSelectExpr ords 0-5 replayed through one shared scenario (23 records, 0 differences): expression precedence with auto-generated column names (3*2+1, 3*(2+1)), graph select over a public insert-into stream with nested property paths, 31 keyword-named fields plus keyword aliases over count(*), 12 escape-string variants (quotes, unicode escapes, statement name/description), getEventType schema introspection via deployed+types records, and window stats over #length(3) with a post-window filter. Go notes: EPL auto-column names are pinned via explicit Alias() matching the EPL-derived name; count(*) in a plain Select is non-aggregate (always 0) so the keywords case routes through Aggregate."
       ]
+    },
+    {
+      "id": "case.epl-other-plan-in-keyword",
+      "javaRuntimeIds": [
+        "java-runtime-cf29d6b68db89aa0b8a8",
+        "java-runtime-c982eaac78b6fd1b45ae",
+        "java-runtime-c5daa1f63378ab985abd",
+        "java-runtime-dd7da2447d43068347ff",
+        "java-runtime-d1bd81d5833b3bb70b20",
+        "java-runtime-b537100e9c81481cfe31",
+        "java-runtime-8607ff3a12954cbb6373",
+        "java-runtime-fb1e28fea28321f53bd1",
+        "java-runtime-36887b719198c76fca9d"
+      ],
+      "javaNames": [
+        "EPLOtherNotIn",
+        "EPLOtherMultiIdxMultipleInAndMultirow",
+        "EPLOtherMultiIdxSubquery",
+        "EPLOtherSingleIdxMultipleInAndMultirow",
+        "EPLOtherSingleIdxSubquery",
+        "EPLOtherSingleIdxConstants",
+        "EPLOtherMultiIdxConstants",
+        "EPLOtherQueryPlan3Stream",
+        "EPLOtherQueryPlan2Stream"
+      ],
+      "javaStaticIds": [
+        "java-61ef48fd70c1eb9fb712",
+        "java-150700e404fe914eb1e9",
+        "java-6f47e17a2b64ac117a22",
+        "java-6124a7e0a85c0c5cad08",
+        "java-a848701a26a2f89a8e81",
+        "java-9a9e2f1ca46c53feffb0",
+        "java-07fef47260a50e65bca4",
+        "java-3f44a9a497b71647f01d",
+        "java-2587b5e921c4bc0c5be0"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherPlanInKeywordQuery.java"
+      ],
+      "goTests": [
+        "internal/app/parity/run_test.go:TestRunEplOtherPlanInKeywordDirectReplay",
+        "internal/app/parity/run_test.go:TestRunEplOtherPlanInKeywordDiffWritesPassingEvidence",
+        "internal/app/parity/run_test.go:TestRunEplOtherPlanInKeywordDiffRejectsTraceMutations",
+        "internal/app/parity/run_test.go:TestRunEplOtherPlanInKeywordCheckedInEvidenceMatchesTraceAndReplay",
+        "internal/app/parity/run_test.go:TestRunEplOtherPlanInKeywordRejectsMalformedRawScenario",
+        "internal/app/parity/run_test.go:TestRunEplOtherPlanInKeywordRuntimeIDMappingMatchesScenario"
+      ],
+      "tags": [
+        "correctness",
+        "epl",
+        "join",
+        "in-keyword",
+        "unidirectional",
+        "named-window",
+        "table",
+        "subquery",
+        "selectFrom",
+        "differential"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "testdata/parity/epl-other-plan-in-keyword.json",
+        "testdata/parity/epl-other-plan-in-keyword.trace.json",
+        "testdata/parity/epl-other-plan-in-keyword.evidence.json",
+        "tools/java-oracle/EPLOtherPlanInKeywordScenarioOracle.java",
+        "tools/java-oracle/run-epl-other-plan-in-keyword.sh"
+      ],
+      "notes": "EPLOtherPlanInKeywordQuery ordinals 0-8 born-differential: in-keyword and not-in query-plan executions over SupportBean_S0/S1/S2. Covers unidirectional multi-idx and single-idx joins, keepall named-window and primary-key table surfaces via on-trigger, multirow subqueries with selectFrom collections (plus a coercion-absence deploy-only probe), constant-expression in-joins, and deploy-only plan-3stream (4 cycles) / plan-2stream (13 cycles) compile shapes. 114 records, 0 differences; every statement carries the byte-exact INTERNAL_QUERY_PLAN @Hook annotation (compile-time no-op mirror).",
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-cf29d6b68db89aa0b8a8",
+        "java-runtime-c982eaac78b6fd1b45ae",
+        "java-runtime-c5daa1f63378ab985abd",
+        "java-runtime-dd7da2447d43068347ff",
+        "java-runtime-d1bd81d5833b3bb70b20",
+        "java-runtime-b537100e9c81481cfe31",
+        "java-runtime-8607ff3a12954cbb6373",
+        "java-runtime-fb1e28fea28321f53bd1",
+        "java-runtime-36887b719198c76fca9d"
+      ]
     }
   ],
   "mappings": [
@@ -47096,13 +47190,17 @@
     {
       "capabilityId": "epl.other.select-expr",
       "caseId": "case.epl-other-select-expr"
+    },
+    {
+      "capabilityId": "join.basic",
+      "caseId": "case.epl-other-plan-in-keyword"
     }
   ],
   "summary": {
-    "inventoriedCases": 687,
-    "implementedCases": 685,
-    "differentialVerifiedCases": 313,
-    "differentialVerifiedRuntimeIds": 1169,
+    "inventoriedCases": 688,
+    "implementedCases": 686,
+    "differentialVerifiedCases": 314,
+    "differentialVerifiedRuntimeIds": 1178,
     "intentionallyDifferentCases": 29,
     "representativeVerifiedCases": 119,
     "nfrVerifiedCases": 0,
@@ -47112,13 +47210,13 @@
     "intentionallyDifferentCapabilities": 8,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 3717,
-    "referencedJavaRuntimeIds": 3353,
+    "runtimeAssociationCount": 3726,
+    "referencedJavaRuntimeIds": 3362,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 783,
+    "unreferencedJavaRuntimeIds": 774,
     "representativeScenarioTotal": 122,
     "representativeScenarioPassing": 122,
-    "totalCases": 687,
+    "totalCases": 688,
     "totalCapabilities": 121
   }
 }
