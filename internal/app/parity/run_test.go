@@ -21452,6 +21452,107 @@ func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *t
 	}
 }
 
+func TestRunEPLOtherPatternQueriesDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-queries.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-other-pattern-queries.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-queries.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-other-pattern-queries-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 4 {
+		t.Fatalf("runtime ids = %d, want 4", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunEPLOtherPatternQueriesDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "pattern-where-filter-mutated",
+			mutate: func(trace *compat.Trace) {
+				// pattern-where record 2 is S1(100) matching the >=100
+				// branch. Mutating idS1 breaks the where-filter contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "pattern-where" && rec.Sequence == 2 {
+						rec.New[0].Fields["idS1"] = float64(99)
+						return
+					}
+				}
+				panic("no pattern-where record 2")
+			},
+		},
+		{
+			name: "pattern-aggregation-sum-mutated",
+			mutate: func(trace *compat.Trace) {
+				// pattern-aggregation record 4 sumS0=21 accumulates S0 ids
+				// across the every-pattern. Mutating it breaks the
+				// cross-match accumulation contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "pattern-aggregation" && rec.Sequence == 4 {
+						rec.New[0].Fields["sumS0"] = float64(20)
+						return
+					}
+				}
+				panic("no pattern-aggregation record 4")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-queries.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-other-pattern-queries.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-other-pattern-queries.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-other-pattern-queries-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunViewFirstLastEventDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "view-first-last-event.trace.json"),

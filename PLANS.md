@@ -49,6 +49,54 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.443 ('epl-other-pattern-queries').
+
+- [x] 4.443 pre-check: the ResultSetAggregateMedianAndDeviation +
+      ResultSetAggregateMinMax remainder is ALREADY differential-verified
+      (case.resultset-aggregate-median-and-deviation,
+      case.resultset-aggregate-minmax-no-data-window-subquery,
+      case.resultset-aggregate-minmax-named-window-wever). The earlier
+      unreferenced survey used the static `id` field instead of `runtimeId`
+      — corrected; the true unreferenced count is 799, dominated by
+      epl/infra/event, not resultset/view.
+- [x] Contract FROZEN by read-only scouts SelectiveBat (Java, contract
+      complete but yield failed; details recovered from transcript + source)
+      + ValuableWasp (Go). Scope narrowed to FOUR executions: ords 0
+      `EPLOtherWhereOM` (`java-runtime-00e2f9b1ff1f7568065e`), 1
+      `EPLOtherWhereCompile` (`java-runtime-2d9518b6894d4c46972d`), 2
+      `EPLOtherWhere` (`java-runtime-5b43884f1025d0953a3c`), 3
+      `EPLOtherAggregation` (`java-runtime-ba57386eec69d7a3e1f4`). Ords 4
+      `EPLOtherFollowedByAndWindow` (`java-runtime-fd7159994ebcb7f19959`) and
+      5 `EPLOtherPatternWindow` (`java-runtime-10596afe9bddc558a7d9`) DEFERRED
+      — they need a standalone pattern-window surface (`pattern [...]#time(1)`
+      / `#length(1)`); Go's `patternWindow` exists only on join sources.
+- [x] Assets authored by parity-asset-worker GeneralAngelfish (yield failed;
+      files verified on disk): `tools/java-oracle/EPLOtherPatternQueriesScenarioOracle.java`
+      + `run-epl-other-pattern-queries.sh`, `testdata/parity/epl-other-pattern-queries.json`
+      (2 cases / 8 steps), `internal/app/parity/epl_other_pattern_queries.go`.
+      One missing `Configuration` import fixed by primary agent.
+- [x] Differential replay: Java 6 records; Go 6 records. ZERO differences on
+      first run — no shared-core changes needed. `pattern-where` covers ords
+      0/1/2 (SODA-OM compile-path variants share one scenario pass);
+      `pattern-aggregation` covers ord 3.
+- [x] run.go wiring + run_test family (passing + 2 trace mutations) green.
+- [x] Manifest: NEW `case.epl-other-pattern-queries` born-DV with 4 runtime
+      IDs; capability `pattern.basic` goRefs extended. 685 cases / 683
+      implemented / 311 DV / 1157 DV runtime IDs / 3705 associations /
+      referenced 3341 / unreferenced 795.
+- [x] Independent parity review (agent BetterPython, read-only): PASS. The
+      reviewer's yield mechanism rejected its structured output (same harness
+      issue as SelectiveBat/GeneralAngelfish), but the transcript shows a
+      complete review: Java source re-read, inventory/static-manifest ID
+      mappings re-derived, fluent API symbols verified, evidence pipeline
+      cross-checked programmatically, `git diff --check` clean, deferral
+      rationale confirmed (PatternStream has no Window method). No P0-P3
+      findings.
+- [x] Full local gates GREEN: `make check` exit 0 (parity 200s,
+      internal/esper 57s). gofmt clean, `git diff --check` clean.
+- [ ] Commit and push.
+
+## Current work unit
 Active: Draft 4.442 ('view-first-last-event').
 
 - [x] Contract FROZEN by read-only scouts LonelyPiranha (Java) +
@@ -76,7 +124,7 @@ Active: Draft 4.442 ('view-first-last-event').
       `@Name`); 38/38 records verified; diff re-run exit 0 / passing / 0
       differences; silent-drop and IR-pair semantics confirmed. Two P3
       informational notes only.
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.442 committed and pushed as `a8e3776a0`.
 
 ## Current work unit
 Active: Draft 4.441 ('resultset-aggregate-method-remainder').

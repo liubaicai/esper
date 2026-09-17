@@ -1,0 +1,136 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-other-pattern-queries",
+ "description": "EPLOtherPatternQueries ordinals 0/1/2 (pattern where over every-or tags; ords 0/1 are SODA-OM compile-path variants of ord 2) and ordinal 3 (sum aggregation over every-or tags)",
+ "steps": [
+  {
+   "op": "case",
+   "case": "pattern-where"
+  },
+  {
+   "op": "deploy",
+   "case": "pattern-where",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "pattern-where",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-where",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 101
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-where",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-where",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 100
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "pattern-where"
+  },
+  {
+   "op": "case",
+   "case": "pattern-aggregation"
+  },
+  {
+   "op": "deploy",
+   "case": "pattern-aggregation",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "pattern-aggregation",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-aggregation",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-aggregation",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 10
+   }
+  },
+  {
+   "op": "send",
+   "case": "pattern-aggregation",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 20
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "pattern-aggregation"
+  }
+ ],
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherPatternQueries.java",
+ "javaRuntimes": [
+  "java-runtime-00e2f9b1ff1f7568065e",
+  "java-runtime-2d9518b6894d4c46972d",
+  "java-runtime-5b43884f1025d0953a3c",
+  "java-runtime-ba57386eec69d7a3e1f4"
+ ],
+ "javaNames": [
+  "EPLOtherWhereOM",
+  "EPLOtherWhereCompile",
+  "EPLOtherWhere",
+  "EPLOtherAggregation"
+ ],
+ "javaStaticIds": [
+  "java-08ff402bdcbb7f821aa4",
+  "java-08ff402bdcbb7f821aa4",
+  "java-08ff402bdcbb7f821aa4",
+  "java-08ff402bdcbb7f821aa4"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "pattern-where",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-5b43884f1025d0953a3c",
+   "executionName": "EPLOtherWhere",
+   "observation": "listener; Java ordinals 0/1 are SODA-OM compile-path variants of ordinal 2, one scenario pass covers all three",
+   "epl": "@name('s0') select s0.id as idS0, s1.id as idS1 from pattern [every s0=SupportBean_S0 or every s1=SupportBean_S1] where (s0.id is not null and s0.id < 100) or (s1.id is not null and s1.id >= 100)"
+  },
+  {
+   "case": "pattern-aggregation",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-ba57386eec69d7a3e1f4",
+   "executionName": "EPLOtherAggregation",
+   "observation": "listener",
+   "epl": "@name('s0') select sum(s0.id) as sumS0, sum(s1.id) as sumS1, sum(s0.id + s1.id) as sumS0S1 from pattern [every s0=SupportBean_S0 or every s1=SupportBean_S1]"
+  }
+ ]
+}

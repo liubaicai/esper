@@ -1,0 +1,357 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-00e2f9b1ff1f7568065e",
+    "java-runtime-2d9518b6894d4c46972d",
+    "java-runtime-5b43884f1025d0953a3c",
+    "java-runtime-ba57386eec69d7a3e1f4"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherPatternQueries.java"
+  ],
+  "javaExecutions": [
+    "EPLOtherWhereOM",
+    "EPLOtherWhereCompile",
+    "EPLOtherWhere",
+    "EPLOtherAggregation"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-pattern-queries",
+    "steps": [
+      {
+        "op": "case",
+        "case": "pattern-where"
+      },
+      {
+        "op": "deploy",
+        "case": "pattern-where",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "pattern-where",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-where",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 101
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-where",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-where",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 100
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "pattern-where"
+      },
+      {
+        "op": "case",
+        "case": "pattern-aggregation"
+      },
+      {
+        "op": "deploy",
+        "case": "pattern-aggregation",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "pattern-aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-aggregation",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-aggregation",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "pattern-aggregation",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "pattern-aggregation"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-pattern-queries",
+    "records": [
+      {
+        "case": "pattern-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "idS0": 1,
+              "idS1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "idS0": {
+                "state": "null"
+              },
+              "idS1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumS0": 1,
+              "sumS0S1": {
+                "state": "null"
+              },
+              "sumS1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumS0": 1,
+              "sumS0S1": {
+                "state": "null"
+              },
+              "sumS1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumS0": 1,
+              "sumS0S1": {
+                "state": "null"
+              },
+              "sumS1": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumS0": 21,
+              "sumS0S1": {
+                "state": "null"
+              },
+              "sumS1": 12
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-pattern-queries",
+    "records": [
+      {
+        "case": "pattern-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "idS0": 1,
+              "idS1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-where",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "idS0": {
+                "state": "null"
+              },
+              "idS1": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumS0": 1,
+              "sumS0S1": {
+                "state": "null"
+              },
+              "sumS1": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumS0": 1,
+              "sumS0S1": {
+                "state": "null"
+              },
+              "sumS1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumS0": 1,
+              "sumS0S1": {
+                "state": "null"
+              },
+              "sumS1": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-aggregation",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumS0": 21,
+              "sumS0S1": {
+                "state": "null"
+              },
+              "sumS1": 12
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

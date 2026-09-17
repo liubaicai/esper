@@ -1335,7 +1335,8 @@
     "internal/esper/pattern_invalid_parity_test.go",
     "internal/esper/pattern_expression_text_parity_test.go",
     "internal/esper/pattern_timer_interval_parity_test.go",
-    "internal/app/parity/pattern_timer.go"
+    "internal/app/parity/pattern_timer.go",
+    "internal/app/parity/epl_other_pattern_queries.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1351,7 +1352,11 @@
     "representative-verified"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-36d18111e663f599bc14"
+    "java-runtime-36d18111e663f599bc14",
+    "java-runtime-00e2f9b1ff1f7568065e",
+    "java-runtime-2d9518b6894d4c46972d",
+    "java-runtime-5b43884f1025d0953a3c",
+    "java-runtime-ba57386eec69d7a3e1f4"
    ],
    "representativeScenarioIds": [
     "pattern-timer-interval"
@@ -43769,6 +43774,67 @@
    "notes": [
     "ViewFirstEvent, ViewFirstLength and ViewLastEvent replayed through one shared scenario (38 records, 0 differences): firstevent/firstlength admit-then-silently-drop (no listener invocation, no remove stream), lastevent posts new+old IR pairs. Snapshot steps cover the iterator assertions."
    ]
+  },
+  {
+   "id": "case.epl-other-pattern-queries",
+   "javaRuntimeIds": [
+    "java-runtime-00e2f9b1ff1f7568065e",
+    "java-runtime-2d9518b6894d4c46972d",
+    "java-runtime-5b43884f1025d0953a3c",
+    "java-runtime-ba57386eec69d7a3e1f4"
+   ],
+   "javaStaticIds": [
+    "java-08ff402bdcbb7f821aa4"
+   ],
+   "javaNames": [
+    "EPLOtherWhereOM",
+    "EPLOtherWhereCompile",
+    "EPLOtherWhere",
+    "EPLOtherAggregation"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherPatternQueries.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEPLOtherPatternQueriesDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunEPLOtherPatternQueriesDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "epl",
+    "pattern",
+    "where",
+    "aggregation",
+    "every",
+    "or",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-pattern-queries.json",
+    "testdata/parity/epl-other-pattern-queries.trace.json",
+    "testdata/parity/epl-other-pattern-queries.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-00e2f9b1ff1f7568065e",
+    "java-runtime-2d9518b6894d4c46972d",
+    "java-runtime-5b43884f1025d0953a3c",
+    "java-runtime-ba57386eec69d7a3e1f4"
+   ],
+   "representativeScenarioIds": [
+    "epl-other-pattern-queries"
+   ],
+   "notes": [
+    "EPLOtherWhereOM, EPLOtherWhereCompile, EPLOtherWhere and EPLOtherAggregation replayed through one shared scenario (6 records, 0 differences): every-or pattern with a tag-field where clause and cross-match sum aggregation. Ords 0/1 are SODA-OM compile-path variants of ord 2's semantics covered by one pass. Ords 4/5 (pattern #time/#length windows) deferred \u2014 they need a standalone pattern-window surface."
+   ]
   }
  ],
  "mappings": [
@@ -46843,15 +46909,19 @@
   {
    "capabilityId": "view.basic-windows",
    "caseId": "case.view-first-last-event"
+  },
+  {
+   "capabilityId": "pattern.basic",
+   "caseId": "case.epl-other-pattern-queries"
   }
  ],
  "summary": {
-  "inventoriedCases": 684,
-  "implementedCases": 682,
-  "differentialVerifiedCases": 310,
-  "differentialVerifiedRuntimeIds": 1153,
+  "inventoriedCases": 685,
+  "implementedCases": 683,
+  "differentialVerifiedCases": 311,
+  "differentialVerifiedRuntimeIds": 1157,
   "intentionallyDifferentCases": 29,
-  "representativeVerifiedCases": 117,
+  "representativeVerifiedCases": 118,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46859,13 +46929,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3701,
-  "referencedJavaRuntimeIds": 3337,
+  "runtimeAssociationCount": 3705,
+  "referencedJavaRuntimeIds": 3341,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 799,
-  "representativeScenarioTotal": 120,
-  "representativeScenarioPassing": 120,
-  "totalCases": 684,
+  "unreferencedJavaRuntimeIds": 795,
+  "representativeScenarioTotal": 121,
+  "representativeScenarioPassing": 121,
+  "totalCases": 685,
   "totalCapabilities": 120
  }
 }
