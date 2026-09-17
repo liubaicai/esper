@@ -1,0 +1,915 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-namedwindow-processing-order",
+  "description": "InfraNamedWindowProcessingOrder dispatch-order semantics: six event-representation variants of the back-queue insert-into/on-update chain (ords 0-5, observably identical in Go) plus the ordered delete-then-select execution (ord 6). listener records capture the irstream select's atomic old/new update pair and the s0 insert-into stream deliveries (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowProcessingOrder.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowProcessingOrder.java",
+  "javaRuntimes": [
+    "java-runtime-d103aeca629813a82acf",
+    "java-runtime-0c77245232ebd6281a47",
+    "java-runtime-cef00c40d92d73111b6e",
+    "java-runtime-21dd5ef783d585d85dfd",
+    "java-runtime-59a4da55e98ca67b95c2",
+    "java-runtime-99f94152e6a94e3e60bc",
+    "java-runtime-c56598034a18ee372891"
+  ],
+  "javaNames": [
+    "InfraDispatchBackQueue{OBJECTARRAY}",
+    "InfraDispatchBackQueue{MAP}",
+    "InfraDispatchBackQueue{AVRO}",
+    "InfraDispatchBackQueue{JSON}",
+    "InfraDispatchBackQueue{JSONCLASSPROVIDED}",
+    "InfraDispatchBackQueue{DEFAULT}",
+    "InfraOrderedDeleteAndSelect"
+  ],
+  "javaStaticIds": [
+    "java-78aff9650bba15e78056",
+    "java-78aff9650bba15e78056",
+    "java-78aff9650bba15e78056",
+    "java-78aff9650bba15e78056",
+    "java-78aff9650bba15e78056",
+    "java-78aff9650bba15e78056",
+    "java-78aff9650bba15e78056"
+  ],
+  "javaFlags": [
+    "EXCLUDEWHENINSTRUMENTED"
+  ],
+  "cases": [
+    {
+      "case": "dispatch-objectarray",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-d103aeca629813a82acf",
+      "executionName": "InfraDispatchBackQueue{OBJECTARRAY}",
+      "observation": "listener; three declared-schema event types feed a back-queue insert-into chain: StartValueEvent inserts V1/O1 into a #unique(prop1) named window, TestInputEvent routes TestForwardEvent which fires an on-update trigger in the same dispatch, and the irstream select observes the update as one old/new pair (O1->U1)",
+      "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema StartValueEvent as (dummy string);\n@EventRepresentation('objectarray') @buseventtype @public create schema TestForwardEvent as (prop1 string);\n@EventRepresentation('objectarray') @buseventtype @public create schema TestInputEvent as (dummy string);\ninsert into TestForwardEvent select'V1' as prop1 from TestInputEvent;\n@EventRepresentation('objectarray') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string);\ninsert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent;\non TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1';\n@name('select') select irstream prop1, prop2 from NamedWin;"
+    },
+    {
+      "case": "dispatch-map",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-0c77245232ebd6281a47",
+      "executionName": "InfraDispatchBackQueue{MAP}",
+      "observation": "listener; three declared-schema event types feed a back-queue insert-into chain: StartValueEvent inserts V1/O1 into a #unique(prop1) named window, TestInputEvent routes TestForwardEvent which fires an on-update trigger in the same dispatch, and the irstream select observes the update as one old/new pair (O1->U1)",
+      "epl": "@EventRepresentation('map') @buseventtype @public create schema StartValueEvent as (dummy string);\n@EventRepresentation('map') @buseventtype @public create schema TestForwardEvent as (prop1 string);\n@EventRepresentation('map') @buseventtype @public create schema TestInputEvent as (dummy string);\ninsert into TestForwardEvent select'V1' as prop1 from TestInputEvent;\n@EventRepresentation('map') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string);\ninsert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent;\non TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1';\n@name('select') select irstream prop1, prop2 from NamedWin;"
+    },
+    {
+      "case": "dispatch-avro",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-cef00c40d92d73111b6e",
+      "executionName": "InfraDispatchBackQueue{AVRO}",
+      "observation": "listener; three declared-schema event types feed a back-queue insert-into chain: StartValueEvent inserts V1/O1 into a #unique(prop1) named window, TestInputEvent routes TestForwardEvent which fires an on-update trigger in the same dispatch, and the irstream select observes the update as one old/new pair (O1->U1)",
+      "epl": "@EventRepresentation('avro') @buseventtype @public create schema StartValueEvent as (dummy string);\n@EventRepresentation('avro') @buseventtype @public create schema TestForwardEvent as (prop1 string);\n@EventRepresentation('avro') @buseventtype @public create schema TestInputEvent as (dummy string);\ninsert into TestForwardEvent select'V1' as prop1 from TestInputEvent;\n@EventRepresentation('avro') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string);\ninsert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent;\non TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1';\n@name('select') select irstream prop1, prop2 from NamedWin;"
+    },
+    {
+      "case": "dispatch-json",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-21dd5ef783d585d85dfd",
+      "executionName": "InfraDispatchBackQueue{JSON}",
+      "observation": "listener; three declared-schema event types feed a back-queue insert-into chain: StartValueEvent inserts V1/O1 into a #unique(prop1) named window, TestInputEvent routes TestForwardEvent which fires an on-update trigger in the same dispatch, and the irstream select observes the update as one old/new pair (O1->U1)",
+      "epl": "@EventRepresentation('json') @buseventtype @public create schema StartValueEvent as (dummy string);\n@EventRepresentation('json') @buseventtype @public create schema TestForwardEvent as (prop1 string);\n@EventRepresentation('json') @buseventtype @public create schema TestInputEvent as (dummy string);\ninsert into TestForwardEvent select'V1' as prop1 from TestInputEvent;\n@EventRepresentation('json') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string);\ninsert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent;\non TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1';\n@name('select') select irstream prop1, prop2 from NamedWin;"
+    },
+    {
+      "case": "dispatch-json-provided",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-59a4da55e98ca67b95c2",
+      "executionName": "InfraDispatchBackQueue{JSONCLASSPROVIDED}",
+      "observation": "listener; three declared-schema event types feed a back-queue insert-into chain: StartValueEvent inserts V1/O1 into a #unique(prop1) named window, TestInputEvent routes TestForwardEvent which fires an on-update trigger in the same dispatch, and the irstream select observes the update as one old/new pair (O1->U1)",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.namedwindow.InfraNamedWindowProcessingOrder$MyLocalJsonProvidedStartValueEvent') @EventRepresentation('json') @buseventtype @public create schema StartValueEvent as (dummy string);\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.namedwindow.InfraNamedWindowProcessingOrder$MyLocalJsonProvidedTestForwardEvent') @EventRepresentation('json') @buseventtype @public create schema TestForwardEvent as (prop1 string);\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.namedwindow.InfraNamedWindowProcessingOrder$MyLocalJsonProvidedTestInputEvent') @EventRepresentation('json') @buseventtype @public create schema TestInputEvent as (dummy string);\ninsert into TestForwardEvent select'V1' as prop1 from TestInputEvent;\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.namedwindow.InfraNamedWindowProcessingOrder$MyLocalJsonProvidedNamedWin') @EventRepresentation('json') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string);\ninsert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent;\non TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1';\n@name('select') select irstream prop1, prop2 from NamedWin;"
+    },
+    {
+      "case": "dispatch-default",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-99f94152e6a94e3e60bc",
+      "executionName": "InfraDispatchBackQueue{DEFAULT}",
+      "observation": "listener; three declared-schema event types feed a back-queue insert-into chain: StartValueEvent inserts V1/O1 into a #unique(prop1) named window, TestInputEvent routes TestForwardEvent which fires an on-update trigger in the same dispatch, and the irstream select observes the update as one old/new pair (O1->U1)",
+      "epl": " @buseventtype @public create schema StartValueEvent as (dummy string);\n @buseventtype @public create schema TestForwardEvent as (prop1 string);\n @buseventtype @public create schema TestInputEvent as (dummy string);\ninsert into TestForwardEvent select'V1' as prop1 from TestInputEvent;\n@public create window NamedWin#unique(prop1) (prop1 string, prop2 string);\ninsert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent;\non TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1';\n@name('select') select irstream prop1, prop2 from NamedWin;"
+    },
+    {
+      "case": "ordered-delete-select",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-c56598034a18ee372891",
+      "executionName": "InfraOrderedDeleteAndSelect",
+      "observation": "listener; a #lastevent named window feeds three on-triggers in declaration order: two conditional deletes (intPrimitive 7 then 5) run before an on-insert select that performs a live window lookup per trigger event, so deleted rows never reach ResultStream",
+      "epl": "create window MyWindow#lastevent as select * from SupportBean;\ninsert into MyWindow select * from SupportBean;\non MyWindow e delete from MyWindow win where win.theString=e.theString and e.intPrimitive = 7;\non MyWindow e delete from MyWindow win where win.theString=e.theString and e.intPrimitive = 5;\non MyWindow e insert into ResultStream select e.* from MyWindow;\n@name('s0') select * from ResultStream;"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "dispatch-objectarray"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-objectarray",
+      "statement": "schema-start",
+      "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema StartValueEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-objectarray",
+      "statement": "schema-start"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-objectarray",
+      "statement": "schema-forward",
+      "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TestForwardEvent as (prop1 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-objectarray",
+      "statement": "schema-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-objectarray",
+      "statement": "schema-input",
+      "epl": "@EventRepresentation('objectarray') @buseventtype @public create schema TestInputEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-objectarray",
+      "statement": "schema-input"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-objectarray",
+      "statement": "insert-forward",
+      "epl": "insert into TestForwardEvent select'V1' as prop1 from TestInputEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-objectarray",
+      "statement": "insert-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-objectarray",
+      "statement": "create",
+      "epl": "@EventRepresentation('objectarray') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-objectarray",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-objectarray",
+      "statement": "insert-window",
+      "epl": "insert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-objectarray",
+      "statement": "insert-window"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-objectarray",
+      "statement": "update",
+      "epl": "on TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1'"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-objectarray",
+      "statement": "update"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-objectarray",
+      "statement": "select",
+      "epl": "@name('select') select irstream prop1, prop2 from NamedWin"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-objectarray",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "case": "dispatch-objectarray",
+      "eventType": "StartValueEvent",
+      "payload": {
+        "repr": "objectarray",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "dispatch-objectarray",
+      "eventType": "TestInputEvent",
+      "payload": {
+        "repr": "objectarray",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "dispatch-objectarray"
+    },
+    {
+      "op": "case",
+      "case": "dispatch-map"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-map",
+      "statement": "schema-start",
+      "epl": "@EventRepresentation('map') @buseventtype @public create schema StartValueEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-map",
+      "statement": "schema-start"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-map",
+      "statement": "schema-forward",
+      "epl": "@EventRepresentation('map') @buseventtype @public create schema TestForwardEvent as (prop1 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-map",
+      "statement": "schema-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-map",
+      "statement": "schema-input",
+      "epl": "@EventRepresentation('map') @buseventtype @public create schema TestInputEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-map",
+      "statement": "schema-input"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-map",
+      "statement": "insert-forward",
+      "epl": "insert into TestForwardEvent select'V1' as prop1 from TestInputEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-map",
+      "statement": "insert-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-map",
+      "statement": "create",
+      "epl": "@EventRepresentation('map') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-map",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-map",
+      "statement": "insert-window",
+      "epl": "insert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-map",
+      "statement": "insert-window"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-map",
+      "statement": "update",
+      "epl": "on TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1'"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-map",
+      "statement": "update"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-map",
+      "statement": "select",
+      "epl": "@name('select') select irstream prop1, prop2 from NamedWin"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-map",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "case": "dispatch-map",
+      "eventType": "StartValueEvent",
+      "payload": {
+        "repr": "map",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "dispatch-map",
+      "eventType": "TestInputEvent",
+      "payload": {
+        "repr": "map",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "dispatch-map"
+    },
+    {
+      "op": "case",
+      "case": "dispatch-avro"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-avro",
+      "statement": "schema-start",
+      "epl": "@EventRepresentation('avro') @buseventtype @public create schema StartValueEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-avro",
+      "statement": "schema-start"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-avro",
+      "statement": "schema-forward",
+      "epl": "@EventRepresentation('avro') @buseventtype @public create schema TestForwardEvent as (prop1 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-avro",
+      "statement": "schema-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-avro",
+      "statement": "schema-input",
+      "epl": "@EventRepresentation('avro') @buseventtype @public create schema TestInputEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-avro",
+      "statement": "schema-input"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-avro",
+      "statement": "insert-forward",
+      "epl": "insert into TestForwardEvent select'V1' as prop1 from TestInputEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-avro",
+      "statement": "insert-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-avro",
+      "statement": "create",
+      "epl": "@EventRepresentation('avro') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-avro",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-avro",
+      "statement": "insert-window",
+      "epl": "insert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-avro",
+      "statement": "insert-window"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-avro",
+      "statement": "update",
+      "epl": "on TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1'"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-avro",
+      "statement": "update"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-avro",
+      "statement": "select",
+      "epl": "@name('select') select irstream prop1, prop2 from NamedWin"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-avro",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "case": "dispatch-avro",
+      "eventType": "StartValueEvent",
+      "payload": {
+        "repr": "avro",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "dispatch-avro",
+      "eventType": "TestInputEvent",
+      "payload": {
+        "repr": "avro",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "dispatch-avro"
+    },
+    {
+      "op": "case",
+      "case": "dispatch-json"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json",
+      "statement": "schema-start",
+      "epl": "@EventRepresentation('json') @buseventtype @public create schema StartValueEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json",
+      "statement": "schema-start"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json",
+      "statement": "schema-forward",
+      "epl": "@EventRepresentation('json') @buseventtype @public create schema TestForwardEvent as (prop1 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json",
+      "statement": "schema-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json",
+      "statement": "schema-input",
+      "epl": "@EventRepresentation('json') @buseventtype @public create schema TestInputEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json",
+      "statement": "schema-input"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json",
+      "statement": "insert-forward",
+      "epl": "insert into TestForwardEvent select'V1' as prop1 from TestInputEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json",
+      "statement": "insert-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json",
+      "statement": "create",
+      "epl": "@EventRepresentation('json') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json",
+      "statement": "insert-window",
+      "epl": "insert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json",
+      "statement": "insert-window"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json",
+      "statement": "update",
+      "epl": "on TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1'"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json",
+      "statement": "update"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json",
+      "statement": "select",
+      "epl": "@name('select') select irstream prop1, prop2 from NamedWin"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "case": "dispatch-json",
+      "eventType": "StartValueEvent",
+      "payload": {
+        "repr": "json",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "dispatch-json",
+      "eventType": "TestInputEvent",
+      "payload": {
+        "repr": "json",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "dispatch-json"
+    },
+    {
+      "op": "case",
+      "case": "dispatch-json-provided"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json-provided",
+      "statement": "schema-start",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.namedwindow.InfraNamedWindowProcessingOrder$MyLocalJsonProvidedStartValueEvent') @EventRepresentation('json') @buseventtype @public create schema StartValueEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json-provided",
+      "statement": "schema-start"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json-provided",
+      "statement": "schema-forward",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.namedwindow.InfraNamedWindowProcessingOrder$MyLocalJsonProvidedTestForwardEvent') @EventRepresentation('json') @buseventtype @public create schema TestForwardEvent as (prop1 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json-provided",
+      "statement": "schema-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json-provided",
+      "statement": "schema-input",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.namedwindow.InfraNamedWindowProcessingOrder$MyLocalJsonProvidedTestInputEvent') @EventRepresentation('json') @buseventtype @public create schema TestInputEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json-provided",
+      "statement": "schema-input"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json-provided",
+      "statement": "insert-forward",
+      "epl": "insert into TestForwardEvent select'V1' as prop1 from TestInputEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json-provided",
+      "statement": "insert-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json-provided",
+      "statement": "create",
+      "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.namedwindow.InfraNamedWindowProcessingOrder$MyLocalJsonProvidedNamedWin') @EventRepresentation('json') @public create window NamedWin#unique(prop1) (prop1 string, prop2 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json-provided",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json-provided",
+      "statement": "insert-window",
+      "epl": "insert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json-provided",
+      "statement": "insert-window"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json-provided",
+      "statement": "update",
+      "epl": "on TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1'"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json-provided",
+      "statement": "update"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-json-provided",
+      "statement": "select",
+      "epl": "@name('select') select irstream prop1, prop2 from NamedWin"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-json-provided",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "case": "dispatch-json-provided",
+      "eventType": "StartValueEvent",
+      "payload": {
+        "repr": "json-provided",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "dispatch-json-provided",
+      "eventType": "TestInputEvent",
+      "payload": {
+        "repr": "json-provided",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "dispatch-json-provided"
+    },
+    {
+      "op": "case",
+      "case": "dispatch-default"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-default",
+      "statement": "schema-start",
+      "epl": " @buseventtype @public create schema StartValueEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-default",
+      "statement": "schema-start"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-default",
+      "statement": "schema-forward",
+      "epl": " @buseventtype @public create schema TestForwardEvent as (prop1 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-default",
+      "statement": "schema-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-default",
+      "statement": "schema-input",
+      "epl": " @buseventtype @public create schema TestInputEvent as (dummy string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-default",
+      "statement": "schema-input"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-default",
+      "statement": "insert-forward",
+      "epl": "insert into TestForwardEvent select'V1' as prop1 from TestInputEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-default",
+      "statement": "insert-forward"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-default",
+      "statement": "create",
+      "epl": " @public create window NamedWin#unique(prop1) (prop1 string, prop2 string)"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-default",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-default",
+      "statement": "insert-window",
+      "epl": "insert into NamedWin select 'V1' as prop1, 'O1' as prop2 from StartValueEvent"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-default",
+      "statement": "insert-window"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-default",
+      "statement": "update",
+      "epl": "on TestForwardEvent update NamedWin as work set prop2 = 'U1' where work.prop1 = 'V1'"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-default",
+      "statement": "update"
+    },
+    {
+      "op": "deploy",
+      "case": "dispatch-default",
+      "statement": "select",
+      "epl": "@name('select') select irstream prop1, prop2 from NamedWin"
+    },
+    {
+      "op": "deployed",
+      "case": "dispatch-default",
+      "statement": "select"
+    },
+    {
+      "op": "send",
+      "case": "dispatch-default",
+      "eventType": "StartValueEvent",
+      "payload": {
+        "repr": "default",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "send",
+      "case": "dispatch-default",
+      "eventType": "TestInputEvent",
+      "payload": {
+        "repr": "default",
+        "fields": {
+          "dummy": "dummyValue"
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "dispatch-default"
+    },
+    {
+      "op": "case",
+      "case": "ordered-delete-select"
+    },
+    {
+      "op": "deploy",
+      "case": "ordered-delete-select",
+      "statement": "create",
+      "epl": "create window MyWindow#lastevent as select * from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "ordered-delete-select",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "ordered-delete-select",
+      "statement": "insert",
+      "epl": "insert into MyWindow select * from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "ordered-delete-select",
+      "statement": "insert"
+    },
+    {
+      "op": "deploy",
+      "case": "ordered-delete-select",
+      "statement": "delete7",
+      "epl": "on MyWindow e delete from MyWindow win where win.theString=e.theString and e.intPrimitive = 7"
+    },
+    {
+      "op": "deployed",
+      "case": "ordered-delete-select",
+      "statement": "delete7"
+    },
+    {
+      "op": "deploy",
+      "case": "ordered-delete-select",
+      "statement": "delete5",
+      "epl": "on MyWindow e delete from MyWindow win where win.theString=e.theString and e.intPrimitive = 5"
+    },
+    {
+      "op": "deployed",
+      "case": "ordered-delete-select",
+      "statement": "delete5"
+    },
+    {
+      "op": "deploy",
+      "case": "ordered-delete-select",
+      "statement": "oninsert",
+      "epl": "on MyWindow e insert into ResultStream select e.* from MyWindow"
+    },
+    {
+      "op": "deployed",
+      "case": "ordered-delete-select",
+      "statement": "oninsert"
+    },
+    {
+      "op": "deploy",
+      "case": "ordered-delete-select",
+      "statement": "s0",
+      "epl": "@name('s0') select * from ResultStream"
+    },
+    {
+      "op": "deployed",
+      "case": "ordered-delete-select",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "ordered-delete-select",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 7
+      }
+    },
+    {
+      "op": "send",
+      "case": "ordered-delete-select",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 8
+      }
+    },
+    {
+      "op": "send",
+      "case": "ordered-delete-select",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E3",
+        "intPrimitive": 5
+      }
+    },
+    {
+      "op": "send",
+      "case": "ordered-delete-select",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E4",
+        "intPrimitive": 6
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "ordered-delete-select"
+    }
+  ]
+}

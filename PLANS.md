@@ -49,6 +49,55 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.451 ('infra-namedwindow-processing-order').
+
+- Unit: `InfraNamedWindowProcessingOrder` ordinals 0-6 - six `InfraDispatchBackQueue`
+      event-representation variants (`java-runtime-d103aeca629813a82acf`/
+      `0c77245232ebd6281a47`/`cef00c40d92d73111b6e`/`21dd5ef783d585d85dfd`/
+      `59a4da55e98ca67b95c2`/`99f94152e6a94e3e60bc`, EXCLUDEWHENINSTRUMENTED) plus
+      `InfraOrderedDeleteAndSelect` (`java-runtime-c56598034a18ee372891`); shared
+      static `java-78aff9650bba15e78056`.
+- [x] Contract frozen by read-only scouts `NextJavaContract451` (Java) +
+      `NextGoSurface451` (Go surface); both hit the yield-tool data/error bug and
+      their payloads were recovered from transcripts. Scout error corrected
+      during implementation: the @JsonSchema annotation is per-statement with its
+      own `MyLocalJsonProvided<Name>` class (including `create window`).
+      Reviewer correction: `e.*` expands over the FULL SupportBean type (20
+      fields) — the earlier 2-field trace was an artifact of the oracle's local
+      2-property SupportBean mirror; the oracle now imports the real
+      `common.internal.support.SupportBean` and the Go bean mirror carries the
+      charPrimitive default '\u0000'.
+- [x] Scenario `testdata/parity/infra-namedwindow-processing-order.json` (7 cases /
+      138 steps); runner `internal/app/parity/infra_namedwindow_processing_order.go`
+      + run.go wiring; strict loader + generated pin table; send payload carries a
+      `repr` tag selecting SendObjectArray/Send/SendAvro/SendJSON.
+- [x] Java oracle `tools/java-oracle/InfraNamedWindowProcessingOrderScenarioOracle.java`
+      + `run-infra-namedwindow-processing-order.sh`; ordered-delete-select deploys
+      its whole module at the first deploy step (module-private window); avro
+      enabled via `getEventMeta().getAvroSettings().setEnableAvro(true)` on both
+      the runtime config and CompilerArguments; trace 68 records.
+- [x] Differential replay: Java 68 / Go 68 / 0 differences; evidence
+      `testdata/parity/infra-namedwindow-processing-order.evidence.json` passing.
+      Zero engine changes required. Parity review (ParityReview451) returned
+      FAIL with 1 P1 (fabricated activator-reduction claim — fixed by using the
+      real SupportBean so e.* delivers all 20 fields) and 1 P3 (dispatch-default
+      leading space from Java's empty-annotation concatenation — fixed in the
+      scenario, oracle ann(), and pin table).
+- [x] Six-test family green (replay, diff-evidence, checked-in evidence, 6 trace
+      mutations, 9 raw-scenario mutations, runtime-ID mapping).
+- [x] Manifest: new `case.infra-namedwindow-processing-order` born-DV mapped to
+      `infra.namedwindow.views`; summary 693 cases / 691 implemented / 319 DV /
+      1203 DV runtime IDs / 3751 associations (referenced 3387, unreferenced 749).
+- [x] Full gates GREEN: `make check` exit 0 (check-layout, go vet, full go test;
+      parity ~203s, internal/esper ~56s). gofmt clean, `git diff --check` clean.
+- [x] Independent parity review (`ParityReview451`, read-only): initial FAIL
+      (P1 fabricated activator-reduction claim + P3 dispatch-default leading
+      space), both fixed and re-verified; re-review verdict PASS — EPLs
+      byte-exact, IDs re-derived from inventory, traces identical, evidence
+      sound, six-test family asserts observable behavior.
+- [x] Shipped; Git owns identity.
+
+## Current work unit
 Active: Draft 4.450 ('infra-namedwindow-on-delete-indexes') — contract frozen, not started.
 
 - Frozen by read-only scouts JavaContract450 + GoSurface450 (full reports in message log):
