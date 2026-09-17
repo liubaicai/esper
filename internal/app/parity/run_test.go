@@ -21452,6 +21452,123 @@ func TestRunResultSetOutputLimitRowPerGroupDefaultDiffRejectsTraceMutations(t *t
 	}
 }
 
+func TestRunResultSetAggregateMethodRemainderDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromTrace(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-method-remainder.trace.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-method-remainder.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-method-remainder.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "resultset-aggregate-method-remainder-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+	if len(evidence.JavaRuntimeIDs) != 3 {
+		t.Fatalf("runtime ids = %d, want 3", len(evidence.JavaRuntimeIDs))
+	}
+}
+
+func TestRunResultSetAggregateMethodRemainderDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "rate-ever-boundary-mutated",
+			mutate: func(trace *compat.Trace) {
+				// rate-ever record 8 (t=11100) is the first non-null rate
+				// (0.7) after the delta==interval prune boundary. Mutating
+				// it breaks the ever-points pruning contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "rate-ever" && rec.Sequence == 8 {
+						rec.New[0].Fields["myrate"] = nil
+						return
+					}
+				}
+				panic("no rate-ever record 8")
+			},
+		},
+		{
+			name: "rate-windowed-denominator-mutated",
+			mutate: func(trace *compat.Trace) {
+				// rate-windowed record 4 myrate=6.0 uses denominator
+				// latest-entered minus most-recent-LEAVING ts (1500-1000=500).
+				// Mutating it breaks the leaving-timestamp contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "rate-windowed" && rec.Sequence == 4 {
+						rec.New[0].Fields["myrate"] = 5.0
+						return
+					}
+				}
+				panic("no rate-windowed record 4")
+			},
+		},
+		{
+			name: "leaving-sticky-mutated",
+			mutate: func(trace *compat.Trace) {
+				// leaving record 4 (E4) is the first true after E1's
+				// eviction. Mutating it breaks the sticky-leaving contract.
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "leaving" && rec.Sequence == 4 {
+						rec.New[0].Fields["val"] = false
+						return
+					}
+				}
+				panic("no leaving record 4")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromTrace(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-method-remainder.trace.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "resultset-aggregate-method-remainder.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-method-remainder.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "resultset-aggregate-method-remainder-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
 func TestRunResultSetAggregateRemainderDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromTrace(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-aggregate-remainder.trace.json"),

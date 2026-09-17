@@ -4451,7 +4451,8 @@
     "internal/esper/expr.go",
     "internal/esper/runtime.go",
     "internal/app/parity/resultset_querytype_row_per_event.go",
-    "internal/app/parity/resultset_aggregate_remainder.go"
+    "internal/app/parity/resultset_aggregate_remainder.go",
+    "internal/app/parity/resultset_aggregate_method_remainder.go"
    ],
    "phase": 2,
    "status": "differential-verified",
@@ -4518,7 +4519,10 @@
     "java-runtime-840f1ca5610dd00d3ec0",
     "java-runtime-47dee40e6fe320005f49",
     "java-runtime-dd3414775a8421e08a52",
-    "java-runtime-c95393b13d253135c833"
+    "java-runtime-c95393b13d253135c833",
+    "java-runtime-d0424628aa4aad2d80bc",
+    "java-runtime-b90c3df2e444e89e8cb6",
+    "java-runtime-276a60a1f8e8298c32ec"
    ],
    "representativeScenarioIds": [
     "output-policy-iterator",
@@ -43629,6 +43633,65 @@
    "notes": [
     "ResultSetAggregateFirstLastEver, ResultSetAggregateMultipleCriteria and ResultSetAggregateAuditAndReuse replayed through one shared scenario (15 records, 0 differences): filtered ever-aggregates over a length window, four sorted() multi-criteria columns plus eight heterogeneous-key minby/maxby/minbyever/maxbyever columns, and duplicate filtered-aggregate reuse. FirstLastEver's soda dual-run is covered by one pass (compile path only)."
    ]
+  },
+  {
+   "id": "case.resultset-aggregate-method-remainder",
+   "javaRuntimeIds": [
+    "java-runtime-d0424628aa4aad2d80bc",
+    "java-runtime-b90c3df2e444e89e8cb6",
+    "java-runtime-276a60a1f8e8298c32ec"
+   ],
+   "javaStaticIds": [
+    "java-5d1774a76d730ac199fb",
+    "java-f24caa115a51453bcad3"
+   ],
+   "javaNames": [
+    "ResultSetAggregateRateDataNonWindowed",
+    "ResultSetAggregateRateDataWindowed",
+    "ResultSetAggregateLeaving"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateRate.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/resultset/aggregate/ResultSetAggregateLeaving.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMethodRemainderDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunResultSetAggregateMethodRemainderDiffRejectsTraceMutations"
+   ],
+   "tags": [
+    "resultset",
+    "aggregate",
+    "rate",
+    "leaving",
+    "virtual-time",
+    "java-oracle-trace",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/resultset-aggregate-method-remainder.json",
+    "testdata/parity/resultset-aggregate-method-remainder.trace.json",
+    "testdata/parity/resultset-aggregate-method-remainder.evidence.json"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d0424628aa4aad2d80bc",
+    "java-runtime-b90c3df2e444e89e8cb6",
+    "java-runtime-276a60a1f8e8298c32ec"
+   ],
+   "representativeScenarioIds": [
+    "resultset-aggregate-method-remainder"
+   ],
+   "notes": [
+    "ResultSetAggregateRateDataNonWindowed, ResultSetAggregateRateDataWindowed and ResultSetAggregateLeaving replayed through one shared scenario (21 records, 0 differences): virtual-time rate(10) ever-points with the delta==interval prune boundary, timestamp-property rate over length(3) with the leaving-timestamp denominator, and the sticky leaving() flag. The soda dual-runs are covered by one pass each (compile path only)."
+   ]
   }
  ],
  "mappings": [
@@ -46695,15 +46758,19 @@
   {
    "capabilityId": "resultset.aggregate-group-by",
    "caseId": "case.resultset-aggregate-remainder"
+  },
+  {
+   "capabilityId": "resultset.aggregate-group-by",
+   "caseId": "case.resultset-aggregate-method-remainder"
   }
  ],
  "summary": {
-  "inventoriedCases": 682,
-  "implementedCases": 680,
-  "differentialVerifiedCases": 308,
-  "differentialVerifiedRuntimeIds": 1144,
+  "inventoriedCases": 683,
+  "implementedCases": 681,
+  "differentialVerifiedCases": 309,
+  "differentialVerifiedRuntimeIds": 1147,
   "intentionallyDifferentCases": 29,
-  "representativeVerifiedCases": 115,
+  "representativeVerifiedCases": 116,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 120,
   "implementedCapabilities": 119,
@@ -46711,13 +46778,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3692,
+  "runtimeAssociationCount": 3695,
   "referencedJavaRuntimeIds": 3337,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 799,
-  "representativeScenarioTotal": 118,
-  "representativeScenarioPassing": 118,
-  "totalCases": 682,
+  "representativeScenarioTotal": 119,
+  "representativeScenarioPassing": 119,
+  "totalCases": 683,
   "totalCapabilities": 120
  }
 }

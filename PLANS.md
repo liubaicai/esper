@@ -49,6 +49,38 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.441 ('resultset-aggregate-method-remainder').
+
+- [x] Contract FROZEN by read-only scouts LevelCoral (Java) +
+      CreepyFly (Go). Scope narrowed to THREE executions: `ResultSetAggregateRate`
+      ord 0 `ResultSetAggregateRateDataNonWindowed` (`java-runtime-d0424628aa4aad2d80bc`,
+      virtual-time rate(10) ever-points), ord 1 `ResultSetAggregateRateDataWindowed`
+      (`java-runtime-b90c3df2e444e89e8cb6`, timestamp-property rate over length(3)),
+      and `ResultSetAggregateLeaving` ord 0 (`java-runtime-276a60a1f8e8298c32ec`,
+      sticky leaving() over length(3)). `ResultSetAggregateNTh` already DV via
+      `case.resultset-aggregate-nth`.
+- [x] Assets (oracle + scenario + runner) via parity-asset-worker
+      WorkingTyrannosaurus; run.go wiring + run_test family by primary.
+- [x] Differential replay: Java 21 records; Go 21 records. ZERO differences —
+      rate-ever boundary (delta==interval prunes), rate-windowed denominator
+      (latest-entered minus most-recent-leaving), and sticky leaving() all
+      converged. Evidence `testdata/parity/resultset-aggregate-method-remainder.evidence.json`
+      status `passing`.
+- [x] Manifest: NEW case `case.resultset-aggregate-method-remainder` born-DV
+      with the 3 IDs; mapping to `resultset.aggregate-group-by`; capability
+      goRefs +1. Summary: 683 cases / 681 implemented / 309 DV / 1147 DV
+      runtime IDs / 3695 associations / 799 unreferenced.
+- [x] Full local gates GREEN: `make check` exit 0 (parity 197.3s,
+      internal/esper 58.0s, compat 0.12s).
+- [x] Independent parity review (FrightenedManatee, read-only): OVERALL PASS.
+      All three EPLs byte-exact; 21/21 records verified; diff re-run exit 0 /
+      passing / 0 differences; boundary semantics confirmed in both engines.
+      One P3 informational: Go runner skips empty listener batches while the
+      Java writer would emit a field-less record — unreachable in these
+      unidirectional aggregate scenarios.
+- [ ] Commit and push.
+
+## Current work unit
 Active: Draft 4.440 ('view-unique').
 
 - [x] Contract FROZEN by read-only scouts ExuberantTarantula (Java) +
@@ -75,7 +107,7 @@ Active: Draft 4.440 ('view-unique').
       informational: Go propagates oldData unconditionally while Java's
       plain LengthWindowView ignores it for single-data-window chains —
       exotic, no DV coverage, not blocking.
-- [ ] Commit and push.
+- [x] Shipped; Git owns identity. Draft 4.440 committed and pushed as `fd872ffa5`.
 
 ## Current work unit
 Active: Draft 4.439 ('resultset-aggregate-filtered-remainder').
