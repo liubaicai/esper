@@ -1,0 +1,4601 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0dcb2b72f505c7931a45",
+    "java-runtime-c4c336036fdd92d803f7",
+    "java-runtime-a58ae70ca908579af50a",
+    "java-runtime-2d6d018e91b5664f3734"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/namedwindow/InfraNamedWindowOnDelete.java"
+  ],
+  "javaExecutions": [
+    "InfraStaggeredNamedWindow",
+    "InfraCoercionKeyMultiPropIndexes",
+    "InfraCoercionRangeMultiPropIndexes",
+    "InfraCoercionKeyAndRangeMultiPropIndexes"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-on-delete-indexes",
+    "steps": [
+      {
+        "op": "case",
+        "case": "staggered"
+      },
+      {
+        "op": "deploy",
+        "case": "staggered",
+        "statement": "createOne",
+        "epl": "@name('createOne') @public create window MyWindowSTAG#keepall as select theString as a1, intPrimitive as b1 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "staggered",
+        "statement": "createOne"
+      },
+      {
+        "op": "index-count",
+        "case": "staggered",
+        "statement": "MyWindowSTAG",
+        "count": 0,
+        "of": "rows",
+        "create": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "staggered",
+        "statement": "createTwo",
+        "epl": " @name('createTwo') @public create window MyWindowSTAGTwo#keepall as select theString as a2, intPrimitive as b2 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "staggered",
+        "statement": "createTwo"
+      },
+      {
+        "op": "index-count",
+        "case": "staggered",
+        "statement": "MyWindowSTAGTwo",
+        "count": 0,
+        "of": "rows",
+        "create": "createTwo"
+      },
+      {
+        "op": "deploy",
+        "case": "staggered",
+        "statement": "delete",
+        "epl": "@name('delete') on MyWindowSTAG delete from MyWindowSTAGTwo where a1 = a2"
+      },
+      {
+        "op": "deployed",
+        "case": "staggered",
+        "statement": "delete"
+      },
+      {
+        "op": "deploy",
+        "case": "staggered",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyWindowSTAG select theString as a1, intPrimitive as b1 from SupportBean(intPrimitive \u003e 0)"
+      },
+      {
+        "op": "deployed",
+        "case": "staggered",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "staggered",
+        "statement": "insertTwo",
+        "epl": "@name('insertTwo') insert into MyWindowSTAGTwo select theString as a2, intPrimitive as b2 from SupportBean(intPrimitive \u003c 0)"
+      },
+      {
+        "op": "deployed",
+        "case": "staggered",
+        "statement": "insertTwo"
+      },
+      {
+        "op": "send",
+        "case": "staggered",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "staggered",
+        "statement": "createTwo"
+      },
+      {
+        "op": "index-count",
+        "case": "staggered",
+        "statement": "MyWindowSTAGTwo",
+        "count": 1,
+        "of": "rows",
+        "create": "createTwo"
+      },
+      {
+        "op": "send",
+        "case": "staggered",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "staggered",
+        "statement": "createOne"
+      },
+      {
+        "op": "index-count",
+        "case": "staggered",
+        "statement": "MyWindowSTAG",
+        "count": 1,
+        "of": "rows",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "staggered",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "staggered",
+        "statement": "createTwo"
+      },
+      {
+        "op": "index-count",
+        "case": "staggered",
+        "statement": "MyWindowSTAGTwo",
+        "count": 2,
+        "of": "rows",
+        "create": "createTwo"
+      },
+      {
+        "op": "send",
+        "case": "staggered",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "staggered",
+        "statement": "createOne"
+      },
+      {
+        "op": "snapshot",
+        "case": "staggered",
+        "statement": "createTwo"
+      },
+      {
+        "op": "index-count",
+        "case": "staggered",
+        "statement": "MyWindowSTAG",
+        "count": 2,
+        "of": "rows",
+        "create": "createOne"
+      },
+      {
+        "op": "index-count",
+        "case": "staggered",
+        "statement": "MyWindowSTAGTwo",
+        "count": 1,
+        "of": "rows",
+        "create": "createTwo"
+      },
+      {
+        "op": "undeploy",
+        "case": "staggered",
+        "statement": "delete"
+      },
+      {
+        "op": "undeploy",
+        "case": "staggered",
+        "statement": "insert"
+      },
+      {
+        "op": "undeploy",
+        "case": "staggered",
+        "statement": "insertTwo"
+      },
+      {
+        "op": "undeploy",
+        "case": "staggered",
+        "statement": "createOne"
+      },
+      {
+        "op": "undeploy",
+        "case": "staggered",
+        "statement": "createTwo"
+      },
+      {
+        "op": "case",
+        "case": "coercion-key"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "createOne",
+        "epl": "@name('createOne') @public create window MyWindowCK#keepall as select theString, intPrimitive, intBoxed, doublePrimitive, doubleBoxed from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "d1",
+        "epl": "@name('d1') on SupportBean(theString='DB') as s0 delete from MyWindowCK as win where win.intPrimitive = s0.doubleBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "d1"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "MyWindowCK",
+        "count": 1,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "d2",
+        "epl": "@name('d2') on SupportBean(theString='DP') as s0 delete from MyWindowCK as win where win.intPrimitive = s0.doublePrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "d2"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "MyWindowCK",
+        "count": 1,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "d3",
+        "epl": "@name('d3') on SupportBean(theString='IB') as s0 delete from MyWindowCK where MyWindowCK.intPrimitive = s0.intBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "d3"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "MyWindowCK",
+        "count": 2,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "d4",
+        "epl": "@name('d4') on SupportBean(theString='IPDP') as s0 delete from MyWindowCK as win where win.intPrimitive = s0.intPrimitive and win.doublePrimitive = s0.doublePrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "d4"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "MyWindowCK",
+        "count": 3,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "d5",
+        "epl": "@name('d5') on SupportBean(theString='IPDP2') as s0 delete from MyWindowCK as win where win.doublePrimitive = s0.doublePrimitive and win.intPrimitive = s0.intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "d5"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "MyWindowCK",
+        "count": 4,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "d6",
+        "epl": "@name('d6') on SupportBean(theString='IPDPIB') as s0 delete from MyWindowCK as win where win.doublePrimitive = s0.doublePrimitive and win.intPrimitive = s0.intPrimitive and win.intBoxed = s0.intBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "d6"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "MyWindowCK",
+        "count": 5,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "d7",
+        "epl": "@name('d7') on SupportBean(theString='CAST') as s0 delete from MyWindowCK as win where win.intBoxed = s0.intPrimitive and win.doublePrimitive = s0.doubleBoxed and win.intPrimitive = s0.intBoxed"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "d7"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "MyWindowCK",
+        "count": 6,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "insert",
+        "epl": "insert into MyWindowCK select theString, intPrimitive, intBoxed, doublePrimitive, doubleBoxed from SupportBean(theString like 'E%')"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": 10,
+          "doublePrimitive": 100,
+          "doubleBoxed": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": 20,
+          "doublePrimitive": 200,
+          "doubleBoxed": 2000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "intBoxed": 30,
+          "doublePrimitive": 300,
+          "doubleBoxed": 3000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": 40,
+          "doublePrimitive": 400,
+          "doubleBoxed": 4000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "DB",
+          "intPrimitive": 0,
+          "intBoxed": 0,
+          "doublePrimitive": 0,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "DB",
+          "intPrimitive": 0,
+          "intBoxed": 0,
+          "doublePrimitive": 0,
+          "doubleBoxed": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "DP",
+          "intPrimitive": 0,
+          "intBoxed": 0,
+          "doublePrimitive": 5,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "DP",
+          "intPrimitive": 0,
+          "intBoxed": 0,
+          "doublePrimitive": 4,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IB",
+          "intPrimitive": 0,
+          "intBoxed": -1,
+          "doublePrimitive": 0,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IB",
+          "intPrimitive": 0,
+          "intBoxed": 1,
+          "doublePrimitive": 0,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5,
+          "intBoxed": 50,
+          "doublePrimitive": 500,
+          "doubleBoxed": 5000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 6,
+          "intBoxed": 60,
+          "doublePrimitive": 600,
+          "doubleBoxed": 6000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E7",
+          "intPrimitive": 7,
+          "intBoxed": 70,
+          "doublePrimitive": 700,
+          "doubleBoxed": 7000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IPDP",
+          "intPrimitive": 5,
+          "intBoxed": 0,
+          "doublePrimitive": 500,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IPDP2",
+          "intPrimitive": 6,
+          "intBoxed": 0,
+          "doublePrimitive": 600,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IPDPIB",
+          "intPrimitive": 7,
+          "intBoxed": 70,
+          "doublePrimitive": 0,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "IPDPIB",
+          "intPrimitive": 7,
+          "intBoxed": 70,
+          "doublePrimitive": 700,
+          "doubleBoxed": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E8",
+          "intPrimitive": 8,
+          "intBoxed": 80,
+          "doublePrimitive": 800,
+          "doubleBoxed": 8000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "CAST",
+          "intPrimitive": 80,
+          "intBoxed": 8,
+          "doublePrimitive": 0,
+          "doubleBoxed": 800
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key",
+        "statement": "d1"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key",
+        "statement": "d2"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key",
+        "statement": "d3"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key",
+        "statement": "d4"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key",
+        "statement": "d5"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key",
+        "statement": "d6"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key",
+        "statement": "d7"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "d0",
+        "epl": "@name('d0') on SupportBean(theString='LAST') as s0 delete from MyWindowCK as win where win.intPrimitive = s0.intPrimitive and win.doublePrimitive = s0.doublePrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "d0"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "LAST",
+          "intPrimitive": 2,
+          "intBoxed": 20,
+          "doublePrimitive": 200,
+          "doubleBoxed": 2000
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "coercion-key",
+        "statement": "createOne"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key",
+        "statement": "d0"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "MyWindowCK",
+        "count": 0,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "coercion-key"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "createTwo",
+        "epl": "@name('createTwo') @public create window WinOne#keepall as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "createTwo"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "select1",
+        "epl": "on SupportBean_ST0 select * from WinOne where theString = key0"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "select1"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "WinOne",
+        "count": 1,
+        "of": "indexes",
+        "create": "createTwo"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key",
+        "statement": "select2",
+        "epl": "on SupportBean_ST0 select * from WinOne where theString = key0 and intPrimitive = p00"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key",
+        "statement": "select2"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key",
+        "statement": "WinOne",
+        "count": 2,
+        "of": "indexes",
+        "create": "createTwo"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "coercion-key"
+      },
+      {
+        "op": "case",
+        "case": "coercion-range"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-range",
+        "statement": "createOne",
+        "epl": "@name('createOne') @public create window MyWindowCR#keepall as select theString, intPrimitive, intBoxed, doublePrimitive, doubleBoxed from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-range",
+        "statement": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-range",
+        "statement": "insert",
+        "epl": "insert into MyWindowCR select theString, intPrimitive, intBoxed, doublePrimitive, doubleBoxed from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-range",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": 10,
+          "doublePrimitive": 100,
+          "doubleBoxed": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": 20,
+          "doublePrimitive": 200,
+          "doubleBoxed": 2000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "intBoxed": 30,
+          "doublePrimitive": 3,
+          "doubleBoxed": 30
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": 40,
+          "doublePrimitive": 4,
+          "doubleBoxed": 40
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 5,
+          "intBoxed": 50,
+          "doublePrimitive": 500,
+          "doubleBoxed": 5000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 6,
+          "intBoxed": 60,
+          "doublePrimitive": 600,
+          "doubleBoxed": 6000
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-range",
+        "statement": "d0",
+        "epl": "@name('d0') on SupportBeanTwo as s2 delete from MyWindowCR as win where win.intPrimitive between s2.doublePrimitiveTwo and s2.doubleBoxedTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-range",
+        "statement": "d0"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-range",
+        "statement": "MyWindowCR",
+        "count": 1,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "T",
+          "intPrimitiveTwo": 0,
+          "intBoxedTwo": 0,
+          "doublePrimitiveTwo": 0,
+          "doubleBoxedTwo": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "T",
+          "intPrimitiveTwo": 0,
+          "intBoxedTwo": 0,
+          "doublePrimitiveTwo": -1,
+          "doubleBoxedTwo": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-range",
+        "statement": "d1",
+        "epl": "@name('d1') on SupportBeanTwo as s2 delete from MyWindowCR as win where win.intPrimitive between s2.intPrimitiveTwo and s2.intBoxedTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-range",
+        "statement": "d1"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-range",
+        "statement": "MyWindowCR",
+        "count": 2,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "T",
+          "intPrimitiveTwo": -2,
+          "intBoxedTwo": 2,
+          "doublePrimitiveTwo": 0,
+          "doubleBoxedTwo": 0
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-range",
+        "statement": "d2",
+        "epl": "@name('d2') on SupportBeanTwo as s2 delete from MyWindowCR as win where win.intPrimitive between s2.intPrimitiveTwo and s2.intBoxedTwo and win.doublePrimitive between s2.intPrimitiveTwo and s2.intBoxedTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-range",
+        "statement": "d2"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-range",
+        "statement": "MyWindowCR",
+        "count": 3,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "T",
+          "intPrimitiveTwo": -3,
+          "intBoxedTwo": 3,
+          "doublePrimitiveTwo": -3,
+          "doubleBoxedTwo": 3
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-range",
+        "statement": "d3",
+        "epl": "@name('d3') on SupportBeanTwo as s2 delete from MyWindowCR as win where win.doublePrimitive between s2.intPrimitiveTwo and s2.intPrimitiveTwo and win.intPrimitive between s2.intPrimitiveTwo and s2.intPrimitiveTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-range",
+        "statement": "d3"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-range",
+        "statement": "MyWindowCR",
+        "count": 4,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "T",
+          "intPrimitiveTwo": -4,
+          "intBoxedTwo": 4,
+          "doublePrimitiveTwo": -4,
+          "doubleBoxedTwo": 4
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-range",
+        "statement": "d4",
+        "epl": "@name('d4') on SupportBeanTwo as s2 delete from MyWindowCR as win where win.intPrimitive \u003c= doublePrimitiveTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-range",
+        "statement": "d4"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-range",
+        "statement": "MyWindowCR",
+        "count": 4,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "T",
+          "intPrimitiveTwo": 0,
+          "intBoxedTwo": 0,
+          "doublePrimitiveTwo": 5,
+          "doubleBoxedTwo": 1
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-range",
+        "statement": "d5",
+        "epl": "@name('d5') on SupportBeanTwo as s2 delete from MyWindowCR as win where win.intPrimitive not between s2.intPrimitiveTwo and s2.intBoxedTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-range",
+        "statement": "d5"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-range",
+        "statement": "MyWindowCR",
+        "count": 4,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "T",
+          "intPrimitiveTwo": 100,
+          "intBoxedTwo": 200,
+          "doublePrimitiveTwo": 0,
+          "doubleBoxedTwo": 0
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-range",
+        "statement": "d0"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-range",
+        "statement": "d1"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-range",
+        "statement": "d2"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-range",
+        "statement": "d3"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-range",
+        "statement": "d4"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-range",
+        "statement": "d5"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-range",
+        "statement": "MyWindowCR",
+        "count": 0,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "coercion-range"
+      },
+      {
+        "op": "case",
+        "case": "coercion-key-range"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key-range",
+        "statement": "createOne",
+        "epl": "@name('createOne') @public create window MyWindowCKR#keepall as select theString, intPrimitive, intBoxed, doublePrimitive, doubleBoxed from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key-range",
+        "statement": "createOne"
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key-range",
+        "statement": "insert",
+        "epl": "insert into MyWindowCKR select theString, intPrimitive, intBoxed, doublePrimitive, doubleBoxed from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key-range",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1,
+          "intBoxed": 10,
+          "doublePrimitive": 100,
+          "doubleBoxed": 1000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2,
+          "intBoxed": 20,
+          "doublePrimitive": 200,
+          "doubleBoxed": 2000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3,
+          "intBoxed": 30,
+          "doublePrimitive": 300,
+          "doubleBoxed": 3000
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 4,
+          "intBoxed": 40,
+          "doublePrimitive": 400,
+          "doubleBoxed": 4000
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key-range",
+        "statement": "d0",
+        "epl": "@name('d0') on SupportBeanTwo delete from MyWindowCKR where theString = stringTwo and intPrimitive between doublePrimitiveTwo and doubleBoxedTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key-range",
+        "statement": "d0"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key-range",
+        "statement": "MyWindowCKR",
+        "count": 1,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "T",
+          "intPrimitiveTwo": 0,
+          "intBoxedTwo": 0,
+          "doublePrimitiveTwo": 1,
+          "doubleBoxedTwo": 200
+        }
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "E1",
+          "intPrimitiveTwo": 0,
+          "intBoxedTwo": 0,
+          "doublePrimitiveTwo": 1,
+          "doubleBoxedTwo": 200
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key-range",
+        "statement": "d1",
+        "epl": "@name('d1') on SupportBeanTwo delete from MyWindowCKR where theString = stringTwo and intPrimitive = intPrimitiveTwo and intBoxed between doublePrimitiveTwo and doubleBoxedTwo"
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key-range",
+        "statement": "d1"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key-range",
+        "statement": "MyWindowCKR",
+        "count": 2,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "E2",
+          "intPrimitiveTwo": 2,
+          "intBoxedTwo": 0,
+          "doublePrimitiveTwo": 19,
+          "doubleBoxedTwo": 21
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key-range",
+        "statement": "d2",
+        "epl": "@name('d2') on SupportBeanTwo delete from MyWindowCKR where intBoxed between doubleBoxedTwo and doublePrimitiveTwo and intPrimitive = intPrimitiveTwo and theString = stringTwo "
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key-range",
+        "statement": "d2"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key-range",
+        "statement": "MyWindowCKR",
+        "count": 3,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "E3",
+          "intPrimitiveTwo": 3,
+          "intBoxedTwo": 0,
+          "doublePrimitiveTwo": 29,
+          "doubleBoxedTwo": 34
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "coercion-key-range",
+        "statement": "d3",
+        "epl": "@name('d3') on SupportBeanTwo delete from MyWindowCKR where intBoxed between intBoxedTwo and intBoxedTwo and intPrimitive = intPrimitiveTwo and theString = stringTwo "
+      },
+      {
+        "op": "deployed",
+        "case": "coercion-key-range",
+        "statement": "d3"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key-range",
+        "statement": "MyWindowCKR",
+        "count": 4,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "send",
+        "case": "coercion-key-range",
+        "eventType": "SupportBeanTwo",
+        "payload": {
+          "stringTwo": "E4",
+          "intPrimitiveTwo": 4,
+          "intBoxedTwo": 40,
+          "doublePrimitiveTwo": 0,
+          "doubleBoxedTwo": null
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key-range",
+        "statement": "d0"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key-range",
+        "statement": "d1"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key-range",
+        "statement": "d2"
+      },
+      {
+        "op": "undeploy",
+        "case": "coercion-key-range",
+        "statement": "d3"
+      },
+      {
+        "op": "index-count",
+        "case": "coercion-key-range",
+        "statement": "MyWindowCKR",
+        "count": 0,
+        "of": "indexes",
+        "create": "createOne"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "coercion-key-range"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-on-delete-indexes",
+    "records": [
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAG",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "createTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAGTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "insertTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E1",
+              "b2": -10
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E1",
+              "b2": -10
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAGTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E2",
+              "b1": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E2",
+              "b1": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAG",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E3",
+              "b2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E1",
+              "b2": -10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E3",
+              "b2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAGTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E3",
+              "b1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E3",
+              "b2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E3",
+              "b2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E2",
+              "b1": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E3",
+              "b1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E1",
+              "b2": -10
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAG",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAGTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 3
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d6",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 5
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d7",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 6
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 5000,
+              "doublePrimitive": 500,
+              "intBoxed": 50,
+              "intPrimitive": 5,
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 7000,
+              "doublePrimitive": 700,
+              "intBoxed": 70,
+              "intPrimitive": 7,
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 5000,
+              "doublePrimitive": 500,
+              "intBoxed": 50,
+              "intPrimitive": 5,
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 7000,
+              "doublePrimitive": 700,
+              "intBoxed": 70,
+              "intPrimitive": 7,
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 7000,
+              "doublePrimitive": 700,
+              "intBoxed": 70,
+              "intPrimitive": 7,
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 7000,
+              "doublePrimitive": 700,
+              "intBoxed": 70,
+              "intPrimitive": 7,
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 8000,
+              "doublePrimitive": 800,
+              "intBoxed": 80,
+              "intPrimitive": 8,
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 8000,
+              "doublePrimitive": 800,
+              "intBoxed": 80,
+              "intPrimitive": 8,
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 8000,
+              "doublePrimitive": 800,
+              "intBoxed": 80,
+              "intPrimitive": 8,
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "createTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "select1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "WinOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "select2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "WinOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 30,
+              "doublePrimitive": 3,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 40,
+              "doublePrimitive": 4,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 5000,
+              "doublePrimitive": 500,
+              "intBoxed": 50,
+              "intPrimitive": 5,
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 3
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 30,
+              "doublePrimitive": 3,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 40,
+              "doublePrimitive": 4,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 5000,
+              "doublePrimitive": 500,
+              "intBoxed": 50,
+              "intPrimitive": 5,
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "d0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "d1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "d2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 3
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "d3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-namedwindow-on-delete-indexes",
+    "records": [
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAG",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "createTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAGTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "deployed",
+        "statement": "insertTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E1",
+              "b2": -10
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E1",
+              "b2": -10
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAGTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E2",
+              "b1": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E2",
+              "b1": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAG",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createTwo",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E3",
+              "b2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E1",
+              "b2": -10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E3",
+              "b2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAGTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E3",
+              "b1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "createTwo",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E3",
+              "b2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "listener",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E3",
+              "b2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E2",
+              "b1": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "a1": "E3",
+              "b1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "snapshot",
+        "statement": "createTwo",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a2": "E1",
+              "b2": -10
+            }
+          }
+        ]
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAG",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "staggered",
+        "operation": "index-count",
+        "statement": "MyWindowSTAGTwo",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 3
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d6",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 5
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d7",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 6
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 5000,
+              "doublePrimitive": 500,
+              "intBoxed": 50,
+              "intPrimitive": 5,
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 7000,
+              "doublePrimitive": 700,
+              "intBoxed": 70,
+              "intPrimitive": 7,
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 5000,
+              "doublePrimitive": 500,
+              "intBoxed": 50,
+              "intPrimitive": 5,
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 7000,
+              "doublePrimitive": 700,
+              "intBoxed": 70,
+              "intPrimitive": 7,
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 7000,
+              "doublePrimitive": 700,
+              "intBoxed": 70,
+              "intPrimitive": 7,
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 13,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 7000,
+              "doublePrimitive": 700,
+              "intBoxed": 70,
+              "intPrimitive": 7,
+              "theString": "E7"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 14,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 8000,
+              "doublePrimitive": 800,
+              "intBoxed": 80,
+              "intPrimitive": 8,
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 8000,
+              "doublePrimitive": 800,
+              "intBoxed": 80,
+              "intPrimitive": 8,
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 15,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 8000,
+              "doublePrimitive": 800,
+              "intBoxed": 80,
+              "intPrimitive": 8,
+              "theString": "E8"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "d0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 16,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key",
+        "operation": "snapshot",
+        "statement": "createOne",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "MyWindowCK",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "createTwo",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "select1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "WinOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key",
+        "operation": "deployed",
+        "statement": "select2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key",
+        "operation": "index-count",
+        "statement": "WinOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 30,
+              "doublePrimitive": 3,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 40,
+              "doublePrimitive": 4,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 5000,
+              "doublePrimitive": 500,
+              "intBoxed": 50,
+              "intPrimitive": 5,
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 3
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 30,
+              "doublePrimitive": 3,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 40,
+              "doublePrimitive": 4,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 11,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 5000,
+              "doublePrimitive": 500,
+              "intBoxed": 50,
+              "intPrimitive": 5,
+              "theString": "E5"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "deployed",
+        "statement": "d5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 12,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 6000,
+              "doublePrimitive": 600,
+              "intBoxed": 60,
+              "intPrimitive": 6,
+              "theString": "E6"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-range",
+        "operation": "index-count",
+        "statement": "MyWindowCR",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "d0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 1
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 1000,
+              "doublePrimitive": 100,
+              "intBoxed": 10,
+              "intPrimitive": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "d1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 2
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 2000,
+              "doublePrimitive": 200,
+              "intBoxed": 20,
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "d2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 3
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 3000,
+              "doublePrimitive": 300,
+              "intBoxed": 30,
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "deployed",
+        "statement": "d3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 4
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "listener",
+        "statement": "createOne",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "doubleBoxed": 4000,
+              "doublePrimitive": 400,
+              "intBoxed": 40,
+              "intPrimitive": 4,
+              "theString": "E4"
+            }
+          }
+        ]
+      },
+      {
+        "case": "coercion-key-range",
+        "operation": "index-count",
+        "statement": "MyWindowCKR",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

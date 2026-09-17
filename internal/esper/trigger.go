@@ -2002,7 +2002,7 @@ func executeSelectNamedWindowAction(ctx context.Context, engine *Engine, definit
 	if engine == nil || definition == nil {
 		return ResultBatch{}, NewError(ErrorDependency, "nil named-window select trigger")
 	}
-	window, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.table)]
+	window, ok := engine.ensureNamedWindowLockedInModule(definition.moduleName, definition.table)
 	if !ok {
 		return ResultBatch{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
 	}
@@ -2416,7 +2416,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 	if definition.action == triggerInsertFromNamedWindow {
 		return executeInsertFromNamedWindowAction(ctx, engine, definition, event, now, variables, owner)
 	}
-	window, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.table)]
+	window, ok := engine.ensureNamedWindowLockedInModule(definition.moduleName, definition.table)
 	if !ok {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
 	}
@@ -2634,7 +2634,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 // The inserts land in the same triggering-event cascade, so a later routed
 // statement observes them (preemptive named-window processing).
 func executeInsertFromNamedWindowAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement) (tableMutationResult, error) {
-	sourceWindow, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.sourceTable)]
+	sourceWindow, ok := engine.ensureNamedWindowLockedInModule(definition.moduleName, definition.sourceTable)
 	if !ok {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger source named window %q is not available", definition.sourceTable))
 	}
@@ -2645,7 +2645,7 @@ func executeInsertFromNamedWindowAction(ctx context.Context, engine *Engine, def
 	if !sourceExists {
 		return tableMutationResult{}, nil
 	}
-	window, ok := engine.namedWindows[catalogKey(definition.moduleName, definition.table)]
+	window, ok := engine.ensureNamedWindowLockedInModule(definition.moduleName, definition.table)
 	if !ok {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger named window %q is not available", definition.table))
 	}

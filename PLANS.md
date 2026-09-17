@@ -2651,6 +2651,61 @@ Active: Draft 4.414 ('orderby-rowperevent-agg').
       Both are their own units when scheduled.
 
 ## Current work unit
+Active: Draft 4.450 ('infra-namedwindow-on-delete-indexes').
+
+- Unit: `InfraNamedWindowOnDelete` ordinals 1-4 - `InfraStaggeredNamedWindow`
+      (`java-runtime-0dcb2b72f505c7931a45`, STATICHOOK), `InfraCoercionKeyMultiPropIndexes`
+      (`java-runtime-c4c336036fdd92d803f7`), `InfraCoercionRangeMultiPropIndexes`
+      (`java-runtime-a58ae70ca908579af50a`), `InfraCoercionKeyAndRangeMultiPropIndexes`
+      (`java-runtime-2d6d018e91b5664f3734`); shared static `java-06bf0eb71230b3119293`.
+      Ordinals 0/5/6 already covered (first-unique / silent-delete cases).
+- [x] Scenario `testdata/parity/infra-namedwindow-on-delete-indexes.json` (4 cases / 185 steps)
+      with byte-exact EPLs; runner `internal/app/parity/infra_namedwindow_on_delete_indexes.go`
+      + run.go wiring; strict loader with generated step-pin table; `index-count` step op added
+      to `internal/compat/scenario.go` (introspection-only observable).
+- [x] Java oracle `tools/java-oracle/InfraNamedWindowOnDeleteIndexesScenarioOracle.java` +
+      `run-infra-namedwindow-on-delete-indexes.sh`; trace 118 records at commit
+      `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+- [x] **Engine fixes (shared core)**: (1) trigger select/insert/delete and FAF named-window
+      targets resolve via `ensureNamedWindowLockedInModule` so env-registered windows created
+      after engine start materialize lazily at first trigger action (trigger.go x4, faf.go x2);
+      (2) `flushNamedWindowConsumerWaveLocked` drains the direct create-window dispatches a
+      consumer-wave mutation statement just queued ahead of that statement's own batch,
+      matching Java `OnExprViewNamedWindowDelete` root-view-first ordering (fixes staggered
+      createTwo-before-delete ordering); (3) both send-loop and routed-loop merge sites now
+      also drain pending direct dispatches into the deployment-order merge.
+- [x] Differential replay: Java 118 records / Go 118 records / 0 differences; evidence
+      `testdata/parity/infra-namedwindow-on-delete-indexes.evidence.json` status passing.
+- [x] Six-test family green (replay, diff-evidence, checked-in evidence, 8 trace mutations,
+      9 raw-scenario mutations, runtime-ID mapping).
+- [x] Manifest: new `case.infra-namedwindow-on-delete-indexes` born-DV mapped to
+      `infra.namedwindow.views`; summary 692 cases / 690 implemented / 318 DV / 1196 DV
+      runtime IDs / 3744 associations (referenced 3380, unreferenced 756).
+- [x] Full local gates GREEN: `make check` exit 0 (parity 199s, internal/esper 56s);
+      gofmt clean, `git diff --check` clean.
+- [x] Independent parity review (agent `ParityReview450`, read-only): findings extracted
+      from transcript after repeated yield-tool failures. All verified and FIXED:
+      - P1 `IndexCount()` double-counted declared unique indexes (`def.uniqueIndexes` is a
+        subset of `def.indexes`) - now `len(def.indexes) + len(implicitIndexes)` (state.go).
+      - P1 `cleanupPreparedStatementLocked` leaked implicit-index references on failed
+        multi-statement deploys - now calls `releaseTriggerImplicitIndexLocked` (runtime.go).
+      - P2 index inference missed the typed `Equal[T]` "eq" node kind (trigger_index.go).
+      - P2 action gate excluded on-update/on-merge; Java plans implicit indexes for every
+        OnTriggerWindowDesc lookup action - gate extended (trigger_index.go).
+      - P2 `win.a = win.b` / window-field between-bounds registered phantom indexes; Java's
+        SubordPropAnalyzer requires a non-window lookup value - operand check added.
+      - P3 step count corrected 84 -> 185 in manifest notes, PLANS.md (CHANGELOG/roadmap
+        never carried the wrong count).
+- [x] Post-fix re-validation: `-mode ...-diff` passing / 0 differences (118 records), six-test
+      family green, `TestTriggerImplicitIndex|TestNamedWindow` engine tests green.
+- [x] Reviewer confirmation: `ParityReview450` re-verified all six fixes in the working
+      tree and submitted a final verdict (transcript: "All six fixes verified in the
+      working tree. Submitting the final verdict."; the yield tool itself kept failing
+      on a schema quirk, so the verdict was recovered from the transcript).
+- [x] Post-confirmation full gates GREEN: `make check` exit 0 (parity 199s,
+      internal/esper 56s).
+
+## Current work unit
 Active: Draft 4.413 ('resultset-querytype-local-group-solution-pattern').
 
 - Unit: the LAST normal execution of `ResultSetQueryTypeLocalGroupBy` - ordinal 12

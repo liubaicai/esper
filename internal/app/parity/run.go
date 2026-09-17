@@ -125,6 +125,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableOnUpdateScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-silent" || *mode == "infra-namedwindow-on-delete-silent-diff" {
 		scenario, err = loadInfraNWOnDeleteSilentScenario(file)
+	} else if *mode == "infra-namedwindow-on-delete-indexes" || *mode == "infra-namedwindow-on-delete-indexes-diff" {
+		scenario, err = loadInfraNWOnDeleteIndexesScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
 		scenario, err = compat.LoadScenario(file)
 	} else if *mode == "epl-from-clause-method-variable" || *mode == "epl-from-clause-method-variable-diff" {
@@ -433,6 +435,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWOnDeleteSilentJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWOnDeleteSilentJavaSources),
 				splitMetadata(*javaExecutions, infraNWOnDeleteSilentJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-namedwindow-on-delete-indexes" || *mode == "infra-namedwindow-on-delete-indexes-diff" {
+		trace, err := runInfraNWOnDeleteIndexesScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-namedwindow-on-delete-indexes-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWOnDeleteIndexesJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWOnDeleteIndexesJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWOnDeleteIndexesSources),
+				splitMetadata(*javaExecutions, infraNWOnDeleteIndexesJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

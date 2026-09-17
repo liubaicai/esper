@@ -1960,16 +1960,119 @@ type namedWindowRuntime struct {
 	batchLast         []Event
 	indexes           map[string]map[string][]int
 	indexEntries      map[string][]namedWindowIndexEntry
-	keyed             map[string]storedEvent
-	keyOrder          []string
-	listeners         map[uint64]NamedWindowListener
-	nextID            uint64
-	entrySeq          uint64
-	indexLookups      atomic.Uint64
+	// implicitIndexes holds the ref-counted implicit indexes inferred from
+	// on-delete/on-select trigger where clauses (Java creates one index per
+	// distinct IndexMultiKey and drops it when the last owning statement
+	// undeploys). The map key is the canonical spec encoding.
+	implicitIndexes map[string]*namedWindowImplicitIndex
+	keyed           map[string]storedEvent
+	keyOrder        []string
+	listeners       map[uint64]NamedWindowListener
+	nextID          uint64
+	entrySeq        uint64
+	indexLookups    atomic.Uint64
 	// compositeChildren holds one child runtime per child view of an
 	// intersecting composite retention (#length(2)#unique(x)); the window
 	// contents are the intersection of the child contents.
 	compositeChildren []*namedWindowRuntime
+}
+
+// namedWindowImplicitIndex records one implicit index inferred from a
+// trigger where clause. hashProps and rangeProps preserve conjunct order:
+// Java's IndexMultiKey equality is order-sensitive, so {int,double} and
+// {double,int} are distinct indexes.
+type namedWindowImplicitIndex struct {
+	hashProps  []namedWindowImplicitProp
+	rangeProps []namedWindowImplicitProp
+	refs       map[string]struct{}
+}
+
+// namedWindowImplicitProp mirrors Java's IndexedPropDesc: identity is the
+// property name plus the coercion type inferred from the compared operands.
+type namedWindowImplicitProp struct {
+	name     string
+	coercion string
+}
+
+func (p namedWindowImplicitProp) key() string {
+	return p.name + "\x00" + p.coercion
+}
+
+func (idx *namedWindowImplicitIndex) key() string {
+	var b strings.Builder
+	b.WriteString("h:")
+	for _, prop := range idx.hashProps {
+		b.WriteString(prop.key())
+		b.WriteByte(',')
+	}
+	b.WriteString("r:")
+	for _, prop := range idx.rangeProps {
+		b.WriteString(prop.key())
+		b.WriteByte(',')
+	}
+	return b.String()
+}
+
+// registerImplicitIndex attaches the statement to the implicit index
+// matching spec, creating it when absent. It returns false when the spec is
+// empty (no indexable conjuncts — Java creates no index either).
+func (w *NamedWindow) registerImplicitIndex(statementID string, spec *namedWindowImplicitIndex) bool {
+	if w == nil || w.state == nil || spec == nil || (len(spec.hashProps) == 0 && len(spec.rangeProps) == 0) {
+		return false
+	}
+	w.state.mu.Lock()
+	defer w.state.mu.Unlock()
+	if w.state.implicitIndexes == nil {
+		w.state.implicitIndexes = make(map[string]*namedWindowImplicitIndex)
+	}
+	key := spec.key()
+	existing, ok := w.state.implicitIndexes[key]
+	if !ok {
+		existing = &namedWindowImplicitIndex{
+			hashProps:  append([]namedWindowImplicitProp(nil), spec.hashProps...),
+			rangeProps: append([]namedWindowImplicitProp(nil), spec.rangeProps...),
+			refs:       make(map[string]struct{}),
+		}
+		w.state.implicitIndexes[key] = existing
+	}
+	existing.refs[statementID] = struct{}{}
+	return true
+}
+
+// unregisterImplicitIndex drops the statement's reference; the index is
+// removed when its last owner undeploys, matching Java's index lifecycle.
+func (w *NamedWindow) unregisterImplicitIndex(statementID string, spec *namedWindowImplicitIndex) {
+	if w == nil || w.state == nil || spec == nil {
+		return
+	}
+	w.state.mu.Lock()
+	defer w.state.mu.Unlock()
+	key := spec.key()
+	existing, ok := w.state.implicitIndexes[key]
+	if !ok {
+		return
+	}
+	delete(existing.refs, statementID)
+	if len(existing.refs) == 0 {
+		delete(w.state.implicitIndexes, key)
+	}
+}
+
+// IndexCount reports the number of index descriptors the window instance
+// maintains — declared indexes plus the implicit indexes inferred from live
+// trigger where clauses. It mirrors Java's
+// EPAssertionUtil/SupportInfraUtil index-count introspection
+// (instance.getIndexDescriptors().length).
+func (w *NamedWindow) IndexCount() int {
+	if w == nil || w.state == nil {
+		return 0
+	}
+	w.state.mu.RLock()
+	defer w.state.mu.RUnlock()
+	// def.indexes already contains the unique definitions (they are a
+	// subset, not an additional list), so counting uniqueIndexes again
+	// would double-count them against Java's getIndexDescriptors().
+	return len(w.state.def.indexes) + len(w.state.implicitIndexes)
 }
 
 // namedWindowIndexEntry is the ordered representation of one B-tree index

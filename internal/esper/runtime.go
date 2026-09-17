@@ -3372,6 +3372,10 @@ func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deploym
 		e.cleanupPreparedStatementLocked(statement)
 		return nil, err
 	}
+	// Java creates the implicit index for an on-delete/on-select trigger
+	// where clause when the statement deploys and drops it when the last
+	// owning statement undeploys.
+	statement.runtime.triggerImplicitIndex = e.registerTriggerImplicitIndexLocked(statement)
 	return statement, nil
 }
 
@@ -3379,6 +3383,10 @@ func (e *Engine) cleanupPreparedStatementLocked(statement *Statement) {
 	if statement == nil {
 		return
 	}
+	// A statement that registered an implicit trigger index before a sibling
+	// failed to prepare must drop that reference here; undeploy never runs
+	// for a deployment that was never committed.
+	e.releaseTriggerImplicitIndexLocked(statement)
 	e.releaseRowRecogRuntimeLocked(&statement.runtime)
 	e.matchRecognizeStatePool.removeOwner(statement.id)
 	statement.closed = true
@@ -3676,6 +3684,7 @@ func (e *Engine) undeploy(ctx context.Context, deploymentID string, force bool) 
 	e.removeDeploymentResourceDependentsLocked(deploymentID)
 	removedStatements := append([]*Statement(nil), deployment.statements...)
 	for _, statement := range deployment.statements {
+		e.releaseTriggerImplicitIndexLocked(statement)
 		e.removeStatementMetricsLocked(statement)
 		e.sharedFilterIndex.remove(statement)
 		delete(e.statements, statement.id)
@@ -4116,13 +4125,17 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 				}
 			}
 		}
-		if len(deferredTriggerDispatches) > 0 && len(e.pendingNamedWindowConsumerDeltas) > 0 {
-			// Java delivers window-consumer notifications raised by a trigger
-			// mutation in statement deployment order, interleaved with the
-			// trigger's own output (a consumer deployed before the trigger
-			// fires first; one deployed after it fires last). Flush the
-			// consumer wave, then merge the deferred trigger batches back by
-			// deployment order instead of appending them unconditionally.
+		if len(deferredTriggerDispatches) > 0 && (len(e.pendingNamedWindowConsumerDeltas) > 0 || len(e.pendingDirectNamedWindowDispatches) > 0) {
+			// Java delivers the named window's own-statement delivery and
+			// window-consumer notifications raised by a trigger mutation in
+			// statement deployment order, interleaved with the trigger's own
+			// output (a consumer deployed before the trigger fires first; one
+			// deployed after it fires last). The direct create-window child is
+			// part of the mutation delivery and precedes the deferred wave.
+			// Drain it, flush the consumer wave, then merge the deferred
+			// trigger batches back by deployment order instead of appending
+			// them unconditionally.
+			e.drainPendingDirectNamedWindowDispatchesLocked(&dispatches)
 			consumerStart := len(dispatches)
 			if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, &variables, &dispatches); err != nil {
 				e.mu.Unlock()
@@ -5382,7 +5395,12 @@ func (e *Engine) flushNamedWindowConsumerWaveLocked(ctx context.Context, now tim
 	// produced while preprocessing a mutation keeps its documented precedence
 	// over the direct child, so the drain is skipped while such output is
 	// still queued (see the routed loop's drain order).
-	if len(e.pendingStatementDispatches) == 0 {
+	// drainDirectInWave tracks whether direct create-window dispatches may
+	// join this wave: when mutation-preprocessing output is still queued it
+	// keeps precedence over the direct child, so mid-wave drains are skipped
+	// too and the routed loop handles them later.
+	drainDirectInWave := len(e.pendingStatementDispatches) == 0
+	if drainDirectInWave {
 		e.drainPendingDirectNamedWindowDispatchesLocked(dispatches)
 	}
 	statements := e.dispatchStatementsLocked()
@@ -5457,6 +5475,15 @@ func (e *Engine) flushNamedWindowConsumerWaveLocked(ctx context.Context, now tim
 			}
 			if !changed {
 				continue
+			}
+			// A mutation trigger running as a consumer queues the target
+			// window's own-statement delivery while it executes. Java
+			// delivers that create-window child output before the trigger's
+			// own batch (OnExprViewNamedWindowDelete updates the root view
+			// first), so drain the direct dispatches this statement just
+			// queued ahead of its batch.
+			if drainDirectInWave {
+				e.drainPendingDirectNamedWindowDispatchesLocked(dispatches)
 			}
 			*dispatches = append(*dispatches, statementDispatch{statement: wave.statement, batch: batch})
 			if err := e.queueStatementRoutesLocked(wave.statement, batch, now); err != nil {
@@ -5784,10 +5811,12 @@ func (e *Engine) processPendingRoutedEventsUntilBoundaryLocked(ctx context.Conte
 				break
 			}
 		}
-		if len(deferredTriggerDispatches) > 0 && len(e.pendingNamedWindowConsumerDeltas) > 0 {
-			// Same deployment-order merge as the send loop: consumers raised
-			// by the trigger mutation interleave with the trigger output by
-			// statement deployment order.
+		if len(deferredTriggerDispatches) > 0 && (len(e.pendingNamedWindowConsumerDeltas) > 0 || len(e.pendingDirectNamedWindowDispatches) > 0) {
+			// Same deployment-order merge as the send loop: the direct
+			// create-window child and consumers raised by the trigger
+			// mutation interleave with the trigger output by statement
+			// deployment order.
+			e.drainPendingDirectNamedWindowDispatchesLocked(dispatches)
 			consumerStart := len(*dispatches)
 			if err := e.flushNamedWindowConsumerWaveLocked(ctx, now, &variables, dispatches); err != nil {
 				return false, err
@@ -6460,6 +6489,10 @@ type statementRuntime struct {
 	// GroupByViewReclaimAged.nextSweepTime is per agent instance).
 	viewReclaimSweeps  map[*streamNode]time.Time
 	namedWindowArrival []Event
+	// triggerImplicitIndex holds the implicit named-window index spec this
+	// statement registered at deploy (nil for non-indexable triggers), so
+	// undeploy releases exactly that index.
+	triggerImplicitIndex *namedWindowImplicitIndex
 	// priorArrival retains the logical input arrival order used by Esper's
 	// prior() expression. Unlike Prev, Prior is not limited to the current
 	// view's retained entries: a length(2) view can still evaluate prior(2,

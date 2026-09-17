@@ -730,7 +730,7 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 		return mutation, nil
 	}
 
-	window := e.namedWindows[catalogKey(target.moduleName, target.sourceName)]
+	window, _ := e.ensureNamedWindowLockedInModule(target.moduleName, target.sourceName)
 	if window == nil {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", target.sourceName))
 	}
@@ -1532,7 +1532,7 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 	partitions := make(map[string]contextMutationPartition)
 	switch source.kind {
 	case streamNamedWindow:
-		window := e.namedWindows[catalogKey(source.moduleName, source.sourceName)]
+		window, _ := e.ensureNamedWindowLockedInModule(source.moduleName, source.sourceName)
 		if window == nil {
 			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("named window %q is not registered", source.sourceName))
 		}

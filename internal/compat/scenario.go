@@ -47,9 +47,16 @@ type Step struct {
 	Mode           string            `json:"mode,omitempty"`
 	Label          string            `json:"label,omitempty"`
 	// Count pins introspection-style observables without a row shape:
-	// pending schedule callbacks (schedule-count/schedule-count-overall) and
-	// iterator sizes (iterator-count). Required for those ops.
+	// pending schedule callbacks (schedule-count/schedule-count-overall),
+	// iterator sizes (iterator-count) and named-window index descriptor
+	// counts (index-count). Required for those ops.
 	Count *int64 `json:"count,omitempty"`
+	// Of distinguishes index-count kinds: "indexes" counts index
+	// descriptors (assertIndexCount) while "rows" counts retained window
+	// rows (getDataWindowCountNoContext). Create names the create statement
+	// whose deployment owns the window instance in Java.
+	Of     string `json:"of,omitempty"`
+	Create string `json:"create,omitempty"`
 }
 
 func LoadScenario(reader io.Reader) (Scenario, error) {
@@ -109,7 +116,7 @@ func (s Scenario) Validate() error {
 			}
 		case "undeploy", "undeploy-all":
 			// Cleanup targets are selected by the host lifecycle handler.
-		case "schedule-count", "iterator-count":
+		case "schedule-count", "iterator-count", "index-count":
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
 			}
