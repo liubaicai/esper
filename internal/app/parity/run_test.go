@@ -59854,3 +59854,363 @@ func assertInfraNWTableOnDeleteTrace(t *testing.T, trace compat.Trace) {
 		}
 	}
 }
+
+func TestRunInfraNWTableOnUpdateDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableOnUpdateID,
+		"-scenario", filepath.Join(root, infraNWTableOnUpdateID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraNWTableOnUpdateTrace(t, trace)
+}
+
+func TestRunInfraNWTableOnUpdateDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraNWTableOnUpdateID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableOnUpdateID + "-diff",
+		"-scenario", filepath.Join(root, infraNWTableOnUpdateID+".json"),
+		"-java-trace", filepath.Join(root, infraNWTableOnUpdateID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraNWTableOnUpdateJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWTableOnUpdateJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNWTableOnUpdateSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWTableOnUpdateJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraNWTableOnUpdateTrace(t, evidence.JavaTrace)
+	assertInfraNWTableOnUpdateTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraNWTableOnUpdateDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "sceneone-update-old-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "sceneone-nw" && rec.Operation == "listener" && rec.Statement == "update" && rec.Sequence == 1 {
+						rec.Old[0].Fields["theString"] = "Z9"
+						return
+					}
+				}
+				panic("no sceneone-nw update record 1")
+			},
+		},
+		{
+			name: "sceneone-order-swap",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "sceneone-nw" && rec.Operation == "listener" && rec.Statement == "create" && rec.Sequence == 3 {
+						rec.Statement = "update"
+						return
+					}
+				}
+				panic("no sceneone-nw create record 3")
+			},
+		},
+		{
+			name: "subqself-value-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "subqself-nw" && rec.Operation == "snapshot" {
+						rec.New[0].Fields["intPrimitive"] = json.Number("9")
+						return
+					}
+				}
+				panic("no subqself-nw snapshot")
+			},
+		},
+		{
+			name: "multikey-null-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multikey-table" && rec.Operation == "snapshot" && len(rec.New) > 0 {
+						if marker, ok := rec.New[0].Fields["value"].(map[string]any); ok && marker["state"] == "null" {
+							rec.New[0].Fields["value"] = json.Number("0")
+							return
+						}
+					}
+				}
+				panic("no multikey-table null snapshot")
+			},
+		},
+		{
+			name: "multikey-deferred-order",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multikey-nw" && rec.Operation == "listener" && rec.Statement == "create" && rec.Sequence == 1 {
+						rec.New[0].Fields["value"] = json.Number("21")
+						return
+					}
+				}
+				panic("no multikey-nw create record 1")
+			},
+		},
+		{
+			name: "deployed-sequence-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "sceneone-table" && rec.Operation == "deployed" && rec.Statement == "update" {
+						rec.Sequence = 99
+						return
+					}
+				}
+				panic("no sceneone-table update deployed record")
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraNWTableOnUpdateID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraNWTableOnUpdateID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraNWTableOnUpdateID + "-diff",
+				"-scenario", filepath.Join(root, infraNWTableOnUpdateID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableOnUpdateCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraNWTableOnUpdateID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraNWTableOnUpdateID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraNWTableOnUpdateID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != infraNWTableOnUpdateJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWTableOnUpdateJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNWTableOnUpdateSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWTableOnUpdateJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertInfraNWTableOnUpdateTrace(t, javaTrace)
+	assertInfraNWTableOnUpdateTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, infraNWTableOnUpdateID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatalf("checked-in scenario differs from evidence scenario")
+	}
+}
+
+func TestRunInfraNWTableOnUpdateRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWTableOnUpdateID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "sceneone-nw"`), []byte(`"case": "sceneone-nw", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-f8090e148364d7b15116"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "update-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`update MyInfra set theString = p00`), []byte(`update MyInfra set theString = p01`), 1)
+		}},
+		{name: "subqself-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`t.theString = c.id`), []byte(`t.theString = c.id2`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "A1", "intPrimitive": 1`), []byte(`"theString": "A1", "intPrimitive": 1, "extra": 0`), 1)
+		}},
+		{name: "wrong-event", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"eventType": "SupportBean_S0"`), []byte(`"eventType": "WrongEvent"`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"id": "E4", "array": [1]`), []byte(`"id": "E4", "array": [9]`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraNWTableOnUpdateID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableOnUpdateRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWTableOnUpdateID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, infraNWTableOnUpdateJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, infraNWTableOnUpdateJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != infraNWTableOnUpdateJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, infraNWTableOnUpdateJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertInfraNWTableOnUpdateTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraNWTableOnUpdateID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 42 {
+		t.Fatalf("trace records = %d, want 42", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"sceneone-nw":    {"deployed": 3, "listener": 6, "snapshot": 3},
+		"sceneone-table": {"deployed": 3, "listener": 2, "snapshot": 3},
+		"subqself-nw":    {"deployed": 3, "snapshot": 1},
+		"subqself-table": {"deployed": 3, "snapshot": 1},
+		"multikey-nw":    {"deployed": 2, "listener": 4, "snapshot": 3},
+		"multikey-table": {"deployed": 2, "snapshot": 3},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+	for _, record := range trace.Records {
+		if record.Operation != "listener" {
+			continue
+		}
+		// Table cases only fire the update trigger listener; named-window
+		// cases fire the create consumer plus the update trigger.
+		if record.Case == "sceneone-table" && record.Statement != "update" {
+			t.Fatalf("sceneone-table fired listener %q", record.Statement)
+		}
+		if record.Case == "subqself-nw" || record.Case == "subqself-table" {
+			t.Fatalf("subqself case %q fired listener %q", record.Case, record.Statement)
+		}
+		if record.Case == "multikey-table" {
+			t.Fatalf("multikey-table fired listener %q", record.Statement)
+		}
+	}
+}

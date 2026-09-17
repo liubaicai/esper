@@ -1580,7 +1580,8 @@ func (e *Engine) InsertNamedWindowInModule(ctx context.Context, moduleName, name
 	e.pendingStatementDispatches = nil
 	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
-	e.pendingNamedWindowConsumerDeltas = nil
+	// pendingNamedWindowConsumerDeltas survives: fire-and-forget mutations
+	// defer consumer delivery to this next work boundary.
 	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
@@ -3986,7 +3987,9 @@ func (e *Engine) send(ctx context.Context, eventType string, underlying any, jso
 	e.pendingStatementDispatches = nil
 	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
-	e.pendingNamedWindowConsumerDeltas = nil
+	// pendingNamedWindowConsumerDeltas survives: fire-and-forget mutations
+	// defer consumer delivery to this next work boundary (Java drains the
+	// deferred delta before the inbound event's own consumer wave).
 	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
@@ -4653,7 +4656,8 @@ func (e *Engine) advanceTime(ctx context.Context, at time.Time, coalesceSchedule
 	e.pendingStatementDispatches = nil
 	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
-	e.pendingNamedWindowConsumerDeltas = nil
+	// pendingNamedWindowConsumerDeltas survives: fire-and-forget mutations
+	// defer consumer delivery to this next work boundary.
 	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
@@ -4958,6 +4962,11 @@ type namedWindowConsumerDelta struct {
 	window *NamedWindow
 	delta  NamedWindowDelta
 	owner  *Statement
+	// waveKey isolates deltas that must deliver as their own consumer wave:
+	// fire-and-forget mutations defer consumer delivery to the next work
+	// boundary, and Java delivers each mutation boundary as a separate
+	// listener invocation rather than aggregating it with later deltas.
+	waveKey uint64
 }
 type engineDispatchWork struct {
 	statements                         []statementDispatch
@@ -5374,6 +5383,7 @@ func (e *Engine) flushNamedWindowConsumerWaveLocked(ctx context.Context, now tim
 			window    *NamedWindow
 			statement *Statement
 			delta     NamedWindowDelta
+			waveKey   uint64
 		}
 		waves := make([]consumerWave, 0, len(raw))
 		for _, item := range raw {
@@ -5389,13 +5399,13 @@ func (e *Engine) flushNamedWindowConsumerWaveLocked(ctx context.Context, now tim
 				}
 				found := -1
 				for waveIndex := range waves {
-					if waves[waveIndex].window == item.window && waves[waveIndex].statement == statement {
+					if waves[waveIndex].window == item.window && waves[waveIndex].statement == statement && waves[waveIndex].waveKey == item.waveKey {
 						found = waveIndex
 						break
 					}
 				}
 				if found < 0 {
-					waves = append(waves, consumerWave{window: item.window, statement: statement, delta: cloneNamedWindowDelta(item.delta)})
+					waves = append(waves, consumerWave{window: item.window, statement: statement, delta: cloneNamedWindowDelta(item.delta), waveKey: item.waveKey})
 				} else {
 					waves[found].delta.New = append(waves[found].delta.New, item.delta.New...)
 					waves[found].delta.Old = append(waves[found].delta.Old, item.delta.Old...)

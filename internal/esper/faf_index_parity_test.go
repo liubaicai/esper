@@ -2329,7 +2329,13 @@ func TestInfraFAFPhysicalBTreeRangeTracksMutation(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			run([]string{"L1", "L2", "L3"})
+			// Esper's on-update is a remove+reinsert: the updated row moves to
+			// the tail of iteration order, so the FAF read sees L1 last.
+			if namedWindow {
+				run([]string{"L2", "L3", "L1"})
+			} else {
+				run([]string{"L1", "L2", "L3"})
+			}
 
 			if namedWindow {
 				window, _ := engine.NamedWindow("PhysicalStore")
@@ -2344,7 +2350,12 @@ func TestInfraFAFPhysicalBTreeRangeTracksMutation(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			run([]string{"L1", "L3"})
+			// L2 leaves; the surviving order keeps L1 at the tail.
+			if namedWindow {
+				run([]string{"L3", "L1"})
+			} else {
+				run([]string{"L1", "L3"})
+			}
 
 			before := indexLookups()
 			if namedWindow {

@@ -295,11 +295,22 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	processedEvents := make([]Event, 0, len(routed))
 	variables := cloneValues(e.variables)
 	processedRoutes := 0
+	// Java defers named-window consumer delivery queued by earlier
+	// fire-and-forget mutations to the next work boundary: pre-existing
+	// consumer deltas stay pending (tagged for per-boundary wave delivery)
+	// while deltas produced by this route's processing dispatch inline.
+	deferredConsumers := e.pendingNamedWindowConsumerDeltas
+	e.pendingNamedWindowConsumerDeltas = nil
+	for index := range deferredConsumers {
+		e.nextID++
+		deferredConsumers[index].waveKey = e.nextID
+	}
 	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, &processedEvents, nil, &processedRoutes); err != nil {
 		rollback()
 		e.mu.Unlock()
 		return err
 	}
+	e.pendingNamedWindowConsumerDeltas = append(deferredConsumers, e.pendingNamedWindowConsumerDeltas...)
 	dispatches = append(dispatches, e.pendingStatementDispatches...)
 	namedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
@@ -308,7 +319,6 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	e.pendingStatementDispatches = nil
 	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
-	e.pendingNamedWindowConsumerDeltas = nil
 	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
@@ -589,11 +599,22 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	}
 	dispatches := make([]statementDispatch, 0, len(e.pendingStatementDispatches))
 	processedRoutes := 0
+	// Java defers named-window consumer delivery queued by the fire-and-forget
+	// mutation itself to the next work boundary: the consumer delta stays
+	// pending and drains with the following send/deploy processing. Only
+	// consumer deltas produced by routed processing dispatch inline here.
+	deferredConsumers := e.pendingNamedWindowConsumerDeltas
+	e.pendingNamedWindowConsumerDeltas = nil
+	for index := range deferredConsumers {
+		e.nextID++
+		deferredConsumers[index].waveKey = e.nextID
+	}
 	if err := e.processPendingRoutedEventsLocked(ctx, now, variables, &dispatches, nil, nil, &processedRoutes); err != nil {
 		rollback()
 		e.mu.Unlock()
 		return QueryResult{}, err
 	}
+	e.pendingNamedWindowConsumerDeltas = append(deferredConsumers, e.pendingNamedWindowConsumerDeltas...)
 	dispatches = append(dispatches, e.pendingStatementDispatches...)
 	nestedNamedWindowDispatches := append([]namedWindowDispatch(nil), e.pendingNamedWindowDispatches...)
 	variableChanges := e.takeVariableChangesLocked()
@@ -602,7 +623,6 @@ func (e *Engine) executeFireAndForgetMutation(ctx context.Context, plan Plan, se
 	e.pendingStatementDispatches = nil
 	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
-	e.pendingNamedWindowConsumerDeltas = nil
 	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil
@@ -1311,7 +1331,11 @@ func (e *Engine) clearFireAndForgetPendingMutationLocked() {
 	e.pendingStatementDispatches = nil
 	e.pendingDirectNamedWindowDispatches = nil
 	e.pendingNamedWindowDispatches = nil
-	e.pendingNamedWindowConsumerDeltas = nil
+	// pendingNamedWindowConsumerDeltas deliberately survives: Java defers
+	// named-window consumer delivery queued by fire-and-forget mutations to
+	// the next work boundary, so a consecutive FAF must not drop deltas a
+	// prior FAF left pending. Snapshot/rollback paths save and restore the
+	// slice explicitly.
 	e.pendingFrontRoutedEvents = nil
 	e.pendingRoutedEvents = nil
 	e.pendingContextEvents = nil

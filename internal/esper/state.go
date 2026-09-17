@@ -3152,7 +3152,16 @@ func (w *NamedWindow) deleteWhereState(ctx context.Context, state *namedWindowRu
 }
 
 func (w *NamedWindow) UpdateWhere(ctx context.Context, predicate func(Event) bool, update func(Event) (any, error)) (NamedWindowDelta, error) {
+	// The engine mutex serializes the mutation against concurrent sends and
+	// other mutations: the predicate/updater evaluate outside the window
+	// lock (self-referencing subqueries, ESPER-507) but no other engine work
+	// can interleave between the entry snapshot and the per-row apply.
+	if w == nil || w.engine == nil {
+		return NamedWindowDelta{}, NewError(ErrorState, "nil named window")
+	}
+	w.engine.mu.Lock()
 	delta, err := w.updateWhere(ctx, predicate, update)
+	w.engine.mu.Unlock()
 	if err != nil {
 		return NamedWindowDelta{}, err
 	}
@@ -3188,23 +3197,6 @@ func (w *NamedWindow) updateWhere(ctx context.Context, predicate func(Event) boo
 	return w.updateWhereState(ctx, w.state, predicate, update, now)
 }
 
-func (w *NamedWindow) updateWherePartition(ctx context.Context, partitionKey string, predicate func(Event) bool, update func(Event) (any, error)) (NamedWindowDelta, error) {
-	if err := contextErr(ctx); err != nil {
-		return NamedWindowDelta{}, err
-	}
-	if w == nil || w.state == nil {
-		return NamedWindowDelta{}, NewError(ErrorState, "nil named window")
-	}
-	if predicate == nil || update == nil {
-		return NamedWindowDelta{}, NewError(ErrorInvalidRule, "named-window update requires predicate and updater")
-	}
-	state, err := w.partitionState(partitionKey, false)
-	if err != nil {
-		return NamedWindowDelta{}, err
-	}
-	return w.updateWhereState(ctx, state, predicate, update, w.now())
-}
-
 func (w *NamedWindow) updateWhereState(ctx context.Context, state *namedWindowRuntime, predicate func(Event) bool, update func(Event) (any, error), now time.Time) (NamedWindowDelta, error) {
 	if state == nil {
 		return NamedWindowDelta{}, NewError(ErrorState, "nil named-window partition")
@@ -3212,10 +3204,20 @@ func (w *NamedWindow) updateWhereState(ctx context.Context, state *namedWindowRu
 	if composite, ok := state.def.retention.(CompositeWindowSpec); ok {
 		return w.updateCompositeWhereState(state, predicate, update, now, composite)
 	}
-	state.mu.Lock()
-	defer state.mu.Unlock()
+	// The predicate and updater may evaluate subqueries that read this same
+	// window (self-referencing on-update, ESPER-507): they must run outside
+	// the window lock. The engine mutex serializes the whole mutation, so
+	// the entry snapshot cannot change between the two lock sections.
+	// Java's OnUpdateView applies each row's update before evaluating the
+	// next row: a subquery in the predicate or assignments observes the
+	// progressively updated window, so each matched row is applied under
+	// the window lock before the next candidate is evaluated.
+	state.mu.RLock()
+	entries := append([]storedEvent(nil), state.entries...)
+	state.mu.RUnlock()
 	delta := NamedWindowDelta{Time: now, External: true}
-	for index, entry := range state.entries {
+	applied := 0
+	for _, entry := range entries {
 		if !predicate(entry.event) {
 			continue
 		}
@@ -3229,11 +3231,31 @@ func (w *NamedWindow) updateWhereState(ctx context.Context, state *namedWindowRu
 		}
 		updated.typeName = state.def.name
 		updated.streamType = state.def.name
+		state.mu.Lock()
+		// Esper's on-update is a remove+reinsert: the updated row leaves the
+		// window and re-enters at the tail of iteration order. Applied rows
+		// already moved to the tail, so the next untouched entry sits at
+		// index len(entries)-applied-1 within the kept prefix.
+		position := -1
+		limit := len(state.entries) - applied
+		for index := 0; index < limit; index++ {
+			if sameEvent(state.entries[index].event, entry.event) {
+				position = index
+				break
+			}
+		}
+		if position < 0 {
+			state.mu.Unlock()
+			return NamedWindowDelta{}, NewError(ErrorState, "named-window on-update lost a matched row")
+		}
+		state.entries = append(state.entries[:position], state.entries[position+1:]...)
+		state.entries = append(state.entries, storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt})
+		w.rebuildUniqueStateForLocked(state)
+		state.mu.Unlock()
+		applied++
 		delta.Old = append(delta.Old, entry.event)
 		delta.New = append(delta.New, updated)
-		state.entries[index] = storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt}
 	}
-	w.rebuildUniqueStateForLocked(state)
 	return delta, nil
 }
 
@@ -3244,16 +3266,27 @@ func (w *NamedWindow) updateWhereState(ctx context.Context, state *namedWindowRu
 // contents, so a replacement expelled by one child (or an update that expels
 // an untouched row through a child view) leaves the window as old data.
 func (w *NamedWindow) updateCompositeWhereState(state *namedWindowRuntime, predicate func(Event) bool, update func(Event) (any, error), now time.Time, composite CompositeWindowSpec) (NamedWindowDelta, error) {
-	state.mu.Lock()
-	defer state.mu.Unlock()
+	// The predicate and updater may evaluate subqueries that read this same
+	// window: they must run outside the window lock (see updateWhereState).
+	// Java's OnUpdateView applies each row's update before evaluating the
+	// next row, so every matched row is pushed through the intersection
+	// (remove from each child, insert the replacement, recompute the window
+	// contents) before the next candidate is evaluated.
+	state.mu.RLock()
 	if len(state.compositeChildren) != len(composite.Windows) {
+		state.mu.RUnlock()
 		return NamedWindowDelta{}, NewError(ErrorState, "named-window composite retention is not initialized")
 	}
-	delta := NamedWindowDelta{Time: now, External: true}
 	previous := append([]storedEvent(nil), state.entries...)
-	replacements := make(map[int]Event)
+	state.mu.RUnlock()
+	retains := func(event Event) bool {
+		return namedWindowCompositeRetains(composite.Mode, state.compositeChildren, event)
+	}
+	delta := NamedWindowDelta{Time: now, External: true}
+	expelled := make(map[int]bool)
+	replaced := make(map[int]storedEvent)
 	for index, entry := range previous {
-		if !predicate(entry.event) {
+		if expelled[index] || !predicate(entry.event) {
 			continue
 		}
 		underlying, err := update(entry.event)
@@ -3266,36 +3299,55 @@ func (w *NamedWindow) updateCompositeWhereState(state *namedWindowRuntime, predi
 		}
 		updated.typeName = state.def.name
 		updated.streamType = state.def.name
+		state.mu.Lock()
 		removeFromNamedWindowCompositeChildrenLocked(state, []Event{entry.event})
 		stored := storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt}
+		applyErr := error(nil)
 		for childIndex, child := range state.compositeChildren {
-			if err := insertNamedWindowCompositeChildLocked(child, composite.Windows[childIndex], stored, now); err != nil {
-				return NamedWindowDelta{}, err
+			if applyErr = insertNamedWindowCompositeChildLocked(child, composite.Windows[childIndex], stored, now); applyErr != nil {
+				break
 			}
 		}
-		delta.Old = append(delta.Old, entry.event)
-		replacements[index] = updated
-	}
-	retains := func(event Event) bool {
-		return namedWindowCompositeRetains(composite.Mode, state.compositeChildren, event)
-	}
-	kept := make([]storedEvent, 0, len(previous))
-	for index, stored := range previous {
-		if updated, replaced := replacements[index]; replaced {
+		if applyErr == nil {
+			replaced[index] = stored
+			// Recompute the window contents as the intersection of the child
+			// contents: replacements enter when every child retains them;
+			// untouched rows a child expelled leave as old data. The updated
+			// row leaves exactly once as old data whether or not its
+			// replacement is retained.
+			delta.Old = append(delta.Old, entry.event)
 			if retains(updated) {
-				kept = append(kept, storedEvent{event: updated, receivedAt: stored.receivedAt, expiresAt: stored.expiresAt})
 				delta.New = append(delta.New, updated)
 			}
-			continue
+			kept := make([]storedEvent, 0, len(state.entries))
+			for previousIndex, candidate := range previous {
+				if expelled[previousIndex] || previousIndex == index {
+					continue
+				}
+				current := candidate
+				if replacement, ok := replaced[previousIndex]; ok {
+					current = replacement
+				}
+				if retains(current.event) {
+					kept = append(kept, current)
+					continue
+				}
+				expelled[previousIndex] = true
+				// The expelled row is what the window currently holds: the
+				// replacement for an already-updated row, else the original.
+				delta.Old = append(delta.Old, current.event)
+			}
+			if retains(updated) {
+				kept = append(kept, stored)
+			}
+			state.entries = kept
+			rebuildNamedWindowIndexesLocked(state)
 		}
-		if retains(stored.event) {
-			kept = append(kept, stored)
-			continue
+		state.mu.Unlock()
+		if applyErr != nil {
+			return NamedWindowDelta{}, applyErr
 		}
-		delta.Old = append(delta.Old, stored.event)
 	}
-	state.entries = kept
-	rebuildNamedWindowIndexesLocked(state)
 	return delta, nil
 }
 

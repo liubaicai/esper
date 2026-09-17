@@ -49,6 +49,44 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.448 ('infra-nwtable-on-update').
+
+- [x] Contract freeze via read-only scouts NextJavaContract448b (Java) + NextGoSurface448b (Go):
+ InfraNWTableOnUpdate ords 0/1/4/5/6/7 — where-clause updates (IR pairs), self-correlated
+ subquery assignment (ESPER-507), group-by-int-array multikey subquery -> null on multi-row.
+- [x] Assets by parity-asset-worker OracleAssets448: scenario
+ `testdata/parity/infra-nwtable-on-update.json` (6 cases / 92 steps), oracle
+ `tools/java-oracle/InfraNWTableOnUpdateScenarioOracle.java` + run script.
+- [x] Runner `internal/app/parity/infra_nwtable_on_update.go` + run.go wiring; strict loader
+ pins metadata, per-op field whitelists, full step shape; `compat.Step` gained `Fields` for
+ snapshot projection (Java iterator asserts read only pinned properties).
+- [x] **Engine fixes (shared core)**: (1) `updateWhereState`/`updateCompositeWhereState`
+ evaluate predicate+updater OUTSIDE the window lock (self-referencing subquery deadlock)
+ and apply each matched row under the lock before evaluating the next candidate —
+ Java OnUpdateView progressive semantics; public `UpdateWhere` holds `e.mu` across the
+ mutation (dispatch outside). (2) keepall on-update is remove+reinsert — updated rows
+ move to iteration tail. (3) FAF mutations defer named-window consumer delivery to the
+ next work boundary: `waveKey` isolates per-boundary waves, send/insert/advance-time
+ entry points preserve `pendingNamedWindowConsumerDeltas`, and
+ `clearFireAndForgetPendingMutationLocked` no longer drops them (consecutive-FAF fix).
+ Three stale tests re-pinned to deferred semantics; `TestInfraFAFPhysicalBTreeRangeTracksMutation`
+ re-pinned to tail-move order. Dead `updateWherePartition` removed.
+- [x] Differential replay: Java 42 records / Go 42 records, 0 differences. Six-test
+ family green (6 trace mutations + 9 raw-scenario mutations rejected).
+- [x] Oracle fix: `projectedRow` sorts field names alphabetically so "any"-mode
+ canonical ordering matches Go's fields-JSON sort; run script jq expectations
+ corrected (full-schema listener rows, multikey indices, mid-slice deployed op).
+- [x] Manifest: new born-DV `case.infra-nwtable-on-update` (6 runtime IDs) mapped to
+ `trigger.table-named-window` (goRefs +3 incl. runtime.go, DV IDs +6). Summary:
+ 690 cases / 688 implemented / 316 DV cases / 1190 DV runtime IDs / 3738 associations
+ (referenced 3374, unref 762).
+- [x] Independent parity review (`ParityReview448`, read-only): OVERALL PASS after two
+ fix rounds — round 1 caught oracle canonicalization (record 16 order) + consecutive-FAF
+ delta drop; round 2 verified all fixes, two P3s resolved (dead error-path appends
+ removed, runtime.go goRef added).
+- [ ] `make check` final, commit/push.
+
+## Previous work unit
 Active: Draft 4.447 ('infra-nwtable-on-delete').
 
 - [x] Contract freeze via read-only scouts NextJavaContract447 (Java) + NextGoSurface447 (Go):

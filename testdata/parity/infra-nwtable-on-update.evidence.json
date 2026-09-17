@@ -1,0 +1,2791 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f8090e148364d7b15116",
+    "java-runtime-922adbe6628b17d5ec61",
+    "java-runtime-046926326cad5f0172cd",
+    "java-runtime-702d919aaadcbb188467",
+    "java-runtime-5cc56f78a52d6a452948",
+    "java-runtime-b23b2fbc3cc233237ac9"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnUpdate.java"
+  ],
+  "javaExecutions": [
+    "InfraNWTableOnUpdateSceneOne{namedWindow=true}",
+    "InfraNWTableOnUpdateSceneOne{namedWindow=false}",
+    "InfraSubquerySelf{namedWindow=true}",
+    "InfraSubquerySelf{namedWindow=false}",
+    "InfraSubqueryMultikeyWArray{namedWindow=true}",
+    "InfraSubqueryMultikeyWArray{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-update",
+    "steps": [
+      {
+        "op": "case",
+        "case": "sceneone-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "sceneone-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfra.win:keepall() as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "sceneone-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "sceneone-nw",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "sceneone-nw",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "sceneone-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sceneone-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "sceneone-nw",
+        "statement": "update",
+        "epl": "@name('update') on SupportBean_S0 update MyInfra set theString = p00 where intPrimitive = id"
+      },
+      {
+        "op": "deployed",
+        "case": "sceneone-nw",
+        "statement": "update"
+      },
+      {
+        "op": "send",
+        "case": "sceneone-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "X1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "sceneone-nw",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "sceneone-nw",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "X2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "sceneone-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "snapshot",
+        "case": "sceneone-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sceneone-nw"
+      },
+      {
+        "op": "case",
+        "case": "sceneone-table"
+      },
+      {
+        "op": "deploy",
+        "case": "sceneone-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfra(theString string, intPrimitive int primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "sceneone-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "sceneone-table",
+        "statement": "insert",
+        "epl": "@name('insert') insert into MyInfra select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "sceneone-table",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "sceneone-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "sceneone-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "sceneone-table",
+        "statement": "update",
+        "epl": "@name('update') on SupportBean_S0 update MyInfra set theString = p00 where intPrimitive = id"
+      },
+      {
+        "op": "deployed",
+        "case": "sceneone-table",
+        "statement": "update"
+      },
+      {
+        "op": "send",
+        "case": "sceneone-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "X1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "sceneone-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "sceneone-table",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "X2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "sceneone-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "snapshot",
+        "case": "sceneone-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "sceneone-table"
+      },
+      {
+        "op": "case",
+        "case": "subqself-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "subqself-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfraSS#keepall as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "subqself-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "subqself-nw",
+        "statement": "Insert",
+        "epl": "insert into MyInfraSS select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "subqself-nw",
+        "statement": "Insert"
+      },
+      {
+        "op": "deploy",
+        "case": "subqself-nw",
+        "statement": "Self Update",
+        "epl": "@Name(\"Self Update\")\non SupportBean_A c\nupdate MyInfraSS s\nset intPrimitive = (select intPrimitive from MyInfraSS t where t.theString = c.id) + 1\nwhere s.theString = c.id"
+      },
+      {
+        "op": "deployed",
+        "case": "subqself-nw",
+        "statement": "Self Update"
+      },
+      {
+        "op": "send",
+        "case": "subqself-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "subqself-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "case": "subqself-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subqself-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subqself-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "subqself-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "subqself-nw"
+      },
+      {
+        "op": "case",
+        "case": "subqself-table"
+      },
+      {
+        "op": "deploy",
+        "case": "subqself-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfraSS(theString string primary key, intPrimitive int)"
+      },
+      {
+        "op": "deployed",
+        "case": "subqself-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "subqself-table",
+        "statement": "Insert",
+        "epl": "insert into MyInfraSS select theString, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "subqself-table",
+        "statement": "Insert"
+      },
+      {
+        "op": "deploy",
+        "case": "subqself-table",
+        "statement": "Self Update",
+        "epl": "@Name(\"Self Update\")\non SupportBean_A c\nupdate MyInfraSS s\nset intPrimitive = (select intPrimitive from MyInfraSS t where t.theString = c.id) + 1\nwhere s.theString = c.id"
+      },
+      {
+        "op": "deployed",
+        "case": "subqself-table",
+        "statement": "Self Update"
+      },
+      {
+        "op": "send",
+        "case": "subqself-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "subqself-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "case": "subqself-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subqself-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subqself-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "subqself-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "subqself-table"
+      },
+      {
+        "op": "case",
+        "case": "multikey-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfra#keepall() as (value int)"
+      },
+      {
+        "op": "deployed",
+        "case": "multikey-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-nw",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfra select 0 as value"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-nw",
+        "statement": "Update",
+        "epl": "on SupportBean update MyInfra set value = (select sum(value) as c0 from SupportEventWithIntArray#keepall group by array)"
+      },
+      {
+        "op": "deployed",
+        "case": "multikey-nw",
+        "statement": "Update"
+      },
+      {
+        "op": "send",
+        "case": "multikey-nw",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E1",
+          "array": [
+            1,
+            2
+          ],
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-nw",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E2",
+          "array": [
+            1,
+            2
+          ],
+          "value": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "multikey-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "multikey-nw",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E3",
+          "array": [
+            1,
+            2
+          ],
+          "value": 12
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "multikey-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "multikey-nw",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E4",
+          "array": [
+            1
+          ],
+          "value": 13
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "multikey-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multikey-nw"
+      },
+      {
+        "op": "case",
+        "case": "multikey-table"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfra(value int)"
+      },
+      {
+        "op": "deployed",
+        "case": "multikey-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-table",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfra select 0 as value"
+      },
+      {
+        "op": "deploy",
+        "case": "multikey-table",
+        "statement": "Update",
+        "epl": "on SupportBean update MyInfra set value = (select sum(value) as c0 from SupportEventWithIntArray#keepall group by array)"
+      },
+      {
+        "op": "deployed",
+        "case": "multikey-table",
+        "statement": "Update"
+      },
+      {
+        "op": "send",
+        "case": "multikey-table",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E1",
+          "array": [
+            1,
+            2
+          ],
+          "value": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-table",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E2",
+          "array": [
+            1,
+            2
+          ],
+          "value": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "multikey-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "multikey-table",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E3",
+          "array": [
+            1,
+            2
+          ],
+          "value": 12
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "multikey-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "multikey-table",
+        "eventType": "SupportEventWithIntArray",
+        "payload": {
+          "id": "E4",
+          "array": [
+            1
+          ],
+          "value": 13
+        }
+      },
+      {
+        "op": "send",
+        "case": "multikey-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "multikey-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multikey-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-update",
+    "records": [
+      {
+        "case": "sceneone-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "deployed",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "X1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "X1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "X2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "X2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "deployed",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subqself-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-nw",
+        "operation": "deployed",
+        "statement": "Insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-nw",
+        "operation": "deployed",
+        "statement": "Self Update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subqself-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-table",
+        "operation": "deployed",
+        "statement": "Insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-table",
+        "operation": "deployed",
+        "statement": "Self Update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "deployed",
+        "statement": "Update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 21
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 33
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-table",
+        "operation": "deployed",
+        "statement": "Update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-update",
+    "records": [
+      {
+        "case": "sceneone-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "deployed",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "X1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "X1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 1,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "X2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "X2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "deployed",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "A1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "listener",
+        "statement": "update",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "sceneone-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "theString": "X1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "X2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subqself-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-nw",
+        "operation": "deployed",
+        "statement": "Insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-nw",
+        "operation": "deployed",
+        "statement": "Self Update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subqself-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-table",
+        "operation": "deployed",
+        "statement": "Insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-table",
+        "operation": "deployed",
+        "statement": "Self Update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subqself-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "deployed",
+        "statement": "Update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 21
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 33
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-table",
+        "operation": "deployed",
+        "statement": "Update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multikey-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 33
+            }
+          }
+        ]
+      },
+      {
+        "case": "multikey-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -67,7 +67,15 @@ func TestOnDemandNamedWindowCallbackRouteDefersUntilCallbackReturns(t *testing.T
 	if _, err := engine.ExecuteFireAndForget(ctx, insertPlan); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := order, []string{"before-route", "after-route", "routed"}; !reflect.DeepEqual(got, want) {
+	// Java defers the FAF mutation's consumer delivery to the next work
+	// boundary: nothing fires until the following send drains the queue.
+	if len(order) != 0 {
+		t.Fatalf("FAF consumer fired inline: %v", order)
+	}
+	if err := engine.Send(ctx, "FAFCallbackTargetEvent", map[string]any{"value": int64(9)}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := order, []string{"routed", "before-route", "after-route", "routed"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("FAF callback route order = %v, want %v", got, want)
 	}
 }
@@ -128,15 +136,18 @@ func TestOnDemandNamedWindowListenerErrorStillDrainsQueuedRoute(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = func() error {
-		_, callErr := engine.ExecuteFireAndForget(ctx, plan)
-		return callErr
-	}()
-	if err == nil || !strings.Contains(err.Error(), "intentional FAF mutation listener failure") {
-		t.Fatalf("FAF mutation listener error = %v", err)
+	if _, err := engine.ExecuteFireAndForget(ctx, plan); err != nil {
+		t.Fatal(err)
 	}
-	if followed != 1 {
-		t.Fatalf("queued FAF mutation route count = %d, want 1", followed)
+	// The deferred consumer delivery surfaces its listener error at the
+	// next work boundary, and the route queued by the first listener still
+	// drains before the failing listener runs.
+	err = engine.Send(ctx, "FAFMutationErrorTarget", map[string]any{"value": int64(9)})
+	if err == nil || !strings.Contains(err.Error(), "intentional FAF mutation listener failure") {
+		t.Fatalf("deferred FAF mutation listener error = %v", err)
+	}
+	if followed != 2 {
+		t.Fatalf("queued FAF mutation route count = %d, want 2", followed)
 	}
 }
 
@@ -384,7 +395,7 @@ func TestOnDemandNamedWindowMutationRollsBackAfterAssignmentFailure(t *testing.T
 	}
 }
 
-func TestOnDemandMutationRollsBackAfterRoutedProcessingFailure(t *testing.T) {
+func TestOnDemandMutationSurvivesDeferredRoutedProcessingFailure(t *testing.T) {
 	env := NewEnvironment()
 	if _, err := RegisterMap(env, "FAFRouteRollbackEvent", []FieldSpec{
 		FieldDef("value", typeOf[int64]()),
@@ -423,16 +434,22 @@ func TestOnDemandMutationRollsBackAfterRoutedProcessingFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := engine.ExecuteFireAndForget(ctx, plan); err == nil || !strings.Contains(err.Error(), "route event limit") {
-		t.Fatalf("routed processing failure = %v", err)
+	if _, err := engine.ExecuteFireAndForget(ctx, plan); err != nil {
+		t.Fatal(err)
+	}
+	// The FAF mutation already committed; the deferred consumer delivery
+	// hits the route limit at the next work boundary and the committed
+	// update survives.
+	if err := engine.Send(ctx, "FAFRouteRollbackEvent", map[string]any{"value": int64(9)}); err == nil || !strings.Contains(err.Error(), "route event limit") {
+		t.Fatalf("deferred routed processing failure = %v", err)
 	}
 	window, ok := engine.NamedWindow("FAFRouteRollbackWindow")
 	if !ok {
 		t.Fatal("FAFRouteRollbackWindow is missing")
 	}
 	rows, err := window.Snapshot(ctx)
-	if err != nil || len(rows) != 1 || rows[0].Get("value").Any() != int64(1) {
-		t.Fatalf("routed failure rollback snapshot = %#v, err=%v", rows, err)
+	if err != nil || len(rows) != 1 || rows[0].Get("value").Any() != int64(2) {
+		t.Fatalf("committed mutation snapshot = %#v, err=%v", rows, err)
 	}
 }
 

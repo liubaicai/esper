@@ -1469,7 +1469,10 @@
         "internal/esper/expr.go",
         "internal/app/parity/infra_table_into_table.go",
         "internal/esper/into_table_agg_compatibility_test.go",
-        "internal/app/parity/infra_nwtable_on_delete.go"
+        "internal/app/parity/infra_nwtable_on_delete.go",
+        "internal/esper/runtime.go",
+        "internal/app/parity/infra_nwtable_on_update.go",
+        "internal/esper/faf.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -1502,7 +1505,13 @@
         "java-runtime-2ab09353c939b15ee52e",
         "java-runtime-e795679c4403d309f805",
         "java-runtime-11809b3f1d90b37d52b8",
-        "java-runtime-b7a9b1b53c0009e7d347"
+        "java-runtime-b7a9b1b53c0009e7d347",
+        "java-runtime-f8090e148364d7b15116",
+        "java-runtime-922adbe6628b17d5ec61",
+        "java-runtime-046926326cad5f0172cd",
+        "java-runtime-702d919aaadcbb188467",
+        "java-runtime-5cc56f78a52d6a452948",
+        "java-runtime-b23b2fbc3cc233237ac9"
       ],
       "representativeScenarioIds": [
         "named-window-mutation",
@@ -44182,6 +44191,77 @@
         "java-runtime-11809b3f1d90b37d52b8",
         "java-runtime-b7a9b1b53c0009e7d347"
       ]
+    },
+    {
+      "id": "case.infra-nwtable-on-update",
+      "javaRuntimeIds": [
+        "java-runtime-f8090e148364d7b15116",
+        "java-runtime-922adbe6628b17d5ec61",
+        "java-runtime-046926326cad5f0172cd",
+        "java-runtime-702d919aaadcbb188467",
+        "java-runtime-5cc56f78a52d6a452948",
+        "java-runtime-b23b2fbc3cc233237ac9"
+      ],
+      "javaNames": [
+        "InfraNWTableOnUpdateSceneOne{namedWindow=true}",
+        "InfraNWTableOnUpdateSceneOne{namedWindow=false}",
+        "InfraSubquerySelf{namedWindow=true}",
+        "InfraSubquerySelf{namedWindow=false}",
+        "InfraSubqueryMultikeyWArray{namedWindow=true}",
+        "InfraSubqueryMultikeyWArray{namedWindow=false}"
+      ],
+      "javaStaticIds": [
+        "java-bc54a78188b2249a0a9f",
+        "java-bc54a78188b2249a0a9f",
+        "java-c67318a7541b42eb7940",
+        "java-c67318a7541b42eb7940",
+        "java-9ab08590ab6533e21139",
+        "java-9ab08590ab6533e21139"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnUpdate.java"
+      ],
+      "goTests": [
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnUpdateDirectReplay",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnUpdateDiffWritesPassingEvidence",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnUpdateDiffRejectsTraceMutations",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnUpdateCheckedInEvidenceMatchesTraceAndReplay",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnUpdateRejectsMalformedRawScenario",
+        "internal/app/parity/run_test.go:TestRunInfraNWTableOnUpdateRuntimeIDMappingMatchesScenario"
+      ],
+      "tags": [
+        "correctness",
+        "infra",
+        "named-window",
+        "table",
+        "on-update",
+        "trigger",
+        "subquery",
+        "differential"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "testdata/parity/infra-nwtable-on-update.json",
+        "testdata/parity/infra-nwtable-on-update.trace.json",
+        "testdata/parity/infra-nwtable-on-update.go.trace.json",
+        "testdata/parity/infra-nwtable-on-update.evidence.json",
+        "tools/java-oracle/InfraNWTableOnUpdateScenarioOracle.java",
+        "tools/java-oracle/run-infra-nwtable-on-update.sh"
+      ],
+      "notes": "InfraNWTableOnUpdate ordinals 0/1/4/5/6/7 born-differential: where-clause updates scoped to trigger-event vs infra-row properties (post-update new row + pre-update old row IR pairs), a self-correlated subquery assignment reading the pre-update value of the same infra (ESPER-507), and a group-by-int-array multikey aggregated subquery whose multi-row result assigns null. Java/Go 42 records each, 0 differences. THREE shared-core fixes: (1) named-window updateWhere evaluates predicate+updater outside the window lock so self-referencing subqueries cannot deadlock (Java reads pre-update state); (2) keepall on-update is remove+reinsert, moving updated rows to the tail of iteration order; (3) fire-and-forget mutations defer named-window consumer delivery to the next work boundary (Java drains the deferred delta before the inbound event's own consumer wave), with per-boundary wave isolation via waveKey and pending-delta preservation at send/insert/advance-time entry points.",
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-f8090e148364d7b15116",
+        "java-runtime-922adbe6628b17d5ec61",
+        "java-runtime-046926326cad5f0172cd",
+        "java-runtime-702d919aaadcbb188467",
+        "java-runtime-5cc56f78a52d6a452948",
+        "java-runtime-b23b2fbc3cc233237ac9"
+      ]
     }
   ],
   "mappings": [
@@ -47276,13 +47356,17 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-nwtable-on-delete"
+    },
+    {
+      "capabilityId": "trigger.table-named-window",
+      "caseId": "case.infra-nwtable-on-update"
     }
   ],
   "summary": {
-    "inventoriedCases": 689,
-    "implementedCases": 687,
-    "differentialVerifiedCases": 315,
-    "differentialVerifiedRuntimeIds": 1184,
+    "inventoriedCases": 690,
+    "implementedCases": 688,
+    "differentialVerifiedCases": 316,
+    "differentialVerifiedRuntimeIds": 1190,
     "intentionallyDifferentCases": 29,
     "representativeVerifiedCases": 119,
     "nfrVerifiedCases": 0,
@@ -47292,13 +47376,13 @@
     "intentionallyDifferentCapabilities": 8,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 3732,
-    "referencedJavaRuntimeIds": 3368,
+    "runtimeAssociationCount": 3738,
+    "referencedJavaRuntimeIds": 3374,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 768,
+    "unreferencedJavaRuntimeIds": 762,
     "representativeScenarioTotal": 122,
     "representativeScenarioPassing": 122,
-    "totalCases": 689,
+    "totalCases": 690,
     "totalCapabilities": 121
   }
 }
