@@ -104,7 +104,13 @@ Active: Draft 4.452 ('infra-namedwindow-consumer').
 - [x] Full gates GREEN post-fix: `make check` exit 0 (check-layout, vet, full
       go test; parity 74s, internal/esper 66s); gofmt/git-diff-check clean;
       Go replay trace byte-identical; diff passing / 0 differences.
-- [x] Shipped; Git owns identity.
+- [x] Shipped; Git owns identity. Draft 4.452 committed and pushed as `806d7dd04`.
+
+## Next work unit (prefetch)
+Candidate: Draft 4.453 `ExprFilterInAndBetween` — 6 unreferenced executions
+(ords 0,4,5,6,7,8; in/between/not-in filters, dynamic sets, reuse, invalid).
+Scouts `NextJavaContract453` + `NextGoSurface453` spawned after 4.452 review
+PASS; no writes until their contracts land.
 
 ## Current work unit
 Active: Draft 4.451 ('infra-namedwindow-processing-order').
