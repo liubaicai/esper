@@ -2588,15 +2588,36 @@ func (r *statementRuntime) snapshotQuery(plan Plan, now time.Time, variables map
 		values := make([]Value, 0, len(plan.query.trigger.variableAssignments))
 		seen := make(map[string]struct{}, len(plan.query.trigger.variableAssignments))
 		for _, assignment := range plan.query.trigger.variableAssignments {
-			if _, duplicate := seen[assignment.Name]; duplicate {
+			if assignment.Index != nil || assignment.Apply != nil {
+				// Array-element and call-form writes contribute no output
+				// columns, matching the listener delivery shape.
 				continue
 			}
-			seen[assignment.Name] = struct{}{}
-			if value, exists := variables[assignment.Name]; exists {
-				values = append(values, value)
-			} else {
-				values = append(values, Null())
+			column := assignment.Name
+			if assignment.Prop != "" {
+				column = assignment.Name + "." + assignment.Prop
 			}
+			if _, duplicate := seen[column]; duplicate {
+				continue
+			}
+			seen[column] = struct{}{}
+			value, exists := variables[assignment.Name]
+			if !exists {
+				value = Null()
+			}
+			if assignment.Prop != "" {
+				// The iterator reads the live property value; the posted
+				// assignment value is only a fallback for properties that do
+				// not resolve on the current value.
+				live := propertyValue(value.Any(), assignment.Prop)
+				if live.IsMissing() {
+					if posted, ok := variables[column]; ok {
+						live = posted
+					}
+				}
+				value = live
+			}
+			values = append(values, value)
 		}
 		result.New = append(result.New, resultRow(newRow(plan.resultSchema, values)))
 		// The iterator boundary is the evaluation point for result modifiers;

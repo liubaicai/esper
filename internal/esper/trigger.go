@@ -96,6 +96,12 @@ type VariableAssignmentExpr struct {
 	Name  string
 	Index Expr
 	Expr  Expr
+	// Prop names a property of the variable's current value for a
+	// property-assignment such as Java's `set varbean.theString = 'A'`: the
+	// write is copy-on-write (the stored value is replaced by an updated
+	// copy), a null variable makes the assignment a no-op, and the output
+	// column is named "name.prop" carrying the post-write property value.
+	Prop string
 	// Apply carries a call-form assignment such as Java's
 	// `set Helper.swap(VAR)`: the transform receives the current value and
 	// its result becomes the written value. Call-form assignments contribute
@@ -112,6 +118,17 @@ func SetVariableExpr(name string, expression Expr) VariableAssignmentExpr {
 // `set thearray[index] = value` on-set assignment.
 func SetVariableIndexExpr(name string, index, expression Expr) VariableAssignmentExpr {
 	return VariableAssignmentExpr{Name: strings.TrimSpace(name), Index: index, Expr: expression}
+}
+
+// SetVariablePropExpr assigns one property of a bean- or map-valued runtime
+// variable when the trigger fires, the Go-native counterpart of Java's
+// `set varbean.theString = 'A'` on-set property write. The assignment is
+// copy-on-write: the variable stores an updated copy and the previously held
+// value is untouched. A null variable skips the write entirely, matching
+// Java's silent no-op on null receivers. The statement emits a "name.prop"
+// output column carrying the post-write property value.
+func SetVariablePropExpr(name, property string, expression Expr) VariableAssignmentExpr {
+	return VariableAssignmentExpr{Name: strings.TrimSpace(name), Prop: strings.TrimSpace(property), Expr: expression}
 }
 
 // SetVariableApply assigns a runtime variable through a single-variable call
@@ -1579,6 +1596,11 @@ func (e *Environment) validateVariableTriggerAssignments(definition *triggerDefi
 				return fmt.Errorf("variable assignment %q: %w", assignment.Name, err)
 			}
 		}
+		if assignment.Prop != "" {
+			// Property writes type-check at write time once the variable's
+			// value is known; the expression itself is validated above.
+			continue
+		}
 		if assignment.Index != nil {
 			if err := e.validateExprFields(definition.input, assignment.Index); err != nil {
 				return fmt.Errorf("variable assignment %q index: %w", assignment.Name, err)
@@ -1791,13 +1813,26 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 					// columns, matching Java's on-set result shape.
 					continue
 				}
-				if _, exists := seen[assignment.Name]; exists {
+				column := assignment.Name
+				if assignment.Prop != "" {
+					column = assignment.Name + "." + assignment.Prop
+				}
+				if _, exists := seen[column]; exists {
 					continue
 				}
-				seen[assignment.Name] = struct{}{}
+				seen[column] = struct{}{}
 				value, exists := variables[assignment.Name]
 				if !exists {
 					value = Missing()
+				}
+				if assignment.Prop != "" {
+					// Java emits the evaluated assignment value, including
+					// for no-op writes on null receivers.
+					if posted, ok := variables[column]; ok {
+						value = posted
+					} else {
+						value = Null()
+					}
 				}
 				values = append(values, value)
 			}
@@ -3159,6 +3194,10 @@ func executeVariableTriggerAction(ctx context.Context, engine *Engine, definitio
 	if working == nil {
 		working = make(map[string]Value)
 	}
+	// propValues records each property assignment's evaluated expression
+	// value: Java's set-prop output columns carry the assigned value even
+	// when a null receiver makes the write itself a no-op.
+	propValues := make(map[string]Value)
 	assignments := make([]VariableAssignment, 0, len(definition.variableAssignments))
 	contextAssignments := make([]VariableAssignment, 0, len(definition.variableAssignments))
 	seen := make(map[string]struct{}, len(definition.variableAssignments))
@@ -3171,6 +3210,19 @@ func executeVariableTriggerAction(ctx context.Context, engine *Engine, definitio
 		}
 		if variableDefinition.context != "" && (runtime == nil || runtime.partitionContextName != variableDefinition.context || runtime.partitionKey == "") {
 			return NewError(ErrorState, fmt.Sprintf("context variable %q requires a matching context partition", assignment.Name))
+		}
+		if assignment.Prop != "" {
+			// Java's VariableTriggerWriteDescForge evaluates the RHS once per
+			// trigger; the same value feeds both the write and the emitted
+			// name.prop column.
+			assigned := assignment.Expr.eval(stepEvaluation)
+			propValues[assignment.Name+"."+assignment.Prop] = assigned
+			written, err := applyVariablePropAssignment(variableDefinition, assignment, assigned, working)
+			if err != nil {
+				return err
+			}
+			recordVariableTriggerWrite(variableDefinition, written, working, seen, &assignments, &contextAssignments)
+			continue
 		}
 		if assignment.Index != nil {
 			written, err := applyVariableIndexAssignment(stepEvaluation, variableDefinition, assignment, working)
@@ -3195,6 +3247,12 @@ func executeVariableTriggerAction(ctx context.Context, engine *Engine, definitio
 			return WrapError(ErrorTypeMismatch, "variable."+assignment.Name, err)
 		}
 		recordVariableTriggerWrite(variableDefinition, coerced, working, seen, &assignments, &contextAssignments)
+	}
+	for column, value := range propValues {
+		// Expose the evaluated assignment value under its output column name
+		// so the listener row builder can emit it; the key cannot collide
+		// with a variable name because it always contains a dot.
+		variables[column] = value
 	}
 	if len(assignments) > 0 {
 		if err := engine.setVariablesLocked(ctx, assignments); err != nil {
@@ -3303,6 +3361,142 @@ func applyVariableIndexAssignment(evaluation EvalContext, definition VariableDef
 	}
 	array.Index(int(index)).Set(reflect.ValueOf(element))
 	return current.Any(), nil
+}
+
+// applyVariablePropAssignment mirrors Java's `set var.prop = expr` on-set
+// write: the expression evaluates against the working map (so sequential
+// assignments see earlier writes), the current variable value is copied, the
+// property is set on the copy, and the copy becomes the new variable value.
+// A null or missing variable makes the write a no-op, matching Java's silent
+// skip on null receivers.
+func applyVariablePropAssignment(definition VariableDefinition, assignment VariableAssignmentExpr, value Value, working map[string]Value) (any, error) {
+	name := definition.Name()
+	current, ok := working[name]
+	if !ok || !current.IsPresent() {
+		return current.Any(), nil
+	}
+	updated, err := writeVariableProperty(current.Any(), assignment.Prop, value.Any())
+	if err != nil {
+		return nil, WrapError(ErrorTypeMismatch, "variable."+name+"."+assignment.Prop, err)
+	}
+	return updated, nil
+}
+
+// writeVariableProperty returns a copy of current with the named property set
+// to value. Struct values copy the struct and set the resolved field (with
+// Java-widening coercion into the field type); map values clone and set the
+// key; Event values copy the underlying and rebuild the envelope so the
+// variable's stored event identity stays stable.
+func writeVariableProperty(current any, property string, value any) (any, error) {
+	if current == nil {
+		return current, nil
+	}
+	if event, ok := current.(Event); ok {
+		underlying, err := writeVariableProperty(event.underlying, property, value)
+		if err != nil {
+			return nil, err
+		}
+		updated := event
+		updated.underlying = underlying
+		return updated, nil
+	}
+	raw := reflect.ValueOf(current)
+	for raw.Kind() == reflect.Pointer {
+		if raw.IsNil() {
+			return current, nil
+		}
+		raw = raw.Elem()
+	}
+	switch raw.Kind() {
+	case reflect.Struct:
+		typ := raw.Type()
+		table := structFieldTableFor(typ)
+		paths := table.lookupPaths(property, PropertyCaseInsensitive)
+		if len(paths) == 0 {
+			paths = table.lookupPaths(property, PropertyCaseSensitive)
+		}
+		if len(paths) == 0 {
+			return nil, fmt.Errorf("property %q not found on %s", property, typ)
+		}
+		clone := reflect.New(typ).Elem()
+		clone.Set(raw)
+		var field reflect.Value
+		for _, path := range paths {
+			if resolved, ok := resolveStructFieldPath(clone, path); ok {
+				field = resolved
+				break
+			}
+		}
+		if !field.IsValid() || !field.CanSet() {
+			return nil, fmt.Errorf("property %q is not assignable on %s", property, typ)
+		}
+		coerced, err := coercePropertyWrite(field.Type(), value)
+		if err != nil {
+			return nil, err
+		}
+		field.Set(coerced)
+		return clone.Interface(), nil
+	case reflect.Map:
+		clone := reflect.MakeMapWithSize(raw.Type(), raw.Len())
+		iter := raw.MapRange()
+		for iter.Next() {
+			clone.SetMapIndex(iter.Key(), iter.Value())
+		}
+		key := reflect.ValueOf(property)
+		if !key.Type().AssignableTo(raw.Type().Key()) {
+			if key.Type().ConvertibleTo(raw.Type().Key()) {
+				key = key.Convert(raw.Type().Key())
+			} else {
+				return nil, fmt.Errorf("property %q is not a %s map key", property, raw.Type().Key())
+			}
+		}
+		coerced, err := coercePropertyWrite(raw.Type().Elem(), value)
+		if err != nil {
+			return nil, err
+		}
+		clone.SetMapIndex(key, coerced)
+		return clone.Interface(), nil
+	default:
+		return nil, fmt.Errorf("variable value of type %s has no settable properties", raw.Type())
+	}
+}
+
+// coercePropertyWrite coerces an assigned value into the target property type
+// using the same Java-widening chain as variable assignment.
+func coercePropertyWrite(target reflect.Type, value any) (reflect.Value, error) {
+	if value == nil {
+		switch target.Kind() {
+		case reflect.Pointer, reflect.Interface, reflect.Map, reflect.Slice, reflect.Func, reflect.Chan:
+			return reflect.Zero(target), nil
+		default:
+			return reflect.Value{}, fmt.Errorf("cannot assign null to %s", target)
+		}
+	}
+	source := reflect.ValueOf(value)
+	if target.Kind() == reflect.Pointer && source.IsValid() && source.Type().AssignableTo(target.Elem()) {
+		// Boxed property types accept their underlying value, mirroring
+		// Java's autoboxing on bean property writes.
+		boxed := reflect.New(target.Elem())
+		boxed.Elem().Set(source)
+		return boxed, nil
+	}
+	definition := VariableDefinition{name: "property", typ: target}
+	coerced, err := definition.coerce(value)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	if coerced == nil {
+		return reflect.Zero(target), nil
+	}
+	result := reflect.ValueOf(coerced)
+	if !result.Type().AssignableTo(target) {
+		if result.Type().ConvertibleTo(target) {
+			result = result.Convert(target)
+		} else {
+			return reflect.Value{}, fmt.Errorf("cannot assign %s to %s", result.Type(), target)
+		}
+	}
+	return result, nil
 }
 
 // variableIndexNumber converts an integer-typed evaluation result to the
@@ -3727,4 +3921,44 @@ func evaluateTriggerKeys(keys []Expr, evaluation EvalContext) ([]any, error) {
 		values = append(values, value.Any())
 	}
 	return values, nil
+}
+
+// variablePropertyType resolves the declared type of a property on a
+// variable's registered type, mirroring Java's spi.getPropertyEPType lookup
+// for `set var.prop` output columns. Returns nil when the variable type is
+// dynamic or the property is not statically resolvable.
+func variablePropertyType(variableType reflect.Type, property string) reflect.Type {
+	if variableType == nil || property == "" {
+		return nil
+	}
+	typ := variableType
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	switch typ.Kind() {
+	case reflect.Struct:
+		table := structFieldTableFor(typ)
+		paths := table.lookupPaths(property, PropertyCaseInsensitive)
+		if len(paths) == 0 {
+			paths = table.lookupPaths(property, PropertyCaseSensitive)
+		}
+		if len(paths) == 0 {
+			return nil
+		}
+		zero := reflect.New(typ).Elem()
+		field, ok := resolveStructFieldPath(zero, paths[0])
+		if !ok {
+			return nil
+		}
+		return field.Type()
+	case reflect.Map:
+		return typ.Elem()
+	default:
+		// Event-typed variables carry reflect.Type only (no event-type name),
+		// so their property types are not statically resolvable; the caller
+		// falls back to the assignment expression type. This is the same
+		// event-type-name gap recorded as an approved difference for ord 5's
+		// variable-deployment EVENTTYPE dependency edge.
+		return nil
+	}
 }

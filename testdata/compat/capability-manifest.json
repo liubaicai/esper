@@ -4862,7 +4862,9 @@
         "internal/esper/variable_deploy_parity_test.go",
         "internal/app/parity/variable_deploy.go",
         "internal/esper/epl_variables_onset_parity_test.go",
-        "internal/app/parity/epl_variables_create.go"
+        "internal/app/parity/epl_variables_create.go",
+        "internal/app/parity/epl_variables_event_typed.go",
+        "internal/app/parity/run_test.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -44653,6 +44655,76 @@
         "java-runtime-5cc56f78a52d6a452948",
         "java-runtime-b23b2fbc3cc233237ac9"
       ]
+    },
+    {
+      "id": "case.epl-variables-event-typed",
+      "javaRuntimeIds": [
+        "java-runtime-0ccc8cc9831c8681b7b1",
+        "java-runtime-683d12f7c34c448319da",
+        "java-runtime-cc00e385af1428a74014",
+        "java-runtime-067180db58b5432f57dc",
+        "java-runtime-400881e0dc41c6d3e4e4",
+        "java-runtime-0794ac05da19ce34dbaf"
+      ],
+      "javaStaticIds": [
+        "java-0d1b65aff5dcb7751e5b",
+        "java-0d1b65aff5dcb7751e5b",
+        "java-0d1b65aff5dcb7751e5b",
+        "java-0d1b65aff5dcb7751e5b",
+        "java-0d1b65aff5dcb7751e5b",
+        "java-0d1b65aff5dcb7751e5b"
+      ],
+      "javaNames": [
+        "EPLVariableEventTypedSceneOne",
+        "EPLVariableEventTypedSceneTwo",
+        "EPLVariableConfig",
+        "EPLVariableEventTypedSetProp",
+        "EPLVariableInvalid",
+        "EPLVariableEventTypedCreateSchema"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesEventTyped.java"
+      ],
+      "goTests": [
+        "TestRunEplVariablesEventTypedDirectReplay",
+        "TestRunEplVariablesEventTypedDiffWritesPassingEvidence",
+        "TestRunEplVariablesEventTypedCheckedInEvidenceMatchesTraceAndReplay",
+        "TestRunEplVariablesEventTypedDiffRejectsTraceMutations",
+        "TestRunEplVariablesEventTypedRejectsMalformedRawScenario",
+        "TestRunEplVariablesEventTypedRuntimeIDMappingMatchesScenario"
+      ],
+      "tags": [
+        "epl",
+        "variable",
+        "event-typed",
+        "on-set",
+        "set-prop",
+        "runtime-api"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "difference": "Event-typed variables carry reflect.Type only, so Java's consumed(variable-deployment)=[EVENTTYPE OrderEvent] dependency edge is unmodelable and asserted oracle-side only (approved difference). Ord 4 EPLVariableInvalid pins the type-mismatch category token: Java's declared-type rendering differs between event-type-name and class-name declarations, so exact messages are asserted inside the Java oracle while both sides emit the category. No STATEMENTTYPE metadata (ON_SET) exists on the Go side, consistent with prior contracts. Set-prop assignments emit name.prop output columns carrying the evaluated assignment value (Java semantics: emitted even when a null receiver makes the write a no-op); the write itself is copy-on-write via SetVariablePropExpr.",
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-0ccc8cc9831c8681b7b1",
+        "java-runtime-683d12f7c34c448319da",
+        "java-runtime-cc00e385af1428a74014",
+        "java-runtime-067180db58b5432f57dc",
+        "java-runtime-400881e0dc41c6d3e4e4",
+        "java-runtime-0794ac05da19ce34dbaf"
+      ],
+      "notes": "6 executions, 61 records, 0 differences. SetVariablePropExpr added to shared core: copy-on-write property write on struct/map/Event variable values with name.prop output columns; snapshotQuery aligned to emit per-column values."
     }
   ],
   "mappings": [
@@ -47775,13 +47847,17 @@
     {
       "capabilityId": "trigger.table-named-window",
       "caseId": "case.infra-nwtable-on-update"
+    },
+    {
+      "capabilityId": "epl.variable-onset",
+      "caseId": "case.epl-variables-event-typed"
     }
   ],
   "summary": {
-    "inventoriedCases": 696,
-    "implementedCases": 694,
-    "differentialVerifiedCases": 322,
-    "differentialVerifiedRuntimeIds": 1217,
+    "inventoriedCases": 697,
+    "implementedCases": 695,
+    "differentialVerifiedCases": 323,
+    "differentialVerifiedRuntimeIds": 1223,
     "intentionallyDifferentCases": 29,
     "representativeVerifiedCases": 119,
     "nfrVerifiedCases": 0,
@@ -47791,13 +47867,13 @@
     "intentionallyDifferentCapabilities": 8,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 3767,
-    "referencedJavaRuntimeIds": 3403,
+    "runtimeAssociationCount": 3773,
+    "referencedJavaRuntimeIds": 3409,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 733,
+    "unreferencedJavaRuntimeIds": 727,
     "representativeScenarioTotal": 122,
     "representativeScenarioPassing": 122,
-    "totalCases": 696,
+    "totalCases": 697,
     "totalCapabilities": 121
   }
 }

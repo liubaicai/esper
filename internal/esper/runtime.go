@@ -6480,12 +6480,18 @@ type statementRuntime struct {
 	// expression-sized time-window durations keyed by window node. The
 	// engine deletes empty window states during expiry, so the snapshot
 	// lives on the runtime and is copied into newly created states.
-	windowExprDurations      map[*streamNode]time.Duration
-	joinState                *joinRuntimeState
-	aggregateState           *aggregateRuntimeState
-	derivedStates            map[*streamNode]*aggregateRuntimeState
-	patternState             *patternRuntimeState
-	patternJoinStates        map[*streamNode]*patternJoinRuntime
+	windowExprDurations map[*streamNode]time.Duration
+	joinState           *joinRuntimeState
+	aggregateState      *aggregateRuntimeState
+	derivedStates       map[*streamNode]*aggregateRuntimeState
+	patternState        *patternRuntimeState
+	patternJoinStates   map[*streamNode]*patternJoinRuntime
+	// iterableLastEvent retains the last event that entered an unwindowed
+	// select's stream when the query carries iterableUnbound, mirroring
+	// Java's ZeroDepthStreamIterable: the statement iterator then yields the
+	// transformed last event instead of an empty result.
+	iterableLastEvent        Event
+	iterableLastEventSet     bool
 	patternAggregateGroup    []Event
 	patternAggregateTags     []map[string]Event
 	contextStartPatternState *patternRuntimeState
@@ -9898,6 +9904,10 @@ func (r *statementRuntime) process(plan Plan, event Event, now time.Time, variab
 		delta, insertErr := r.insert(plan.query.input, event, now)
 		err = insertErr
 		if err == nil {
+			if plan.query.iterableUnbound && len(delta.newEvents) > 0 {
+				r.iterableLastEvent = delta.newEvents[len(delta.newEvents)-1]
+				r.iterableLastEventSet = true
+			}
 			if queryUsesPriorAccess(plan.query) {
 				r.trackPriorArrival(&delta)
 			}
@@ -12291,7 +12301,15 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 	if plan.query.rowRecog != nil {
 		return r.snapshotRowRecog(plan, now, r.variables)
 	}
-	events := r.currentStreamEvents(plan.query.input, now)
+	var events []Event
+	if plan.query.iterableUnbound && r.iterableLastEventSet && len(streamWindowNodes(plan.query.input)) == 0 {
+		// iterableUnbound unwindowed selects iterate the last stream event,
+		// transformed through the projection below; on windowed inputs Java's
+		// annotation is a no-op and the iterator reads the window contents.
+		events = []Event{r.iterableLastEvent}
+	} else {
+		events = r.currentStreamEvents(plan.query.input, now)
+	}
 	if len(events) == 0 {
 		return ResultBatch{Time: now}
 	}

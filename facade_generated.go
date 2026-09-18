@@ -6185,6 +6185,17 @@ func SetVariableIndexExpr(name string, index, expression Expr) VariableAssignmen
 	return internalengine.SetVariableIndexExpr(name, index, expression)
 }
 
+// SetVariablePropExpr assigns one property of a bean- or map-valued runtime
+// variable when the trigger fires, the Go-native counterpart of Java's
+// `set varbean.theString = 'A'` on-set property write. The assignment is
+// copy-on-write: the variable stores an updated copy and the previously held
+// value is untouched. A null variable skips the write entirely, matching
+// Java's silent no-op on null receivers. The statement emits a "name.prop"
+// output column carrying the post-write property value.
+func SetVariablePropExpr(name, property string, expression Expr) VariableAssignmentExpr {
+	return internalengine.SetVariablePropExpr(name, property, expression)
+}
+
 // Signum is the Go-native equivalent of Java Math.signum for double-valued
 // expressions. NaN and negative zero are preserved, while finite values are
 // normalized to -1, 0, or 1.

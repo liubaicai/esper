@@ -4399,15 +4399,33 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 				// variable reads.
 				continue
 			}
-			if _, exists := seen[assignment.Name]; exists {
+			column := assignment.Name
+			if assignment.Prop != "" {
+				// Property writes emit a "name.prop" column; the column type
+				// follows the assignment expression since the property type
+				// is only known once the variable holds a value.
+				column = assignment.Name + "." + assignment.Prop
+			}
+			if _, exists := seen[column]; exists {
 				continue
 			}
-			seen[assignment.Name] = struct{}{}
+			seen[column] = struct{}{}
 			definition, ok := e.Variable(assignment.Name)
 			if !ok {
 				return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("variable %q is not registered", assignment.Name))
 			}
-			fields = append(fields, FieldSpec{Name: assignment.Name, Type: definition.Type()})
+			columnType := definition.Type()
+			if assignment.Prop != "" {
+				// Java types the name.prop column from the target property
+				// (spi.getPropertyEPType); fall back to the expression type
+				// only when the property is not resolvable at plan time.
+				if propertyType := variablePropertyType(definition.Type(), assignment.Prop); propertyType != nil {
+					columnType = propertyType
+				} else if expressionType := assignment.Expr.Type(); expressionType != nil {
+					columnType = expressionType
+				}
+			}
+			fields = append(fields, FieldSpec{Name: column, Type: columnType})
 		}
 		return NewSchema("result:"+query.name, fields...)
 	}

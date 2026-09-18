@@ -3197,138 +3197,38 @@ Active: Draft 4.454 ('epl-variables-create').
       clean; traces regenerated and diff still passing / 0 differences.
 - [x] Shipped; Git owns identity. Draft 4.454 committed and pushed as `c38007e23`.
 
-## Next work unit (prefetch)
-Candidate: Draft 4.455 `EPLVariablesEventTyped` — 6 unreferenced executions
-(ords 0-5; event-typed variables, set-prop, create-schema interplay).
-Scouts `NextJavaContract455` + `NextGoSurface455` spawned after 4.454
-review PASS; no writes until their contracts land. Status and summary counts unchanged (go-unit unit).
+## Current work unit
+Active: Draft 4.455 ('epl-variables-event-typed').
 
-### Previous work unit (prior)
-
-Active: Draft 4.402 ('go-unit-integrity-repair').
-
-- [x] Baseline audit: manifest-wide reconciliation of every `goTests` claim against defined Go tests
-      (full-repo `func Test...` scan). Found and repaired: (1) 4.401 event-json cases claimed three
-      `TestRunEventJsonSenderGetter*` run-family tests that never existed - written for real in
-      `internal/app/parity/run_test.go` (evidence-diff passing, direct replay with full-layout pins
-      including the kind/row wrapper decode shape, and 5 discriminating trace mutations all rejected:
-      sender payload drift, nested-map drift, wrapper-stripped, statement drift, record-count short).
-      (2) `case.view-union-basic` claimed the nonexistent `TestViewUnionLengthUniqueMatchesEsper` -
-      repointed to the real `TestViewUnionFirstUniqueAndFirstLengthParity` /
-      `TestViewUnionNamedWindowFirstUniqueAndFirstLengthParity` pins that mirror Java
-      ViewUnionFirstUniqueAndFirstLength. (3) `case.view-timebatch-basic` and
-      `case.inventory.context-nested` claimed never-written tests - dropped, with the true coverage
-      gaps recorded in case notes (ViewTimeAccumPreviousAndPrior scenes, ViewTimeAccumSum,
-      ViewTimeAccumGroupedWindow, ContextNestedInvalid) as schedulable follow-up.
-- [x] Full-repo audit now clean except three benign informational entries (mode reference and two
-      existing test-file paths under `case-epl-as-keyword-backtick-behavioral`,
-      `case.infra-nwtable-faf-join-matrix`, `case.epl-insert-into-istream-func`).
-- [x] Baseline regression found by the full parity gate and repaired: d013b965a's event-json insertion
-      deleted the `epl-database-restart` scenario-loader line in run.go (all four restart family tests
-      failed with `unsupported scenario version ""`); loader restored, no other empty mode branches.
-- [x] Gates green: internal/app/parity 188s, internal/esper 60s, internal/compat, go build/vet,
-      gofmt (incl. pre-existing `database_join_class_parity_test.go` whitespace), `git diff --check`.
-
-### Previous work unit (prior)
-
-Shipped: Draft 4.401 ('event-json-slice') landed with d013b965a; Git owns identity. Two
-EventJson executions differential-verified (277 DV cases, 1020 DV runtime IDs). Post-landing audit
-found the unit's manifest goUnit claims were never backed by tests; repaired in 4.402 above.
-
-Prior Draft 4.401 record (superseded):
-- [x] Combined scout complete (agent_18e55d54): Java contract + Go surface + runner sketch + value canonicalization + manifest delta. Both executions deterministic (single JSON parse + send, one listener delivery each, no remove-streams/timing). Go surface mature: RegisterJSON + JSONSender(Parse/Send) + Schema.Getter + RenderJSON all exist with engine-test precedents. Key canonicalization: nested Map prop projects as kind/row wrapper (Java oracle convention, Go normalizeValue wraps esper.Event not plain maps — declare prop with nested schema or add a case normalizer).
-- [x] Contract frozen. Scenario event-json-sender-getter, 2 cases, 2 listener records/side: (0) json-sender-parse-and-send 8d0258718d883f9c5497 — @JsonSchema create json schema MyEvent(p1 string) + select *, JSONSender Parse '{"p1": "abc"}' (exact bytes with space) → SendEvent → 1 delivery {p1:"abc"}; (1) json-getter-map-type b36d999f7edc275dacd2 — create json schema JsonEvent(prop java.util.Map) + select *, sendEventJson '{"prop":{"x":"y"}}' (minimaljson compact) → 1 delivery {prop: nested {x:"y"}}; in-process: getter prop('x')=="y", prop.somefield? null. Manifest: both cases → differential-verified, dv list = [own ID]; summary dvCases 275→277, dvIds 1018→1020.
-- [ ] Writer dispatched (oracle + script + scenario + Java trace) + Go runner implementer dispatched in parallel.
-- [x] Evidence pipeline, manifest upgrade, roadmap, CHANGELOG. (Writer agent_1f472a4a Java trace 2 records deterministic; evidence passing 0 diffs; manifest dvCases 277, dvIds 1020; roadmap + CHANGELOG 4.401 supplements newest-first.)
-- [ ] Gates + independent parity review + commit.
-
-### Previous work unit (prior)
-
-Active: Draft 4.400 ('database-invalid-dispositions').
-
-- [x] Scope frozen from perf doc §4.9.3 remaining half: (a) ResultBatch borrow/reuse — the dispatch path clones the batch per listener/subscriber/sink (runtime.go:6045/6049/6052/6057); add an internal borrow path for synchronous listener dispatch when no retention is possible; (b) non-empty variable snapshot copy reduction — cloneValues per dispatch for statements with variables; share read-only views where isolation allows. The listener-holding-semantics verification is the unit's own deliverable.
-- [x] Investigation: subscriber clone provably unnecessary (newSubscriberUpdate detaches rows synchronously — subscriber.go:30-45); listeners/sink need clone-per-delivery EXCEPT the last (arrays never reused — no slice pooling, producers build fresh, all dispatch queues drained under e.mu before dispatch); non-empty variable snapshot copy EXCLUDED (written per statement during dispatch — subqueryEngineVariable injection + output-policy assignments; read-only view needs cross-cutting map refactor, deferred).
-- [x] Implementation: last-consumer-borrows in dispatchSync (runtime.go:6057-6096) — subscriber un-cloned, listener i clones unless last, sink borrows; single-listener dispatch zero clones; retention contract documented on Listener/Sink/async-pool-clone/replay-clone (all kept). No public API change.
-- [x] Equivalence pins: dispatch_borrow_test.go (multi-listener in-place mutation isolation with retained slice header, single-listener borrow retention, subscriber detached from mutating borrower, sink isolation + retention, SubscribeWithReplay with send-during-replay under mutating callback, second-send cleanliness); -race green on Threading/Outbound/Replay/Subscriber/Dispatch; full corpus green (internal/esper 57s, internal/app/parity 195s, internal/compat ok).
-- [x] Benchmark: accepted 9→8 allocs · 1584→1536 B; GenericFilter accepted 19→18; DispatchBorrowListeners 1/2/4 listeners 7/8/10 allocs (each additional listener +1 instead of +2); single-listener borrow zero dispatch clones.
-- [ ] Gates + independent parity review + commit.
-
-### Previous work unit (prior)
-
-Active: Draft 4.397 ('unified-single-filter-eval').
-
-- Scope frozen from perf doc §4.9.2 (priority 2): the generic statement path re-evaluates the filter per event even though Engine.send's dispatch loop already computed `accepted` — extending the dispatch-verdict reuse from the stateless fast path to eligible generic single-chain statements (plain, getter-bearing, window-above-filter); joins/patterns/contexts/triggers/update-streams and divergent-shapes keep duplicate evaluation per the structural eligibility proof. Metrics sampling windows, audit accepted values, and user function/script call counts must be preserved.
-- [x] Investigation: map the dispatch/filter call graph (Engine.send → matchesEventFilter → processStatementWithMetricsLocked → Statement.process → filter re-eval; file:line), identify what must flow down (accepted + variables assembly), and what observability must be preserved.
-- [ ] Implementation + equivalence pins (the full differential corpus is the net; metrics/audit in-process asserts).
-- [ ] Benchmark showing the eliminated duplicate evaluation per perf doc requirements.
-- [x] Gates: go build/vet/gofmt clean; internal/esper, internal/app/parity, internal/compat all green; make check green; git diff --check clean.
-- [x] Independent parity review: agent_661cc0b9 round-1 OVERALL FAIL with one P2 (metrics cpuTime/wallTime double-counted the process window — resolve() measured lazily after process returned, so the merged total was filter + 2×process) + P3 doc/checkpoint nits. P2 fixed pre-commit: statementMetricElapsed gained stop()/stopped fields freezing the filter window before the sample opens; resolve() returns the frozen window; the factually wrong "windows never overlap" comment corrected. P3s fixed: PLANS duplicate header removed, scope bullet corrected to the landed eligible-single-chain scope, perf doc §4.9.2 rewritten as landed-for-eligible-shapes and §6 remaining-item updated (joins/patterns/contexts/multi-slot still double-eval pending per-shape evidence).
-- [x] Commit and push (single semantic commit with all checkpoint edits folded in).
-
-### Previous work unit (prior)
-
-### Previous work unit (prior)
-
-Active: Draft 4.396 ('incremental-join-index').
-
-- [x] Scope frozen from perf doc §4.9.1 (priority 1): statementRuntime.insertJoin/updateJoin recomputes the FULL join tuple set twice per event (before/after diff, O(prod|sides|) per event). This unit implements the lower-risk half: per-side equi/IN join-condition indexes so the composition looks up candidate rows instead of full-scanning the opposite side, preserving EXACT output semantics (ordering, old/new, lineage, outer-join unmatched rows). The full incremental-join rewrite (§4.9.1's other half) stays deferred.
-- [x] Investigation: composition call graph mapped (insertJoin/updateJoin -> joinKeyedTuples -> visit(0) Cartesian / 2-stream outer / chained per-edge; joinConditionsMatch -> EqualValues oracle); index-eligible = pure equi/IN on regular event windows; exclusions per perf doc.
-- [x] Implementation + equivalence pins: join_index.go (key encoding EqualValues-faithful incl. -0/json.Number/DeepEqual fallback; OR mixed-branch nil-return; plan-time drop-whole-condition rule with level-validity gating) + hooks (inner, 2-stream outer, chained inner); equivalence via 17-scenario randomized property test vs copied legacy reference + full differential corpus (internal/esper, internal/app/parity, internal/compat all green ×3); -race green on indexed shapes (pre-existing TestDatabaseJoinPerfNoCache -race panic documented as not-this-unit).
-- [x] Benchmark: equi 500×500 ~310x, composite ~62x, IN selective ~97x, 3-stream ~397x, chained ~46x, hot-value IN ~1.4x; perf doc §4.9.1.1 records numbers + measurement-environment note (reviewer P3).
-- [x] Gates + independent parity review: reviewer agent_d01c2e17 round-1 FAIL caught 2 P1 soundness holes (OR mixed-branch extraction; plan dead-alternatives) — fixed with proof-by-revert pins; round-2 re-check OVERALL PASS (both fixes verified sound end-to-end; engagement assertions prevent reference-vs-reference; performance-neutral on unaffected shapes).
-- [ ] Commit and push (single semantic commit with all checkpoint edits folded in).
-
-### Previous work unit (prior)
-
-Active: Draft 4.395 ('infra-named-window-final-views').
-
-- [x] Contract frozen from parallel read-only scouts `FinalNWJava` (java-oracle-scout) and `FinalNWGo` (scout): fixed Java source `InfraNamedWindowViews.java`, commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; final slice S13 covers ord 46 `InfraInvalid` (`java-runtime-c4bdf3c2b96b8fc08eaf`), ord 47 `InfraNamedWindowInvalidAlreadyExists` (`java-runtime-2bea74c29c162eed65e9`), ord 48 `InfraNamedWindowInvalidConsumerDataWindow` (`java-runtime-06948675706a1d4ee9a7`), ord 52 `InfraPattern` (`java-runtime-476271957d6ffdb3a878`), ord 57 `InfraNamedWindowTimeToLiveDelete` (`java-runtime-3c2f3a2696127c04b2a6`); static `java-030c8e6d456d680e8745`.
-- [x] Observable contract frozen: ord 52 deploys create + pattern `s0` (`every a=PAT(key='S1') or a=PAT(key='S2')`) + insert, then sends E1/S1(2)/S1(3)/S2(4)/S1(1) for 3 ordered new rows `{S1,2}/{S1,3}/{S2,4}` with silence gaps at steps 1 and 5 (or-quit: S2 completes the or-expression, later S1 stays silent). Ord 57 deploys `win` + merge + delete over absolute virtual time 0/500/1000/2000 with deletes E2/E1 for 5 any-order iterator snapshots `[{E1,E2,E3,E4},{E1,E3,E4},{E3,E4},{E4},{}]` (TTL deadline = insert-time + longPrimitive; E3/1000 gone at t=1000, E4/2000 gone at t=2000; milestones are persistence no-ops, omitted). Ords 46/47/48 are compile/deploy-only diagnostics with zero output rows (6/1/1 pinned EPL strings; INVALIDITY flags on 46/47 only, not 48): 4 of the 8 probes have typed-builder counterparts (groupwin child, unknown window, duplicate create, consumer data window — already asserted in-process by `TestInfraNWViewsInvalidParity` via ErrorCode), while the no-view window, update/FAF phase-split and innermap property-resolution probes are EPL-text-only with no typed-builder surface. Per the `case.infra-nwtable-faf-invalid` precedent the trio is disposed as `intentionally-different` (no trace; exact Java texts stay oracle-side), and ords 52+57 form one DV chain (`infra-named-window-final-views`, 8 records over 30 steps).
-- [x] Build final-slice differential chain and replay Java/Go (primary, single shared-core writer): new chain `internal/app/parity/infra_named_window_final_views.go` + modes, strict scenario (30 steps, 2 cases), Java oracle + script; Java/Go traces 8 records, evidence `passing`, 0 differences. No engine change (TTL expiry, deletes, pattern or-quit all replay clean).
-- [x] Fix engine gaps if replay proves any: none — replay proved no gap; `internal/esper` untouched.
-- [x] Run focused tests, mutations, full local gates: `TestRunInfraNamedWindowFinalViews*` 6 tests (6 mutations) green; `go test ./...` all packages ok; `go vet ./...` clean; gofmt clean; `git diff --check` clean; manifest machine checks pass (`TestCapabilityManifestArtifactValidates`).
-- [x] Independent parity review `ReviewFinalViews`: PASS, no P0/P1/P2/P3 findings. Ready to commit and push (single semantic commit).
-- [x] Update manifest, roadmap and changelog facts: capability goRefs + DV +2, new DV case + new intentionally-different invalid case, mappings +2, summary 651/649/273/1018/24/3619; roadmap 4.395; CHANGELOG 4.395.
-- Delegation checkpoint: parallel read-only scouts `FinalNWJava` + `FinalNWGo` complete before implementation (no serial fallback needed). Single writer (primary) owns the new chain file plus run.go/run_test.go integration; no asset-worker split (invalid/pattern/TTL share one runtime harness). No `internal/esper` change assumed; replay decides.
-
-### Previous work unit (prior)
-
-Active: Draft 4.392 ('infra-named-window-bean-views').
-
-### Previous work unit (prior)
-
-Active: Draft 4.392 ('infra-named-window-bean-views') - chain, evidence and docs complete; test family, gates, independent review, commit and push pending.
-
-- Scope: slice S11 of the InfraNamedWindowViews inventory (bean/schema representations) - ord 2 `InfraBeanBacked` (`java-runtime-f0a1da1fe931e132c21f`), ord 35 `InfraBeanContained` (`java-runtime-fe6adc5803da60bf18f5`), ord 37 `InfraBeanSchemaBacked` (`java-runtime-f195548d023dfbde1aed`), ord 38 `InfraDeepSupertypeInsert` (`java-runtime-baa0bd4ca41b9b2c5f94`); 25 records (23 listener + 1 faf + 1 snapshot), 57 steps, case `case.infra-namedwindow-views-beans`.
-- Pinned semantics: the bean-backed window statement and its on-trigger update waves (five listener invocations per cycle: create, s0, create new+old, update, s0), the nested bean fragment projection (`bean.p00`), the schema-backed variant with its AVRO compile-reject slot, the fire-and-forget query result, and the subtype-insert-into-supertype-window mapping (payload carries valOneA/valOne/val, the window's `val` reads the most-derived override).
-- Recorded engine difference (oracle-pinned): in the ord-2 on-trigger update wave the Go engine publishes the consumer record before the trigger statement's own record where Java publishes the trigger record first. Content, sequences, streams and counts are identical; the chain normalizes exactly that adjacent pair for that case through the repository's existing Go-normalizer hook (the same instrument eight other chains use), the checked-in Go trace keeps the raw engine order, and every other record matches Java. Candidate follow-up: evaluate an `internal/esper` dispatch-order fix in a dedicated unit.
-- [x] Java contract ('/home/baicai/.omp/agent/sessions/-app-bigsoc-esper/2026-09-11T07-25-06-987Z_01a08f5b-182b-706f-8107-607a49b2980d/S11JavaContract.md'), scenario, oracle, trace and the Go chain delivered; differential `passing` with 25/25 records and 0 differences; both the Go evidence and the Java trace (md5 0d313fabb00b9a942af1412a12174e39) are byte-reproducible.
-- [ ] Test family, manifest (`case.infra-namedwindow-views-beans`, capability DV +4), gates, review, commit.
-- Next unit (prefetched candidate): slice S12 - the insert-shape family, ord 28 `InfraDoubleInsertSameWindow` (`java-runtime-1b9f5b6ccf6b49cdba09`), ord 36 `InfraIntersection` (`java-runtime-f739aa91028d27aa572f`), ord 54 `InfraSelectStreamDotStarInsert` (`java-runtime-9740441818d84a3ee94d`), ord 56 `InfraOnInsertPremptiveTwoWindow` (`java-runtime-71402af94b27b4255ab8`).
-
-- Scope: slice S10 of the InfraNamedWindowViews inventory (named-window consumer views) - ord 43 `InfraFilteringConsumer` (`java-runtime-a7827f22ee0c135e84d2`), ord 45 `InfraFilteringConsumerLateStart` (`java-runtime-502dd5b0e84f28fb2c68`), ord 49 `InfraPriorStats` (`java-runtime-5ccc9535c9241efda4cc`), ord 50 `InfraLateConsumer` (`java-runtime-5118f72a4d8684d593d0`), ord 51 `InfraLateConsumerJoin` (`java-runtime-c49a6a43a1efd3fa0729`); 64 records (38 listener + 26 snapshot), 87 scenario steps, case `case.infra-namedwindow-views-consumers`.
-- Pinned semantics: the from-clause consumer filter applies to both the new and the old stream of a named-window delta, the unique window's replacement pair arrives in one callback, prior access reports null priors, the univariate-statistics derived view projects its average column only (single-value rows on the non-irstream consumer, new+old state pairs on the irstream one; the empty-state NaN case is not exercised here), the late-started filtered aggregate consumer preloads the already-retained rows, and the left-outer join pads unmatched left rows; Java's order-insensitive iterator states are encoded any-order.
-- Notables: the asset lane corrected the contract on ord 50 (15 records, not 12 - the suite never detaches the create listener, so the three later inserts fire it again); the chain loader pins case order, per-case deploy/send/advance/snapshot counts, the new `s2Epl`/`s3Epl` slots, the pinned undeploy order and in-block placement.
-- [x] Java contract (agent://S10JavaContract), scenario, oracle and trace delivered; the Go chain is integrated (agent://S10GoSurface findings used), the differential is `passing` with 64/64 records and 0 differences, and both the Go evidence and the Java trace (md5 c5456c8b4062958fe74498d433e132b5) are byte-reproducible.
-- [ ] Test family, manifest (`case.infra-namedwindow-views-consumers`, capability DV +5), CHANGELOG/roadmap/README (done), gates, review, commit.
-- Next unit (prefetched candidate): slice S11 - the bean/schema family, ord 2 `InfraBeanBacked` (`java-runtime-f0a1da1fe931e132c21f`), ord 35 `InfraBeanContained` (`java-runtime-fe6adc5803da60bf18f5`), ord 37 `InfraBeanSchemaBacked` (`java-runtime-f195548d023dfbde1aed`), ord 38 `InfraDeepSupertypeInsert` (`java-runtime-baa0bd4ca41b9b2c5f94`).
-
-- Scope: slice S9 of the InfraNamedWindowViews inventory (per-group retention and late-started grouped views) - ord 26 `InfraLengthWindowPerGroup` (`java-runtime-083a289ee5f82dd87ad3`), ord 27 `InfraTimeBatchPerGroup` (`java-runtime-accaf82c3c846493832b`), ord 44 `InfraSelectGroupedViewLateStart` (`java-runtime-3326973240f20b92dced`), ord 55 `InfraSelectGroupedViewLateStartVariableIterate` (`java-runtime-0ec49d4098c9796540b0`); 29 records (22 listener + 7 snapshot), 72 scenario steps, case `case.infra-namedwindow-views-groupwin`.
-- Pinned semantics: the per-group iterator order (group-creation order, then insertion order inside a group), length expiring only on insert, a capacity expiry carrying new+old in ONE callback, a delete wave that is old-only, the per-group time_batch anchored at each group's first arrival with same-instant group flushes concatenated in group-creation order, the late-started grouped consumers whose preload replays the whole window into the aggregation, and the iterate-time `having` against the runtime variable set by an on-set trigger.
-- Notables: Java asserts only the row count at the two window-iterator sites, so those snapshots pin `fields: []` with `mode: any` (count assertion, order unconstrained) instead of asserting values Java does not check; the scenario root and per-case descriptions are the asset lane's Java-derived text and the chain pins them byte for byte.
-- [x] Java contract (agent://S9JavaContract), scenario, oracle, trace and the six-test Go family delivered; the Go trace and evidence are byte-reproducible and the differential is `passing` with 29/29 records and 0 differences.
-- [x] Manifest (`case.infra-namedwindow-views-groupwin`, capability DV +4, summary 646/644/269/1003/3601), CHANGELOG 4.390, roadmap 4.390, README stats.
-- Next unit (prefetched, read-only): slice S10 - the consumer/preload family, ord 43 `InfraFilteringConsumer` (`java-runtime-a7827f22ee0c135e84d2`), ord 45 `InfraFilteringConsumerLateStart` (`java-runtime-502dd5b0e84f28fb2c68`), ord 49 `InfraPriorStats` (`java-runtime-5ccc9535c9241efda4cc`), ord 50 `InfraLateConsumer` (`java-runtime-5118f72a4d8684d593d0`), ord 51 `InfraLateConsumerJoin` (`java-runtime-c49a6a43a1efd3fa0729`).
-
-- Scope: slice S8 of the InfraNamedWindowViews inventory (virtual time, batch retentions) - ord 16 `InfraTimeBatch` (`java-runtime-1ad42a8ed8025c4a0730`), ord 17 `InfraTimeBatchSceneTwo` (`java-runtime-1eb11f5cf275069ef6b5`), ord 18 `InfraTimeBatchLateConsumer` (`java-runtime-bb926d092e7110db203f`), ord 23 `InfraTimeLengthBatch` (`java-runtime-22bf6b3644a24862df7d`), ord 24 `InfraTimeLengthBatchSceneTwo` (`java-runtime-dd924e1b7e500df135f8`); 43 records (8/10/2/10/13 = 12 listener + 31 snapshot, 10 empty), case `case.infra-namedwindow-views-time-batch`.
-- Pinned semantics: buffered arrivals with no callback, the boundary flush as ONE delivery carrying the completed batch as new and the previous batch as old, no callback for an all-empty flush, the anchor surviving an empty flush, the time_length_batch size/time dual trigger, and the late consumer whose batch preload is skipped (one row, whole-batch sum).
-- Notables: an ungrouped aggregate consumer over a batch window must be built with `Aggregate(...)` - a plain `Select` of a bare aggregate is a per-event projection (3 null rows instead of Java's single summed row); `internal/esper` needed no change. The asset scout confirmed the ord-16/18 flush shapes against the Java source, and the independent reviewer re-derived all 17 pinned EPLs and the 5/8/1/6/11 snapshot counts.
-- [x] Java contract, scenario, oracle and trace delivered by the asset lane (deterministic, 43 records, byte-reproducible).
-- [x] Go chain `internal/app/parity/infra_named_window_time_batch_views.go` + modes + 6-test family (mutation indices derived from the trace layout) + 0-difference evidence.
-- [x] Manifest (`case.infra-namedwindow-views-time-batch`, capability DV +5, summary 645/643/268/999/3597), CHANGELOG 4.389, roadmap 4.389, README stats.
-- [x] `make check` green; independent parity review accepted with four P3 findings (PLANS block, CHANGELOG example, Java line citations, dead `consume` branch), all fixed and re-verified.
-- Next unit (prefetched, read-only): slice S9 'infra-namedwindow-views-groupwin' - ords 26 `InfraLengthWindowPerGroup`, 27 `InfraTimeBatchPerGroup`, 44 `InfraSelectGroupedViewLateStart`, 55 `InfraSelectGroupedViewLateStartVariableIterate`; Java contract ('/home/baicai/.omp/agent/sessions/-app-bigsoc-esper/2026-09-11T07-25-06-987Z_01a08f5b-182b-706f-8107-607a49b2980d/S9JavaContract.md') and Go surface ('/home/baicai/.omp/agent/sessions/-app-bigsoc-esper/2026-09-11T07-25-06-987Z_01a08f5b-182b-706f-8107-607a49b2980d/S9GoSurface.md') reports are in hand.
-
+- [x] Contract frozen (scouts `NextJavaContract455` + `NextGoSurface455`):
+ EPLVariablesEventTyped.java 6 executions (SceneOne/SceneTwo/Config/SetProp/
+ Invalid/CreateSchema); 7 preconfigured global variables seeded via
+ env.RegisterVariable; contract at .omp/contract-455.md.
+- [x] Shared-core: `SetVariablePropExpr` — copy-on-write property write on
+ struct/map/Event variable values, `name.prop` output columns, null-receiver
+ no-op; schema + validation wiring in plan.go/trigger.go. Build + trigger
+ tests green.
+- [x] Assets authored (worker `AssetWorker455`): scenario (6 cases / 61
+ records), oracle, runner, run.go wiring.
+- [x] Java trace + Go replay + zero-diff evidence: `-mode
+ epl-variables-event-typed-diff` passing / 0 differences, 61 records each.
+- [x] Manifest/roadmap/CHANGELOG updated; `make check` green.
+- [x] Parity review round 1 (agent `ParityReview455`): FAIL on one P1 —
+ oracle omitted `setIterableUnbound(true)` so the s0 snapshot misrecorded
+ empty vs Java's asserted {A,1} row. Fixed: oracle config +
+ `WithIterableUnbound` on all runner selects + new shared-core
+ iterableUnbound last-event retention for unwindowed selects
+ (`iterableLastEvent` on statementRuntime, snapshotBatch projection).
+ P2 fixed: prop RHS now evaluated once (assigned value feeds both write and
+ emitted column). P3s fixed: name.prop column type resolves from the
+ variable's declared property type; snapshotQuery prefers the live property
+ read with posted-value fallback; this checklist updated.
+- [x] Confirmation review (same agent `ParityReview455`): OVERALL PASS.
+ Two residual latent P3s handled: iterableUnbound snapshot branch now gated
+ on unwindowed input (streamWindowNodes check); Event-typed variable
+ property-type resolution documented as the same event-type-name gap as
+ ord 5's approved difference.
+- [x] Shipped; Git owns identity.
 
 ## Delegation checkpoint (recent)
 

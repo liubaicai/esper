@@ -62757,3 +62757,481 @@ func TestRunEplVariablesCreateRuntimeIDMappingMatchesScenario(t *testing.T) {
 		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
 	}
 }
+
+// eplVariablesEventTypedCheckJavaMetadata verifies differential evidence
+// carries the pinned Java commit, runtime IDs, source file and execution
+// names for the EPLVariablesEventTyped suite.
+func eplVariablesEventTypedCheckJavaMetadata(javaCommit string, runtimeIDs, sourceFiles, executions []string) error {
+	if javaCommit != eplVariablesEventTypedJavaCommit {
+		return fmt.Errorf("Java commit = %q, want %q", javaCommit, eplVariablesEventTypedJavaCommit)
+	}
+	if !reflect.DeepEqual(runtimeIDs, eplVariablesEventTypedJavaRuntimeIDs) {
+		return fmt.Errorf("Java runtime IDs = %v, want %v", runtimeIDs, eplVariablesEventTypedJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(sourceFiles, eplVariablesEventTypedSources) {
+		return fmt.Errorf("Java source files = %v, want %v", sourceFiles, eplVariablesEventTypedSources)
+	}
+	if !reflect.DeepEqual(executions, eplVariablesEventTypedJavaExecutions) {
+		return fmt.Errorf("Java executions = %v, want %v", executions, eplVariablesEventTypedJavaExecutions)
+	}
+	return nil
+}
+
+func assertEplVariablesEventTypedTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eplVariablesEventTypedID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	type line struct {
+		caseName  string
+		operation string
+		statement string
+		name      string
+		sequence  uint64
+		newRows   string
+		oldRows   string
+		value     string
+	}
+	expected := []line{
+		{"event-typed-scene-one", "deployed", "v0", "", 1, "", "", ""},
+		{"event-typed-scene-one", "deployed", "v1", "", 1, "", "", ""},
+		{"event-typed-scene-one", "deployed", "v2", "", 1, "", "", ""},
+		{"event-typed-scene-one", "deployed", "s0", "", 1, "", "", ""},
+		{"event-typed-scene-one", "listener", "s0", "", 1, "varbean:null,varbean.id:null,varobject:null,vartype:null,vartype.id:null", "", ""},
+		{"event-typed-scene-one", "listener", "s0", "", 2, "varbean:map[id:A1],varbean.id:A1,varobject:abc,vartype:map[id:1 p00:<nil> p01:<nil> p02:<nil> p03:<nil>],vartype.id:1", "", ""},
+		{"event-typed-scene-one", "deployed", "set", "", 1, "", "", ""},
+		{"event-typed-scene-one", "listener", "set", "", 1, "varbean:null,varobject:1,vartype:map[id:2 p00:X p01:<nil> p02:<nil> p03:<nil>]", "", ""},
+		{"event-typed-scene-one", "variable", "", "varobject", 0, "", "", "1"},
+		{"event-typed-scene-one", "variable", "", "vartype", 0, "", "", "map[id:2 p00:X p01:<nil> p02:<nil> p03:<nil>]"},
+		{"event-typed-scene-one", "variable", "", "vartype", 0, "", "", "map[id:2 p00:X p01:<nil> p02:<nil> p03:<nil>]"},
+		{"event-typed-scene-one", "snapshot", "set", "", 0, "varbean:null,varobject:1,vartype:map[id:2 p00:X p01:<nil> p02:<nil> p03:<nil>]", "", ""},
+		{"event-typed-scene-one", "listener", "s0", "", 3, "varbean:null,varbean.id:null,varobject:null,vartype:null,vartype.id:null", "", ""},
+		{"event-typed-scene-one", "listener", "s0", "", 4, "varbean:map[id:A1],varbean.id:A1,varobject:10,vartype:map[id:2 p00:X p01:<nil> p02:<nil> p03:<nil>],vartype.id:2", "", ""},
+		{"event-typed-scene-one", "deployed", "set-two", "", 1, "", "", ""},
+		{"event-typed-scene-one", "listener", "set-two", "", 1, "varbean:map[id:Y],varobject:null,vartype:null", "", ""},
+		{"event-typed-scene-one", "variable", "", "varobject", 0, "", "", "null"},
+		{"event-typed-scene-one", "variable", "", "vartype", 0, "", "", "null"},
+		{"event-typed-scene-one", "variable", "", "varbean", 0, "", "", "map[id:Y]"},
+		{"event-typed-scene-one", "snapshot", "set-two", "", 0, "varbean:map[id:Y],varobject:null,vartype:null", "", ""},
+		{"event-typed-scene-two", "deployed", "vars", "", 1, "", "", ""},
+		{"event-typed-scene-two", "deployed", "Select", "", 1, "", "", ""},
+		{"event-typed-scene-two", "listener", "Select", "", 1, "c0:null,c1:null,c2:null,c3:null,c4:null,c5:null,c6:null", "", ""},
+		{"event-typed-scene-two", "listener", "Select", "", 2, "c0:E1,c1:-1,c2:1,c3:S01,c4:101,c5:null,c6:null", "", ""},
+		{"event-typed-scene-two", "deployed", "Update", "", 1, "", "", ""},
+		{"event-typed-scene-two", "listener", "Select", "", 3, "c0:EX,c1:-999,c2:1,c3:S01,c4:101,c5:null,c6:null", "", ""},
+		{"event-typed-scene-two", "deployed", "Update2", "", 1, "", "", ""},
+		{"event-typed-scene-two", "listener", "Select", "", 4, "c0:E2,c1:0,c2:1,c3:S01,c4:101,c5:null,c6:null", "", ""},
+		{"event-typed-config", "variable", "", "vars0_A", 0, "", "", "map[id:10 p00:<nil> p01:<nil> p02:<nil> p03:<nil>]"},
+		{"event-typed-config", "variable", "", "vars1_A", 0, "", "", "map[id:20]"},
+		{"event-typed-config", "variable", "", "varsobj1", 0, "", "", "123"},
+		{"event-typed-config", "variable", "", "myNonSerializable", 0, "", "", "map[myString:abc]"},
+		{"event-typed-config", "variable", "", "vars2", 0, "", "", "map[id:30]"},
+		{"event-typed-config", "variable", "", "vars3", 0, "", "", "map[id:40]"},
+		{"event-typed-config", "variable", "", "varsobj2", 0, "", "", "ABC"},
+		{"event-typed-config", "deployed", "create", "", 1, "", "", ""},
+		{"event-typed-config", "variable", "", "varsobj3", 0, "", "", "222"},
+		{"event-typed-set-prop", "deployed", "create", "", 1, "", "", ""},
+		{"event-typed-set-prop", "deployed", "s0", "", 1, "", "", ""},
+		{"event-typed-set-prop", "listener", "s0", "", 1, "varbean.getTheString():null,varbean.intPrimitive:null,varbean.theString:null", "", ""},
+		{"event-typed-set-prop", "deployed", "set", "", 1, "", "", ""},
+		{"event-typed-set-prop", "listener", "set", "", 1, "varbean.intPrimitive:1,varbean.theString:A", "", ""},
+		{"event-typed-set-prop", "listener", "s0", "", 2, "varbean.getTheString():null,varbean.intPrimitive:null,varbean.theString:null", "", ""},
+		{"event-typed-set-prop", "listener", "set", "", 2, "varbean.intPrimitive:1,varbean.theString:A", "", ""},
+		{"event-typed-set-prop", "snapshot", "s0", "", 0, "varbean.getTheString():A,varbean.intPrimitive:1,varbean.theString:A", "", ""},
+		{"event-typed-set-prop", "listener", "s0", "", 3, "varbean.getTheString():A,varbean.intPrimitive:1,varbean.theString:A", "", ""},
+		{"event-typed-set-prop", "variable", "", "varbean", 0, "", "", "map[intPrimitive:1 longPrimitive:0 theString:A]"},
+		{"event-typed-set-prop", "deployed", "set", "", 2, "", "", ""},
+		{"event-typed-set-prop", "listener", "set", "", 3, "varbean.theString:>E3<", "", ""},
+		{"event-typed-set-prop", "variable", "", "varbean", 0, "", "", "map[intPrimitive:1 longPrimitive:0 theString:>E3<]"},
+		{"event-typed-set-prop", "deployed", "set", "", 3, "", "", ""},
+		{"event-typed-set-prop", "listener", "set", "", 4, "varbean.longPrimitive:1", "", ""},
+		{"event-typed-set-prop", "variable", "", "varbean", 0, "", "", "map[intPrimitive:1 longPrimitive:1 theString:>E3<]"},
+		{"event-typed-invalid", "set-variable-error", "", "", 0, "", "", "type-mismatch"},
+		{"event-typed-invalid", "compile-error", "set-vars1_A", "", 0, "", "", "type-mismatch"},
+		{"event-typed-invalid", "compile-error", "set-vars0_A", "", 0, "", "", "type-mismatch"},
+		{"event-typed-create-schema", "deployed", "schema", "", 1, "", "", ""},
+		{"event-typed-create-schema", "deployed", "variable", "", 1, "", "", ""},
+		{"event-typed-create-schema", "deployed", "onset", "", 1, "", "", ""},
+		{"event-typed-create-schema", "listener", "s0", "", 1, "c0:O1", "", ""},
+		{"event-typed-create-schema", "listener", "s0", "", 2, "c0:O2", "", ""},
+	}
+	if len(trace.Records) != len(expected) {
+		t.Fatalf("trace records = %d, want %d", len(trace.Records), len(expected))
+	}
+	for index, want := range expected {
+		record := trace.Records[index]
+		got := line{
+			caseName:  record.Case,
+			operation: record.Operation,
+			statement: record.Statement,
+			name:      record.Name,
+			sequence:  record.Sequence,
+			newRows:   eplVariablesCreateRenderRows(record.New),
+			oldRows:   eplVariablesCreateRenderRows(record.Old),
+			value:     eplVariablesCreateRenderValue(record.Value),
+		}
+		if got != want {
+			t.Fatalf("record %d = %#v, want %#v", index, got, want)
+		}
+	}
+}
+
+func TestRunEplVariablesEventTypedDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariablesEventTypedID,
+		"-scenario", filepath.Join(root, eplVariablesEventTypedID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEplVariablesEventTypedTrace(t, trace)
+}
+
+func TestRunEplVariablesEventTypedDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eplVariablesEventTypedID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariablesEventTypedID + "-diff",
+		"-scenario", filepath.Join(root, eplVariablesEventTypedID+".json"),
+		"-java-trace", filepath.Join(root, eplVariablesEventTypedID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if err := eplVariablesEventTypedCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("Java metadata: %v", err)
+	}
+	assertEplVariablesEventTypedTrace(t, evidence.JavaTrace)
+	assertEplVariablesEventTypedTrace(t, evidence.GoTrace)
+}
+
+func TestRunEplVariablesEventTypedDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// Record 5 is ord 0's first populated s0 row: the API-set object
+			// variable reads "abc" and the event-typed variable exposes id 1.
+			name: "scene-one-populated-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["varobject"] = "WRONG"
+			},
+		},
+		{
+			// Record 25 is ord 1's post-on-set-mutation row: the set-prop
+			// write mutated the bean held by the variable to {'EX',-999}.
+			name: "scene-two-set-prop-mutation-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[25].New[0].Fields["c0"] = "E1"
+			},
+		},
+		{
+			// Record 27 is ord 1's whole-event replacement: Update2 assigns
+			// the SupportBean event so the select reads {'E2',0,...}.
+			name: "scene-two-whole-event-replace-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[27].New[0].Fields["c0"] = "EX"
+			},
+		},
+		{
+			// Record 41 is ord 3's null-receiver no-op: Java still emits the
+			// evaluated assignment values {'A',1} on the name.prop columns.
+			name: "set-prop-null-receiver-columns-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[41].New[0].Fields["varbean.theString"] = map[string]any{"state": "null"}
+			},
+		},
+		{
+			// Record 48 is the sequential self-evaluation proof: the second
+			// assignment reads the just-written theString ('>'+c0+'<').
+			name: "set-prop-sequential-self-eval-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[48].New[0].Fields["varbean.theString"] = ">E2<"
+			},
+		},
+		{
+			// Record 51 is the int-to-long widening proof: the int literal 1
+			// lands in the longPrimitive property column.
+			name: "set-prop-widening-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[51].New[0].Fields["varbean.longPrimitive"] = json.Number("0")
+			},
+		},
+		{
+			// Record 54 is the first compile probe: assigning an S0 arrival
+			// event into the S1-typed variable must stay a type-mismatch.
+			name: "invalid-compile-probe-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[54].Value = "<no-error>"
+			},
+		},
+		{
+			// Record 60 is ord 5's second orderId read through the
+			// schema-typed variable after the on-set assignment.
+			name: "create-schema-order-id-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[60].New[0].Fields["c0"] = "O1"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:58]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, eplVariablesEventTypedID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eplVariablesEventTypedID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eplVariablesEventTypedID + "-diff",
+				"-scenario", filepath.Join(root, eplVariablesEventTypedID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEplVariablesEventTypedCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eplVariablesEventTypedID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eplVariablesEventTypedID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eplVariablesEventTypedID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if err := eplVariablesEventTypedCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("checked-in Java metadata: %v", err)
+	}
+	assertEplVariablesEventTypedTrace(t, javaTrace)
+	assertEplVariablesEventTypedTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, eplVariablesEventTypedID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		eplVariablesEventTypedJavaCommit,
+		eplVariablesEventTypedJavaRuntimeIDs,
+		eplVariablesEventTypedSources,
+		eplVariablesEventTypedJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariablesEventTypedID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertEplVariablesEventTypedTrace(t, replayed)
+}
+
+func TestRunEplVariablesEventTypedRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eplVariablesEventTypedID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "step-extra-field", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`{"op": "deploy", "case": "event-typed-scene-one", "statement": "v0"`),
+				[]byte(`{"op": "deploy", "case": "event-typed-scene-one", "statement": "v0", "bogus": 1`), 1)
+		}},
+		{name: "expect-error-category-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"expectError": "type-mismatch"`),
+				[]byte(`"expectError": "unknown-name"`), 1)
+		}},
+		{name: "unknown-op", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "undeploy-all"`), []byte(`"op": "close-all"`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), eplVariablesEventTypedID+".json")
+			if err := os.WriteFile(path, test.mutate(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", eplVariablesEventTypedID, "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q was accepted", test.name)
+			}
+		})
+	}
+}
+
+func TestRunEplVariablesEventTypedRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", eplVariablesEventTypedID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version      string   `json:"version"`
+		ID           string   `json:"id"`
+		Description  string   `json:"description"`
+		JavaCommit   string   `json:"javaCommit"`
+		JavaSource   string   `json:"javaSource"`
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaFlags    []string `json:"javaFlags"`
+		Cases        []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+			Observation   string `json:"observation"`
+			EPL           string `json:"epl"`
+		} `json:"cases"`
+		Steps []struct {
+			Op        string `json:"op"`
+			Case      string `json:"case"`
+			Statement string `json:"statement"`
+			Name      string `json:"name"`
+		} `json:"steps"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != eplVariablesEventTypedID ||
+		document.Description != eplVariablesEventTypedDescription ||
+		document.JavaCommit != eplVariablesEventTypedJavaCommit ||
+		document.JavaSource != eplVariablesEventTypedSource {
+		t.Fatalf("scenario identity = %q/%q/%q/%q/%q", document.Version, document.ID,
+			document.Description, document.JavaCommit, document.JavaSource)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, eplVariablesEventTypedJavaRuntimeIDs) {
+		t.Fatalf("scenario javaRuntimes = %v, want %v", document.JavaRuntimes, eplVariablesEventTypedJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(document.JavaNames, eplVariablesEventTypedJavaExecutions) {
+		t.Fatalf("scenario javaNames = %v, want %v", document.JavaNames, eplVariablesEventTypedJavaExecutions)
+	}
+	if !reflect.DeepEqual(document.JavaFlags, eplVariablesEventTypedJavaFlags) {
+		t.Fatalf("scenario javaFlags = %v, want %v", document.JavaFlags, eplVariablesEventTypedJavaFlags)
+	}
+	if len(document.Cases) != len(eplVariablesEventTypedCases) {
+		t.Fatalf("scenario cases = %d, want %d", len(document.Cases), len(eplVariablesEventTypedCases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != eplVariablesEventTypedCases[index] ||
+			entry.Ordinal != eplVariablesEventTypedOrdinals[index] ||
+			entry.RuntimeID != eplVariablesEventTypedJavaRuntimeIDs[index] ||
+			entry.ExecutionName != eplVariablesEventTypedJavaExecutions[index] ||
+			entry.Observation != eplVariablesEventTypedCaseObservations[index] ||
+			entry.EPL != eplVariablesEventTypedCaseEPLs[index] {
+			t.Fatalf("scenario case %d = %#v", index, entry)
+		}
+	}
+	// Step order per case: case marker, then the pinned case steps.
+	offset := 0
+	for _, caseName := range eplVariablesEventTypedCases {
+		if offset >= len(document.Steps) {
+			t.Fatalf("missing case %q", caseName)
+		}
+		if document.Steps[offset].Op != "case" || document.Steps[offset].Case != caseName {
+			t.Fatalf("step %d is not the %q case marker", offset, caseName)
+		}
+		offset++
+		offset += len(eplVariablesEventTypedCaseSteps[caseName])
+	}
+	if offset != len(document.Steps) {
+		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
+	}
+}
