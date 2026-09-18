@@ -110,7 +110,8 @@ classpath="$classpath:$esper_root/common-avro/target/classes:$esper_root/common-
 classpath="$classpath:$(tr '\n' ':' < "$work/compiler-cp.txt"):$(tr '\n' ':' < "$work/runtime-cp.txt")"
 
 "$javac_bin" -encoding UTF-8 -cp "$classpath" -d "$classes" \
-    "$script_root/ContextHashScenarioOracle.java"
+    "$script_root/ContextHashScenarioOracle.java" \
+    "$script_root/ContextHashSegmented.java"
 
 parent=$(dirname "$output")
 mkdir -p "$parent"

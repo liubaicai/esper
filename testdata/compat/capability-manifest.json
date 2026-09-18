@@ -26906,22 +26906,31 @@
    "javaRuntimeIds": [
     "java-runtime-64ed27d8c2b0325c1cbd",
     "java-runtime-5d429404e8e55f30567a",
-    "java-runtime-c5406f66fdd34533bcb2"
+    "java-runtime-c5406f66fdd34533bcb2",
+    "java-runtime-514d6623af4af2d18516",
+    "java-runtime-7f880063fe0f23046c59",
+    "java-runtime-74e1f67a0acf62775846"
    ],
    "javaNames": [
     "ContextHashNoPreallocate",
     "ContextHashSegmentedManyArg",
-    "ContextHashPartitionSelection"
+    "ContextHashPartitionSelection",
+    "ContextHashSegmentedFilter",
+    "ContextHashSegmentedBySingleRowFunc",
+    "ContextHashScoringUseCase"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextHashSegmented.java"
    ],
    "goTests": [
-    "TestContextHashNoPreallocateParity",
-    "TestContextHashSegmentedManyArgParity",
-    "TestContextHashPartitionSelectionParity",
-    "TestRunContextHashDiffWritesPassingEvidence",
-    "TestDifferentialEvidenceRejectsMutationWithoutUpdatedDiff"
+    "internal/esper/context_hash_segmented_parity_test.go:TestContextHashNoPreallocateParity",
+    "internal/esper/context_hash_segmented_parity_test.go:TestContextHashSegmentedManyArgParity",
+    "internal/esper/context_hash_segmented_parity_test.go:TestContextHashPartitionSelectionParity",
+    "internal/app/parity/run_test.go:TestRunContextHashDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunContextHashDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunContextHashDiffRejectsMissingJavaTrace",
+    "internal/app/parity/run_test.go:TestRunContextHashDiffRejectsTraceIdentityMismatch",
+    "internal/compat/differential_any_mode_test.go:TestDifferentialEvidenceRejectsMutationWithoutUpdatedDiff"
    ],
    "tags": [
     "correctness",
@@ -26948,10 +26957,24 @@
    "differentialVerifiedRuntimeIds": [
     "java-runtime-64ed27d8c2b0325c1cbd",
     "java-runtime-5d429404e8e55f30567a",
-    "java-runtime-c5406f66fdd34533bcb2"
+    "java-runtime-c5406f66fdd34533bcb2",
+    "java-runtime-514d6623af4af2d18516",
+    "java-runtime-7f880063fe0f23046c59",
+    "java-runtime-74e1f67a0acf62775846"
    ],
    "representativeScenarioIds": [
     "context-hash-segmented"
+   ],
+   "javaStaticIds": [
+    "java-0564864de64ece6e7772",
+    "java-0564864de64ece6e7772",
+    "java-0564864de64ece6e7772",
+    "java-0564864de64ece6e7772",
+    "java-0564864de64ece6e7772",
+    "java-0564864de64ece6e7772"
+   ],
+   "notes": [
+    "Extended with ords 1/5/6: context-filtered hash source (statement-level filter emulation, observably identical under preallocate), plug-in single-row hash function via Func1+EventValue with JavaHashCode identity, and the two-type scoring use case (context-bound unique window + grouped aggregate insert-into repartitioning + never-firing on-delete trigger). Ord 8 ContextHashInvalid deferred: its six compile-error checks need named hash-function registry, context-level filter expressions, and named-window-in-partition-criteria surfaces Go does not expose."
    ]
   },
   {
@@ -48097,7 +48120,7 @@
   "inventoriedCases": 700,
   "implementedCases": 698,
   "differentialVerifiedCases": 326,
-  "differentialVerifiedRuntimeIds": 1241,
+  "differentialVerifiedRuntimeIds": 1244,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48107,10 +48130,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3791,
-  "referencedJavaRuntimeIds": 3418,
+  "runtimeAssociationCount": 3794,
+  "referencedJavaRuntimeIds": 3421,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 718,
+  "unreferencedJavaRuntimeIds": 715,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
   "totalCases": 700,

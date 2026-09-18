@@ -1,31 +1,336 @@
 {
-  "version": "esper-parity/v1",
-  "id": "context-hash-segmented",
-  "steps": [
-    {"op": "case", "case": "no-preallocate"},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 11}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 12}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 14}},
-    {"op": "case", "case": "many-arg-crc32"},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 20}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 21}},
-    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1000, "p00": "S0"}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 22}},
-    {"op": "case", "case": "many-arg-hash-code"},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 20}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 21}},
-    {"op": "send", "eventType": "SupportBean_S0", "payload": {"id": 1000, "p00": "S0"}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 100, "longPrimitive": 22}},
-    {"op": "case", "case": "partition-selection"},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 2}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 100}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 101}},
-    {"op": "send", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 3}},
-    {"op": "snapshot", "statement": "s0"},
-    {"op": "snapshot-selector", "statement": "s0", "selector": "hashes", "hashes": [15]},
-    {"op": "snapshot-selector", "statement": "s0", "selector": "hashes", "hashes": [1, 9, 5]}
-  ]
+ "version": "esper-parity/v1",
+ "id": "context-hash-segmented",
+ "steps": [
+  {
+   "op": "case",
+   "case": "no-preallocate"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 14
+   }
+  },
+  {
+   "op": "case",
+   "case": "many-arg-crc32"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100,
+    "longPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100,
+    "longPrimitive": 21
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1000,
+    "p00": "S0"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100,
+    "longPrimitive": 22
+   }
+  },
+  {
+   "op": "case",
+   "case": "many-arg-hash-code"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100,
+    "longPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100,
+    "longPrimitive": 21
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1000,
+    "p00": "S0"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100,
+    "longPrimitive": 22
+   }
+  },
+  {
+   "op": "case",
+   "case": "partition-selection"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 101
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot-selector",
+   "statement": "s0",
+   "selector": "hashes",
+   "hashes": [
+    15
+   ]
+  },
+  {
+   "op": "snapshot-selector",
+   "statement": "s0",
+   "selector": "hashes",
+   "hashes": [
+    1,
+    9,
+    5
+   ]
+  },
+  {
+   "op": "case",
+   "case": "filter"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 12
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E6",
+    "intPrimitive": 15
+   }
+  },
+  {
+   "op": "case",
+   "case": "single-row-func"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 7
+   }
+  },
+  {
+   "op": "case",
+   "case": "scoring"
+  },
+  {
+   "op": "send",
+   "eventType": "ScoreCycle",
+   "payload": {
+    "userId": "Pete",
+    "keyword": "K1",
+    "productId": "P1",
+    "score": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "ScoreCycle",
+   "payload": {
+    "userId": "Pete",
+    "keyword": "K1",
+    "productId": "P2",
+    "score": 15
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "ScoreCycle",
+   "payload": {
+    "userId": "Joe",
+    "keyword": "K1",
+    "productId": "P2",
+    "score": 30
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "ScoreCycle",
+   "payload": {
+    "userId": "Joe",
+    "keyword": "K2",
+    "productId": "P1",
+    "score": 40
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "ScoreCycle",
+   "payload": {
+    "userId": "Joe",
+    "keyword": "K1",
+    "productId": "P1",
+    "score": 20
+   }
+  }
+ ]
 }

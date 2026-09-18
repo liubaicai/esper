@@ -4,7 +4,10 @@
   "javaRuntimeIds": [
     "java-runtime-64ed27d8c2b0325c1cbd",
     "java-runtime-5d429404e8e55f30567a",
-    "java-runtime-c5406f66fdd34533bcb2"
+    "java-runtime-c5406f66fdd34533bcb2",
+    "java-runtime-514d6623af4af2d18516",
+    "java-runtime-7f880063fe0f23046c59",
+    "java-runtime-74e1f67a0acf62775846"
   ],
   "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextHashSegmented.java"
@@ -12,7 +15,10 @@
   "javaExecutions": [
     "ContextHashNoPreallocate",
     "ContextHashSegmentedManyArg",
-    "ContextHashPartitionSelection"
+    "ContextHashPartitionSelection",
+    "ContextHashSegmentedFilter",
+    "ContextHashSegmentedBySingleRowFunc",
+    "ContextHashScoringUseCase"
   ],
   "scenario": {
     "version": "esper-parity/v1",
@@ -205,6 +211,148 @@
           9,
           5
         ]
+      },
+      {
+        "op": "case",
+        "case": "filter"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 15
+        }
+      },
+      {
+        "op": "case",
+        "case": "single-row-func"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 7
+        }
+      },
+      {
+        "op": "case",
+        "case": "scoring"
+      },
+      {
+        "op": "send",
+        "eventType": "ScoreCycle",
+        "payload": {
+          "userId": "Pete",
+          "keyword": "K1",
+          "productId": "P1",
+          "score": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ScoreCycle",
+        "payload": {
+          "userId": "Pete",
+          "keyword": "K1",
+          "productId": "P2",
+          "score": 15
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ScoreCycle",
+        "payload": {
+          "userId": "Joe",
+          "keyword": "K1",
+          "productId": "P2",
+          "score": 30
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ScoreCycle",
+        "payload": {
+          "userId": "Joe",
+          "keyword": "K2",
+          "productId": "P1",
+          "score": 40
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ScoreCycle",
+        "payload": {
+          "userId": "Joe",
+          "keyword": "K1",
+          "productId": "P1",
+          "score": 20
+        }
       }
     ]
   },
@@ -732,6 +880,269 @@
             }
           }
         ]
+      },
+      {
+        "case": "filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "HashSegmentedContext",
+              "c1": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "HashSegmentedContext",
+              "c1": 12
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "hash:0",
+            "properties": {
+              "hash": 0
+            }
+          },
+          {
+            "id": 1,
+            "key": "hash:1",
+            "properties": {
+              "hash": 1
+            }
+          },
+          {
+            "id": 2,
+            "key": "hash:2",
+            "properties": {
+              "hash": 2
+            }
+          },
+          {
+            "id": 3,
+            "key": "hash:3",
+            "properties": {
+              "hash": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "HashSegmentedContext",
+              "c1": 12
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "hash:0",
+            "properties": {
+              "hash": 0
+            }
+          },
+          {
+            "id": 1,
+            "key": "hash:1",
+            "properties": {
+              "hash": 1
+            }
+          },
+          {
+            "id": 2,
+            "key": "hash:2",
+            "properties": {
+              "hash": 2
+            }
+          },
+          {
+            "id": 3,
+            "key": "hash:3",
+            "properties": {
+              "hash": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "HashSegmentedContext",
+              "c1": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-row-func",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 3,
+              "c2": 3,
+              "c3": "E1",
+              "c4": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-row-func",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 0,
+              "c2": 0,
+              "c3": "E2",
+              "c4": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-row-func",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 3,
+              "c2": 7,
+              "c3": "E3",
+              "c4": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K1",
+              "sumScore": 100,
+              "userId": "Pete"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K1",
+              "sumScore": 115,
+              "userId": "Pete"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K1",
+              "sumScore": 30,
+              "userId": "Joe"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K2",
+              "sumScore": 40,
+              "userId": "Joe"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K1",
+              "sumScore": 50,
+              "userId": "Joe"
+            }
+          }
+        ]
       }
     ]
   },
@@ -1256,6 +1667,269 @@
             "key": "hash:9",
             "properties": {
               "hash": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "HashSegmentedContext",
+              "c1": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "HashSegmentedContext",
+              "c1": 12
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "hash:0",
+            "properties": {
+              "hash": 0
+            }
+          },
+          {
+            "id": 1,
+            "key": "hash:1",
+            "properties": {
+              "hash": 1
+            }
+          },
+          {
+            "id": 2,
+            "key": "hash:2",
+            "properties": {
+              "hash": 2
+            }
+          },
+          {
+            "id": 3,
+            "key": "hash:3",
+            "properties": {
+              "hash": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "HashSegmentedContext",
+              "c1": 12
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "hash:0",
+            "properties": {
+              "hash": 0
+            }
+          },
+          {
+            "id": 1,
+            "key": "hash:1",
+            "properties": {
+              "hash": 1
+            }
+          },
+          {
+            "id": 2,
+            "key": "hash:2",
+            "properties": {
+              "hash": 2
+            }
+          },
+          {
+            "id": 3,
+            "key": "hash:3",
+            "properties": {
+              "hash": 3
+            }
+          }
+        ]
+      },
+      {
+        "case": "filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "HashSegmentedContext",
+              "c1": 15
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-row-func",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 3,
+              "c2": 3,
+              "c3": "E1",
+              "c4": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-row-func",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 0,
+              "c2": 0,
+              "c3": "E2",
+              "c4": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-row-func",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": 3,
+              "c2": 7,
+              "c3": "E3",
+              "c4": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K1",
+              "sumScore": 100,
+              "userId": "Pete"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K1",
+              "sumScore": 115,
+              "userId": "Pete"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K1",
+              "sumScore": 30,
+              "userId": "Joe"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K2",
+              "sumScore": 40,
+              "userId": "Joe"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scoring",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "keyword": "K1",
+              "sumScore": 50,
+              "userId": "Joe"
             }
           }
         ]

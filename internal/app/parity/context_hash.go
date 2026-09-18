@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	esper "github.com/liubaicai/esper"
@@ -26,6 +27,9 @@ const (
 	contextHashCaseManyCRC32     = "many-arg-crc32"
 	contextHashCaseManyHashCode  = "many-arg-hash-code"
 	contextHashCaseSelection     = "partition-selection"
+	contextHashCaseFilter        = "filter"
+	contextHashCaseSingleRowFunc = "single-row-func"
+	contextHashCaseScoring       = "scoring"
 )
 
 const (
@@ -38,11 +42,17 @@ var (
 		"java-runtime-64ed27d8c2b0325c1cbd",
 		"java-runtime-5d429404e8e55f30567a",
 		"java-runtime-c5406f66fdd34533bcb2",
+		"java-runtime-514d6623af4af2d18516",
+		"java-runtime-7f880063fe0f23046c59",
+		"java-runtime-74e1f67a0acf62775846",
 	}
 	contextHashJavaExecutions = []string{
 		"ContextHashNoPreallocate",
 		"ContextHashSegmentedManyArg",
 		"ContextHashPartitionSelection",
+		"ContextHashSegmentedFilter",
+		"ContextHashSegmentedBySingleRowFunc",
+		"ContextHashScoringUseCase",
 	}
 )
 
@@ -69,6 +79,9 @@ func runContextHashScenario(ctx context.Context, scenario compat.Scenario) (comp
 		contextHashCaseManyCRC32,
 		contextHashCaseManyHashCode,
 		contextHashCaseSelection,
+		contextHashCaseFilter,
+		contextHashCaseSingleRowFunc,
+		contextHashCaseScoring,
 	}
 	traces := make([]compat.Trace, 0, len(caseOrder))
 	for _, caseName := range caseOrder {
@@ -111,6 +124,31 @@ func runContextHashCase(ctx context.Context, scenario compat.Scenario, caseName 
 	}
 	if caseName == contextHashCaseManyCRC32 || caseName == contextHashCaseManyHashCode {
 		if _, err := esper.RegisterStruct[contextHashS0](env, "SupportBean_S0"); err != nil {
+			return compat.Trace{}, err
+		}
+	}
+	if caseName == contextHashCaseScoring {
+		scoreSchema, err := esper.NewMapSchema("ScoreCycle", []esper.FieldSpec{
+			esper.FieldDef("userId", reflect.TypeOf("")),
+			esper.FieldDef("keyword", reflect.TypeOf("")),
+			esper.FieldDef("productId", reflect.TypeOf("")),
+			esper.FieldDef("score", reflect.TypeOf(int64(0))),
+		}, esper.BusEventType())
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		if err := env.RegisterSchema(scoreSchema); err != nil {
+			return compat.Trace{}, err
+		}
+		totalSchema, err := esper.NewMapSchema("UserKeywordTotalStream", []esper.FieldSpec{
+			esper.FieldDef("userId", reflect.TypeOf("")),
+			esper.FieldDef("keyword", reflect.TypeOf("")),
+			esper.FieldDef("sumScore", reflect.TypeOf(int64(0))),
+		}, esper.BusEventType())
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		if err := env.RegisterSchema(totalSchema); err != nil {
 			return compat.Trace{}, err
 		}
 	}
@@ -161,6 +199,63 @@ func runContextHashCase(ctx context.Context, scenario compat.Scenario, caseName 
 		engine, statement, err = deployParityStatement(ctx, env, plan)
 		if err != nil {
 			return compat.Trace{}, err
+		}
+	case contextHashCaseFilter:
+		// Java ord 1 declares the filter inside the context definition
+		// (from SupportBean(intPrimitive > 10)); under preallocate the
+		// statement-level filter is observably identical: filtered events
+		// produce no output and never reach the lastevent window.
+		if _, err := esper.CreatePreallocatedHashContextWithAlgorithm(env, "HashSegmentedContext",
+			esper.HashAlgorithmCRC32, 4, esper.Field[contextHashBean, string]("theString")); err != nil {
+			return compat.Trace{}, err
+		}
+		plan, err := env.Build(esper.Select(
+			esper.From[contextHashBean](env, "SupportBean").
+				Filter(esper.Greater[int](esper.Field[contextHashBean, int]("intPrimitive"), esper.Literal(10))).
+				Window(esper.LastEvent()),
+			esper.Alias("c0", esper.ContextName()),
+			esper.Alias("c1", esper.Field[contextHashBean, int]("intPrimitive")),
+		).Query(esper.StatementName("s0"), esper.WithContext("HashSegmentedContext")))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		engine, statement, err = deployParityStatement(ctx, env, plan)
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case contextHashCaseSingleRowFunc:
+		// Java ord 5 registers myHash/mySecond as plug-in single-row
+		// functions; Go expresses them as inline Func1/Func2 over the whole
+		// event (EventValue mirrors the '*' argument). JavaHashCode is the
+		// identity for int keys, so bucket = value % granularity.
+		myHash := esper.Func1[contextHashBean, int]("myHash",
+			func(event contextHashBean) int { return event.IntPrimitive },
+			esper.EventValue[contextHashBean]())
+		if _, err := esper.CreatePreallocatedHashContextWithAlgorithm(env, "HashSegmentedContext",
+			esper.HashAlgorithmJavaHashCode, 4, myHash); err != nil {
+			return compat.Trace{}, err
+		}
+		mySecond := esper.Func2[contextHashBean, string, string]("mySecond",
+			func(_ contextHashBean, text string) string { return text },
+			esper.EventValue[contextHashBean](), esper.Field[contextHashBean, string]("theString"))
+		plan, err := env.Build(esper.Select(esper.From[contextHashBean](env, "SupportBean"),
+			esper.Alias("c1", esper.ContextID()),
+			esper.Alias("c2", myHash),
+			esper.Alias("c3", mySecond),
+			esper.Alias("c4", mySecond),
+		).Query(esper.StatementName("s0"), esper.WithContext("HashSegmentedContext")))
+		if err != nil {
+			return compat.Trace{}, err
+		}
+		engine, statement, err = deployParityStatement(ctx, env, plan)
+		if err != nil {
+			return compat.Trace{}, err
+		}
+	case contextHashCaseScoring:
+		var scoringErr error
+		engine, statement, scoringErr = deployContextHashScoring(ctx, env)
+		if scoringErr != nil {
+			return compat.Trace{}, scoringErr
 		}
 	case contextHashCaseSelection:
 		if _, err := esper.CreatePreallocatedHashContextWithAlgorithm(env, "MyCtx", esper.HashAlgorithmCRC32, 16,
@@ -232,6 +327,62 @@ func deployParityStatement(ctx context.Context, env *esper.Environment, plan esp
 	return engine, statements[0], nil
 }
 
+// deployContextHashScoring mirrors Java ord 6: a hash context shared by two
+// declared map types, a context-bound unique(productId,keyword) named window
+// fed by an insert-into trigger, a grouped aggregate over the window routed
+// into the second stream, and an on-delete trigger that never fires.
+func deployContextHashScoring(ctx context.Context, env *esper.Environment) (*esper.Engine, *esper.Statement, error) {
+	userKey := esper.Field[map[string]any, string]("userId")
+	if _, err := esper.CreateHashContextWithAlgorithm(env, "HashByUserCtx",
+		esper.HashAlgorithmCRC32, 1000000, userKey); err != nil {
+		return nil, nil, err
+	}
+	scoreWindowSchema, _ := env.Schema("ScoreCycle")
+	if _, err := esper.CreateNamedWindow(env, "ScoreCycleWindow", scoreWindowSchema,
+		esper.NamedWindowContext("HashByUserCtx"),
+		esper.NamedWindowRetention(esper.UniqueBy(
+			esper.Field[map[string]any, string]("productId"),
+			esper.Field[map[string]any, string]("keyword"),
+		))); err != nil {
+		return nil, nil, err
+	}
+	engine := esper.NewEngine(env)
+	insertPlan, err := env.Build(esper.OnEvent(esper.From[map[string]any](env, "ScoreCycle")).
+		InsertIntoNamedWindow("ScoreCycleWindow", esper.CopyMatchingFields()).
+		Query(esper.StatementName("ins"), esper.WithContext("HashByUserCtx")))
+	if err != nil {
+		return nil, nil, err
+	}
+	if _, err := engine.Deploy(ctx, insertPlan); err != nil {
+		return nil, nil, err
+	}
+	aggPlan, err := env.Build(esper.FromNamedWindow(env, "ScoreCycleWindow").
+		GroupBy(esper.Field[map[string]any, string]("keyword")).
+		Select(
+			esper.Alias("userId", esper.Field[map[string]any, string]("userId")),
+			esper.Alias("keyword", esper.Field[map[string]any, string]("keyword")),
+			esper.Alias("sumScore", esper.Sum[int64](esper.Field[map[string]any, int64]("score"))),
+		).InsertInto("UserKeywordTotalStream", esper.StatementName("s0"), esper.WithContext("HashByUserCtx")))
+	if err != nil {
+		return nil, nil, err
+	}
+	deployment, err := engine.Deploy(ctx, aggPlan)
+	if err != nil {
+		return nil, nil, err
+	}
+	deletePlan, err := env.Build(esper.OnEvent(esper.From[map[string]any](env, "UserKeywordTotalStream").
+		Filter(esper.Greater[int64](esper.Field[map[string]any, int64]("sumScore"), esper.Literal(int64(10000))))).
+		DeleteFromNamedWindow("ScoreCycleWindow", nil).
+		Query(esper.StatementName("outTwo"), esper.WithContext("HashByUserCtx")))
+	if err != nil {
+		return nil, nil, err
+	}
+	if _, err := engine.Deploy(ctx, deletePlan); err != nil {
+		return nil, nil, err
+	}
+	return engine, deployment.Statements()[0], nil
+}
+
 func decodeContextHashPayload(step compat.Step) (any, error) {
 	switch step.EventType {
 	case "SupportBean":
@@ -244,6 +395,12 @@ func decodeContextHashPayload(step compat.Step) (any, error) {
 		var value contextHashS0
 		if err := json.Unmarshal(step.Payload, &value); err != nil {
 			return nil, fmt.Errorf("decode SupportBean_S0: %w", err)
+		}
+		return value, nil
+	case "ScoreCycle", "UserKeywordTotalStream":
+		var value map[string]any
+		if err := json.Unmarshal(step.Payload, &value); err != nil {
+			return nil, fmt.Errorf("decode %s: %w", step.EventType, err)
 		}
 		return value, nil
 	default:

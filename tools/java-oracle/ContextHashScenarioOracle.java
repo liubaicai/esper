@@ -67,7 +67,7 @@ public final class ContextHashScenarioOracle {
         JsonArray records = new JsonArray();
         trace.add("records", records);
 
-        String[] cases = {"no-preallocate", "many-arg-crc32", "many-arg-hash-code", "partition-selection"};
+        String[] cases = {"no-preallocate", "many-arg-crc32", "many-arg-hash-code", "partition-selection", "filter", "single-row-func", "scoring"};
         for (String caseName : cases) {
             if (!hasCase(steps, caseName)) {
                 continue;
@@ -94,6 +94,15 @@ public final class ContextHashScenarioOracle {
         if (caseName.startsWith("many-arg")) {
             configuration.getCommon().addEventType("SupportBean_S0", Class.forName("com.espertech.esper.common.internal.support.SupportBean_S0"));
         }
+        if ("single-row-func".equals(caseName)) {
+            // Mirrors TestSuiteContext.configure: plug-in single-row functions
+            // myHash/mySecond plus a class import for the qualified call.
+            configuration.getCompiler().addPlugInSingleRowFunction("myHash",
+                    ContextHashSegmented.class.getName(), "myHashFunc");
+            configuration.getCompiler().addPlugInSingleRowFunction("mySecond",
+                    ContextHashSegmented.class.getName(), "mySecondFunc");
+            configuration.getCommon().addImport(ContextHashSegmented.class.getName());
+        }
 
         EPRuntime runtime = EPRuntimeProvider.getRuntime("parity-" + caseName, configuration);
         ((EPRuntimeSPI) runtime).initialize(0L);
@@ -109,6 +118,36 @@ public final class ContextHashScenarioOracle {
             epl = "@name('ctx') create context Ctx1 as coalesce " + hash + "(theString, intPrimitive) from SupportBean granularity 1000000;" +
                     "@name('s0') context Ctx1 select intPrimitive as c1, sum(longPrimitive) as c2, prev(1, longPrimitive) as c3, prior(1, longPrimitive) as c4," +
                     "(select p00 from SupportBean_S0#length(2)) as c5 from SupportBean#length(3);";
+        } else if ("filter".equals(caseName)) {
+            contextName = "HashSegmentedContext";
+            epl = "@Name('context') @public create context HashSegmentedContext as " +
+                    "coalesce  consistent_hash_crc32(theString) from SupportBean(intPrimitive > 10) " +
+                    "granularity 4 preallocate;" +
+                    "@name('s0') context HashSegmentedContext " +
+                    "select context.name as c0, intPrimitive as c1 from SupportBean#lastevent;";
+        } else if ("single-row-func".equals(caseName)) {
+            contextName = "HashSegmentedContext";
+            epl = "@Name('context') @public create context HashSegmentedContext as " +
+                    "coalesce myHash(*) from SupportBean granularity 4 preallocate;" +
+                    "@name('s0') context HashSegmentedContext select context.id as c1, " +
+                    "myHash(*) as c2, mySecond(*, theString) as c3, " +
+                    "ContextHashSegmented.mySecondFunc(*, theString) as c4 from SupportBean;";
+        } else if ("scoring".equals(caseName)) {
+            contextName = "HashByUserCtx";
+            epl = "@buseventtype @public create schema ScoreCycle (userId string, keyword string, productId string, score long);\n" +
+                    "@buseventtype @public create schema UserKeywordTotalStream (userId string, keyword string, sumScore long);\n" +
+                    "\n" +
+                    " create context HashByUserCtx as coalesce by consistent_hash_crc32(userId) from ScoreCycle, " +
+                    "consistent_hash_crc32(userId) from UserKeywordTotalStream granularity 1000000;\n" +
+                    "\n" +
+                    "context HashByUserCtx create window ScoreCycleWindow#unique(productId, keyword) as ScoreCycle;\n" +
+                    "\n" +
+                    "context HashByUserCtx insert into ScoreCycleWindow select * from ScoreCycle;\n" +
+                    "\n" +
+                    "@Name('s0') context HashByUserCtx insert into UserKeywordTotalStream \n" +
+                    "select userId, keyword, sum(score) as sumScore from ScoreCycleWindow group by keyword;\n" +
+                    "\n" +
+                    "@Name('outTwo') context HashByUserCtx on UserKeywordTotalStream(sumScore > 10000) delete from ScoreCycleWindow;\n";
         } else if ("partition-selection".equals(caseName)) {
             contextName = "MyCtx";
             epl = "@name('ctx') create context MyCtx as coalesce consistent_hash_crc32(theString) from SupportBean granularity 16 preallocate;" +
@@ -118,7 +157,12 @@ public final class ContextHashScenarioOracle {
         }
 
         try {
-            EPCompiled compiled = EPCompilerProvider.getCompiler().compile(epl, new CompilerArguments(runtime.getRuntimePath()));
+            // CompilerArguments(configuration) carries the compiler-level
+            // plug-in single-row function registry; the runtime path does not.
+            CompilerArguments arguments = "single-row-func".equals(caseName)
+                    ? new CompilerArguments(configuration)
+                    : new CompilerArguments(runtime.getRuntimePath());
+            EPCompiled compiled = EPCompilerProvider.getCompiler().compile(epl, arguments);
             EPDeployment deployment = runtime.getDeploymentService().deploy(compiled,
                     new DeploymentOptions().setDeploymentId("parity-" + caseName));
             EPStatement statement = null;
@@ -217,6 +261,15 @@ public final class ContextHashScenarioOracle {
             } catch (ReflectiveOperationException error) {
                 throw new IllegalStateException("cannot build SupportBean_S0", error);
             }
+        }
+        if ("ScoreCycle".equals(eventType) || "UserKeywordTotalStream".equals(eventType)) {
+            Map<String, Object> event = new java.util.LinkedHashMap<>();
+            for (String name : payload.names()) {
+                JsonValue value = payload.get(name);
+                event.put(name, value.isNumber() ? (Object) value.asLong() : value.asString());
+            }
+            runtime.getEventService().sendEventMap(event, eventType);
+            return;
         }
         throw new IllegalArgumentException("unsupported event type " + eventType);
     }

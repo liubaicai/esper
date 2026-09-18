@@ -1350,6 +1350,46 @@ func TestRunContextHashDiffRejectsTraceMutations(t *testing.T) {
 				trace.Records[0].Time = "1970-01-01T00:00:01Z"
 			},
 		},
+		{
+			// Record 19 is ord 1's first accepted event: the context filter
+			// must drop intPrimitive <= 10 before the lastevent window.
+			name: "filter-dropped-event-leaks",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[19].New[0].Fields["c1"] = json.Number("10")
+			},
+		},
+		{
+			// Record 20 is ord 1's iterator proof: filtered events leave the
+			// lastevent state untouched (still E3's row).
+			name: "filter-iterator-state-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[20].New[0].Fields["c1"] = json.Number("1")
+			},
+		},
+		{
+			// Record 25 is ord 5's mod-granularity proof: context.id is
+			// hash%4 (3) while the raw hash stays in c2 (7).
+			name: "single-row-func-bucket-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[25].New[0].Fields["c1"] = json.Number("7")
+			},
+		},
+		{
+			// Record 27 is ord 6's unique-window aggregation: Pete's K1 sum
+			// must accumulate across productIds P1+P2 (100+15=115).
+			name: "scoring-unique-window-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[27].New[0].Fields["sumScore"] = json.Number("100")
+			},
+		},
+		{
+			// Record 30 is ord 6's last insert-into row: the routed
+			// UserKeywordTotalStream event re-enters hash partitioning.
+			name: "scoring-routed-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[30].New[0].Fields["userId"] = "Pete"
+			},
+		},
 	}
 
 	for _, test := range tests {
