@@ -3228,7 +3228,14 @@ Active: Draft 4.455 ('epl-variables-event-typed').
  on unwindowed input (streamWindowNodes check); Event-typed variable
  property-type resolution documented as the same event-type-name gap as
  ord 5's approved difference.
-- [x] Shipped; Git owns identity.
+- [x] Shipped; Git owns identity. Draft 4.455 committed and pushed as `bd862d900`.
+
+## Next work unit (prefetch)
+Candidate: Draft 4.456 ('context-variables'): ContextVariables.java, 5
+executions sharing `java-runtime-2443c804eb31da7902e7` (SegmentedByKey /
+Overlapping / IterateAndListen / GetSetAPI RUNTIMEOPS / Invalid). Scouts
+`NextJavaContract456` + `NextGoSurface456` in flight.
+
 
 ## Delegation checkpoint (recent)
 
