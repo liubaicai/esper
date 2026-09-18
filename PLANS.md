@@ -3265,7 +3265,8 @@ Active: Draft 4.461 ('infra-table-join'): InfraTableJoin.java ordinals
  on one P2 (md5 transcription) + three P3s (EPL pins not byte-exact, case
  marker skipped the field whitelist, stale oracle comment). All fixed and
  re-verified; confirmation review PASS with zero findings.
-- [ ] `make check` final, commit/push.
+- [x] `make check` green; shipped. Draft 4.461 committed and pushed as
+ `939791365`.
 
 ## Next work unit (prefetch)
 Candidate: next unreferenced cluster per the manifest scan; scouts to be
