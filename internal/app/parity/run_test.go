@@ -63689,3 +63689,479 @@ func TestRunContextVariablesRuntimeIDMappingMatchesScenario(t *testing.T) {
 		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
 	}
 }
+
+// contextCategoryCheckJavaMetadata verifies differential evidence carries the
+// pinned Java commit, runtime IDs, source file and execution names for the
+// ContextCategory suite.
+func contextCategoryCheckJavaMetadata(javaCommit string, runtimeIDs, sourceFiles, executions []string) error {
+	if javaCommit != contextCategoryJavaCommit {
+		return fmt.Errorf("Java commit = %q, want %q", javaCommit, contextCategoryJavaCommit)
+	}
+	if !reflect.DeepEqual(runtimeIDs, contextCategoryJavaRuntimeIDs) {
+		return fmt.Errorf("Java runtime IDs = %v, want %v", runtimeIDs, contextCategoryJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(sourceFiles, contextCategorySources) {
+		return fmt.Errorf("Java source files = %v, want %v", sourceFiles, contextCategorySources)
+	}
+	if !reflect.DeepEqual(executions, contextCategoryJavaExecutions) {
+		return fmt.Errorf("Java executions = %v, want %v", executions, contextCategoryJavaExecutions)
+	}
+	return nil
+}
+
+func assertContextCategoryTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != contextCategoryID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	type line struct {
+		caseName  string
+		operation string
+		statement string
+		name      string
+		sequence  uint64
+		newRows   string
+		oldRows   string
+		value     string
+	}
+	expected := []line{
+		{"scene-one", "deployed", "module", "", 1, "", "", ""},
+		{"scene-one", "admin", "context", "CategoryContext", 0, "", "", "map[nestingLevel:1 partitionCount:2 statementNames:[s0]]"},
+		{"scene-one", "admin", "context", "", 0, "", "", "map[contextDeploymentId:map[state:null] contextName:map[state:null]]"},
+		{"scene-one", "admin", "s0", "", 0, "", "", "map[contextDeploymentId:module contextName:CategoryContext]"},
+		{"scene-one", "listener", "s0", "", 1, "c0:1,c1:cat1", "", ""},
+		{"scene-one", "listener", "s0", "", 2, "c0:1,c1:cat2", "", ""},
+		{"scene-one", "listener", "s0", "", 3, "c0:2,c1:cat1", "", ""},
+		{"scene-one", "listener", "s0", "", 4, "c0:3,c1:cat1", "", ""},
+		{"scene-one", "listener", "s0", "", 5, "c0:2,c1:cat2", "", ""},
+		{"scene-two", "deployed", "module", "", 1, "", "", ""},
+		{"scene-two", "admin", "CTX", "CtxCategory", 0, "", "", ""},
+		{"scene-two", "listener", "s0", "", 1, "c1:G1,c2:1,c3:cat1,c4:CtxCategory,c5:0", "", ""},
+		{"scene-two", "admin", "CTX", "CtxCategory", 0, "", "", ""},
+		{"scene-two", "listener", "s0", "", 2, "c1:G2,c2:-2,c3:cat2,c4:CtxCategory,c5:1", "", ""},
+		{"scene-two", "listener", "s0", "", 3, "c1:G3,c2:4,c3:cat1,c4:CtxCategory,c5:0", "", ""},
+		{"scene-two", "listener", "s0", "", 4, "c1:G4,c2:-6,c3:cat2,c4:CtxCategory,c5:1", "", ""},
+		{"scene-two", "listener", "s0", "", 5, "c1:G5,c2:9,c3:cat1,c4:CtxCategory,c5:0", "", ""},
+		{"w-context-props", "deployed", "module", "", 1, "", "", ""},
+		{"w-context-props", "admin", "context", "CategorizedContext", 0, "", "", ""},
+		{"w-context-props", "listener", "s0", "", 1, "c0:CategorizedContext,c1:cat1,c2:5", "", ""},
+		{"w-context-props", "snapshot", "s0", "", 0, "c0:CategorizedContext,c1:cat1,c2:5;c0:CategorizedContext,c1:cat2,c2:null;c0:CategorizedContext,c1:cat3,c2:null", "", ""},
+		{"w-context-props", "listener", "s0", "", 2, "c0:CategorizedContext,c1:cat1,c2:9", "", ""},
+		{"w-context-props", "listener", "s0", "", 3, "c0:CategorizedContext,c1:cat2,c2:11", "", ""},
+		{"w-context-props", "listener", "s0", "", 4, "c0:CategorizedContext,c1:cat3,c2:25", "", ""},
+		{"w-context-props", "listener", "s0", "", 5, "c0:CategorizedContext,c1:cat3,c2:50", "", ""},
+		{"w-context-props", "listener", "s0", "", 6, "c0:CategorizedContext,c1:cat1,c2:12", "", ""},
+		{"w-context-props", "snapshot", "s0", "", 0, "c0:CategorizedContext,c1:cat1,c2:12;c0:CategorizedContext,c1:cat2,c2:11;c0:CategorizedContext,c1:cat3,c2:50", "", ""},
+		{"w-context-props", "admin", "context", "", 0, "", "", "1"},
+		{"w-context-props", "admin", "context", "", 0, "", "", "0"},
+		{"boolean-expr-filter", "deployed", "ctx", "", 1, "", "", ""},
+		{"boolean-expr-filter", "deployed", "s0", "", 1, "", "", ""},
+		{"boolean-expr-filter", "admin", "s0", "", 0, "", "", "map[contextDeploymentId:ctx contextName:Ctx600a]"},
+		{"boolean-expr-filter", "listener", "s0", "", 1, "c0:bgroup,c1:1", "", ""},
+		{"boolean-expr-filter", "listener", "s0", "", 2, "c0:agroup,c1:1", "", ""},
+		{"boolean-expr-filter", "listener", "s0", "", 3, "c0:bgroup,c1:2", "", ""},
+		{"boolean-expr-filter", "listener", "s0", "", 4, "c0:agroup,c1:2", "", ""},
+		{"partition-selection", "deployed", "ctx", "", 1, "", "", ""},
+		{"partition-selection", "deployed", "s0", "", 1, "", "", ""},
+		{"partition-selection", "snapshot", "s0", "", 0, "c0:0,c1:grp1,c2:E3,c3:-108;c0:1,c1:grp2,c2:E1,c3:3;c0:1,c1:grp2,c2:E2,c3:-5;c0:2,c1:grp3,c2:E1,c3:60", "", ""},
+		{"partition-selection", "admin", "ctx", "MyCtx", 0, "", "", ""},
+		{"partition-selection", "snapshot-selector", "s0", "", 0, "c0:1,c1:grp2,c2:E1,c3:3;c0:1,c1:grp2,c2:E2,c3:-5", "", ""},
+		{"partition-selection", "snapshot-selector", "s0", "", 0, "c0:0,c1:grp1,c2:E3,c3:-108;c0:2,c1:grp3,c2:E1,c3:60", "", ""},
+		{"partition-selection", "snapshot-selector", "s0", "", 0, "c0:0,c1:grp1,c2:E3,c3:-108", "", "map[observedLabels:[grp1 grp2 grp3]]"},
+		{"partition-selection", "snapshot-selector", "s0", "", 0, "", "", ""},
+		{"partition-selection", "snapshot-selector", "s0", "", 0, "", "", ""},
+		{"partition-selection", "snapshot-selector", "s0", "", 0, "", "", "map[observedLabels:[grp1 grp2 grp3]]"},
+		{"partition-selection", "selector-error", "s0", "", 0, "", "", "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorFiltered, ContextPartitionSelectorById, ContextPartitionSelectorCategory] interfaces but received "},
+		{"single-category-soda-prior", "deployed", "ctx", "", 1, "", "", ""},
+		{"single-category-soda-prior", "deployed", "s0", "", 1, "", "", ""},
+		{"single-category-soda-prior", "listener", "s0", "", 1, "c0:CategorizedContext,c1:cat1,c2:null", "", ""},
+		{"single-category-soda-prior", "listener", "s0", "", 2, "c0:CategorizedContext,c1:cat1,c2:5", "", ""},
+		{"single-category-soda-prior", "admin", "context", "", 0, "", "", "1"},
+		{"single-category-soda-prior", "admin", "context", "", 0, "", "", "0"},
+		{"single-category-soda-prior", "deployed", "ctx-soda", "", 1, "", "", ""},
+		{"single-category-soda-prior", "deployed", "s0-soda", "", 1, "", "", ""},
+		{"single-category-soda-prior", "listener", "s0", "", 3, "c0:CategorizedContext,c1:cat1,c2:null", "", ""},
+		{"single-category-soda-prior", "listener", "s0", "", 4, "c0:CategorizedContext,c1:cat1,c2:5", "", ""},
+		{"single-category-soda-prior", "admin", "context", "", 0, "", "", "1"},
+		{"single-category-soda-prior", "admin", "context", "", 0, "", "", "0"},
+		{"invalid", "compile-error", "bad-filter-prop", "", 0, "", "", "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream ["},
+		{"invalid", "compile-error", "non-boolean-predicate", "", 0, "", "", "Filter expression not returning a boolean value: 'intPrimitive' ["},
+		{"invalid", "deployed", "ctx", "", 1, "", "", ""},
+		{"invalid", "compile-error", "statement-stream-type", "", 0, "", "", "Category context 'ACtx' requires that any of the events types that are listed in the category context also appear in any of the filter expressions of the statement ["},
+		{"declared-expr-alias", "deployed", "ctx", "", 1, "", "", ""},
+		{"declared-expr-alias", "deployed", "expr-1", "", 1, "", "", ""},
+		{"declared-expr-alias", "deployed", "expr-2", "", 1, "", "", ""},
+		{"declared-expr-alias", "deployed", "s0", "", 1, "", "", ""},
+		{"declared-expr-alias", "listener", "s0", "", 1, "c0:n,c1:xnx,c2:n", "", ""},
+		{"declared-expr-alias", "listener", "s0", "", 2, "c0:p,c1:xpx,c2:p", "", ""},
+		{"declared-expr-call", "deployed", "ctx", "", 1, "", "", ""},
+		{"declared-expr-call", "deployed", "expr-1", "", 1, "", "", ""},
+		{"declared-expr-call", "deployed", "expr-2", "", 1, "", "", ""},
+		{"declared-expr-call", "deployed", "s0", "", 1, "", "", ""},
+		{"declared-expr-call", "listener", "s0", "", 1, "c0:n,c1:xnx,c2:n", "", ""},
+		{"declared-expr-call", "listener", "s0", "", 2, "c0:p,c1:xpx,c2:p", "", ""},
+	}
+	if len(trace.Records) != len(expected) {
+		t.Fatalf("trace records = %d, want %d", len(trace.Records), len(expected))
+	}
+	for index, want := range expected {
+		record := trace.Records[index]
+		got := line{
+			caseName:  record.Case,
+			operation: record.Operation,
+			statement: record.Statement,
+			name:      record.Name,
+			sequence:  record.Sequence,
+			newRows:   eplVariablesCreateRenderRows(record.New),
+			oldRows:   eplVariablesCreateRenderRows(record.Old),
+			value:     eplVariablesCreateRenderValue(record.Value),
+		}
+		if got != want {
+			t.Fatalf("record %d = %#v, want %#v", index, got, want)
+		}
+	}
+}
+
+func TestRunContextCategoryDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextCategoryID,
+		"-scenario", filepath.Join(root, contextCategoryID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertContextCategoryTrace(t, trace)
+}
+
+func TestRunContextCategoryDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), contextCategoryID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextCategoryID + "-diff",
+		"-scenario", filepath.Join(root, contextCategoryID+".json"),
+		"-java-trace", filepath.Join(root, contextCategoryID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if err := contextCategoryCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("Java metadata: %v", err)
+	}
+	assertContextCategoryTrace(t, evidence.JavaTrace)
+	assertContextCategoryTrace(t, evidence.GoTrace)
+}
+
+func TestRunContextCategoryDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// Record 4 is ord 0's first delivery: count 1 under cat1.
+			name: "scene-one-first-delivery-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].New[0].Fields["c0"] = json.Number("2")
+			},
+		},
+		{
+			// Record 20 is ord 2's eager-partition iterator: empty partitions
+			// yield null sums alongside the populated cat1 row.
+			name: "w-context-props-empty-partition-loss",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[20].New = trace.Records[20].New[:1]
+			},
+		},
+		{
+			// Record 38 is ord 4's full iterator: per-partition keepall rows
+			// with context.id/label and per-group sums.
+			name: "partition-selection-iterator-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[38].New = trace.Records[38].New[:2]
+			},
+		},
+		{
+			// Record 46 is ord 4's selector rejection: a segmented selector
+			// must stay an invalid context partition selector.
+			name: "partition-selection-selector-error-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[46].Value = "<no-error>"
+			},
+		},
+		{
+			// Record 50 is ord 5's per-partition prior: prior(1) reads the
+			// earlier matching event's value, not the non-matching one.
+			name: "soda-prior-state-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[50].New[0].Fields["c2"] = json.Number("20")
+			},
+		},
+		{
+			// Record 55 is ord 5's second-cycle prior: the redeployed
+			// statement starts with null prior again.
+			name: "soda-second-cycle-prior-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[55].New[0].Fields["c2"] = json.Number("5")
+			},
+		},
+		{
+			// Record 62 is ord 6's stream-type probe: a statement whose
+			// stream is not in the category context must stay a compile
+			// rejection.
+			name: "invalid-stream-type-probe-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[62].Value = "<no-error>"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:70]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, contextCategoryID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), contextCategoryID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", contextCategoryID + "-diff",
+				"-scenario", filepath.Join(root, contextCategoryID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunContextCategoryCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, contextCategoryID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, contextCategoryID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, contextCategoryID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if err := contextCategoryCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("checked-in Java metadata: %v", err)
+	}
+	assertContextCategoryTrace(t, javaTrace)
+	assertContextCategoryTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, contextCategoryID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		contextCategoryJavaCommit,
+		contextCategoryJavaRuntimeIDs,
+		contextCategorySources,
+		contextCategoryJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextCategoryID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertContextCategoryTrace(t, replayed)
+}
+
+func TestRunContextCategoryRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, contextCategoryID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "unknown-op", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "undeploy-all"`), []byte(`"op": "close-all"`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), contextCategoryID+".json")
+			if err := os.WriteFile(path, test.mutate(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", contextCategoryID, "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q was accepted", test.name)
+			}
+		})
+	}
+}
+
+func TestRunContextCategoryRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", contextCategoryID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version      string   `json:"version"`
+		ID           string   `json:"id"`
+		Description  string   `json:"description"`
+		JavaCommit   string   `json:"javaCommit"`
+		JavaSource   string   `json:"javaSource"`
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaFlags    []string `json:"javaFlags"`
+		Cases        []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+			Observation   string `json:"observation"`
+			EPL           string `json:"epl"`
+		} `json:"cases"`
+		Steps []struct {
+			Op        string `json:"op"`
+			Case      string `json:"case"`
+			Statement string `json:"statement"`
+			Name      string `json:"name"`
+		} `json:"steps"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != contextCategoryID ||
+		document.Description != contextCategoryDescription ||
+		document.JavaCommit != contextCategoryJavaCommit ||
+		document.JavaSource != contextCategorySource {
+		t.Fatalf("scenario identity = %q/%q/%q/%q/%q", document.Version, document.ID,
+			document.Description, document.JavaCommit, document.JavaSource)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, contextCategoryJavaRuntimeIDs) {
+		t.Fatalf("scenario javaRuntimes = %v, want %v", document.JavaRuntimes, contextCategoryJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(document.JavaNames, contextCategoryJavaExecutions) {
+		t.Fatalf("scenario javaNames = %v, want %v", document.JavaNames, contextCategoryJavaExecutions)
+	}
+	if !reflect.DeepEqual(document.JavaFlags, contextCategoryJavaFlags) {
+		t.Fatalf("scenario javaFlags = %v, want %v", document.JavaFlags, contextCategoryJavaFlags)
+	}
+	if len(document.Cases) != len(contextCategoryCases) {
+		t.Fatalf("scenario cases = %d, want %d", len(document.Cases), len(contextCategoryCases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != contextCategoryCases[index] ||
+			entry.Ordinal != contextCategoryOrdinals[index] ||
+			entry.RuntimeID != contextCategoryJavaRuntimeIDs[index] ||
+			entry.ExecutionName != contextCategoryJavaExecutions[index] ||
+			entry.Observation != contextCategoryCaseObservations[index] ||
+			entry.EPL != contextCategoryCaseEPLs[index] {
+			t.Fatalf("scenario case %d = %#v", index, entry)
+		}
+	}
+	// Step order per case: case marker, then the pinned case steps.
+	offset := 0
+	for _, caseName := range contextCategoryCases {
+		if offset >= len(document.Steps) {
+			t.Fatalf("missing case %q", caseName)
+		}
+		if document.Steps[offset].Op != "case" || document.Steps[offset].Case != caseName {
+			t.Fatalf("step %d is not the %q case marker", offset, caseName)
+		}
+		offset++
+		offset += len(contextCategoryCaseSteps[caseName])
+	}
+	if offset != len(document.Steps) {
+		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
+	}
+}

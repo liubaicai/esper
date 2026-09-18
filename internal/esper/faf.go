@@ -1939,15 +1939,17 @@ func (e *Engine) executeContextJoinFireAndForget(ctx context.Context, plan Plan,
 		}
 		byPartition := make(map[string][]Event)
 		for _, event := range events {
-			key, active, partitionErr := definition.partition(event, now, variables)
+			keys, active, partitionErr := definition.partitionsForEvent(event, now, variables)
 			if partitionErr != nil {
 				return QueryResult{}, partitionErr
 			}
 			if !active {
 				continue
 			}
-			byPartition[key] = append(byPartition[key], event)
-			allKeys[key] = struct{}{}
+			for _, key := range keys {
+				byPartition[key] = append(byPartition[key], event)
+				allKeys[key] = struct{}{}
+			}
 		}
 		grouped[index] = byPartition
 	}
@@ -2119,15 +2121,17 @@ func (e *Engine) executeContextJoinFireAndForgetWithIndex(
 	grouped[driverIndex] = make(map[string][]Event)
 	allKeys := make(map[string]struct{})
 	for _, event := range driverEvents {
-		key, active, partitionErr := definition.partition(event, now, variables)
+		keys, active, partitionErr := definition.partitionsForEvent(event, now, variables)
 		if partitionErr != nil {
 			return QueryResult{}, true, partitionErr
 		}
 		if !active {
 			continue
 		}
-		grouped[driverIndex][key] = append(grouped[driverIndex][key], event)
-		allKeys[key] = struct{}{}
+		for _, key := range keys {
+			grouped[driverIndex][key] = append(grouped[driverIndex][key], event)
+			allKeys[key] = struct{}{}
+		}
 	}
 	groupedReady := make([]bool, len(sources))
 	groupedReady[driverIndex] = true
@@ -2146,12 +2150,14 @@ func (e *Engine) executeContextJoinFireAndForgetWithIndex(
 		}
 		byPartition := make(map[string][]Event)
 		for _, event := range events {
-			key, active, partitionErr := definition.partition(event, now, variables)
+			keys, active, partitionErr := definition.partitionsForEvent(event, now, variables)
 			if partitionErr != nil {
 				return nil, partitionErr
 			}
 			if active {
-				byPartition[key] = append(byPartition[key], event)
+				for _, key := range keys {
+					byPartition[key] = append(byPartition[key], event)
+				}
 			}
 		}
 		grouped[index] = byPartition
@@ -2354,12 +2360,18 @@ func contextJoinPartitionEvents(definition ContextDefinition, events []Event, ke
 	}
 	result := make([]Event, 0, len(events))
 	for _, event := range events {
-		partitionKey, active, err := definition.partition(event, now, variables)
+		keys, active, err := definition.partitionsForEvent(event, now, variables)
 		if err != nil {
 			return nil, err
 		}
-		if active && partitionKey == key {
-			result = append(result, event)
+		if !active {
+			continue
+		}
+		for _, partitionKey := range keys {
+			if partitionKey == key {
+				result = append(result, event)
+				break
+			}
 		}
 	}
 	return result, nil
@@ -2388,14 +2400,16 @@ func (e *Engine) executeContextFireAndForget(ctx context.Context, plan Plan, sel
 	}
 	grouped := make(map[string][]Event)
 	for _, event := range events {
-		key, active, partitionErr := definition.partition(event, now, variables)
+		eventKeys, active, partitionErr := definition.partitionsForEvent(event, now, variables)
 		if partitionErr != nil {
 			return QueryResult{}, partitionErr
 		}
 		if !active {
 			continue
 		}
-		grouped[key] = append(grouped[key], event)
+		for _, key := range eventKeys {
+			grouped[key] = append(grouped[key], event)
+		}
 	}
 	keys := make([]string, 0, len(grouped))
 	for key := range grouped {

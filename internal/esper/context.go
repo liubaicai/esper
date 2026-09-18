@@ -1113,9 +1113,31 @@ func activeTemporalContextPartitionKey(engine *Engine, definition ContextDefinit
 // into EvalContext variables by statementRuntime; callers use ContextField and
 // do not need to know the reserved variable names.
 func (d ContextDefinition) contextPropertyValues(event Event, now time.Time, variables map[string]Value, partitionID int) map[string]Value {
+	return d.contextPropertyValuesForKey(event, now, variables, partitionID, "")
+}
+
+// contextPropertyValuesForKey resolves context properties for one partition.
+// The partition key pins each level's category label so a lazily created
+// partition reports its own category even when the event matched several.
+// Nested keys encode as encodeKey(["nested", parentKey, childKey]) joined by
+// \x1f, so the per-level segments split back out in order.
+func (d ContextDefinition) contextPropertyValuesForKey(event Event, now time.Time, variables map[string]Value, partitionID int, partitionKey string) map[string]Value {
 	properties := make(map[string]Value)
+	localKey := partitionKey
 	if d.parent != nil {
-		for name, value := range d.parent.contextPropertyValues(event, now, variables, partitionID) {
+		parentKey := ""
+		if partitionKey != "" {
+			// encodeKey joins one %T:%#v segment per key value with \x1f;
+			// the nested marker is segment 0, the parent key segment 1, and
+			// the child key everything after (multi-key children emit
+			// several segments).
+			parts := strings.SplitN(partitionKey, "\x1f", 3)
+			if len(parts) == 3 {
+				parentKey = unquoteEncodedKeyPart(parts[1])
+				localKey = unquoteEncodedKeyPart(parts[2])
+			}
+		}
+		for name, value := range d.parent.contextPropertyValuesForKey(event, now, variables, partitionID, parentKey) {
 			properties["parent."+name] = value
 		}
 	}
@@ -1127,18 +1149,35 @@ func (d ContextDefinition) contextPropertyValues(event Event, now time.Time, var
 	}
 	switch d.kind {
 	case ContextCategorySegmented:
-		for _, category := range d.categories {
-			value := category.predicate.eval(EvalContext{Event: event, Now: now, Variables: variables})
-			matched, ok := boolValue(value)
-			if ok && matched {
-				properties["label"] = Present(category.name)
-				break
+		label := ""
+		if strings.HasPrefix(localKey, "category:") {
+			label = strings.TrimPrefix(localKey, "category:")
+		} else {
+			for _, category := range d.categories {
+				value := category.predicate.eval(EvalContext{Event: event, Now: now, Variables: variables})
+				matched, ok := boolValue(value)
+				if ok && matched {
+					label = category.name
+					break
+				}
 			}
+		}
+		if label != "" {
+			properties["label"] = Present(label)
 		}
 	case ContextHashSegmented:
 		properties["hash"] = Present(int64(d.hashBucket(event, now, variables)))
 	}
 	return properties
+}
+
+// unquoteEncodedKeyPart strips the `string:"..."` wrapper encodeKey applies
+// to string key segments.
+func unquoteEncodedKeyPart(part string) string {
+	if strings.HasPrefix(part, `string:"`) && strings.HasSuffix(part, `"`) {
+		return part[len(`string:"`) : len(part)-1]
+	}
+	return part
 }
 
 func (d ContextDefinition) hashBucket(event Event, now time.Time, variables map[string]Value) int {
@@ -1373,6 +1412,63 @@ func javaHashCode(value any) int32 {
 	default:
 		return int32(crc32.ChecksumIEEE([]byte(fmt.Sprintf("%T:%#v", value, value))))
 	}
+}
+
+// partitionsForEvent returns every partition key the event belongs to.
+// Category contexts fan out: an event is processed in each partition whose
+// predicate matches (Esper ContextControllerCategoryImpl evaluates every
+// category), so the result may hold multiple keys. All other kinds resolve
+// to at most one key.
+// hasCategoryLevel reports whether this definition or any nested parent is a
+// category context, i.e. whether event routing can fan out to multiple
+// partitions.
+func (d ContextDefinition) hasCategoryLevel() bool {
+	for current := &d; current != nil; current = current.parent {
+		if current.kind == ContextCategorySegmented {
+			return true
+		}
+	}
+	return false
+}
+
+func (d ContextDefinition) partitionsForEvent(event Event, now time.Time, variables map[string]Value) ([]string, bool, error) {
+	if d.parent != nil {
+		parentKeys, active, err := d.parent.partitionsForEvent(event, now, variables)
+		if err != nil || !active {
+			return nil, active, err
+		}
+		childKeys, childActive, err := d.partitionsForEventLocal(event, now, variables)
+		if err != nil || !childActive {
+			return nil, childActive, err
+		}
+		keys := make([]string, 0, len(parentKeys)*len(childKeys))
+		for _, parentKey := range parentKeys {
+			for _, childKey := range childKeys {
+				keys = append(keys, encodeKey([]any{"nested", parentKey, childKey}))
+			}
+		}
+		return keys, true, nil
+	}
+	return d.partitionsForEventLocal(event, now, variables)
+}
+
+func (d ContextDefinition) partitionsForEventLocal(event Event, now time.Time, variables map[string]Value) ([]string, bool, error) {
+	if d.kind == ContextCategorySegmented {
+		keys := make([]string, 0, len(d.categories))
+		for _, category := range d.categories {
+			value := category.predicate.eval(EvalContext{Event: event, Now: now, Variables: variables})
+			matched, ok := boolValue(value)
+			if ok && matched {
+				keys = append(keys, "category:"+category.name)
+			}
+		}
+		return keys, len(keys) > 0, nil
+	}
+	key, active, err := d.partitionLocal(event, now, variables)
+	if err != nil || !active {
+		return nil, active, err
+	}
+	return []string{key}, true, nil
 }
 
 func (d ContextDefinition) partition(event Event, now time.Time, variables map[string]Value) (string, bool, error) {

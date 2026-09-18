@@ -1,0 +1,947 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-category",
+ "description": "ContextCategory predefined-partition semantics: a two-category context with admin assertions (statement names, nesting level, partition ids/count, CONTEXTNAME/CONTEXTDEPLOYMENTID statement properties) and per-category count(*) plus context.label delivery where a non-matching event stays silent (ord 0); the 'group by' spelling with c1..c5 fields including context.name/context.id and a cumulative per-category sum (ord 1); three categories with eager empty partitions, iterators over all partitions including null sums, and undeploy cleanup (ord 2); two-deployment shared-path module with 'like' patterns and ctx-deployment CONTEXTDEPLOYMENTID (ord 3); iterator-only keepall+group-by statement with by-id, category, filtered, null/empty-set category selectors and a segmented-selector rejection (ord 4); single-category prior(1) replayed twice where the second cycle mirrors the SODA round-trip and a non-matching event does not advance prior (ord 5); compile-error probes for a bad filter property, a non-boolean predicate and a statement stream type not listed in the category context (ord 6); and declared expressions resolving context.label in script-call (ord 8) and alias (ord 7) forms. listener records mirror s0 IR pairs; snapshot records mirror statement iterators; admin records mirror context-partition service reads; compile-error and selector-error records pin the Go wording while the oracle asserts the Java prefix (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextCategory.java).",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextCategory.java",
+ "javaRuntimes": [
+  "java-runtime-edb899dd318dc4e8711e",
+  "java-runtime-440efde2e13b0063a968",
+  "java-runtime-cbe8b6c2ba86887f6807",
+  "java-runtime-ad038edc0893e86eba46",
+  "java-runtime-fe484daf28031390497b",
+  "java-runtime-96843edb4ce366e1d74e",
+  "java-runtime-51b59dd76ca097972003",
+  "java-runtime-629da2acd413b0688d68",
+  "java-runtime-76b9f0c6ca0a53be2ab0"
+ ],
+ "javaNames": [
+  "ContextCategorySceneOne",
+  "ContextCategorySceneTwo",
+  "ContextCategoryWContextProps",
+  "ContextCategoryBooleanExprFilter",
+  "ContextCategoryContextPartitionSelection",
+  "ContextCategorySingleCategorySODAPrior",
+  "ContextCategoryInvalid",
+  "ContextCategoryDeclaredExpr{isAlias=true}",
+  "ContextCategoryDeclaredExpr{isAlias=false}"
+ ],
+ "javaStaticIds": [
+  "java-2275d4c280d0acadad30",
+  "java-2275d4c280d0acadad30",
+  "java-2275d4c280d0acadad30",
+  "java-2275d4c280d0acadad30",
+  "java-2275d4c280d0acadad30",
+  "java-2275d4c280d0acadad30",
+  "java-2275d4c280d0acadad30",
+  "java-2275d4c280d0acadad30",
+  "java-2275d4c280d0acadad30"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "scene-one",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-edb899dd318dc4e8711e",
+   "executionName": "ContextCategorySceneOne",
+   "observation": "listener+admin; one module deploys the context (trailing space after 'cat2 ') and s0; admin pins statement names [s0], nesting level 1, partition ids {0,1} and count 2, null context properties on 'context' and CategoryContext/module-deployment properties on 's0'; A and B deliver per-category counts, C matches nothing",
+   "epl": "@name('s0') context CategoryContext select count(*) as c0, context.label as c1 from SupportBean"
+  },
+  {
+   "case": "scene-two",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-440efde2e13b0063a968",
+   "executionName": "ContextCategorySceneTwo",
+   "observation": "listener+admin; 'group by' spelling; partition identifiers carry labels {cat1,cat2} with id 0 = cat1 and per-id context properties; c1..c5 project theString, sum, context.label, context.name and context.id; the cumulative sum is per category",
+   "epl": "@Name('s0') context CtxCategory select theString as c1, sum(intPrimitive) as c2, context.label as c3, context.name as c4, context.id as c5 from SupportBean"
+  },
+  {
+   "case": "w-context-props",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-cbe8b6c2ba86887f6807",
+   "executionName": "ContextCategoryWContextProps",
+   "observation": "listener+snapshot+admin; three categories (between 10 and 20 inclusive) allocate eagerly; iterators over all partitions include empty ones with null sums; the oracle asserts filterSvcCountApprox==3 and 3 eager agent instances; context count drops to 0 after undeploying the module containing s0",
+   "epl": "@name('s0') context CategorizedContext select context.name as c0, context.label as c1, sum(intPrimitive) as c2 from SupportBean"
+  },
+  {
+   "case": "boolean-expr-filter",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-ad038edc0893e86eba46",
+   "executionName": "ContextCategoryBooleanExprFilter",
+   "observation": "listener+admin; two deployments share the module path; 'like' patterns A%/B%/C% route to agroup/bgroup/cgroup; s0's CONTEXTDEPLOYMENTID is the ctx deployment from the earlier module",
+   "epl": "@name('s0') context Ctx600a select context.label as c0, count(*) as c1 from SupportBean"
+  },
+  {
+   "case": "partition-selection",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-fe484daf28031390497b",
+   "executionName": "ContextCategoryContextPartitionSelection",
+   "observation": "snapshot+snapshot-selector+selector-error; keepall group-by-theString statement with no listener; selectors pin by-id, by-category {grp1,grp3}, filtered label match, null and empty category sets, an always-false collecting selector observing all three labels, and a segmented selector rejected as an invalid context partition selector",
+   "epl": "@name('s0') context MyCtx select context.id as c0, context.label as c1, theString as c2, sum(intPrimitive) as c3 from SupportBean#keepall group by theString"
+  },
+  {
+   "case": "single-category-soda-prior",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-96843edb4ce366e1d74e",
+   "executionName": "ContextCategorySingleCategorySODAPrior",
+   "observation": "listener+admin; single category; prior(1) is per-partition so E1(5) yields null then E1(4) yields 5 while non-matching E2(20) neither fires nor advances prior; the second deploy+send cycle (mode 'soda') mirrors the Java eplToModel round-trip; context count returns to 0 after each undeploy-all",
+   "epl": "@name('s0') context CategorizedContext select context.name as c0, context.label as c1, prior(1,intPrimitive) as c2 from SupportBean"
+  },
+  {
+   "case": "invalid",
+   "ordinal": 6,
+   "runtimeId": "java-runtime-51b59dd76ca097972003",
+   "executionName": "ContextCategoryInvalid",
+   "observation": "compile-error; probes pin a bad filter property (dummy=1), a non-boolean predicate (intPrimitive), and a statement stream type (SupportBean_S0) not listed in the category context; the record value pins the Go wording while the oracle asserts the Java prefix",
+   "epl": "context ACtx select * from SupportBean_S0"
+  },
+  {
+   "case": "declared-expr-alias",
+   "ordinal": 7,
+   "runtimeId": "java-runtime-629da2acd413b0688d68",
+   "executionName": "ContextCategoryDeclaredExpr{isAlias=true}",
+   "observation": "listener; declared expressions resolving context.label deploy before the s0 module whose inline expression uses the alias-for form; E1(-2) yields n/xnx/n and E2(1) yields p/xpx/p",
+   "epl": "@name('s0') expression getLabelThree alias for { context.label } context MyCtx select getLabelOne as c0, getLabelTwo as c1, getLabelThree as c2 from SupportBean"
+  },
+  {
+   "case": "declared-expr-call",
+   "ordinal": 8,
+   "runtimeId": "java-runtime-76b9f0c6ca0a53be2ab0",
+   "executionName": "ContextCategoryDeclaredExpr{isAlias=false}",
+   "observation": "listener; declared expressions resolving context.label deploy before the s0 module whose inline expression uses the script-call form; E1(-2) yields n/xnx/n and E2(1) yields p/xpx/p",
+   "epl": "@name('s0') expression getLabelThree { context.label } context MyCtx select getLabelOne() as c0, getLabelTwo() as c1, getLabelThree() as c2 from SupportBean"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "scene-one"
+  },
+  {
+   "op": "deploy",
+   "case": "scene-one",
+   "statement": "module",
+   "epl": "@name('context') create context CategoryContext\ngroup theString = 'A' as cat1,\ngroup theString = 'B' as cat2 \nfrom SupportBean;\n@name('s0') context CategoryContext select count(*) as c0, context.label as c1 from SupportBean;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "scene-one",
+   "statement": "module"
+  },
+  {
+   "op": "snapshot",
+   "case": "scene-one",
+   "statement": "context",
+   "name": "CategoryContext",
+   "mode": "admin:context-admin"
+  },
+  {
+   "op": "snapshot",
+   "case": "scene-one",
+   "statement": "context",
+   "mode": "admin:statement-props"
+  },
+  {
+   "op": "snapshot",
+   "case": "scene-one",
+   "statement": "s0",
+   "mode": "admin:statement-props"
+  },
+  {
+   "op": "send",
+   "case": "scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-one",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "C",
+    "intPrimitive": 7
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "scene-one"
+  },
+  {
+   "op": "case",
+   "case": "scene-two"
+  },
+  {
+   "op": "deploy",
+   "case": "scene-two",
+   "statement": "module",
+   "epl": "@Name('CTX') create context CtxCategory group by intPrimitive > 0 as cat1,group by intPrimitive < 0 as cat2 from SupportBean;\n@Name('s0') context CtxCategory select theString as c1, sum(intPrimitive) as c2, context.label as c3, context.name as c4, context.id as c5 from SupportBean;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "scene-two",
+   "statement": "module"
+  },
+  {
+   "op": "snapshot",
+   "case": "scene-two",
+   "statement": "CTX",
+   "name": "CtxCategory",
+   "mode": "admin:partition-info"
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "scene-two",
+   "statement": "CTX",
+   "name": "CtxCategory",
+   "mode": "admin:partition-info"
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G2",
+    "intPrimitive": -2
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G3",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G4",
+    "intPrimitive": -4
+   }
+  },
+  {
+   "op": "send",
+   "case": "scene-two",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G5",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "scene-two"
+  },
+  {
+   "op": "case",
+   "case": "w-context-props"
+  },
+  {
+   "op": "deploy",
+   "case": "w-context-props",
+   "statement": "module",
+   "epl": "@Name('context') create context CategorizedContext group intPrimitive < 10 as cat1, group intPrimitive between 10 and 20 as cat2, group intPrimitive > 20 as cat3 from SupportBean;\n@name('s0') context CategorizedContext select context.name as c0, context.label as c1, sum(intPrimitive) as c2 from SupportBean;\n"
+  },
+  {
+   "op": "deployed",
+   "case": "w-context-props",
+   "statement": "module"
+  },
+  {
+   "op": "snapshot",
+   "case": "w-context-props",
+   "statement": "context",
+   "name": "CategorizedContext",
+   "mode": "admin:partition-info"
+  },
+  {
+   "op": "send",
+   "case": "w-context-props",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "w-context-props",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "case": "w-context-props",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-context-props",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-context-props",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 25
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-context-props",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E5",
+    "intPrimitive": 25
+   }
+  },
+  {
+   "op": "send",
+   "case": "w-context-props",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E6",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "w-context-props",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "snapshot",
+   "case": "w-context-props",
+   "statement": "context",
+   "mode": "admin:context-count"
+  },
+  {
+   "op": "undeploy",
+   "case": "w-context-props",
+   "statement": "module"
+  },
+  {
+   "op": "snapshot",
+   "case": "w-context-props",
+   "statement": "context",
+   "mode": "admin:context-count"
+  },
+  {
+   "op": "case",
+   "case": "boolean-expr-filter"
+  },
+  {
+   "op": "deploy",
+   "case": "boolean-expr-filter",
+   "statement": "ctx",
+   "epl": "@name('ctx') @public create context Ctx600a group by theString like 'A%' as agroup, group by theString like 'B%' as bgroup, group by theString like 'C%' as cgroup from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "boolean-expr-filter",
+   "statement": "ctx"
+  },
+  {
+   "op": "deploy",
+   "case": "boolean-expr-filter",
+   "statement": "s0",
+   "epl": "@name('s0') context Ctx600a select context.label as c0, count(*) as c1 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "boolean-expr-filter",
+   "statement": "s0"
+  },
+  {
+   "op": "snapshot",
+   "case": "boolean-expr-filter",
+   "statement": "s0",
+   "mode": "admin:statement-props"
+  },
+  {
+   "op": "send",
+   "case": "boolean-expr-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "boolean-expr-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "boolean-expr-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B171771",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "boolean-expr-filter",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A  x",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "boolean-expr-filter"
+  },
+  {
+   "op": "case",
+   "case": "partition-selection"
+  },
+  {
+   "op": "deploy",
+   "case": "partition-selection",
+   "statement": "ctx",
+   "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive < -5 as grp1, group by intPrimitive between -5 and +5 as grp2, group by intPrimitive > 5 as grp3 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "partition-selection",
+   "statement": "ctx"
+  },
+  {
+   "op": "deploy",
+   "case": "partition-selection",
+   "statement": "s0",
+   "epl": "@name('s0') context MyCtx select context.id as c0, context.label as c1, theString as c2, sum(intPrimitive) as c3 from SupportBean#keepall group by theString"
+  },
+  {
+   "op": "deployed",
+   "case": "partition-selection",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "partition-selection",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-selection",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -5
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-selection",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-selection",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": -100
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-selection",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": -8
+   }
+  },
+  {
+   "op": "send",
+   "case": "partition-selection",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 60
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "partition-selection",
+   "statement": "s0",
+   "mode": "any"
+  },
+  {
+   "op": "snapshot",
+   "case": "partition-selection",
+   "statement": "ctx",
+   "name": "MyCtx",
+   "mode": "admin:context-props"
+  },
+  {
+   "op": "snapshot-selector",
+   "case": "partition-selection",
+   "statement": "s0",
+   "selector": "ids",
+   "ids": [
+    1
+   ]
+  },
+  {
+   "op": "snapshot-selector",
+   "case": "partition-selection",
+   "statement": "s0",
+   "selector": "filtered",
+   "filterProperty": "labels",
+   "payload": [
+    "grp1",
+    "grp3"
+   ]
+  },
+  {
+   "op": "snapshot-selector",
+   "case": "partition-selection",
+   "statement": "s0",
+   "selector": "filtered",
+   "filterProperty": "label",
+   "filterValue": "grp1"
+  },
+  {
+   "op": "snapshot-selector",
+   "case": "partition-selection",
+   "statement": "s0",
+   "selector": "filtered",
+   "filterProperty": "labels",
+   "payload": null
+  },
+  {
+   "op": "snapshot-selector",
+   "case": "partition-selection",
+   "statement": "s0",
+   "selector": "filtered",
+   "filterProperty": "labels",
+   "payload": []
+  },
+  {
+   "op": "snapshot-selector",
+   "case": "partition-selection",
+   "statement": "s0",
+   "selector": "filtered",
+   "filterProperty": "label"
+  },
+  {
+   "op": "snapshot-selector",
+   "case": "partition-selection",
+   "statement": "s0",
+   "selector": "segmented",
+   "expectError": "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorFiltered, ContextPartitionSelectorById, ContextPartitionSelectorCategory] interfaces but received "
+  },
+  {
+   "op": "undeploy-all",
+   "case": "partition-selection"
+  },
+  {
+   "op": "case",
+   "case": "single-category-soda-prior"
+  },
+  {
+   "op": "deploy",
+   "case": "single-category-soda-prior",
+   "statement": "ctx",
+   "epl": "@Name('context') @public create context CategorizedContext as group intPrimitive<10 as cat1 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "single-category-soda-prior",
+   "statement": "ctx"
+  },
+  {
+   "op": "deploy",
+   "case": "single-category-soda-prior",
+   "statement": "s0",
+   "epl": "@name('s0') context CategorizedContext select context.name as c0, context.label as c1, prior(1,intPrimitive) as c2 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "single-category-soda-prior",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "single-category-soda-prior",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "single-category-soda-prior",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "case": "single-category-soda-prior",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "single-category-soda-prior",
+   "statement": "context",
+   "mode": "admin:context-count"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "single-category-soda-prior",
+   "mode": "clear-path"
+  },
+  {
+   "op": "snapshot",
+   "case": "single-category-soda-prior",
+   "statement": "context",
+   "mode": "admin:context-count"
+  },
+  {
+   "op": "deploy",
+   "case": "single-category-soda-prior",
+   "statement": "ctx-soda",
+   "epl": "@Name('context') @public create context CategorizedContext as group intPrimitive<10 as cat1 from SupportBean",
+   "mode": "soda"
+  },
+  {
+   "op": "deployed",
+   "case": "single-category-soda-prior",
+   "statement": "ctx-soda"
+  },
+  {
+   "op": "deploy",
+   "case": "single-category-soda-prior",
+   "statement": "s0-soda",
+   "epl": "@name('s0') context CategorizedContext select context.name as c0, context.label as c1, prior(1,intPrimitive) as c2 from SupportBean",
+   "mode": "soda"
+  },
+  {
+   "op": "deployed",
+   "case": "single-category-soda-prior",
+   "statement": "s0-soda"
+  },
+  {
+   "op": "send",
+   "case": "single-category-soda-prior",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 5
+   }
+  },
+  {
+   "op": "send",
+   "case": "single-category-soda-prior",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "case": "single-category-soda-prior",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "snapshot",
+   "case": "single-category-soda-prior",
+   "statement": "context",
+   "mode": "admin:context-count"
+  },
+  {
+   "op": "undeploy-all",
+   "case": "single-category-soda-prior"
+  },
+  {
+   "op": "snapshot",
+   "case": "single-category-soda-prior",
+   "statement": "context",
+   "mode": "admin:context-count"
+  },
+  {
+   "op": "case",
+   "case": "invalid"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "bad-filter-prop",
+   "epl": "create context ACtx group theString is not null as cat1 from SupportBean(dummy = 1)",
+   "expectError": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream [",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "non-boolean-predicate",
+   "epl": "create context ACtx group intPrimitive as grp1 from SupportBean",
+   "expectError": "Filter expression not returning a boolean value: 'intPrimitive' [",
+   "compileWithoutPath": true
+  },
+  {
+   "op": "deploy",
+   "case": "invalid",
+   "statement": "ctx",
+   "epl": "@public create context ACtx group intPrimitive < 10 as cat1 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "invalid",
+   "statement": "ctx"
+  },
+  {
+   "op": "build-error",
+   "case": "invalid",
+   "statement": "statement-stream-type",
+   "epl": "context ACtx select * from SupportBean_S0",
+   "expectError": "Category context 'ACtx' requires that any of the events types that are listed in the category context also appear in any of the filter expressions of the statement ["
+  },
+  {
+   "op": "undeploy-all",
+   "case": "invalid"
+  },
+  {
+   "op": "case",
+   "case": "declared-expr-alias"
+  },
+  {
+   "op": "deploy",
+   "case": "declared-expr-alias",
+   "statement": "ctx",
+   "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive < 0 as n, group by intPrimitive > 0 as p from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "declared-expr-alias",
+   "statement": "ctx"
+  },
+  {
+   "op": "deploy",
+   "case": "declared-expr-alias",
+   "statement": "expr-1",
+   "epl": "@name('expr-1') @public create expression getLabelOne { context.label }"
+  },
+  {
+   "op": "deployed",
+   "case": "declared-expr-alias",
+   "statement": "expr-1"
+  },
+  {
+   "op": "deploy",
+   "case": "declared-expr-alias",
+   "statement": "expr-2",
+   "epl": "@name('expr-2') @public create expression getLabelTwo { 'x'||context.label||'x' }"
+  },
+  {
+   "op": "deployed",
+   "case": "declared-expr-alias",
+   "statement": "expr-2"
+  },
+  {
+   "op": "deploy",
+   "case": "declared-expr-alias",
+   "statement": "s0",
+   "epl": "@name('s0') expression getLabelThree alias for { context.label } context MyCtx select getLabelOne as c0, getLabelTwo as c1, getLabelThree as c2 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "declared-expr-alias",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "declared-expr-alias",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": -2
+   }
+  },
+  {
+   "op": "send",
+   "case": "declared-expr-alias",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "declared-expr-alias"
+  },
+  {
+   "op": "case",
+   "case": "declared-expr-call"
+  },
+  {
+   "op": "deploy",
+   "case": "declared-expr-call",
+   "statement": "ctx",
+   "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive < 0 as n, group by intPrimitive > 0 as p from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "declared-expr-call",
+   "statement": "ctx"
+  },
+  {
+   "op": "deploy",
+   "case": "declared-expr-call",
+   "statement": "expr-1",
+   "epl": "@name('expr-1') @public create expression getLabelOne { context.label }"
+  },
+  {
+   "op": "deployed",
+   "case": "declared-expr-call",
+   "statement": "expr-1"
+  },
+  {
+   "op": "deploy",
+   "case": "declared-expr-call",
+   "statement": "expr-2",
+   "epl": "@name('expr-2') @public create expression getLabelTwo { 'x'||context.label||'x' }"
+  },
+  {
+   "op": "deployed",
+   "case": "declared-expr-call",
+   "statement": "expr-2"
+  },
+  {
+   "op": "deploy",
+   "case": "declared-expr-call",
+   "statement": "s0",
+   "epl": "@name('s0') expression getLabelThree { context.label } context MyCtx select getLabelOne() as c0, getLabelTwo() as c1, getLabelThree() as c2 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "case": "declared-expr-call",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "case": "declared-expr-call",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": -2
+   }
+  },
+  {
+   "op": "send",
+   "case": "declared-expr-call",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all",
+   "case": "declared-expr-call"
+  }
+ ]
+}

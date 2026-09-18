@@ -1,0 +1,3319 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-edb899dd318dc4e8711e",
+    "java-runtime-440efde2e13b0063a968",
+    "java-runtime-cbe8b6c2ba86887f6807",
+    "java-runtime-ad038edc0893e86eba46",
+    "java-runtime-fe484daf28031390497b",
+    "java-runtime-96843edb4ce366e1d74e",
+    "java-runtime-51b59dd76ca097972003",
+    "java-runtime-629da2acd413b0688d68",
+    "java-runtime-76b9f0c6ca0a53be2ab0"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextCategory.java"
+  ],
+  "javaExecutions": [
+    "ContextCategorySceneOne",
+    "ContextCategorySceneTwo",
+    "ContextCategoryWContextProps",
+    "ContextCategoryBooleanExprFilter",
+    "ContextCategoryContextPartitionSelection",
+    "ContextCategorySingleCategorySODAPrior",
+    "ContextCategoryInvalid",
+    "ContextCategoryDeclaredExpr{isAlias=true}",
+    "ContextCategoryDeclaredExpr{isAlias=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-category",
+    "steps": [
+      {
+        "op": "case",
+        "case": "scene-one"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-one",
+        "statement": "module",
+        "epl": "@name('context') create context CategoryContext\ngroup theString = 'A' as cat1,\ngroup theString = 'B' as cat2 \nfrom SupportBean;\n@name('s0') context CategoryContext select count(*) as c0, context.label as c1 from SupportBean;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-one",
+        "statement": "module"
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-one",
+        "statement": "context",
+        "name": "CategoryContext",
+        "mode": "admin:context-admin"
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-one",
+        "statement": "context",
+        "mode": "admin:statement-props"
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-one",
+        "statement": "s0",
+        "mode": "admin:statement-props"
+      },
+      {
+        "op": "send",
+        "case": "scene-one",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-one",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-one",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-one",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-one",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-one",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-one",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 7
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "scene-one"
+      },
+      {
+        "op": "case",
+        "case": "scene-two"
+      },
+      {
+        "op": "deploy",
+        "case": "scene-two",
+        "statement": "module",
+        "epl": "@Name('CTX') create context CtxCategory group by intPrimitive \u003e 0 as cat1,group by intPrimitive \u003c 0 as cat2 from SupportBean;\n@Name('s0') context CtxCategory select theString as c1, sum(intPrimitive) as c2, context.label as c3, context.name as c4, context.id as c5 from SupportBean;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "scene-two",
+        "statement": "module"
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-two",
+        "statement": "CTX",
+        "name": "CtxCategory",
+        "mode": "admin:partition-info"
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "scene-two",
+        "statement": "CTX",
+        "name": "CtxCategory",
+        "mode": "admin:partition-info"
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G4",
+          "intPrimitive": -4
+        }
+      },
+      {
+        "op": "send",
+        "case": "scene-two",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G5",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "scene-two"
+      },
+      {
+        "op": "case",
+        "case": "w-context-props"
+      },
+      {
+        "op": "deploy",
+        "case": "w-context-props",
+        "statement": "module",
+        "epl": "@Name('context') create context CategorizedContext group intPrimitive \u003c 10 as cat1, group intPrimitive between 10 and 20 as cat2, group intPrimitive \u003e 20 as cat3 from SupportBean;\n@name('s0') context CategorizedContext select context.name as c0, context.label as c1, sum(intPrimitive) as c2 from SupportBean;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "w-context-props",
+        "statement": "module"
+      },
+      {
+        "op": "snapshot",
+        "case": "w-context-props",
+        "statement": "context",
+        "name": "CategorizedContext",
+        "mode": "admin:partition-info"
+      },
+      {
+        "op": "send",
+        "case": "w-context-props",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "w-context-props",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "w-context-props",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "w-context-props",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "w-context-props",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E4",
+          "intPrimitive": 25
+        }
+      },
+      {
+        "op": "send",
+        "case": "w-context-props",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E5",
+          "intPrimitive": 25
+        }
+      },
+      {
+        "op": "send",
+        "case": "w-context-props",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E6",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "w-context-props",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "snapshot",
+        "case": "w-context-props",
+        "statement": "context",
+        "mode": "admin:context-count"
+      },
+      {
+        "op": "undeploy",
+        "case": "w-context-props",
+        "statement": "module"
+      },
+      {
+        "op": "snapshot",
+        "case": "w-context-props",
+        "statement": "context",
+        "mode": "admin:context-count"
+      },
+      {
+        "op": "case",
+        "case": "boolean-expr-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "boolean-expr-filter",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context Ctx600a group by theString like 'A%' as agroup, group by theString like 'B%' as bgroup, group by theString like 'C%' as cgroup from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "boolean-expr-filter",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "boolean-expr-filter",
+        "statement": "s0",
+        "epl": "@name('s0') context Ctx600a select context.label as c0, count(*) as c1 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "boolean-expr-filter",
+        "statement": "s0"
+      },
+      {
+        "op": "snapshot",
+        "case": "boolean-expr-filter",
+        "statement": "s0",
+        "mode": "admin:statement-props"
+      },
+      {
+        "op": "send",
+        "case": "boolean-expr-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "boolean-expr-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "boolean-expr-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B171771",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "boolean-expr-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A  x",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "boolean-expr-filter"
+      },
+      {
+        "op": "case",
+        "case": "partition-selection"
+      },
+      {
+        "op": "deploy",
+        "case": "partition-selection",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive \u003c -5 as grp1, group by intPrimitive between -5 and +5 as grp2, group by intPrimitive \u003e 5 as grp3 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "partition-selection",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "partition-selection",
+        "statement": "s0",
+        "epl": "@name('s0') context MyCtx select context.id as c0, context.label as c1, theString as c2, sum(intPrimitive) as c3 from SupportBean#keepall group by theString"
+      },
+      {
+        "op": "deployed",
+        "case": "partition-selection",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "partition-selection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "partition-selection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -5
+        }
+      },
+      {
+        "op": "send",
+        "case": "partition-selection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "partition-selection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -100
+        }
+      },
+      {
+        "op": "send",
+        "case": "partition-selection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": -8
+        }
+      },
+      {
+        "op": "send",
+        "case": "partition-selection",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 60
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "partition-selection",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "snapshot",
+        "case": "partition-selection",
+        "statement": "ctx",
+        "name": "MyCtx",
+        "mode": "admin:context-props"
+      },
+      {
+        "op": "snapshot-selector",
+        "case": "partition-selection",
+        "statement": "s0",
+        "selector": "ids",
+        "ids": [
+          1
+        ]
+      },
+      {
+        "op": "snapshot-selector",
+        "case": "partition-selection",
+        "statement": "s0",
+        "selector": "filtered",
+        "filterProperty": "labels",
+        "payload": [
+          "grp1",
+          "grp3"
+        ]
+      },
+      {
+        "op": "snapshot-selector",
+        "case": "partition-selection",
+        "statement": "s0",
+        "selector": "filtered",
+        "filterProperty": "label",
+        "filterValue": "grp1"
+      },
+      {
+        "op": "snapshot-selector",
+        "case": "partition-selection",
+        "statement": "s0",
+        "selector": "filtered",
+        "filterProperty": "labels",
+        "payload": null
+      },
+      {
+        "op": "snapshot-selector",
+        "case": "partition-selection",
+        "statement": "s0",
+        "selector": "filtered",
+        "filterProperty": "labels",
+        "payload": []
+      },
+      {
+        "op": "snapshot-selector",
+        "case": "partition-selection",
+        "statement": "s0",
+        "selector": "filtered",
+        "filterProperty": "label"
+      },
+      {
+        "op": "snapshot-selector",
+        "case": "partition-selection",
+        "statement": "s0",
+        "selector": "segmented",
+        "expectError": "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorFiltered, ContextPartitionSelectorById, ContextPartitionSelectorCategory] interfaces but received "
+      },
+      {
+        "op": "undeploy-all",
+        "case": "partition-selection"
+      },
+      {
+        "op": "case",
+        "case": "single-category-soda-prior"
+      },
+      {
+        "op": "deploy",
+        "case": "single-category-soda-prior",
+        "statement": "ctx",
+        "epl": "@Name('context') @public create context CategorizedContext as group intPrimitive\u003c10 as cat1 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "single-category-soda-prior",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "single-category-soda-prior",
+        "statement": "s0",
+        "epl": "@name('s0') context CategorizedContext select context.name as c0, context.label as c1, prior(1,intPrimitive) as c2 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "single-category-soda-prior",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "single-category-soda-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "single-category-soda-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "single-category-soda-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "single-category-soda-prior",
+        "statement": "context",
+        "mode": "admin:context-count"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "single-category-soda-prior",
+        "mode": "clear-path"
+      },
+      {
+        "op": "snapshot",
+        "case": "single-category-soda-prior",
+        "statement": "context",
+        "mode": "admin:context-count"
+      },
+      {
+        "op": "deploy",
+        "case": "single-category-soda-prior",
+        "statement": "ctx-soda",
+        "epl": "@Name('context') @public create context CategorizedContext as group intPrimitive\u003c10 as cat1 from SupportBean",
+        "mode": "soda"
+      },
+      {
+        "op": "deployed",
+        "case": "single-category-soda-prior",
+        "statement": "ctx-soda"
+      },
+      {
+        "op": "deploy",
+        "case": "single-category-soda-prior",
+        "statement": "s0-soda",
+        "epl": "@name('s0') context CategorizedContext select context.name as c0, context.label as c1, prior(1,intPrimitive) as c2 from SupportBean",
+        "mode": "soda"
+      },
+      {
+        "op": "deployed",
+        "case": "single-category-soda-prior",
+        "statement": "s0-soda"
+      },
+      {
+        "op": "send",
+        "case": "single-category-soda-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "single-category-soda-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "single-category-soda-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "single-category-soda-prior",
+        "statement": "context",
+        "mode": "admin:context-count"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "single-category-soda-prior"
+      },
+      {
+        "op": "snapshot",
+        "case": "single-category-soda-prior",
+        "statement": "context",
+        "mode": "admin:context-count"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "bad-filter-prop",
+        "expectError": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream [",
+        "epl": "create context ACtx group theString is not null as cat1 from SupportBean(dummy = 1)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "non-boolean-predicate",
+        "expectError": "Filter expression not returning a boolean value: 'intPrimitive' [",
+        "epl": "create context ACtx group intPrimitive as grp1 from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "ctx",
+        "epl": "@public create context ACtx group intPrimitive \u003c 10 as cat1 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "invalid",
+        "statement": "ctx"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "statement-stream-type",
+        "expectError": "Category context 'ACtx' requires that any of the events types that are listed in the category context also appear in any of the filter expressions of the statement [",
+        "epl": "context ACtx select * from SupportBean_S0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid"
+      },
+      {
+        "op": "case",
+        "case": "declared-expr-alias"
+      },
+      {
+        "op": "deploy",
+        "case": "declared-expr-alias",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive \u003c 0 as n, group by intPrimitive \u003e 0 as p from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "declared-expr-alias",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "declared-expr-alias",
+        "statement": "expr-1",
+        "epl": "@name('expr-1') @public create expression getLabelOne { context.label }"
+      },
+      {
+        "op": "deployed",
+        "case": "declared-expr-alias",
+        "statement": "expr-1"
+      },
+      {
+        "op": "deploy",
+        "case": "declared-expr-alias",
+        "statement": "expr-2",
+        "epl": "@name('expr-2') @public create expression getLabelTwo { 'x'||context.label||'x' }"
+      },
+      {
+        "op": "deployed",
+        "case": "declared-expr-alias",
+        "statement": "expr-2"
+      },
+      {
+        "op": "deploy",
+        "case": "declared-expr-alias",
+        "statement": "s0",
+        "epl": "@name('s0') expression getLabelThree alias for { context.label } context MyCtx select getLabelOne as c0, getLabelTwo as c1, getLabelThree as c2 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "declared-expr-alias",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "declared-expr-alias",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "send",
+        "case": "declared-expr-alias",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "declared-expr-alias"
+      },
+      {
+        "op": "case",
+        "case": "declared-expr-call"
+      },
+      {
+        "op": "deploy",
+        "case": "declared-expr-call",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive \u003c 0 as n, group by intPrimitive \u003e 0 as p from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "declared-expr-call",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "declared-expr-call",
+        "statement": "expr-1",
+        "epl": "@name('expr-1') @public create expression getLabelOne { context.label }"
+      },
+      {
+        "op": "deployed",
+        "case": "declared-expr-call",
+        "statement": "expr-1"
+      },
+      {
+        "op": "deploy",
+        "case": "declared-expr-call",
+        "statement": "expr-2",
+        "epl": "@name('expr-2') @public create expression getLabelTwo { 'x'||context.label||'x' }"
+      },
+      {
+        "op": "deployed",
+        "case": "declared-expr-call",
+        "statement": "expr-2"
+      },
+      {
+        "op": "deploy",
+        "case": "declared-expr-call",
+        "statement": "s0",
+        "epl": "@name('s0') expression getLabelThree { context.label } context MyCtx select getLabelOne() as c0, getLabelTwo() as c1, getLabelThree() as c2 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "declared-expr-call",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "declared-expr-call",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "send",
+        "case": "declared-expr-call",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "declared-expr-call"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-category",
+    "records": [
+      {
+        "case": "scene-one",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-one",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "label": "cat1"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "label": "cat2"
+            }
+          }
+        ],
+        "name": "CategoryContext",
+        "value": {
+          "nestingLevel": 1,
+          "partitionCount": 2,
+          "statementNames": [
+            "s0"
+          ]
+        }
+      },
+      {
+        "case": "scene-one",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "contextDeploymentId": {
+            "state": "null"
+          },
+          "contextName": {
+            "state": "null"
+          }
+        }
+      },
+      {
+        "case": "scene-one",
+        "operation": "admin",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "contextDeploymentId": "module",
+          "contextName": "CategoryContext"
+        }
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "cat1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "cat2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": "cat1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3,
+              "c1": "cat1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": "cat2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "admin",
+        "statement": "CTX",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "id": 0,
+              "label": "cat1",
+              "name": "CtxCategory"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "id": 1,
+              "label": "cat2",
+              "name": "CtxCategory"
+            }
+          }
+        ],
+        "name": "CtxCategory"
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G1",
+              "c2": 1,
+              "c3": "cat1",
+              "c4": "CtxCategory",
+              "c5": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "admin",
+        "statement": "CTX",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "id": 0,
+              "label": "cat1",
+              "name": "CtxCategory"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "id": 1,
+              "label": "cat2",
+              "name": "CtxCategory"
+            }
+          }
+        ],
+        "name": "CtxCategory"
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G2",
+              "c2": -2,
+              "c3": "cat2",
+              "c4": "CtxCategory",
+              "c5": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G3",
+              "c2": 4,
+              "c3": "cat1",
+              "c4": "CtxCategory",
+              "c5": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G4",
+              "c2": -6,
+              "c3": "cat2",
+              "c4": "CtxCategory",
+              "c5": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G5",
+              "c2": 9,
+              "c3": "cat1",
+              "c4": "CtxCategory",
+              "c5": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "w-context-props",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "id": 0,
+              "label": "cat1",
+              "name": "CategorizedContext"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "id": 1,
+              "label": "cat2",
+              "name": "CategorizedContext"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:cat3",
+            "properties": {
+              "id": 2,
+              "label": "cat3",
+              "name": "CategorizedContext"
+            }
+          }
+        ],
+        "name": "CategorizedContext"
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat2",
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat3",
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "label": "cat1"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "label": "cat2"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:cat3",
+            "properties": {
+              "label": "cat3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat2",
+              "c2": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat3",
+              "c2": 25
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat3",
+              "c2": 50
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat2",
+              "c2": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat3",
+              "c2": 50
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "label": "cat1"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "label": "cat2"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:cat3",
+            "properties": {
+              "label": "cat3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 1
+      },
+      {
+        "case": "w-context-props",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 0
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "admin",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "Ctx600a"
+        }
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "bgroup",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "agroup",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "bgroup",
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "agroup",
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "partition-selection",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 0,
+              "c1": "grp1",
+              "c2": "E3",
+              "c3": -108
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "grp2",
+              "c2": "E1",
+              "c3": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "grp2",
+              "c2": "E2",
+              "c3": -5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": "grp3",
+              "c2": "E1",
+              "c3": 60
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:grp1",
+            "properties": {
+              "label": "grp1"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:grp2",
+            "properties": {
+              "label": "grp2"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:grp3",
+            "properties": {
+              "label": "grp3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "partition-selection",
+        "operation": "admin",
+        "statement": "ctx",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:grp1",
+            "properties": {
+              "id": 0,
+              "label": "grp1",
+              "name": "MyCtx"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:grp2",
+            "properties": {
+              "id": 1,
+              "label": "grp2",
+              "name": "MyCtx"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:grp3",
+            "properties": {
+              "id": 2,
+              "label": "grp3",
+              "name": "MyCtx"
+            }
+          }
+        ],
+        "name": "MyCtx"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "grp2",
+              "c2": "E1",
+              "c3": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "grp2",
+              "c2": "E2",
+              "c3": -5
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 1,
+            "key": "category:grp2",
+            "properties": {
+              "label": "grp2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 0,
+              "c1": "grp1",
+              "c2": "E3",
+              "c3": -108
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": "grp3",
+              "c2": "E1",
+              "c3": 60
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:grp1",
+            "properties": {
+              "label": "grp1"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:grp3",
+            "properties": {
+              "label": "grp3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 0,
+              "c1": "grp1",
+              "c2": "E3",
+              "c3": -108
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:grp1",
+            "properties": {
+              "label": "grp1"
+            }
+          }
+        ],
+        "value": {
+          "observedLabels": [
+            "grp1",
+            "grp2",
+            "grp3"
+          ]
+        }
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "observedLabels": [
+            "grp1",
+            "grp2",
+            "grp3"
+          ]
+        }
+      },
+      {
+        "case": "partition-selection",
+        "operation": "selector-error",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorFiltered, ContextPartitionSelectorById, ContextPartitionSelectorCategory] interfaces but received "
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 1
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 0
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "deployed",
+        "statement": "ctx-soda",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "deployed",
+        "statement": "s0-soda",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 1
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 0
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "bad-filter-prop",
+        "sequence": 0,
+        "value": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "non-boolean-predicate",
+        "sequence": 0,
+        "value": "Filter expression not returning a boolean value: 'intPrimitive' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "statement-stream-type",
+        "sequence": 0,
+        "value": "Category context 'ACtx' requires that any of the events types that are listed in the category context also appear in any of the filter expressions of the statement ["
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "deployed",
+        "statement": "expr-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "deployed",
+        "statement": "expr-2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "n",
+              "c1": "xnx",
+              "c2": "n"
+            }
+          }
+        ]
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "p",
+              "c1": "xpx",
+              "c2": "p"
+            }
+          }
+        ]
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "deployed",
+        "statement": "expr-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "deployed",
+        "statement": "expr-2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "n",
+              "c1": "xnx",
+              "c2": "n"
+            }
+          }
+        ]
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "p",
+              "c1": "xpx",
+              "c2": "p"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-category",
+    "records": [
+      {
+        "case": "scene-one",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-one",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "label": "cat1"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "label": "cat2"
+            }
+          }
+        ],
+        "name": "CategoryContext",
+        "value": {
+          "nestingLevel": 1,
+          "partitionCount": 2,
+          "statementNames": [
+            "s0"
+          ]
+        }
+      },
+      {
+        "case": "scene-one",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "contextDeploymentId": {
+            "state": "null"
+          },
+          "contextName": {
+            "state": "null"
+          }
+        }
+      },
+      {
+        "case": "scene-one",
+        "operation": "admin",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "contextDeploymentId": "module",
+          "contextName": "CategoryContext"
+        }
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "cat1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "cat2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": "cat1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 3,
+              "c1": "cat1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-one",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": "cat2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "scene-two",
+        "operation": "admin",
+        "statement": "CTX",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "id": 0,
+              "label": "cat1",
+              "name": "CtxCategory"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "id": 1,
+              "label": "cat2",
+              "name": "CtxCategory"
+            }
+          }
+        ],
+        "name": "CtxCategory"
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G1",
+              "c2": 1,
+              "c3": "cat1",
+              "c4": "CtxCategory",
+              "c5": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "admin",
+        "statement": "CTX",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "id": 0,
+              "label": "cat1",
+              "name": "CtxCategory"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "id": 1,
+              "label": "cat2",
+              "name": "CtxCategory"
+            }
+          }
+        ],
+        "name": "CtxCategory"
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G2",
+              "c2": -2,
+              "c3": "cat2",
+              "c4": "CtxCategory",
+              "c5": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G3",
+              "c2": 4,
+              "c3": "cat1",
+              "c4": "CtxCategory",
+              "c5": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G4",
+              "c2": -6,
+              "c3": "cat2",
+              "c4": "CtxCategory",
+              "c5": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "scene-two",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "G5",
+              "c2": 9,
+              "c3": "cat1",
+              "c4": "CtxCategory",
+              "c5": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "w-context-props",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "id": 0,
+              "label": "cat1",
+              "name": "CategorizedContext"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "id": 1,
+              "label": "cat2",
+              "name": "CategorizedContext"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:cat3",
+            "properties": {
+              "id": 2,
+              "label": "cat3",
+              "name": "CategorizedContext"
+            }
+          }
+        ],
+        "name": "CategorizedContext"
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat2",
+              "c2": {
+                "state": "null"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat3",
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "label": "cat1"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "label": "cat2"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:cat3",
+            "properties": {
+              "label": "cat3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 9
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat2",
+              "c2": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat3",
+              "c2": 25
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat3",
+              "c2": 50
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 12
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 12
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat2",
+              "c2": 11
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat3",
+              "c2": 50
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:cat1",
+            "properties": {
+              "label": "cat1"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:cat2",
+            "properties": {
+              "label": "cat2"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:cat3",
+            "properties": {
+              "label": "cat3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "w-context-props",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 1
+      },
+      {
+        "case": "w-context-props",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 0
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "admin",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "Ctx600a"
+        }
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "bgroup",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "agroup",
+              "c1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "bgroup",
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "boolean-expr-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "agroup",
+              "c1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "partition-selection",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 0,
+              "c1": "grp1",
+              "c2": "E3",
+              "c3": -108
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "grp2",
+              "c2": "E1",
+              "c3": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "grp2",
+              "c2": "E2",
+              "c3": -5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": "grp3",
+              "c2": "E1",
+              "c3": 60
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:grp1",
+            "properties": {
+              "label": "grp1"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:grp2",
+            "properties": {
+              "label": "grp2"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:grp3",
+            "properties": {
+              "label": "grp3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "partition-selection",
+        "operation": "admin",
+        "statement": "ctx",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:grp1",
+            "properties": {
+              "id": 0,
+              "label": "grp1",
+              "name": "MyCtx"
+            }
+          },
+          {
+            "id": 1,
+            "key": "category:grp2",
+            "properties": {
+              "id": 1,
+              "label": "grp2",
+              "name": "MyCtx"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:grp3",
+            "properties": {
+              "id": 2,
+              "label": "grp3",
+              "name": "MyCtx"
+            }
+          }
+        ],
+        "name": "MyCtx"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "grp2",
+              "c2": "E1",
+              "c3": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": "grp2",
+              "c2": "E2",
+              "c3": -5
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 1,
+            "key": "category:grp2",
+            "properties": {
+              "label": "grp2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 0,
+              "c1": "grp1",
+              "c2": "E3",
+              "c3": -108
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 2,
+              "c1": "grp3",
+              "c2": "E1",
+              "c3": 60
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:grp1",
+            "properties": {
+              "label": "grp1"
+            }
+          },
+          {
+            "id": 2,
+            "key": "category:grp3",
+            "properties": {
+              "label": "grp3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 0,
+              "c1": "grp1",
+              "c2": "E3",
+              "c3": -108
+            }
+          }
+        ],
+        "partitions": [
+          {
+            "id": 0,
+            "key": "category:grp1",
+            "properties": {
+              "label": "grp1"
+            }
+          }
+        ],
+        "value": {
+          "observedLabels": [
+            "grp1",
+            "grp2",
+            "grp3"
+          ]
+        }
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-selection",
+        "operation": "snapshot-selector",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "observedLabels": [
+            "grp1",
+            "grp2",
+            "grp3"
+          ]
+        }
+      },
+      {
+        "case": "partition-selection",
+        "operation": "selector-error",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorFiltered, ContextPartitionSelectorById, ContextPartitionSelectorCategory] interfaces but received "
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 1
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 0
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "deployed",
+        "statement": "ctx-soda",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "deployed",
+        "statement": "s0-soda",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "CategorizedContext",
+              "c1": "cat1",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 1
+      },
+      {
+        "case": "single-category-soda-prior",
+        "operation": "admin",
+        "statement": "context",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": 0
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "bad-filter-prop",
+        "sequence": 0,
+        "value": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "non-boolean-predicate",
+        "sequence": 0,
+        "value": "Filter expression not returning a boolean value: 'intPrimitive' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "statement-stream-type",
+        "sequence": 0,
+        "value": "Category context 'ACtx' requires that any of the events types that are listed in the category context also appear in any of the filter expressions of the statement ["
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "deployed",
+        "statement": "expr-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "deployed",
+        "statement": "expr-2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "n",
+              "c1": "xnx",
+              "c2": "n"
+            }
+          }
+        ]
+      },
+      {
+        "case": "declared-expr-alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "p",
+              "c1": "xpx",
+              "c2": "p"
+            }
+          }
+        ]
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "deployed",
+        "statement": "expr-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "deployed",
+        "statement": "expr-2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "n",
+              "c1": "xnx",
+              "c2": "n"
+            }
+          }
+        ]
+      },
+      {
+        "case": "declared-expr-call",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "p",
+              "c1": "xpx",
+              "c2": "p"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -3269,10 +3269,41 @@ Active: Draft 4.456 ('context-variables').
  cleanup is the inherited pattern.
 - [x] Shipped; Git owns identity. Draft 4.456 committed and pushed as `379fbbe66`.
 
-## Next work unit (prefetch)
-Candidate: Draft 4.457 ('context-category'): ContextCategory.java, 9
-unreferenced executions. Scouts `NextJavaContract457` + `NextGoSurface457`
-in flight.
+## Current work unit
+Active: Draft 4.457 ('context-category'): ContextCategory.java, all 9
+executions born-differential.
+
+- [x] Contract frozen (scouts `NextJavaContract457` + `NextGoSurface457`):
+ eager per-category partitions, fan-out to every matching predicate,
+ context.label/name/id, iterators incl. empty partitions, selectors,
+ per-partition prior, declared expressions, compile-error probes.
+- [x] **Engine fix (shared core)**: category contexts were first-match;
+ now `partitionsForEvent` returns every matching `category:<name>` key,
+ `partitionRuntime` signals fan-out, `processContextCategoryFanOut`
+ dispatches in declaration order with lazy nested-partition creation;
+ `filterEventsForPartition`, `contextJoinPartitionEvents`, FAF grouped
+ paths, and `processNamedWindowContextLocked` use the plural form.
+ Residual: context-bound named-window insert routes to first match only.
+- [x] Assets (worker `AssetWorker457`): scenario (9 cases / 75 records),
+ oracle, runner, run.go wiring. Oracle fix: listener dedup keyed by
+ statement identity (redeployed s0 in the SODA cycle was skipped).
+- [x] Java trace + Go replay + zero-diff evidence: `-mode
+ context-category-diff` passing / 0 differences, 75 records each.
+- [x] Manifest/roadmap/CHANGELOG updated; `make check` green.
+- [x] Parity review round 1 (agent `ParityReview457`): FAIL on one P1 +
+ two P2s. P1 FIXED: lazy nested category partitions got the first-match
+ label; `contextPropertyValuesForKey` now derives each level's label from
+ the partition key segments. P2 FIXED: nested contexts with a category
+ PARENT still dispatched first-match; `hasCategoryLevel` now signals
+ fan-out at any depth. P2 FIXED: manifest javaNames now carry the
+ {isAlias=...} suffixes. P3s documented in manifest notes: named-window
+ insert + table row ownership still first-match; multi-match merges into
+ one listener batch.
+- [x] Confirmation review (same agent `ParityReview457`): OVERALL PASS.
+ Residual P3 fixed in-place: nested-key label derivation now splits on the
+ first two \x1f separators so multi-key children still resolve the parent
+ label.
+- [x] Shipped; Git owns identity.
 
 
 ## Delegation checkpoint (recent)

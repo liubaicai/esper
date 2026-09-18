@@ -8010,6 +8010,9 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			return ResultBatch{}, false, err
 		}
 		if fanOut {
+			if definition.hasCategoryLevel() {
+				return s.processContextCategoryFanOut(definition, event, now, variables)
+			}
 			return s.processContextFanOut(definition, event, now, variables)
 		}
 		if partition == nil {
@@ -9702,6 +9705,12 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 		}
 		return nil, false, nil
 	}
+	if definition.hasCategoryLevel() {
+		// Category contexts fan out: the event is processed in every
+		// partition whose predicate matches (at any nesting level), so the
+		// single-key path below cannot represent it.
+		return nil, true, nil
+	}
 	key, active, err := definition.partition(event, now, variables)
 	if err != nil {
 		return nil, false, err
@@ -9770,6 +9779,67 @@ func (s *Statement) processContextFanOut(definition ContextDefinition, event Eve
 		partition := s.runtime.partitions[partitionKey]
 		if partition == nil {
 			continue
+		}
+		var batch ResultBatch
+		var partitionChanged bool
+		var err error
+		if s.plan.query.trigger != nil {
+			batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
+			partitionChanged = !batch.empty() || batch.forced
+		} else {
+			batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables), streamFilterVerdict{})
+		}
+		if err != nil {
+			return ResultBatch{}, false, err
+		}
+		result.New = append(result.New, batch.New...)
+		result.Old = append(result.Old, batch.Old...)
+		changed = changed || partitionChanged
+	}
+	if changed {
+		result.Sequence = s.runtime.seq.Add(1)
+	}
+	result.Time = now
+	return result, changed, nil
+}
+
+// processContextCategoryFanOut dispatches the event to every category
+// partition whose predicate matches, in declaration order (Esper
+// ContextControllerCategoryImpl). Events matching no category produce no
+// output and update no partition state.
+func (s *Statement) processContextCategoryFanOut(definition ContextDefinition, event Event, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
+	if s == nil || s.engine == nil {
+		return ResultBatch{}, false, NewError(ErrorDependency, "context has no engine")
+	}
+	keys, active, err := definition.partitionsForEvent(event, now, variables)
+	if err != nil {
+		return ResultBatch{}, false, err
+	}
+	if !active {
+		return ResultBatch{}, false, nil
+	}
+	var result ResultBatch
+	var changed bool
+	for _, partitionKey := range keys {
+		partition := s.runtime.partitions[partitionKey]
+		if partition == nil {
+			// Nested category partitions are created lazily on the first
+			// matching event; flat category partitions were materialized at
+			// deploy time.
+			query := s.runtime.query
+			query.contextName = ""
+			partitionRuntime := newStatementRuntime(query)
+			partitionRuntime.engine = s.engine
+			partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
+			partitionRuntime.partitionContextName = s.plan.query.contextName
+			partitionRuntime.partitionKey = partitionKey
+			partitionRuntime.partitionID = s.allocateContextPartitionID(partitionKey)
+			partitionRuntime.contextProperties = definition.contextPropertyValuesForKey(event, now, variables, partitionRuntime.partitionID, partitionKey)
+			partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
+			partitionRuntime.initializeAt(now)
+			partition = ptrStatementRuntime(partitionRuntime)
+			s.runtime.partitions[partitionKey] = partition
+			s.engine.retainContextPartitionLocked(s.plan.query.contextName, partitionKey, partition)
 		}
 		var batch ResultBatch
 		var partitionChanged bool
@@ -13169,9 +13239,15 @@ func (r *statementRuntime) filterPartitionEvents(events []Event, now time.Time) 
 	}
 	filtered := make([]Event, 0, len(events))
 	for _, event := range events {
-		key, active, partitionErr := definition.partition(event, now, r.variables)
-		if partitionErr == nil && active && key == r.partitionKey {
-			filtered = append(filtered, event)
+		keys, active, partitionErr := definition.partitionsForEvent(event, now, r.variables)
+		if partitionErr != nil || !active {
+			continue
+		}
+		for _, key := range keys {
+			if key == r.partitionKey {
+				filtered = append(filtered, event)
+				break
+			}
 		}
 	}
 	return filtered
@@ -14032,14 +14108,26 @@ func (s *Statement) processNamedWindowContextLocked(ctx context.Context, now tim
 				return nil
 			}
 		} else {
-			partitionKey, active, err := definition.partition(event, now, variables)
+			partitionKeys, active, err := definition.partitionsForEvent(event, now, variables)
 			if err != nil {
 				return err
 			}
 			if !active {
 				return nil
 			}
-			key = partitionKey
+			for _, key = range partitionKeys {
+				group := grouped[key]
+				if group == nil {
+					group = &partitionDelta{}
+					grouped[key] = group
+				}
+				if newEvent {
+					group.newEvents = append(group.newEvents, event)
+				} else {
+					group.oldEvents = append(group.oldEvents, event)
+				}
+			}
+			return nil
 		}
 		group := grouped[key]
 		if group == nil {

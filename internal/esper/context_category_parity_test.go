@@ -3,6 +3,7 @@ package esper
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -643,4 +644,111 @@ func contextCategoryDescriptorLabel(d ContextPartitionDescriptor) string {
 	}
 	text, _ := value.Any().(string)
 	return text
+}
+
+// TestContextCategoryMultiMatchFanOut verifies an event matching several
+// category predicates is processed in every matching partition (Esper
+// ContextControllerCategoryImpl evaluates every category), not just the
+// first.
+func TestContextCategoryMultiMatchFanOut(t *testing.T) {
+	env, engine := newContextCategoryParityEnvironment(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+	intPrimitive := Field[contextCategorySupportBean, int32]("intPrimitive")
+	if _, err := CreateCategoryContext(env, "MultiCtx",
+		Category("positive", Greater[int32](intPrimitive, Literal(int32(0)))),
+		Category("large", Greater[int32](intPrimitive, Literal(int32(5)))),
+	); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(From[contextCategorySupportBean](env, "SupportBean").Aggregate(
+		Alias("c0", CountAll()),
+		Alias("c1", ContextLabel()),
+	).Query(StatementName("s0"), WithContext("MultiCtx")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	rows := collectContextCategoryRows(t, deployment)
+
+	// intPrimitive=10 matches both categories: one listener delivery per
+	// partition, each with its own label and count.
+	if err := engine.SendEvent(context.Background(), contextCategorySupportBean{TheString: "E1", IntPrimitive: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 2 {
+		t.Fatalf("expected 2 deliveries (one per matching category), got %d", len(*rows))
+	}
+	labels := map[string]any{}
+	for _, row := range *rows {
+		labels[fmt.Sprint(row.Get("c1").Any())] = row.Get("c0").Any()
+	}
+	if labels["positive"] != int64(1) || labels["large"] != int64(1) {
+		t.Fatalf("labels = %#v", labels)
+	}
+
+	// A second event matching only 'positive' increments only that
+	// partition; 'large' stays at 1.
+	*rows = (*rows)[:0]
+	if err := engine.SendEvent(context.Background(), contextCategorySupportBean{TheString: "E2", IntPrimitive: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 1 || (*rows)[0].Get("c1").Any() != "positive" || (*rows)[0].Get("c0").Any() != int64(2) {
+		t.Fatalf("rows = %#v", *rows)
+	}
+}
+
+// TestContextCategoryNestedMultiMatchFanOut verifies a nested context whose
+// child is a category context fans out to every matching child partition and
+// that each lazily created partition reports its own context.label.
+func TestContextCategoryNestedMultiMatchFanOut(t *testing.T) {
+	env, engine := newContextCategoryParityEnvironment(t)
+	defer func() { _ = engine.Close(context.Background()) }()
+	if _, err := CreateKeyContext(env, "by-string",
+		Field[contextCategorySupportBean, string]("theString")); err != nil {
+		t.Fatal(err)
+	}
+	intPrimitive := Field[contextCategorySupportBean, int32]("intPrimitive")
+	child, err := NewCategoryContext("bands",
+		Category("positive", Greater[int32](intPrimitive, Literal(int32(0)))),
+		Category("large", Greater[int32](intPrimitive, Literal(int32(5)))),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateNestedContext(env, "nested-cat", "by-string", child); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := env.Build(From[contextCategorySupportBean](env, "SupportBean").Aggregate(
+		Alias("c0", CountAll()),
+		Alias("c1", ContextLabel()),
+	).Query(StatementName("s0"), WithContext("nested-cat")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	deployment, err := engine.Deploy(context.Background(), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deployment.Undeploy(context.Background()) }()
+	rows := collectContextCategoryRows(t, deployment)
+
+	// intPrimitive=10 matches both child categories under parent key "E1":
+	// two deliveries, each labelled with its own category.
+	if err := engine.SendEvent(context.Background(), contextCategorySupportBean{TheString: "E1", IntPrimitive: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if len(*rows) != 2 {
+		t.Fatalf("expected 2 deliveries, got %d", len(*rows))
+	}
+	labels := map[string]any{}
+	for _, row := range *rows {
+		labels[fmt.Sprint(row.Get("c1").Any())] = row.Get("c0").Any()
+	}
+	if labels["positive"] != int64(1) || labels["large"] != int64(1) {
+		t.Fatalf("labels = %#v", labels)
+	}
 }
