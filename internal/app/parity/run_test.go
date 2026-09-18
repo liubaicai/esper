@@ -62141,3 +62141,619 @@ func assertInfraNWTableOnUpdateTrace(t *testing.T, trace compat.Trace) {
 		}
 	}
 }
+
+// eplVariablesCreateRenderRows renders listener rows as sorted name:value
+// pairs; {"state":"null"} markers render as "null" and arrays as [a,b].
+func eplVariablesCreateRenderRows(rows []compat.ResultRecord) string {
+	if len(rows) == 0 {
+		return ""
+	}
+	render := func(value any) string {
+		switch typed := value.(type) {
+		case map[string]any:
+			if typed["state"] == "null" {
+				return "null"
+			}
+			return fmt.Sprintf("%v", value)
+		case []any:
+			parts := make([]string, 0, len(typed))
+			for _, element := range typed {
+				if state, ok := element.(map[string]any); ok && state["state"] == "null" {
+					parts = append(parts, "null")
+				} else {
+					parts = append(parts, fmt.Sprintf("%v", element))
+				}
+			}
+			return "[" + strings.Join(parts, ",") + "]"
+		default:
+			return fmt.Sprintf("%v", value)
+		}
+	}
+	parts := make([]string, 0, len(rows))
+	for _, row := range rows {
+		names := make([]string, 0, len(row.Fields))
+		for name := range row.Fields {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		pairs := make([]string, 0, len(names))
+		for _, name := range names {
+			pairs = append(pairs, name+":"+render(row.Fields[name]))
+		}
+		parts = append(parts, strings.Join(pairs, ","))
+	}
+	return strings.Join(parts, ";")
+}
+
+// eplVariablesCreateRenderValue renders a variable/error record value the same
+// way eplVariablesCreateRenderRows renders fields.
+func eplVariablesCreateRenderValue(value any) string {
+	if value == nil {
+		return ""
+	}
+	if state, ok := value.(map[string]any); ok && state["state"] == "null" {
+		return "null"
+	}
+	if array, ok := value.([]any); ok {
+		parts := make([]string, 0, len(array))
+		for _, element := range array {
+			parts = append(parts, eplVariablesCreateRenderValue(element))
+		}
+		return "[" + strings.Join(parts, ",") + "]"
+	}
+	return fmt.Sprintf("%v", value)
+}
+
+func assertEplVariablesCreateTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != eplVariablesCreateID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	type line struct {
+		caseName  string
+		operation string
+		statement string
+		name      string
+		sequence  uint64
+		newRows   string
+		oldRows   string
+		value     string
+	}
+	expected := []line{
+		{"variable-om", "deployed", "create-var1", "", 1, "", "", ""},
+		{"variable-om", "deployed", "create-var2", "", 1, "", "", ""},
+		{"variable-om", "deployed", "s0", "", 1, "", "", ""},
+		{"variable-om", "listener", "s0", "", 1, "var1OMCreate:null,var2OMCreate:abc", "", ""},
+		{"variable-om", "deployed", "create-arrdouble", "", 1, "", "", ""},
+		{"variable-compile-start-stop", "deployed", "create-var1", "", 1, "", "", ""},
+		{"variable-compile-start-stop", "deployed", "create-var2", "", 1, "", "", ""},
+		{"variable-compile-start-stop", "deployed", "s0", "", 1, "", "", ""},
+		{"variable-compile-start-stop", "listener", "s0", "", 1, "var1CSS:null,var2CSS:abc", "", ""},
+		{"variable-compile-start-stop", "deployed", "create", "", 1, "", "", ""},
+		{"variable-compile-start-stop", "deployed", "set", "", 1, "", "", ""},
+		{"variable-compile-start-stop", "listener", "s0", "", 2, "var1CSS:null,var2CSS:abc", "", ""},
+		{"variable-compile-start-stop", "variable", "", "FOO", 0, "", "", "1"},
+		{"variable-compile-start-stop", "deployed", "create", "", 2, "", "", ""},
+		{"variable-compile-start-stop", "variable", "", "FOO", 0, "", "", "0"},
+		{"variable-compile-start-stop", "deployed", "create-x", "", 1, "", "", ""},
+		{"variable-compile-start-stop", "compile-error", "missing-script", "", 0, "", "", ""},
+		{"variable-compile-start-stop", "deployed", "create-x2", "", 1, "", "", ""},
+		{"variable-subscribe-iterate", "deployed", "create-one", "", 1, "", "", ""},
+		{"variable-subscribe-iterate", "variable", "", "var1SAI", 0, "", "", "null"},
+		{"variable-subscribe-iterate", "deployed", "create-two", "", 1, "", "", ""},
+		{"variable-subscribe-iterate", "variable", "", "var2SAI", 0, "", "", "20"},
+		{"variable-subscribe-iterate", "deployed", "set", "", 1, "", "", ""},
+		{"variable-subscribe-iterate", "listener", "create-one", "", 1, "var1SAI:200", "var1SAI:null", ""},
+		{"variable-subscribe-iterate", "listener", "create-two", "", 1, "var2SAI:201", "var2SAI:20", ""},
+		{"variable-subscribe-iterate", "variable", "", "var1SAI", 0, "", "", "200"},
+		{"variable-subscribe-iterate", "variable", "", "var2SAI", 0, "", "", "201"},
+		{"variable-subscribe-iterate", "listener", "create-one", "", 2, "var1SAI:400", "var1SAI:200", ""},
+		{"variable-subscribe-iterate", "listener", "create-two", "", 2, "var2SAI:401", "var2SAI:201", ""},
+		{"variable-subscribe-iterate", "variable", "", "var1SAI", 0, "", "", "400"},
+		{"variable-subscribe-iterate", "variable", "", "var2SAI", 0, "", "", "401"},
+		{"variable-subscribe-iterate", "deployed", "create-two", "", 2, "", "", ""},
+		{"variable-subscribe-iterate", "variable", "", "var1SAI", 0, "", "", "400"},
+		{"variable-subscribe-iterate", "variable", "", "var2SAI", 0, "", "", "20"},
+		{"variable-declaration-select", "deployed", "create-varX1", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX2", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX3", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX4", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX5", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX6", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX7", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX8", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX9", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX10", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX11", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX12", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX13", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX14", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX15", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX16", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX17", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX18", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX19", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX20", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX21", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX22", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX23", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX24", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX25", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX26", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX27", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX28", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "create-varX29", "", 1, "", "", ""},
+		{"variable-declaration-select", "deployed", "s0", "", 1, "", "", ""},
+		{"variable-declaration-select", "listener", "s0", "", 1, "varX1:1,varX10:-1.1399999856948853,varX11: XXXX ,varX12:a,varX13:a,varX14:x,varX15:20,varX16:9,varX17:40,varX18:9,varX19:40,varX2:2,varX20:10,varX21:null,varX22:null,varX23:null,varX24:null,varX25:null,varX26:null,varX27:null,varX28:null,varX29:null,varX3:5,varX4:true,varX5:true,varX6:1.11,varX7:1.2,varX8:1.12,varX9:2.259999990463257", "", ""},
+		{"variable-dimension-primitive", "deployed", "vars", "", 1, "", "", ""},
+		{"variable-dimension-primitive", "variable", "", "int_prim", 0, "", "", "[1,2]"},
+		{"variable-dimension-primitive", "set-variable-error", "", "", 0, "", "", "Variable 'int_prim' of declared type int[] cannot be assigned a value of type String[]"},
+		{"variable-dimension-primitive", "variable", "", "int_boxed", 0, "", "", "[1,2]"},
+		{"variable-dimension-primitive", "set-variable-error", "", "", 0, "", "", "Variable 'int_boxed' of declared type Integer[] cannot be assigned a value of type int[]"},
+		{"variable-dimension-primitive", "variable", "", "objectarray", 0, "", "", "[1,2]"},
+		{"variable-dimension-primitive", "set-variable-error", "", "", 0, "", "", "Variable 'objectarray' of declared type Object[] cannot be assigned a value of type int[]"},
+		{"variable-dimension-primitive", "variable", "", "objectarray_2dim", 0, "", "", "[[1, 2]]"},
+		{"variable-dimension-primitive", "set-variable-error", "", "", 0, "", "", "Variable 'objectarray_2dim' of declared type Object[][] cannot be assigned a value of type int[]"},
+		{"variable-generic-type", "deployed", "var", "", 1, "", "", ""},
+		{"variable-generic-type", "variable", "", "mylist", 0, "", "", "[a,b]"},
+		{"variable-generic-type", "listener", "s0", "", 1, "c0:[a,b],c1:[a]", "", ""},
+	}
+	if len(trace.Records) != len(expected) {
+		t.Fatalf("trace records = %d, want %d", len(trace.Records), len(expected))
+	}
+	for index, want := range expected {
+		got := trace.Records[index]
+		gotNew := eplVariablesCreateRenderRows(got.New)
+		gotOld := eplVariablesCreateRenderRows(got.Old)
+		gotValue := eplVariablesCreateRenderValue(got.Value)
+		if got.Case != want.caseName || got.Operation != want.operation ||
+			got.Statement != want.statement || got.Name != want.name ||
+			got.Sequence != want.sequence ||
+			gotNew != want.newRows || gotOld != want.oldRows || gotValue != want.value {
+			t.Fatalf("record %d = %s|%s|%s|%s|%d|%s|%s|%s, want %s|%s|%s|%s|%d|%s|%s|%s", index,
+				got.Case, got.Operation, got.Statement, got.Name, got.Sequence, gotNew, gotOld, gotValue,
+				want.caseName, want.operation, want.statement, want.name, want.sequence,
+				want.newRows, want.oldRows, want.value)
+		}
+	}
+	// Structural pins: every record is epoch-timed (no execution moves the
+	// clock), IR pairs appear only on the ord-2 create-variable statements,
+	// and the four ord-5 rejections are the only set-variable-error records.
+	for _, record := range trace.Records {
+		if record.Time != "1970-01-01T00:00:00Z" && record.Operation != "variable" &&
+			record.Operation != "set-variable-error" && record.Operation != "compile-error" {
+			t.Fatalf("record %s/%s/%s time = %q", record.Case, record.Operation, record.Statement, record.Time)
+		}
+		if len(record.Old) > 0 && record.Statement != "create-one" && record.Statement != "create-two" {
+			t.Fatalf("record %s/%s carries unexpected old rows", record.Case, record.Statement)
+		}
+	}
+	setVariableErrors := 0
+	for _, record := range trace.Records {
+		if record.Operation == "set-variable-error" {
+			setVariableErrors++
+		}
+	}
+	if setVariableErrors != 4 {
+		t.Fatalf("set-variable-error records = %d, want 4", setVariableErrors)
+	}
+}
+
+// eplVariablesCreateCheckJavaMetadata verifies differential evidence carries
+// the pinned Java commit, runtime IDs, source files and executions.
+func eplVariablesCreateCheckJavaMetadata(javaCommit string, runtimeIDs, sourceFiles, executions []string) error {
+	if javaCommit != eplVariablesCreateJavaCommit {
+		return fmt.Errorf("Java commit = %q, want %q", javaCommit, eplVariablesCreateJavaCommit)
+	}
+	if !reflect.DeepEqual(runtimeIDs, eplVariablesCreateJavaRuntimeIDs) {
+		return fmt.Errorf("Java runtime IDs = %v, want %v", runtimeIDs, eplVariablesCreateJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(sourceFiles, eplVariablesCreateSources) {
+		return fmt.Errorf("Java source files = %v, want %v", sourceFiles, eplVariablesCreateSources)
+	}
+	if !reflect.DeepEqual(executions, eplVariablesCreateJavaExecutions) {
+		return fmt.Errorf("Java executions = %v, want %v", executions, eplVariablesCreateJavaExecutions)
+	}
+	return nil
+}
+
+func TestRunEplVariablesCreateDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariablesCreateID,
+		"-scenario", filepath.Join(root, eplVariablesCreateID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEplVariablesCreateTrace(t, trace)
+}
+
+func TestRunEplVariablesCreateDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), eplVariablesCreateID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariablesCreateID + "-diff",
+		"-scenario", filepath.Join(root, eplVariablesCreateID+".json"),
+		"-java-trace", filepath.Join(root, eplVariablesCreateID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if err := eplVariablesCreateCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("Java metadata: %v", err)
+	}
+	assertEplVariablesCreateTrace(t, evidence.JavaTrace)
+	assertEplVariablesCreateTrace(t, evidence.GoTrace)
+}
+
+func TestRunEplVariablesCreateDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// Record 3 is ord 0's s0 row: the uninitialized long variable
+			// reads null while the string initializer reads "abc".
+			name: "om-select-initializer-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[3].New[0].Fields["var2OMCreate"] = "WRONG"
+			},
+		},
+		{
+			// Record 12 is the ESPER-545 read: FOO incremented to 1 by the
+			// on-pattern set before undeploy-all resets it.
+			name: "compile-start-stop-foo-increment-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].Value = json.Number("0")
+			},
+		},
+		{
+			// Record 14 is the post-redeploy read: FOO resets to its 0
+			// initializer when the create module redeploys.
+			name: "compile-start-stop-redeploy-reset-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[14].Value = json.Number("1")
+			},
+		},
+		{
+			// Record 23 is ord 2's first IR pair: the committed write delivers
+			// new=200 against old=null on create-one.
+			name: "subscribe-iterate-irpair-old-loss",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[23].Old = nil
+			},
+		},
+		{
+			// Record 24 is the sequential-assignment proof: var2SAI reads the
+			// just-written var1SAI (200+1), not the pre-send value.
+			name: "subscribe-iterate-sequential-assignment-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[24].New[0].Fields["var2SAI"] = json.Number("21")
+			},
+		},
+		{
+			// Record 33 is the redeployed create-two read: the module variable
+			// resets to its 20 initializer while create-one survives at 400.
+			name: "subscribe-iterate-redeploy-reset-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[33].Value = json.Number("401")
+			},
+		},
+		{
+			// Record 64 is the 29-variable select row: string-to-int coercion
+			// (varX2), expression folding (varX3) and char rendering (varX13).
+			name: "declaration-select-coercion-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[64].New[0].Fields["varX2"] = json.Number("22")
+			},
+		},
+		{
+			// Record 67 is the first ord-5 rejection: String[] cannot assign
+			// into the primitive int[] variable.
+			name: "dimension-primitive-rejection-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[67].Value = "<no-error>"
+			},
+		},
+		{
+			// Record 76 is ord 6's enum-where projection: c1 keeps only 'a'.
+			name: "generic-type-enum-where-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[76].New[0].Fields["c1"] = []any{"a", "b"}
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:76]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, eplVariablesCreateID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), eplVariablesCreateID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", eplVariablesCreateID + "-diff",
+				"-scenario", filepath.Join(root, eplVariablesCreateID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunEplVariablesCreateCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, eplVariablesCreateID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, eplVariablesCreateID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, eplVariablesCreateID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if err := eplVariablesCreateCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("checked-in Java metadata: %v", err)
+	}
+	assertEplVariablesCreateTrace(t, javaTrace)
+	assertEplVariablesCreateTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, eplVariablesCreateID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		eplVariablesCreateJavaCommit,
+		eplVariablesCreateJavaRuntimeIDs,
+		eplVariablesCreateSources,
+		eplVariablesCreateJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", eplVariablesCreateID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertEplVariablesCreateTrace(t, replayed)
+}
+
+func TestRunEplVariablesCreateRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, eplVariablesCreateID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "flags-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"javaFlags": [
+    "RUNTIMEOPS"
+  ]`), []byte(`"javaFlags": []`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-67e6441b95a4ca30917b"`),
+				[]byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "case-ordinal-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"ordinal": 5`), []byte(`"ordinal": 4`), 1)
+		}},
+		{name: "s0-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select var1OMCreate, var2OMCreate from SupportBean`),
+				[]byte(`select var1OMCreate from SupportBean`), 1)
+		}},
+		{name: "on-set-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`var2SAI = var1SAI + 1`),
+				[]byte(`var2SAI = var1SAI + 2`), 1)
+		}},
+		{name: "send-payload-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"payload": {
+        "theString": "E1",
+        "intPrimitive": 100
+      }`),
+				[]byte(`"payload": {
+        "theString": "E1",
+        "intPrimitive": 50
+      }`), 1)
+		}},
+		{name: "expect-error-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`declared type int[] cannot be assigned a value of type String[]`),
+				[]byte(`declared type int[] cannot be assigned a value of type Object[]`), 1)
+		}},
+		{name: "undeploy-order-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "undeploy",
+      "case": "variable-subscribe-iterate",
+      "statement": "set"`),
+				[]byte(`"op": "undeploy",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-one"`), 1)
+		}},
+		{name: "unknown-op", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "undeploy-all"`), []byte(`"op": "close-all"`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), eplVariablesCreateID+".json")
+			if err := os.WriteFile(path, test.mutate(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", eplVariablesCreateID, "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q was accepted", test.name)
+			}
+		})
+	}
+}
+
+func TestRunEplVariablesCreateRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", eplVariablesCreateID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version      string   `json:"version"`
+		ID           string   `json:"id"`
+		Description  string   `json:"description"`
+		JavaCommit   string   `json:"javaCommit"`
+		JavaSource   string   `json:"javaSource"`
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaFlags    []string `json:"javaFlags"`
+		Cases        []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+			Observation   string `json:"observation"`
+			EPL           string `json:"epl"`
+		} `json:"cases"`
+		Steps []struct {
+			Op        string `json:"op"`
+			Case      string `json:"case"`
+			Statement string `json:"statement"`
+			Name      string `json:"name"`
+		} `json:"steps"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != eplVariablesCreateID ||
+		document.Description != eplVariablesCreateDescription ||
+		document.JavaCommit != eplVariablesCreateJavaCommit ||
+		document.JavaSource != eplVariablesCreateSource {
+		t.Fatalf("scenario identity = %q/%q/%q/%q/%q", document.Version, document.ID,
+			document.Description, document.JavaCommit, document.JavaSource)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, eplVariablesCreateJavaRuntimeIDs) {
+		t.Fatalf("scenario javaRuntimes = %v, want %v", document.JavaRuntimes, eplVariablesCreateJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(document.JavaNames, eplVariablesCreateJavaExecutions) {
+		t.Fatalf("scenario javaNames = %v, want %v", document.JavaNames, eplVariablesCreateJavaExecutions)
+	}
+	if !reflect.DeepEqual(document.JavaFlags, eplVariablesCreateJavaFlags) {
+		t.Fatalf("scenario javaFlags = %v, want %v", document.JavaFlags, eplVariablesCreateJavaFlags)
+	}
+	if len(document.Cases) != len(eplVariablesCreateCases) {
+		t.Fatalf("scenario cases = %d, want %d", len(document.Cases), len(eplVariablesCreateCases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != eplVariablesCreateCases[index] ||
+			entry.Ordinal != eplVariablesCreateOrdinals[index] ||
+			entry.RuntimeID != eplVariablesCreateJavaRuntimeIDs[index] ||
+			entry.ExecutionName != eplVariablesCreateJavaExecutions[index] ||
+			entry.Observation != eplVariablesCreateCaseObservations[index] ||
+			entry.EPL != eplVariablesCreateCaseEPLs[index] {
+			t.Fatalf("scenario case %d = %#v", index, entry)
+		}
+	}
+	// Step order per case: case marker, then the pinned case steps.
+	offset := 0
+	for _, caseName := range eplVariablesCreateCases {
+		if offset >= len(document.Steps) {
+			t.Fatalf("missing case %q", caseName)
+		}
+		if document.Steps[offset].Op != "case" || document.Steps[offset].Case != caseName {
+			t.Fatalf("step %d is not the %q case marker", offset, caseName)
+		}
+		offset++
+		offset += len(eplVariablesCreateCaseSteps[caseName])
+	}
+	if offset != len(document.Steps) {
+		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
+	}
+}

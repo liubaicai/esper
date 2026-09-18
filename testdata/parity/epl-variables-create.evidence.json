@@ -1,0 +1,2324 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-67e6441b95a4ca30917b",
+    "java-runtime-74285cbcf0d7aeabf02f",
+    "java-runtime-06466d91981a6c410b39",
+    "java-runtime-75cb3e01ac92790b5194",
+    "java-runtime-71775e7db7d1ffd875ba",
+    "java-runtime-4ac4b7b111d10a20f74d"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesCreate.java"
+  ],
+  "javaExecutions": [
+    "EPLVariableOM",
+    "EPLVariableCompileStartStop",
+    "EPLVariableSubscribeAndIterate",
+    "EPLVariableDeclarationAndSelect",
+    "EPLVariableDimensionAndPrimitive",
+    "EPLVariableGenericType"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-variables-create",
+    "steps": [
+      {
+        "op": "case",
+        "case": "variable-om"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-om",
+        "statement": "create-var1",
+        "epl": "@public create variable long var1OMCreate"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-om",
+        "statement": "create-var1"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-om",
+        "statement": "create-var2",
+        "epl": "@public create variable string var2OMCreate = \"abc\""
+      },
+      {
+        "op": "deployed",
+        "case": "variable-om",
+        "statement": "create-var2"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-om",
+        "statement": "s0",
+        "epl": "@name('s0') select var1OMCreate, var2OMCreate from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-om",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "variable-om",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "variable-om",
+        "statement": "create-arrdouble",
+        "epl": "create variable double[] arrdouble = {1.0d,2.0d}"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-om",
+        "statement": "create-arrdouble"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-om"
+      },
+      {
+        "op": "case",
+        "case": "variable-compile-start-stop"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-compile-start-stop",
+        "statement": "create-var1",
+        "epl": "@public create variable long var1CSS"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-compile-start-stop",
+        "statement": "create-var1"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-compile-start-stop",
+        "statement": "create-var2",
+        "epl": "@public create variable string var2CSS = \"abc\""
+      },
+      {
+        "op": "deployed",
+        "case": "variable-compile-start-stop",
+        "statement": "create-var2"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-compile-start-stop",
+        "statement": "s0",
+        "epl": "@name('s0') select var1CSS, var2CSS from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-compile-start-stop",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "variable-compile-start-stop",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "variable-compile-start-stop",
+        "statement": "create",
+        "epl": "@name('create') @public create variable int FOO = 0"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-compile-start-stop",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-compile-start-stop",
+        "statement": "set",
+        "epl": "on pattern [every SupportBean] set FOO = FOO + 1"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-compile-start-stop",
+        "statement": "set"
+      },
+      {
+        "op": "send",
+        "case": "variable-compile-start-stop",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-compile-start-stop",
+        "statement": "create",
+        "name": "FOO"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-compile-start-stop"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-compile-start-stop",
+        "statement": "create",
+        "epl": "@name('create') @public create variable int FOO = 0"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-compile-start-stop",
+        "statement": "create"
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-compile-start-stop",
+        "statement": "create",
+        "name": "FOO"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-compile-start-stop",
+        "statement": "create-x",
+        "epl": "@private create variable int x = 123"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-compile-start-stop",
+        "statement": "create-x"
+      },
+      {
+        "op": "build-error",
+        "case": "variable-compile-start-stop",
+        "statement": "missing-script",
+        "epl": "select missingScript(x) from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-compile-start-stop",
+        "statement": "create-x2",
+        "epl": "@private create variable int x = 123"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-compile-start-stop",
+        "statement": "create-x2"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-compile-start-stop"
+      },
+      {
+        "op": "case",
+        "case": "variable-subscribe-iterate"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-one",
+        "epl": "@name('create-one') @public create variable long var1SAI = null"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-one"
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-one",
+        "name": "var1SAI"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two",
+        "epl": "@name('create-two') @public create variable long var2SAI = 20"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two"
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two",
+        "name": "var2SAI"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-subscribe-iterate",
+        "statement": "set",
+        "epl": "@name('set') on SupportBean set var1SAI = intPrimitive * 2, var2SAI = var1SAI + 1"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-subscribe-iterate",
+        "statement": "set"
+      },
+      {
+        "op": "send",
+        "case": "variable-subscribe-iterate",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-one",
+        "name": "var1SAI"
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two",
+        "name": "var2SAI"
+      },
+      {
+        "op": "send",
+        "case": "variable-subscribe-iterate",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 200
+        }
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-one",
+        "name": "var1SAI"
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two",
+        "name": "var2SAI"
+      },
+      {
+        "op": "undeploy",
+        "case": "variable-subscribe-iterate",
+        "statement": "set"
+      },
+      {
+        "op": "undeploy",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two",
+        "epl": "@name('create-two') @public create variable long var2SAI = 20"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two"
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-one",
+        "name": "var1SAI"
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-subscribe-iterate",
+        "statement": "create-two",
+        "name": "var2SAI"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-subscribe-iterate"
+      },
+      {
+        "op": "case",
+        "case": "variable-declaration-select"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX1",
+        "epl": "@public create variable int varX1 = 1"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX1"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX2",
+        "epl": "@public create variable int varX2 = '2'"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX2"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX3",
+        "epl": "@public create variable INTEGER varX3 =  3+2 "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX3"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX4",
+        "epl": "@public create variable bool varX4 =  true|false "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX4"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX5",
+        "epl": "@public create variable boolean varX5 =  varX1=1 "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX5"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX6",
+        "epl": "@public create variable double varX6 =  1.11 "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX6"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX7",
+        "epl": "@public create variable double varX7 =  1.20d "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX7"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX8",
+        "epl": "@public create variable Double varX8 =  ' 1.12 ' "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX8"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX9",
+        "epl": "@public create variable float varX9 =  1.13f*2f "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX9"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX10",
+        "epl": "@public create variable FLOAT varX10 =  -1.14f "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX10"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX11",
+        "epl": "@public create variable string varX11 =  ' XXXX ' "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX11"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX12",
+        "epl": "@public create variable string varX12 =  \"a\" "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX12"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX13",
+        "epl": "@public create variable character varX13 = 'a'"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX13"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX14",
+        "epl": "@public create variable char varX14 = 'x'"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX14"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX15",
+        "epl": "@public create variable short varX15 =  20 "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX15"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX16",
+        "epl": "@public create variable SHORT varX16 =  ' 9 ' "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX16"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX17",
+        "epl": "@public create variable long varX17 =  20*2 "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX17"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX18",
+        "epl": "@public create variable LONG varX18 =  ' 9 ' "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX18"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX19",
+        "epl": "@public create variable byte varX19 =  20*2 "
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX19"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX20",
+        "epl": "@public create variable BYTE varX20 = 9+1"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX20"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX21",
+        "epl": "@public create variable int varX21"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX21"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX22",
+        "epl": "@public create variable bool varX22"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX22"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX23",
+        "epl": "@public create variable double varX23"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX23"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX24",
+        "epl": "@public create variable float varX24"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX24"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX25",
+        "epl": "@public create variable string varX25"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX25"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX26",
+        "epl": "@public create variable char varX26"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX26"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX27",
+        "epl": "@public create variable short varX27"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX27"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX28",
+        "epl": "@public create variable long varX28"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX28"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "create-varX29",
+        "epl": "@public create variable BYTE varX29"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "create-varX29"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-declaration-select",
+        "statement": "s0",
+        "epl": "@name('s0') select varX1,varX2,varX3,varX4,varX5,varX6,varX7,varX8,varX9,varX10,varX11,varX12,varX13,varX14,varX15,varX16,varX17,varX18,varX19,varX20,varX21,varX22,varX23,varX24,varX25,varX26,varX27,varX28,varX29 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-declaration-select",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "variable-declaration-select",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-declaration-select"
+      },
+      {
+        "op": "case",
+        "case": "variable-dimension-primitive"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "epl": "@name('vars') create variable int[primitive] int_prim = null;\ncreate variable int[] int_boxed = null;\ncreate variable java.lang.Object[] objectarray = null;\ncreate variable java.lang.Object[][] objectarray_2dim = null;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-dimension-primitive",
+        "statement": "vars"
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "name": "int_prim",
+        "payload": {
+          "type": "int-array",
+          "value": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "name": "int_prim"
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "expectError": "Variable 'int_prim' of declared type int[] cannot be assigned a value of type String[]",
+        "name": "int_prim",
+        "payload": {
+          "type": "string-array",
+          "value": []
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "name": "int_boxed",
+        "payload": {
+          "type": "integer-array",
+          "value": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "name": "int_boxed"
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "expectError": "Variable 'int_boxed' of declared type Integer[] cannot be assigned a value of type int[]",
+        "name": "int_boxed",
+        "payload": {
+          "type": "int-array",
+          "value": []
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "name": "objectarray",
+        "payload": {
+          "type": "integer-array",
+          "value": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "name": "objectarray"
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "expectError": "Variable 'objectarray' of declared type Object[] cannot be assigned a value of type int[]",
+        "name": "objectarray",
+        "payload": {
+          "type": "int-array",
+          "value": []
+        }
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "name": "objectarray_2dim",
+        "payload": {
+          "type": "object-array-2dim",
+          "value": [
+            [
+              1,
+              2
+            ]
+          ]
+        }
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "name": "objectarray_2dim"
+      },
+      {
+        "op": "set-variable",
+        "case": "variable-dimension-primitive",
+        "statement": "vars",
+        "expectError": "Variable 'objectarray_2dim' of declared type Object[][] cannot be assigned a value of type int[]",
+        "name": "objectarray_2dim",
+        "payload": {
+          "type": "int-array",
+          "value": []
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-dimension-primitive"
+      },
+      {
+        "op": "case",
+        "case": "variable-generic-type"
+      },
+      {
+        "op": "deploy",
+        "case": "variable-generic-type",
+        "statement": "var",
+        "epl": "@name('var') create variable List\u003cString\u003e mylist = Arrays.asList('a', 'b');\n@name('s0') select mylist as c0, mylist.where(v =\u003e v = 'a') as c1 from SupportBean;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "variable-generic-type",
+        "statement": "var"
+      },
+      {
+        "op": "read-variable",
+        "case": "variable-generic-type",
+        "statement": "var",
+        "name": "mylist"
+      },
+      {
+        "op": "send",
+        "case": "variable-generic-type",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": null,
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "variable-generic-type"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-variables-create",
+    "records": [
+      {
+        "case": "variable-om",
+        "operation": "deployed",
+        "statement": "create-var1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-om",
+        "operation": "deployed",
+        "statement": "create-var2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-om",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OMCreate": {
+                "state": "null"
+              },
+              "var2OMCreate": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-om",
+        "operation": "deployed",
+        "statement": "create-arrdouble",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create-var1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create-var2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1CSS": {
+                "state": "null"
+              },
+              "var2CSS": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1CSS": {
+                "state": "null"
+              },
+              "var2CSS": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "FOO",
+        "value": 1
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "FOO",
+        "value": 0
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create-x",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "compile-error",
+        "statement": "missing-script",
+        "sequence": 0
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create-x2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1SAI",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2SAI",
+        "value": 20
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "deployed",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "listener",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1SAI": 200
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1SAI": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "listener",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var2SAI": 201
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "var2SAI": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1SAI",
+        "value": 200
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2SAI",
+        "value": 201
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "listener",
+        "statement": "create-one",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1SAI": 400
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1SAI": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "listener",
+        "statement": "create-two",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var2SAI": 401
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "var2SAI": 201
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1SAI",
+        "value": 400
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2SAI",
+        "value": 401
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1SAI",
+        "value": 400
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2SAI",
+        "value": 20
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX6",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX7",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX8",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX9",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX10",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX11",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX12",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX13",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX14",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX15",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX16",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX17",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX18",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX19",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX20",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX21",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX22",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX23",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX24",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX25",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX26",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX27",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX28",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX29",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "varX1": 1,
+              "varX10": -1.1399999856948853,
+              "varX11": " XXXX ",
+              "varX12": "a",
+              "varX13": "a",
+              "varX14": "x",
+              "varX15": 20,
+              "varX16": 9,
+              "varX17": 40,
+              "varX18": 9,
+              "varX19": 40,
+              "varX2": 2,
+              "varX20": 10,
+              "varX21": {
+                "state": "null"
+              },
+              "varX22": {
+                "state": "null"
+              },
+              "varX23": {
+                "state": "null"
+              },
+              "varX24": {
+                "state": "null"
+              },
+              "varX25": {
+                "state": "null"
+              },
+              "varX26": {
+                "state": "null"
+              },
+              "varX27": {
+                "state": "null"
+              },
+              "varX28": {
+                "state": "null"
+              },
+              "varX29": {
+                "state": "null"
+              },
+              "varX3": 5,
+              "varX4": true,
+              "varX5": true,
+              "varX6": 1.11,
+              "varX7": 1.2,
+              "varX8": 1.12,
+              "varX9": 2.259999990463257
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "deployed",
+        "statement": "vars",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "int_prim",
+        "value": [
+          1,
+          2
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'int_prim' of declared type int[] cannot be assigned a value of type String[]"
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "int_boxed",
+        "value": [
+          1,
+          2
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'int_boxed' of declared type Integer[] cannot be assigned a value of type int[]"
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "objectarray",
+        "value": [
+          1,
+          2
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'objectarray' of declared type Object[] cannot be assigned a value of type int[]"
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "objectarray_2dim",
+        "value": [
+          "[1, 2]"
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'objectarray_2dim' of declared type Object[][] cannot be assigned a value of type int[]"
+      },
+      {
+        "case": "variable-generic-type",
+        "operation": "deployed",
+        "statement": "var",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-generic-type",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "mylist",
+        "value": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "case": "variable-generic-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "a",
+                "b"
+              ],
+              "c1": [
+                "a"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-variables-create",
+    "records": [
+      {
+        "case": "variable-om",
+        "operation": "deployed",
+        "statement": "create-var1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-om",
+        "operation": "deployed",
+        "statement": "create-var2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-om",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-om",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1OMCreate": {
+                "state": "null"
+              },
+              "var2OMCreate": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-om",
+        "operation": "deployed",
+        "statement": "create-arrdouble",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create-var1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create-var2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1CSS": {
+                "state": "null"
+              },
+              "var2CSS": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1CSS": {
+                "state": "null"
+              },
+              "var2CSS": "abc"
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "FOO",
+        "value": 1
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "FOO",
+        "value": 0
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create-x",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "compile-error",
+        "statement": "missing-script",
+        "sequence": 0
+      },
+      {
+        "case": "variable-compile-start-stop",
+        "operation": "deployed",
+        "statement": "create-x2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "deployed",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1SAI",
+        "value": {
+          "state": "null"
+        }
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2SAI",
+        "value": 20
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "deployed",
+        "statement": "set",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "listener",
+        "statement": "create-one",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1SAI": 200
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1SAI": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "listener",
+        "statement": "create-two",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var2SAI": 201
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "var2SAI": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1SAI",
+        "value": 200
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2SAI",
+        "value": 201
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "listener",
+        "statement": "create-one",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1SAI": 400
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "var1SAI": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "listener",
+        "statement": "create-two",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "var2SAI": 401
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "var2SAI": 201
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1SAI",
+        "value": 400
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2SAI",
+        "value": 401
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "deployed",
+        "statement": "create-two",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var1SAI",
+        "value": 400
+      },
+      {
+        "case": "variable-subscribe-iterate",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "var2SAI",
+        "value": 20
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX3",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX4",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX5",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX6",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX7",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX8",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX9",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX10",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX11",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX12",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX13",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX14",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX15",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX16",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX17",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX18",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX19",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX20",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX21",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX22",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX23",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX24",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX25",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX26",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX27",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX28",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "create-varX29",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-declaration-select",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "varX1": 1,
+              "varX10": -1.1399999856948853,
+              "varX11": " XXXX ",
+              "varX12": "a",
+              "varX13": "a",
+              "varX14": "x",
+              "varX15": 20,
+              "varX16": 9,
+              "varX17": 40,
+              "varX18": 9,
+              "varX19": 40,
+              "varX2": 2,
+              "varX20": 10,
+              "varX21": {
+                "state": "null"
+              },
+              "varX22": {
+                "state": "null"
+              },
+              "varX23": {
+                "state": "null"
+              },
+              "varX24": {
+                "state": "null"
+              },
+              "varX25": {
+                "state": "null"
+              },
+              "varX26": {
+                "state": "null"
+              },
+              "varX27": {
+                "state": "null"
+              },
+              "varX28": {
+                "state": "null"
+              },
+              "varX29": {
+                "state": "null"
+              },
+              "varX3": 5,
+              "varX4": true,
+              "varX5": true,
+              "varX6": 1.11,
+              "varX7": 1.2,
+              "varX8": 1.12,
+              "varX9": 2.259999990463257
+            }
+          }
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "deployed",
+        "statement": "vars",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "int_prim",
+        "value": [
+          1,
+          2
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'int_prim' of declared type int[] cannot be assigned a value of type String[]"
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "int_boxed",
+        "value": [
+          1,
+          2
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'int_boxed' of declared type Integer[] cannot be assigned a value of type int[]"
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "objectarray",
+        "value": [
+          1,
+          2
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'objectarray' of declared type Object[] cannot be assigned a value of type int[]"
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "objectarray_2dim",
+        "value": [
+          "[1, 2]"
+        ]
+      },
+      {
+        "case": "variable-dimension-primitive",
+        "operation": "set-variable-error",
+        "sequence": 0,
+        "value": "Variable 'objectarray_2dim' of declared type Object[][] cannot be assigned a value of type int[]"
+      },
+      {
+        "case": "variable-generic-type",
+        "operation": "deployed",
+        "statement": "var",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "variable-generic-type",
+        "operation": "variable",
+        "sequence": 0,
+        "name": "mylist",
+        "value": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "case": "variable-generic-type",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": [
+                "a",
+                "b"
+              ],
+              "c1": [
+                "a"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

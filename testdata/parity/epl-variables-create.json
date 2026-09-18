@@ -1,0 +1,938 @@
+{
+  "version": "esper-parity/v1",
+  "id": "epl-variables-create",
+  "description": "EPLVariablesCreate variable-declaration semantics: object-model/deployable create-variable reads (ord 0), compile-start-stop lifecycle with redeploy reset (ord 1), create-variable IR-pair listeners and iterator reads with sequential on-set assignment (ord 2), the 29-variable typing/coercion matrix (ord 3), runtime set/get over primitive and boxed array dimensions (ord 5), and a List<String> variable with an enum-where projection (ord 6). Ord 4 (EPLVariableInvalid) is compile-failure-only and covered by Go probes. listener records on create-one/create-two mirror the create-variable statement's IR pairs; variable records mirror getVariableValue/iterator reads (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesCreate.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesCreate.java",
+  "javaRuntimes": [
+    "java-runtime-67e6441b95a4ca30917b",
+    "java-runtime-74285cbcf0d7aeabf02f",
+    "java-runtime-06466d91981a6c410b39",
+    "java-runtime-75cb3e01ac92790b5194",
+    "java-runtime-71775e7db7d1ffd875ba",
+    "java-runtime-4ac4b7b111d10a20f74d"
+  ],
+  "javaNames": [
+    "EPLVariableOM",
+    "EPLVariableCompileStartStop",
+    "EPLVariableSubscribeAndIterate",
+    "EPLVariableDeclarationAndSelect",
+    "EPLVariableDimensionAndPrimitive",
+    "EPLVariableGenericType"
+  ],
+  "javaStaticIds": [
+    "java-6a445f399d99f5d4785d",
+    "java-6a445f399d99f5d4785d",
+    "java-6a445f399d99f5d4785d",
+    "java-6a445f399d99f5d4785d",
+    "java-6a445f399d99f5d4785d",
+    "java-6a445f399d99f5d4785d"
+  ],
+  "javaFlags": [
+    "RUNTIMEOPS"
+  ],
+  "cases": [
+    {
+      "case": "variable-om",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-67e6441b95a4ca30917b",
+      "executionName": "EPLVariableOM",
+      "observation": "listener; two create-variable deployments (uninitialized long, string initialized to \"abc\") feed a select that observes new=[null,\"abc\"] on the first SupportBean; the SODA toEPL assertions are API-only approved differences",
+      "epl": "@name('s0') select var1OMCreate, var2OMCreate from SupportBean"
+    },
+    {
+      "case": "variable-compile-start-stop",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-74285cbcf0d7aeabf02f",
+      "executionName": "EPLVariableCompileStartStop",
+      "observation": "listener+variable; select over two module variables, then ESPER-545: an on-pattern set increments module variable FOO to 1, undeploy-all plus redeploy of the create module resets FOO to 0, and a failed compile leaves no residue so the same private create redeploys",
+      "epl": "@name('create') @public create variable int FOO = 0"
+    },
+    {
+      "case": "variable-subscribe-iterate",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-06466d91981a6c410b39",
+      "executionName": "EPLVariableSubscribeAndIterate",
+      "observation": "listener+variable; create-variable statements deliver committed writes as IR pairs (new=current, old=previous), the on-set assignments apply sequentially so var2SAI sees the new var1SAI, iterator reads track current values, and redeploying create-two resets it to 20 while create-one survives at 400",
+      "epl": "@name('set') on SupportBean set var1SAI = intPrimitive * 2, var2SAI = var1SAI + 1"
+    },
+    {
+      "case": "variable-declaration-select",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-75cb3e01ac92790b5194",
+      "executionName": "EPLVariableDeclarationAndSelect",
+      "observation": "listener; 29 create-variable modules pin the declaration typing/coercion matrix (string-to-int, expression folding, equality-as-initializer, char/byte/short/float widths, uninitialized nulls) projected by one select",
+      "epl": "@name('s0') select varX1,varX2,varX3,varX4,varX5,varX6,varX7,varX8,varX9,varX10,varX11,varX12,varX13,varX14,varX15,varX16,varX17,varX18,varX19,varX20,varX21,varX22,varX23,varX24,varX25,varX26,varX27,varX28,varX29 from SupportBean"
+    },
+    {
+      "case": "variable-dimension-primitive",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-71775e7db7d1ffd875ba",
+      "executionName": "EPLVariableDimensionAndPrimitive",
+      "observation": "variable+set-variable-error; runtime set/get over int[primitive], int[], Object[] and Object[][] variables: exact-order reads after writes, and rejections for String[] into int[], int[] into Integer[]/Object[]/Object[][] (primitive arrays are not covariant)",
+      "epl": "@name('vars') create variable int[primitive] int_prim = null;\ncreate variable int[] int_boxed = null;\ncreate variable java.lang.Object[] objectarray = null;\ncreate variable java.lang.Object[][] objectarray_2dim = null;\n"
+    },
+    {
+      "case": "variable-generic-type",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-4ac4b7b111d10a20f74d",
+      "executionName": "EPLVariableGenericType",
+      "observation": "listener+variable; a List<String> variable initialized to [a,b] reads back in exact order and projects c0=[a,b] plus the enum-where filtered c1=[a] on a SupportBean send",
+      "epl": "@name('var') create variable List<String> mylist = Arrays.asList('a', 'b');\n@name('s0') select mylist as c0, mylist.where(v => v = 'a') as c1 from SupportBean;\n"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "variable-om"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-om",
+      "statement": "create-var1",
+      "epl": "@public create variable long var1OMCreate"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-om",
+      "statement": "create-var1"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-om",
+      "statement": "create-var2",
+      "epl": "@public create variable string var2OMCreate = \"abc\""
+    },
+    {
+      "op": "deployed",
+      "case": "variable-om",
+      "statement": "create-var2"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-om",
+      "statement": "s0",
+      "epl": "@name('s0') select var1OMCreate, var2OMCreate from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-om",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "variable-om",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "variable-om",
+      "statement": "create-arrdouble",
+      "epl": "create variable double[] arrdouble = {1.0d,2.0d}",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deployed",
+      "case": "variable-om",
+      "statement": "create-arrdouble"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "variable-om"
+    },
+    {
+      "op": "case",
+      "case": "variable-compile-start-stop"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-compile-start-stop",
+      "statement": "create-var1",
+      "epl": "@public create variable long var1CSS"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-compile-start-stop",
+      "statement": "create-var1"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-compile-start-stop",
+      "statement": "create-var2",
+      "epl": "@public create variable string var2CSS = \"abc\""
+    },
+    {
+      "op": "deployed",
+      "case": "variable-compile-start-stop",
+      "statement": "create-var2"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-compile-start-stop",
+      "statement": "s0",
+      "epl": "@name('s0') select var1CSS, var2CSS from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-compile-start-stop",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "variable-compile-start-stop",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "variable-compile-start-stop",
+      "statement": "create",
+      "epl": "@name('create') @public create variable int FOO = 0"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-compile-start-stop",
+      "statement": "create"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-compile-start-stop",
+      "statement": "set",
+      "epl": "on pattern [every SupportBean] set FOO = FOO + 1"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-compile-start-stop",
+      "statement": "set"
+    },
+    {
+      "op": "send",
+      "case": "variable-compile-start-stop",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-compile-start-stop",
+      "statement": "create",
+      "name": "FOO"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "variable-compile-start-stop"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-compile-start-stop",
+      "statement": "create",
+      "epl": "@name('create') @public create variable int FOO = 0",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deployed",
+      "case": "variable-compile-start-stop",
+      "statement": "create"
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-compile-start-stop",
+      "statement": "create",
+      "name": "FOO"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-compile-start-stop",
+      "statement": "create-x",
+      "epl": "@private create variable int x = 123",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deployed",
+      "case": "variable-compile-start-stop",
+      "statement": "create-x"
+    },
+    {
+      "op": "build-error",
+      "case": "variable-compile-start-stop",
+      "statement": "missing-script",
+      "epl": "select missingScript(x) from SupportBean"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-compile-start-stop",
+      "statement": "create-x2",
+      "epl": "@private create variable int x = 123",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deployed",
+      "case": "variable-compile-start-stop",
+      "statement": "create-x2"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "variable-compile-start-stop"
+    },
+    {
+      "op": "case",
+      "case": "variable-subscribe-iterate"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-one",
+      "epl": "@name('create-one') @public create variable long var1SAI = null"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-one"
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-one",
+      "name": "var1SAI"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two",
+      "epl": "@name('create-two') @public create variable long var2SAI = 20"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two"
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two",
+      "name": "var2SAI"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-subscribe-iterate",
+      "statement": "set",
+      "epl": "@name('set') on SupportBean set var1SAI = intPrimitive * 2, var2SAI = var1SAI + 1"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-subscribe-iterate",
+      "statement": "set"
+    },
+    {
+      "op": "send",
+      "case": "variable-subscribe-iterate",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-one",
+      "name": "var1SAI"
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two",
+      "name": "var2SAI"
+    },
+    {
+      "op": "send",
+      "case": "variable-subscribe-iterate",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 200
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-one",
+      "name": "var1SAI"
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two",
+      "name": "var2SAI"
+    },
+    {
+      "op": "undeploy",
+      "case": "variable-subscribe-iterate",
+      "statement": "set"
+    },
+    {
+      "op": "undeploy",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two",
+      "epl": "@name('create-two') @public create variable long var2SAI = 20",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deployed",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two"
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-one",
+      "name": "var1SAI"
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-subscribe-iterate",
+      "statement": "create-two",
+      "name": "var2SAI"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "variable-subscribe-iterate"
+    },
+    {
+      "op": "case",
+      "case": "variable-declaration-select"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX1",
+      "epl": "@public create variable int varX1 = 1"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX1"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX2",
+      "epl": "@public create variable int varX2 = '2'"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX2"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX3",
+      "epl": "@public create variable INTEGER varX3 =  3+2 "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX3"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX4",
+      "epl": "@public create variable bool varX4 =  true|false "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX4"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX5",
+      "epl": "@public create variable boolean varX5 =  varX1=1 "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX5"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX6",
+      "epl": "@public create variable double varX6 =  1.11 "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX6"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX7",
+      "epl": "@public create variable double varX7 =  1.20d "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX7"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX8",
+      "epl": "@public create variable Double varX8 =  ' 1.12 ' "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX8"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX9",
+      "epl": "@public create variable float varX9 =  1.13f*2f "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX9"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX10",
+      "epl": "@public create variable FLOAT varX10 =  -1.14f "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX10"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX11",
+      "epl": "@public create variable string varX11 =  ' XXXX ' "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX11"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX12",
+      "epl": "@public create variable string varX12 =  \"a\" "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX12"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX13",
+      "epl": "@public create variable character varX13 = 'a'"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX13"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX14",
+      "epl": "@public create variable char varX14 = 'x'"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX14"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX15",
+      "epl": "@public create variable short varX15 =  20 "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX15"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX16",
+      "epl": "@public create variable SHORT varX16 =  ' 9 ' "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX16"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX17",
+      "epl": "@public create variable long varX17 =  20*2 "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX17"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX18",
+      "epl": "@public create variable LONG varX18 =  ' 9 ' "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX18"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX19",
+      "epl": "@public create variable byte varX19 =  20*2 "
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX19"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX20",
+      "epl": "@public create variable BYTE varX20 = 9+1"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX20"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX21",
+      "epl": "@public create variable int varX21"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX21"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX22",
+      "epl": "@public create variable bool varX22"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX22"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX23",
+      "epl": "@public create variable double varX23"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX23"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX24",
+      "epl": "@public create variable float varX24"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX24"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX25",
+      "epl": "@public create variable string varX25"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX25"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX26",
+      "epl": "@public create variable char varX26"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX26"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX27",
+      "epl": "@public create variable short varX27"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX27"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX28",
+      "epl": "@public create variable long varX28"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX28"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "create-varX29",
+      "epl": "@public create variable BYTE varX29"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "create-varX29"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-declaration-select",
+      "statement": "s0",
+      "epl": "@name('s0') select varX1,varX2,varX3,varX4,varX5,varX6,varX7,varX8,varX9,varX10,varX11,varX12,varX13,varX14,varX15,varX16,varX17,varX18,varX19,varX20,varX21,varX22,varX23,varX24,varX25,varX26,varX27,varX28,varX29 from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-declaration-select",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "variable-declaration-select",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "variable-declaration-select"
+    },
+    {
+      "op": "case",
+      "case": "variable-dimension-primitive"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "epl": "@name('vars') create variable int[primitive] int_prim = null;\ncreate variable int[] int_boxed = null;\ncreate variable java.lang.Object[] objectarray = null;\ncreate variable java.lang.Object[][] objectarray_2dim = null;\n"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-dimension-primitive",
+      "statement": "vars"
+    },
+    {
+      "op": "set-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "int_prim",
+      "payload": {
+        "type": "int-array",
+        "value": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "int_prim"
+    },
+    {
+      "op": "set-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "int_prim",
+      "payload": {
+        "type": "string-array",
+        "value": []
+      },
+      "expectError": "Variable 'int_prim' of declared type int[] cannot be assigned a value of type String[]"
+    },
+    {
+      "op": "set-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "int_boxed",
+      "payload": {
+        "type": "integer-array",
+        "value": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "int_boxed"
+    },
+    {
+      "op": "set-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "int_boxed",
+      "payload": {
+        "type": "int-array",
+        "value": []
+      },
+      "expectError": "Variable 'int_boxed' of declared type Integer[] cannot be assigned a value of type int[]"
+    },
+    {
+      "op": "set-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "objectarray",
+      "payload": {
+        "type": "integer-array",
+        "value": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "objectarray"
+    },
+    {
+      "op": "set-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "objectarray",
+      "payload": {
+        "type": "int-array",
+        "value": []
+      },
+      "expectError": "Variable 'objectarray' of declared type Object[] cannot be assigned a value of type int[]"
+    },
+    {
+      "op": "set-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "objectarray_2dim",
+      "payload": {
+        "type": "object-array-2dim",
+        "value": [
+          [
+            1,
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "objectarray_2dim"
+    },
+    {
+      "op": "set-variable",
+      "case": "variable-dimension-primitive",
+      "statement": "vars",
+      "name": "objectarray_2dim",
+      "payload": {
+        "type": "int-array",
+        "value": []
+      },
+      "expectError": "Variable 'objectarray_2dim' of declared type Object[][] cannot be assigned a value of type int[]"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "variable-dimension-primitive"
+    },
+    {
+      "op": "case",
+      "case": "variable-generic-type"
+    },
+    {
+      "op": "deploy",
+      "case": "variable-generic-type",
+      "statement": "var",
+      "epl": "@name('var') create variable List<String> mylist = Arrays.asList('a', 'b');\n@name('s0') select mylist as c0, mylist.where(v => v = 'a') as c1 from SupportBean;\n"
+    },
+    {
+      "op": "deployed",
+      "case": "variable-generic-type",
+      "statement": "var"
+    },
+    {
+      "op": "read-variable",
+      "case": "variable-generic-type",
+      "statement": "var",
+      "name": "mylist"
+    },
+    {
+      "op": "send",
+      "case": "variable-generic-type",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": null,
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "variable-generic-type"
+    }
+  ]
+}

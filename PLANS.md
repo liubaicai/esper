@@ -3157,11 +3157,45 @@ Active: Draft 4.403 ('view-timeaccum-remaining').
       prevcount now keyed on price like Java, stale scout checkbox ticked.
 - [x] Shipped; Git owns identity. Draft 4.453 committed and pushed as `a831ee4fa`.
 
-## Next work unit (prefetch)
-Candidate: Draft 4.454 `EPLVariablesCreate` — 7 unreferenced executions
-(ords 0-6; variable declaration/OM/subscribe/iterate/invalid/generic).
-Scouts `NextJavaContract454` + `NextGoSurface454` spawned after 4.453
-review PASS; no writes until their contracts land. Status and summary counts unchanged (go-unit unit).
+## Current work unit
+Active: Draft 4.454 ('epl-variables-create').
+
+- Unit: `EPLVariablesCreate` ords 0,1,2,3,5,6 DV + ord 4 implemented-only:
+      `EPLVariableOM` (`java-runtime-67e6441b95a4ca30917b`),
+      `EPLVariableCompileStartStop` (`java-runtime-74285cbcf0d7aeabf02f`),
+      `EPLVariableSubscribeAndIterate` (`java-runtime-06466d91981a6c410b39`),
+      `EPLVariableDeclarationAndSelect` (`java-runtime-75cb3e01ac92790b5194`),
+      `EPLVariableInvalid` (`java-runtime-b2c51a16c93eaf0cb126`, probes only),
+      `EPLVariableDimensionAndPrimitive` (`java-runtime-71775e7db7d1ffd875ba`,
+      RUNTIMEOPS), `EPLVariableGenericType` (`java-runtime-4ac4b7b111d10a20f74d`);
+      shared inventory id `java-6a445f399d99f5d4785d`.
+- [x] Delegation checkpoint: Java scout `NextJavaContract454` + Go scout
+      `NextGoSurface454` ran in parallel; frozen contract at
+      `.omp/contract-454.md`. Go surface: module-scoped vars
+      (module.RegisterVariable) give redeploy-reset; VariableChangeListener =
+      IR pairs; read-variable = iterator rows; OnEvent.SetVariables sequential;
+      EnumWhere for ord 6; pre-folded initializers for ord 3. Approved
+      differences: no SODA/toEPL/eplToModel, no create-variable statement type,
+      no parameterized-type metadata, no unrecognized-type concept.
+- [x] Assets authored by `AssetWorker454` (scenario 6 cases, runner, oracle,
+      six-test family; no new scenario ops — set-variable/read-variable/
+      compileWithoutPath all pre-exist).
+- [x] Java trace 77 records via oracle at pinned commit; Go replay
+      byte-identical; `-mode epl-variables-create-diff` passing / 0
+      differences; six-test family green (two worker mutation indices fixed:
+      65→64 declaration-select row, 68→67 first ord-5 rejection).
+- [x] Manifest: `case.epl-variables-create` born-DV (6 DV runtime IDs; ord 4
+      implemented-only) mapped to `epl.variable-onset`; summary 696 cases /
+      694 implemented / 322 DV / 1217 DV runtime IDs / 3767 associations
+      (referenced 3403, unreferenced 733).
+- [x] Independent parity review (`ParityReview454`): PASS, no P0/P1/P2. Three
+      P3s fixed post-review: trailing-newline byte-exactness on ord-5/ord-6
+      module EPLs (scenario + both pin tables), dead `variableNames` field
+      removed, oracle build-error probes now compile without the accumulated
+      path (mirroring tryInvalidCompile's null path).
+- [x] Full gates GREEN post-fix: `make check` exit 0; gofmt/git-diff-check
+      clean; traces regenerated and diff still passing / 0 differences.
+- [x] Shipped; Git owns identity. Status and summary counts unchanged (go-unit unit).
 
 ### Previous work unit (prior)
 

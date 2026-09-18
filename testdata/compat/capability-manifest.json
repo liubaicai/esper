@@ -4850,9 +4850,10 @@
       "id": "epl.variable-onset",
       "domain": "variable",
       "level": "G",
-      "summary": "All 17 executions of EPLVariablesOnSet are covered: 16 differentially verified across three scenarios plus the compile-only Invalid approved difference. EPLVariablesUse fully closed at 9 of 11 executions differentially verified (DotSeparateThread threading and WVarargs varargs-UDF stay unrepresented): runtime get/set API with Java-widening coercion and rollback, constant-variable truth tables with per-slot IN delivery, verbatim set-path diagnostics.",
+      "summary": "All 17 executions of EPLVariablesOnSet are covered: 16 differentially verified across three scenarios plus the compile-only Invalid approved difference. EPLVariablesUse fully closed at 9 of 11 executions differentially verified (DotSeparateThread threading and WVarargs varargs-UDF stay unrepresented): runtime get/set API with Java-widening coercion and rollback, constant-variable truth tables with per-slot IN delivery, verbatim set-path diagnostics. EPLVariablesCreate covered at 6 of 7 executions differentially verified (EPLVariableInvalid stays implemented-only: unrecognized-type, initializer-mismatch and event-type-params rejections have no Go trigger): module-scoped create-variable lifecycle with redeploy reset, sequential on-set assignment, IR-pair change listeners, 29-variable coercion matrix, boxed-vs-primitive array variable service, and generic List<String> with enum-where projection.",
       "javaRefs": [
-        "EPLVariablesOnSet"
+        "EPLVariablesOnSet",
+        "EPLVariablesCreate"
       ],
       "goRefs": [
         "internal/esper/variable_onset_parity_test.go",
@@ -4860,7 +4861,8 @@
         "internal/esper/variable.go",
         "internal/esper/variable_deploy_parity_test.go",
         "internal/app/parity/variable_deploy.go",
-        "internal/esper/epl_variables_onset_parity_test.go"
+        "internal/esper/epl_variables_onset_parity_test.go",
+        "internal/app/parity/epl_variables_create.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -41731,6 +41733,78 @@
       ]
     },
     {
+      "id": "case.epl-variables-create",
+      "javaRuntimeIds": [
+        "java-runtime-67e6441b95a4ca30917b",
+        "java-runtime-74285cbcf0d7aeabf02f",
+        "java-runtime-06466d91981a6c410b39",
+        "java-runtime-75cb3e01ac92790b5194",
+        "java-runtime-b2c51a16c93eaf0cb126",
+        "java-runtime-71775e7db7d1ffd875ba",
+        "java-runtime-4ac4b7b111d10a20f74d"
+      ],
+      "javaStaticIds": [
+        "java-6a445f399d99f5d4785d",
+        "java-6a445f399d99f5d4785d",
+        "java-6a445f399d99f5d4785d",
+        "java-6a445f399d99f5d4785d",
+        "java-6a445f399d99f5d4785d",
+        "java-6a445f399d99f5d4785d",
+        "java-6a445f399d99f5d4785d"
+      ],
+      "javaNames": [
+        "EPLVariableOM",
+        "EPLVariableCompileStartStop",
+        "EPLVariableSubscribeAndIterate",
+        "EPLVariableDeclarationAndSelect",
+        "EPLVariableInvalid",
+        "EPLVariableDimensionAndPrimitive",
+        "EPLVariableGenericType"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/variable/EPLVariablesCreate.java"
+      ],
+      "goTests": [
+        "TestRunEplVariablesCreateDirectReplay",
+        "TestRunEplVariablesCreateDiffWritesPassingEvidence",
+        "TestRunEplVariablesCreateCheckedInEvidenceMatchesTraceAndReplay",
+        "TestRunEplVariablesCreateDiffRejectsTraceMutations",
+        "TestRunEplVariablesCreateRejectsMalformedRawScenario",
+        "TestRunEplVariablesCreateRuntimeIDMappingMatchesScenario"
+      ],
+      "tags": [
+        "epl",
+        "variable",
+        "create-variable",
+        "on-set",
+        "runtime-api"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "difference": "Go has no SODA object model, eplToModel round-trip, or deployable create-variable statement type — ord 0's toEPL byte-exact assertions and ord 2's statement-property/event-type assertions are API-only and unobservable in the port (established approved difference). Module-scoped variables (module.RegisterVariable inside a protected module) model create-variable's deploy-activate/undeploy-delete/redeploy-reset lifecycle; VariableChangeListener Old/New delivers the create-statement IR pair; read-variable steps deliver the iterator row. Ord 4 EPLVariableInvalid is compile-failure-only: duplicate-registration and undeclared-variable errors are reachable in Go, but unrecognized-type, initializer-type-mismatch and event-type-with-type-params cases have no Go trigger — registered implemented without differential evidence. RUNTIMEOPS is a JVM-harness flag with no observable behavior. Parameterized-type metadata (List<String> vs Collection<String>) has no Go counterpart.",
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-67e6441b95a4ca30917b",
+        "java-runtime-74285cbcf0d7aeabf02f",
+        "java-runtime-06466d91981a6c410b39",
+        "java-runtime-75cb3e01ac92790b5194",
+        "java-runtime-71775e7db7d1ffd875ba",
+        "java-runtime-4ac4b7b111d10a20f74d"
+      ],
+      "notes": "variable-om (ord 0): uninitialized long variable reads null, string initializer 'abc'; double[] array-literal initializer. variable-compile-start-stop (ord 1): ESPER-545 on-set increment FOO→1, undeployAll+redeploy resets FOO→0, failed compile leaves no variable residue. variable-subscribe-iterate (ord 2): sequential on-set assignment (var2SAI=var1SAI+1 sees the new value), IR pairs null→200→400 / 20→201→401, iterator rows, undeploy-on-set preserves values, redeployed create-two resets to 20 while create-one survives at 400. variable-declaration-select (ord 3): 29-variable typing/coercion matrix (string→number coercion, expression folding, cross-variable init reference, all-null uninitialized row). variable-dimension-primitive (ord 5): variable-service set/get for int[primitive]/int[]/Object[]/Object[][] with four wrong-array-type rejections. variable-generic-type (ord 6): List<String> via Arrays.asList + mylist.where(v=>v='a') enum method. Scenario testdata/parity/epl-variables-create.json (6 cases); Java trace testdata/parity/epl-variables-create.trace.json (77 records) generated by tools/java-oracle/EPLVariablesCreateScenarioOracle.java via tools/java-oracle/run-epl-variables-create.sh at commit 9e1b9f1cc9117fea4bf33ab043762c045d73839c; Go trace testdata/parity/epl-variables-create.go.trace.json; evidence testdata/parity/epl-variables-create.evidence.json reports passing with zero differences."
+    },
+    {
       "id": "case.epl-subselect-within-filter-having",
       "javaRuntimeIds": [
         "java-runtime-844ff5e51e235151dccc",
@@ -47187,6 +47261,10 @@
       "caseId": "case.resultset-aggregate-firstlastwindow-prev-nth"
     },
     {
+      "capabilityId": "epl.variable-onset",
+      "caseId": "case.epl-variables-create"
+    },
+    {
       "capabilityId": "resultset.aggregate-access",
       "caseId": "case.resultset-aggregate-firstlastwindow-indexed"
     },
@@ -47700,10 +47778,10 @@
     }
   ],
   "summary": {
-    "inventoriedCases": 695,
-    "implementedCases": 693,
-    "differentialVerifiedCases": 321,
-    "differentialVerifiedRuntimeIds": 1211,
+    "inventoriedCases": 696,
+    "implementedCases": 694,
+    "differentialVerifiedCases": 322,
+    "differentialVerifiedRuntimeIds": 1217,
     "intentionallyDifferentCases": 29,
     "representativeVerifiedCases": 119,
     "nfrVerifiedCases": 0,
@@ -47713,13 +47791,13 @@
     "intentionallyDifferentCapabilities": 8,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 3760,
-    "referencedJavaRuntimeIds": 3396,
+    "runtimeAssociationCount": 3767,
+    "referencedJavaRuntimeIds": 3403,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 740,
+    "unreferencedJavaRuntimeIds": 733,
     "representativeScenarioTotal": 122,
     "representativeScenarioPassing": 122,
-    "totalCases": 695,
+    "totalCases": 696,
     "totalCapabilities": 121
   }
 }
