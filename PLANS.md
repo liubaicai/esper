@@ -3195,7 +3195,13 @@ Active: Draft 4.454 ('epl-variables-create').
       path (mirroring tryInvalidCompile's null path).
 - [x] Full gates GREEN post-fix: `make check` exit 0; gofmt/git-diff-check
       clean; traces regenerated and diff still passing / 0 differences.
-- [x] Shipped; Git owns identity. Status and summary counts unchanged (go-unit unit).
+- [x] Shipped; Git owns identity. Draft 4.454 committed and pushed as `c38007e23`.
+
+## Next work unit (prefetch)
+Candidate: Draft 4.455 `EPLVariablesEventTyped` — 6 unreferenced executions
+(ords 0-5; event-typed variables, set-prop, create-schema interplay).
+Scouts `NextJavaContract455` + `NextGoSurface455` spawned after 4.454
+review PASS; no writes until their contracts land. Status and summary counts unchanged (go-unit unit).
 
 ### Previous work unit (prior)
 
