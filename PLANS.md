@@ -3303,7 +3303,13 @@ executions born-differential.
  Residual P3 fixed in-place: nested-key label derivation now splits on the
  first two \x1f separators so multi-key children still resolve the parent
  label.
-- [x] Shipped; Git owns identity.
+- [x] Shipped; Git owns identity. Draft 4.457 committed and pushed as `c675ce61a`.
+
+## Next work unit (prefetch)
+Candidate: Draft 4.458 ('context-admin-listen'): ContextAdminListen.java, 5
+unreferenced executions. Scouts `NextJavaContract458` + `NextGoSurface458`
+in flight.
+
 
 
 ## Delegation checkpoint (recent)
