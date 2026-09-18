@@ -49,62 +49,18 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
-Active: Draft 4.452 ('infra-namedwindow-consumer').
+Active: Draft 4.460 ('context-declared-expression').
 
-- Unit: `InfraNamedWindowConsumer` ordinals 0-2 - `InfraNamedWindowConsumerKeepAll`
-      (`java-runtime-c2d6b88fc4d77c643aab`), `InfraNamedWindowConsumerLengthWin`
-      (`java-runtime-a707367e42b2736c2fcb`), `InfraNamedWindowConsumerWBatch`
-      (`java-runtime-229ba7f65962eb4594a1`, EXCLUDEWHENINSTRUMENTED); shared static
-      `java-04f7e86e470bf275affa`.
-- [x] Delegation checkpoint: scouts `NextJavaContract452`/`NextGoSurface452` were
-      spawned for the InfraWithDelete* family but aborted on a stale premise
-      (those runtime IDs were already DV'd via case.infra-namedwindow-views-keepall-delete;
-      my unref survey had used the static `id` field instead of `runtimeId`).
-      Redirected to InfraNamedWindowConsumer; the Java scout's yield carried only
-      the abort note (yield data/error bug) and the Go scout re-aborted, so the
-      contract was extracted directly from the pinned source and the Go surface
-      surveyed via grep — serial fallback reason: subagent yield/abort failures
-      on a small, single-file contract.
-- [x] Contract: keepall irstream select (new-only full-bean rows), lengthwin
-      aggregate consumer (non-irstream => new-only even on expiry; Java gates
-      old rows on isSelectRStream), wbatch expr_batch(current_count>=10000)
-      insert-into chain (no listener; deployment markers only).
-- [x] Scenario `testdata/parity/infra-namedwindow-consumer.json` (3 cases / 35
-      steps; new `send-batch` op added to compat.Step validation); runner
-      `internal/app/parity/infra_namedwindow_consumer.go` + run.go wiring;
-      strict loader + pin table.
-- [x] Java oracle `tools/java-oracle/InfraNamedWindowConsumerScenarioOracle.java`
-      + `run-infra-namedwindow-consumer.sh`; all three cases deploy their whole
-      module at the first deploy step (module-private windows/schemas); trace
-      17 records.
-- [x] **Engine fixes (shared core)**: maxRoutedEventsPerSend 1024 -> 1<<20
-      (legitimate large batch releases); expression-batch pendingNew gained a
-      cached event projection `pendingNewEvents` (trigger eval O(1)/send, was
-      O(n) rebuild); windowHistoryByEvent shares the history slice and
-      batch-prefix histories share the newEvents backing (was O(n^2) copies);
-      historyByEvent construction gated on queryUsesPreviousAccess;
-      routed-queue boundary take/restore swaps instead of copying. 10k flush
-      437ms (was ~80s at 4k).
-- [x] Differential replay: Java 17 / Go 17 / 0 differences; evidence
-      `testdata/parity/infra-namedwindow-consumer.evidence.json` passing.
-- [x] Six-test family green (replay, diff-evidence, checked-in evidence, 6 trace
-      mutations, 9 raw-scenario mutations, runtime-ID mapping).
-- [x] Manifest: new `case.infra-namedwindow-consumer` born-DV mapped to
-      `infra.namedwindow.views`; summary 694 cases / 692 implemented / 320 DV /
-      1206 DV runtime IDs / 3754 associations (referenced 3390, unreferenced 746).
-- [x] Independent parity review (`ParityReview452`): initial FAIL on one P1 —
-      the historyByEvent gate scanned only selections while orderBy keys and
-      stream-node predicates also consume the map. Fixed by extending
-      `queryUsesPreviousAccess`/`queryUsesPriorAccess` to orderBy, output
-      When/TerminationWhen, aggregate where/having, join where/having, and
-      `visitStreamNodeExpressions(query.input)`; the previousByEvent/nil-entry
-      and length/time-batch blocks are gated identically. Confirmation review:
-      PASS (all eventDelta map consumers covered; nil History unobservable
-      without prev-family expressions).
-- [x] Full gates GREEN post-fix: `make check` exit 0 (check-layout, vet, full
-      go test; parity 74s, internal/esper 66s); gofmt/git-diff-check clean;
-      Go replay trace byte-identical; diff passing / 0 differences.
-- [x] Shipped; Git owns identity. Draft 4.452 committed and pushed as `806d7dd04`.
+- [x] Contract frozen: ContextWDeclaredExpression ords 0/1/2 (Simple `java-runtime-9acc9abebb2846f8b439`, Alias `java-runtime-77b90f33562c2c0f9548`, WFilter `java-runtime-1bff58f3130b73dfc99f`; static IDs `java-999bc7e77f2d48538dc3`/`java-33045a26365f5dd7f45b`/`java-f4bff32df9aeaf56d49c`; no flags). Category context `MyCtx` (intPrimitive<0→n, >0→p) with declared expressions resolving `context.label`; ord 2 uses `initiated @now and pattern[every(SupportBean(THE_EXPRESSION))] terminated after 10 minutes` with `THE_EXPRESSION` as both initiation and statement pattern filter.
+- [x] Scenario `testdata/parity/context-declared-expression.json` (3 cases / 33 steps) + oracle `tools/java-oracle/ContextDeclaredExpressionScenarioOracle.java` + runner `internal/app/parity/context_declared_expression.go` + run.go wiring.
+- [x] **Engine fix (shared core)**: `initializeContextPatternTimer` seeded composite start patterns without arming event filters, so `and(TimerAt, every(event))` was dropped after the timer leg fired (event leg reported inactive). Added `armPatternProgressFilters(progress)` after `armPatternProgressTimers` in the seed path. Verified: partition now allocates on x, s0 fires c0=1/c1=2.
+- [x] Differential replay: Java 16 records / Go 16 records, 0 differences. Evidence `testdata/parity/context-declared-expression.evidence.json` status `passing`.
+- [x] Manifest: `case.context-declared-expression` born-DV with 3 runtime IDs; summary 701 cases / 699 implemented / 327 DV / 1247 DV runtime IDs / 3797 associations (referenced 3424, unreferenced 712).
+- [x] Roadmap + CHANGELOG entries added.
+- [x] Full gates: `go test ./internal/esper/` 72s green, `go test ./internal/app/parity/` 80s green, `TestCapabilityManifestArtifactValidates` green, gofmt clean, `git diff --check` clean, `go vet` clean.
+- [x] Independent parity review (ParityReview460): FAIL on two manifest P1s (missing capability mapping, stale summary counts); both fixed and re-validated.
+- [ ] Commit + push pending.
+
 
 ## Current work unit
 Active: Draft 4.453 ('expr-filter-in-and-between').

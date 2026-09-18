@@ -1,0 +1,527 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-9acc9abebb2846f8b439",
+    "java-runtime-77b90f33562c2c0f9548",
+    "java-runtime-1bff58f3130b73dfc99f"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextWDeclaredExpression.java"
+  ],
+  "javaExecutions": [
+    "ContextWDeclaredExpressionSimple",
+    "ContextWDeclaredExpressionAlias",
+    "ContextWDeclaredExpressionWFilter"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-declared-expression",
+    "steps": [
+      {
+        "op": "case",
+        "case": "simple"
+      },
+      {
+        "op": "deploy",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive \u003c 0 as n, group by intPrimitive \u003e 0 as p from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "statement": "expr-1",
+        "epl": "@name('expr-1') @public create expression getLabelOne { context.label }"
+      },
+      {
+        "op": "deployed",
+        "statement": "expr-1"
+      },
+      {
+        "op": "deploy",
+        "statement": "expr-2",
+        "epl": "@name('expr-2') @public create expression getLabelTwo { 'x'||context.label||'x' }"
+      },
+      {
+        "op": "deployed",
+        "statement": "expr-2"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0",
+        "epl": "@name('s0') expression getLabelThree { context.label } context MyCtx select getLabelOne() as c0, getLabelTwo() as c1, getLabelThree() as c2 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "alias"
+      },
+      {
+        "op": "deploy",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive \u003c 0 as n, group by intPrimitive \u003e 0 as p from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "statement": "expr-1",
+        "epl": "@name('expr-1') @public create expression getLabelOne alias for { context.label }"
+      },
+      {
+        "op": "deployed",
+        "statement": "expr-1"
+      },
+      {
+        "op": "deploy",
+        "statement": "expr-2",
+        "epl": "@name('expr-2') @public create expression getLabelTwo alias for { 'x'||context.label||'x' }"
+      },
+      {
+        "op": "deployed",
+        "statement": "expr-2"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0",
+        "epl": "@name('s0') expression getLabelThree alias for { context.label } context MyCtx select getLabelOne as c0, getLabelTwo as c1, getLabelThree as c2 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": -2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "wfilter"
+      },
+      {
+        "op": "deploy",
+        "statement": "expr",
+        "epl": "@name('expr') @public create expression THE_EXPRESSION alias for {theString='x'}"
+      },
+      {
+        "op": "deployed",
+        "statement": "expr"
+      },
+      {
+        "op": "deploy",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context context2 initiated @now and pattern[every(SupportBean(THE_EXPRESSION))] terminated after 10 minutes"
+      },
+      {
+        "op": "deployed",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0",
+        "epl": "@name('s0') context context2 select e1.intPrimitive as c0, e2.intPrimitive as c1 from pattern[e1=SupportBean(THE_EXPRESSION) -\u003e e2=SupportBean(theString='y')]"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "x",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "y",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-declared-expression",
+    "records": [
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "expr-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "expr-2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "n",
+              "c1": "xnx",
+              "c2": "n"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "p",
+              "c1": "xpx",
+              "c2": "p"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alias",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "alias",
+        "operation": "deployed",
+        "statement": "expr-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "alias",
+        "operation": "deployed",
+        "statement": "expr-2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "alias",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "n",
+              "c1": "xnx",
+              "c2": "n"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "p",
+              "c1": "xpx",
+              "c2": "p"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wfilter",
+        "operation": "deployed",
+        "statement": "expr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wfilter",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wfilter",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wfilter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-declared-expression",
+    "records": [
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "expr-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "expr-2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "n",
+              "c1": "xnx",
+              "c2": "n"
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "p",
+              "c1": "xpx",
+              "c2": "p"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alias",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "alias",
+        "operation": "deployed",
+        "statement": "expr-1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "alias",
+        "operation": "deployed",
+        "statement": "expr-2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "alias",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "n",
+              "c1": "xnx",
+              "c2": "n"
+            }
+          }
+        ]
+      },
+      {
+        "case": "alias",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": "p",
+              "c1": "xpx",
+              "c2": "p"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wfilter",
+        "operation": "deployed",
+        "statement": "expr",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wfilter",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wfilter",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "wfilter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1,
+              "c1": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

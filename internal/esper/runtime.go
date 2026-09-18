@@ -8977,6 +8977,12 @@ func initializeContextPatternTimer(state **patternRuntimeState, definition *patt
 		if len(runtimeState.active) == 0 && !runtimeState.patternStopped && patternCanStartWithoutEvent(definition.root) {
 			progress := newPatternProgress(definition.root)
 			armPatternProgressTimers(progress, at, variables)
+			// A composite root seeded by a timer branch is already listening
+			// on its event filters: an and(TimerAt, every(event)) must stay
+			// active after the timer leg fires so the pending event leg can
+			// still complete the start condition. Without arming, the event
+			// nodes report inactive and the seeded match is dropped.
+			armPatternProgressFilters(progress)
 			if patternProgressActive(progress) {
 				runtimeState.active = []patternMatch{{state: progress, startedAt: at, prearmed: true}}
 			}

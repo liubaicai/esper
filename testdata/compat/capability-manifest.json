@@ -44976,6 +44976,69 @@
     "ContextAdminListen ords 2/3/4/6 born-differential: eager category allocation, nested-leaf allocation, listener add/remove/registry order, single activation across statements. Ord 5 ContextAdminPartitionAddRemoveListener deferred: scenario B needs nested initiated-parent contexts (NewNestedContext rejects ContextInitiatedTerminated parents).",
     "Shared-core fixes: ContextStateEvent.RuntimeURI now populated; activated emits after eager partition materialization; deallocated suppressed for flat non-hash kinds on teardown (Esper gates partition termination on terminateChildContexts=false for single-level non-hash controllers); lifecycle termination still notifies via releaseContextPartitionKindLocked."
    ]
+  },
+  {
+   "id": "case.context-declared-expression",
+   "javaRuntimeIds": [
+    "java-runtime-9acc9abebb2846f8b439",
+    "java-runtime-77b90f33562c2c0f9548",
+    "java-runtime-1bff58f3130b73dfc99f"
+   ],
+   "javaStaticIds": [
+    "java-999bc7e77f2d48538dc3",
+    "java-33045a26365f5dd7f45b",
+    "java-f4bff32df9aeaf56d49c"
+   ],
+   "javaNames": [
+    "ContextWDeclaredExpressionSimple",
+    "ContextWDeclaredExpressionAlias",
+    "ContextWDeclaredExpressionWFilter"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextWDeclaredExpression.java"
+   ],
+   "goTests": [
+    "internal/app/parity/context_declared_expression_test.go:TestRunContextDeclaredExpressionDirectReplay",
+    "internal/app/parity/context_declared_expression_test.go:TestRunContextDeclaredExpressionDiffWritesPassingEvidence",
+    "internal/app/parity/context_declared_expression_test.go:TestRunContextDeclaredExpressionDiffRejectsTraceMutations",
+    "internal/app/parity/context_declared_expression_test.go:TestRunContextDeclaredExpressionCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/context_declared_expression_test.go:TestRunContextDeclaredExpressionRejectsMalformedRawScenario",
+    "internal/app/parity/context_declared_expression_test.go:TestRunContextDeclaredExpressionRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "context",
+    "declared-expression",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/context-declared-expression.json",
+    "testdata/parity/context-declared-expression.trace.json",
+    "testdata/parity/context-declared-expression.go.trace.json",
+    "testdata/parity/context-declared-expression.evidence.json",
+    "tools/java-oracle/ContextDeclaredExpressionScenarioOracle.java",
+    "tools/java-oracle/run-context-declared-expression.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": "Go exposes typed DefineExpression[T]/ExpressionRef[T] nodes instead of EPL create-expression modules; the wfilter case selects e1.intPrimitive/e2.intPrimitive explicitly because select * over a pattern yields tagged-EventBean columns that are not trace-comparable",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-9acc9abebb2846f8b439",
+    "java-runtime-77b90f33562c2c0f9548",
+    "java-runtime-1bff58f3130b73dfc99f"
+   ],
+   "notes": "ords 0/1/2 of ContextWDeclaredExpression; the shared-core fix arms event filters when a composite context start pattern is seeded by a timer branch so and(TimerAt, every(event)) stays active after the timer leg fires"
   }
  ],
  "mappings": [
@@ -48114,13 +48177,17 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-admin-listen"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-declared-expression"
   }
  ],
  "summary": {
-  "inventoriedCases": 700,
-  "implementedCases": 698,
-  "differentialVerifiedCases": 326,
-  "differentialVerifiedRuntimeIds": 1244,
+  "inventoriedCases": 701,
+  "implementedCases": 699,
+  "differentialVerifiedCases": 327,
+  "differentialVerifiedRuntimeIds": 1247,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48130,13 +48197,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3794,
-  "referencedJavaRuntimeIds": 3421,
+  "runtimeAssociationCount": 3797,
+  "referencedJavaRuntimeIds": 3424,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 715,
+  "unreferencedJavaRuntimeIds": 712,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 700,
+  "totalCases": 701,
   "totalCapabilities": 121
  }
 }

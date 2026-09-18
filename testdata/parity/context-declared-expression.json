@@ -1,0 +1,219 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-declared-expression",
+ "description": "ContextWDeclaredExpression ords 0/1/2: declared expressions resolving context.label in a category context (function-style call and alias-for forms) and an alias-for expression used as a pattern filter inside both the context-initiation pattern and a statement pattern.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextWDeclaredExpression.java",
+ "javaRuntimes": [
+  "java-runtime-9acc9abebb2846f8b439",
+  "java-runtime-77b90f33562c2c0f9548",
+  "java-runtime-1bff58f3130b73dfc99f"
+ ],
+ "javaNames": [
+  "ContextWDeclaredExpressionSimple",
+  "ContextWDeclaredExpressionAlias",
+  "ContextWDeclaredExpressionWFilter"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "simple",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-9acc9abebb2846f8b439",
+   "executionName": "ContextWDeclaredExpressionSimple",
+   "observation": "listener; declared expressions resolving context.label deploy before the s0 module whose inline expression uses the function-call form; E1(-2) yields n/xnx/n and E2(1) yields p/xpx/p",
+   "epl": "@public create context MyCtx as group by intPrimitive < 0 as n, group by intPrimitive > 0 as p from SupportBean; @public create expression getLabelOne { context.label }; @public create expression getLabelTwo { 'x'||context.label||'x' }; @public @name('s0') expression getLabelThree { context.label } context MyCtx select getLabelOne() as c0, getLabelTwo() as c1, getLabelThree() as c2 from SupportBean"
+  },
+  {
+   "case": "alias",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-77b90f33562c2c0f9548",
+   "executionName": "ContextWDeclaredExpressionAlias",
+   "observation": "listener; declared expressions resolving context.label deploy before the s0 module whose inline expression uses the alias-for form; E1(-2) yields n/xnx/n and E2(1) yields p/xpx/p",
+   "epl": "@public create context MyCtx as group by intPrimitive < 0 as n, group by intPrimitive > 0 as p from SupportBean; @public create expression getLabelOne alias for { context.label }; @public create expression getLabelTwo alias for { 'x'||context.label||'x' }; @name('s0') expression getLabelThree alias for { context.label } context MyCtx select getLabelOne as c0, getLabelTwo as c1, getLabelThree as c2 from SupportBean"
+  },
+  {
+   "case": "wfilter",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-1bff58f3130b73dfc99f",
+   "executionName": "ContextWDeclaredExpressionWFilter",
+   "observation": "listener; alias-for expression THE_EXPRESSION filters both the context-initiation pattern (every SupportBean(theString='x')) and the statement pattern (e1=x -> e2=y); the initiating x event binds e1 in the new partition, yielding c0=1, c1=2 (explicit field selection replaces select * whose tagged-EventBean columns are not trace-comparable)",
+   "epl": "@public create expression THE_EXPRESSION alias for {theString='x'}; @public create context context2 initiated @now and pattern[every(SupportBean(THE_EXPRESSION))] terminated after 10 minutes; @name('s0') context context2 select e1.intPrimitive as c0, e2.intPrimitive as c1 from pattern[e1=SupportBean(THE_EXPRESSION) -> e2=SupportBean(theString='y')]"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "simple"
+  },
+  {
+   "op": "deploy",
+   "statement": "ctx",
+   "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive < 0 as n, group by intPrimitive > 0 as p from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "statement": "ctx"
+  },
+  {
+   "op": "deploy",
+   "statement": "expr-1",
+   "epl": "@name('expr-1') @public create expression getLabelOne { context.label }"
+  },
+  {
+   "op": "deployed",
+   "statement": "expr-1"
+  },
+  {
+   "op": "deploy",
+   "statement": "expr-2",
+   "epl": "@name('expr-2') @public create expression getLabelTwo { 'x'||context.label||'x' }"
+  },
+  {
+   "op": "deployed",
+   "statement": "expr-2"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0') expression getLabelThree { context.label } context MyCtx select getLabelOne() as c0, getLabelTwo() as c1, getLabelThree() as c2 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": -2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "alias"
+  },
+  {
+   "op": "deploy",
+   "statement": "ctx",
+   "epl": "@name('ctx') @public create context MyCtx as group by intPrimitive < 0 as n, group by intPrimitive > 0 as p from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "statement": "ctx"
+  },
+  {
+   "op": "deploy",
+   "statement": "expr-1",
+   "epl": "@name('expr-1') @public create expression getLabelOne alias for { context.label }"
+  },
+  {
+   "op": "deployed",
+   "statement": "expr-1"
+  },
+  {
+   "op": "deploy",
+   "statement": "expr-2",
+   "epl": "@name('expr-2') @public create expression getLabelTwo alias for { 'x'||context.label||'x' }"
+  },
+  {
+   "op": "deployed",
+   "statement": "expr-2"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0') expression getLabelThree alias for { context.label } context MyCtx select getLabelOne as c0, getLabelTwo as c1, getLabelThree as c2 from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": -2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "wfilter"
+  },
+  {
+   "op": "deploy",
+   "statement": "expr",
+   "epl": "@name('expr') @public create expression THE_EXPRESSION alias for {theString='x'}"
+  },
+  {
+   "op": "deployed",
+   "statement": "expr"
+  },
+  {
+   "op": "deploy",
+   "statement": "ctx",
+   "epl": "@name('ctx') @public create context context2 initiated @now and pattern[every(SupportBean(THE_EXPRESSION))] terminated after 10 minutes"
+  },
+  {
+   "op": "deployed",
+   "statement": "ctx"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0') context context2 select e1.intPrimitive as c0, e2.intPrimitive as c1 from pattern[e1=SupportBean(THE_EXPRESSION) -> e2=SupportBean(theString='y')]"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "x",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "y",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "undeploy-all"
+  }
+ ],
+ "javaStaticIds": [
+  "java-999bc7e77f2d48538dc3",
+  "java-33045a26365f5dd7f45b",
+  "java-f4bff32df9aeaf56d49c"
+ ]
+}

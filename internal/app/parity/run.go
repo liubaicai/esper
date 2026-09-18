@@ -135,6 +135,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEplVariablesCreateScenario(file)
 	} else if *mode == "context-variables" || *mode == "context-variables-diff" {
 		scenario, err = loadContextVariablesScenario(file)
+	} else if *mode == "context-declared-expression" || *mode == "context-declared-expression-diff" {
+		scenario, err = loadContextDeclaredExpressionScenario(file)
 	} else if *mode == "context-admin-listen" || *mode == "context-admin-listen-diff" {
 		scenario, err = loadContextAdminListenScenario(file)
 	} else if *mode == "context-category" || *mode == "context-category-diff" {
@@ -4761,6 +4763,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, contextVariablesJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, contextVariablesSources),
 				splitMetadata(*javaExecutions, contextVariablesJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "context-declared-expression" || *mode == "context-declared-expression-diff" {
+		trace, err := runContextDeclaredExpressionScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-declared-expression-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, contextDeclaredExpressionJavaCommit,
+				splitMetadata(*javaRuntimeIDs, contextDeclaredExpressionJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextDeclaredExpressionSources),
+				splitMetadata(*javaExecutions, contextDeclaredExpressionJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
