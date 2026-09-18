@@ -1,0 +1,282 @@
+{
+  "version": "esper-parity/v1",
+  "id": "context-admin-listen",
+  "description": "ContextAdminListen context listener surface: a category context whose two partitions allocate eagerly at activation with the second carrying label 'neg' (ord 2); a nested category-over-keyed context emitting one created event at ctx deploy, statement-added then activated at s0 deploy, a single nested-leaf partition-allocated on the first event, and statement-removed/partition-deallocated/deactivated/destroyed teardown order (ord 3); three context-state listeners registered before deploy each observing created, listener[0] removed before undeploy so only listeners[1..2] observe destroyed, the listener iterator yielding [l1,l2] in registration order, remove-all emptying the registry, and a redeploy+undeploy-all tail staying silent (ord 4); and one partition-state listener added after ctx deploy observing statement-added(a)/activated/statement-added(b) then exactly one partition-allocated despite two statements (ord 6). context-event records carry the listener label, event kind, runtimeURI normalized to 'default', the ctx deploy-step label as contextDeploymentId, statement deploy labels, partition ids and normalized identifiers (category label / nested parent+leaf key segments / initiated-terminated initiating event type). admin records mirror the listener-registry iterators (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java",
+  "javaRuntimes": [
+    "java-runtime-2021f021c6e12684fb81",
+    "java-runtime-4b1466f2815a381815b2",
+    "java-runtime-410d2c5d3daf011b6c7b",
+    "java-runtime-6dd25578221d74ff6660"
+  ],
+  "javaNames": [
+    "ContextAdminListenCategory",
+    "ContextAdminListenNested",
+    "ContextAddRemoveListener",
+    "ContextAdminListenMultipleStatements"
+  ],
+  "javaStaticIds": [
+    "java-3a026095a61c4060c91b",
+    "java-3a026095a61c4060c91b",
+    "java-3a026095a61c4060c91b",
+    "java-3a026095a61c4060c91b"
+  ],
+  "javaFlags": [
+    "OBSERVEROPS",
+    "RUNTIMEOPS"
+  ],
+  "cases": [
+    {
+      "case": "category",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-2021f021c6e12684fb81",
+      "executionName": "ContextAdminListenCategory",
+      "observation": "context-event; a context-state listener registered before deploy observes created at ctx deploy and re-entrantly registers as a partition listener; deploying s0 into the two-category context eagerly allocates pos then neg (allocated[1] label 'neg') before activated; no events are sent; undeploying s0 then ctx emits statement-removed, two partition-deallocated, deactivated and destroyed",
+      "epl": "@name('s0') context MyContext select count(*) from SupportBean"
+    },
+    {
+      "case": "nested",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-4b1466f2815a381815b2",
+      "executionName": "ContextAdminListenNested",
+      "observation": "context-event; nested category-over-keyed context: ctx deploy emits created, s0 deploy emits statement-added then activated, SupportBean(\"E1\",1) emits exactly one partition-allocated whose nested identifier carries parent label 'pos' and leaf keys [\"E1\"], s0 undeploy emits statement-removed/partition-deallocated/deactivated and ctx undeploy emits destroyed",
+      "epl": "@name('s0') context MyContext select count(*) from SupportBean"
+    },
+    {
+      "case": "add-remove-listener",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-410d2c5d3daf011b6c7b",
+      "executionName": "ContextAddRemoveListener",
+      "observation": "context-event+admin; three context-state listeners registered before deploy each observe created; removing l0 before ctx undeploy leaves l0 silent while l1 and l2 observe destroyed; the listener iterator yields [l1,l2] in registration order; remove-listeners empties the registry; a redeploy plus undeploy-all tail invokes no listener",
+      "epl": "@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1"
+    },
+    {
+      "case": "multiple-statements",
+      "ordinal": 6,
+      "runtimeId": "java-runtime-6dd25578221d74ff6660",
+      "executionName": "ContextAdminListenMultipleStatements",
+      "observation": "context-event; one partition-state listener added after ctx deploy observes statement-added(a), activated, statement-added(b) — activated fires once after the first statement — and SupportBean_S0(1) emits exactly one partition-allocated despite two deployed statements; undeploy-all tears down a, b and the context in dependency order",
+      "epl": "@name('a') context MyContextStartS0EndS1 select count(*) from SupportBean"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "category"
+    },
+    {
+      "op": "add-listener",
+      "case": "category",
+      "statement": "l0"
+    },
+    {
+      "op": "deploy",
+      "case": "category",
+      "statement": "ctx",
+      "epl": "@name('ctx') @public create context MyContext group by intPrimitive > 0 as pos, group by intPrimitive < 0 as neg from SupportBean"
+    },
+    {
+      "op": "deploy",
+      "case": "category",
+      "statement": "s0",
+      "epl": "@name('s0') context MyContext select count(*) from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "category",
+      "statement": "s0"
+    },
+    {
+      "op": "undeploy",
+      "case": "category",
+      "statement": "s0"
+    },
+    {
+      "op": "undeploy",
+      "case": "category",
+      "statement": "ctx"
+    },
+    {
+      "op": "remove-listeners",
+      "case": "category"
+    },
+    {
+      "op": "case",
+      "case": "nested"
+    },
+    {
+      "op": "add-listener",
+      "case": "nested",
+      "statement": "l0"
+    },
+    {
+      "op": "deploy",
+      "case": "nested",
+      "statement": "ctx",
+      "epl": "@name('ctx') @public create context MyContext context ContextPosNeg group by intPrimitive > 0 as pos, group by intPrimitive < 0 as neg from SupportBean, context ByString partition by theString from SupportBean"
+    },
+    {
+      "op": "deploy",
+      "case": "nested",
+      "statement": "s0",
+      "epl": "@name('s0') context MyContext select count(*) from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "nested",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "nested",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 1
+      }
+    },
+    {
+      "op": "undeploy",
+      "case": "nested",
+      "statement": "s0"
+    },
+    {
+      "op": "undeploy",
+      "case": "nested",
+      "statement": "ctx"
+    },
+    {
+      "op": "remove-listeners",
+      "case": "nested"
+    },
+    {
+      "op": "case",
+      "case": "add-remove-listener"
+    },
+    {
+      "op": "add-listener",
+      "case": "add-remove-listener",
+      "statement": "l0"
+    },
+    {
+      "op": "add-listener",
+      "case": "add-remove-listener",
+      "statement": "l1"
+    },
+    {
+      "op": "add-listener",
+      "case": "add-remove-listener",
+      "statement": "l2"
+    },
+    {
+      "op": "deploy",
+      "case": "add-remove-listener",
+      "statement": "ctx",
+      "epl": "@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deployed",
+      "case": "add-remove-listener",
+      "statement": "ctx"
+    },
+    {
+      "op": "remove-listener",
+      "case": "add-remove-listener",
+      "statement": "l0"
+    },
+    {
+      "op": "undeploy",
+      "case": "add-remove-listener",
+      "statement": "ctx"
+    },
+    {
+      "op": "snapshot",
+      "case": "add-remove-listener",
+      "statement": "ctx",
+      "mode": "admin:listeners"
+    },
+    {
+      "op": "remove-listeners",
+      "case": "add-remove-listener"
+    },
+    {
+      "op": "snapshot",
+      "case": "add-remove-listener",
+      "statement": "ctx",
+      "mode": "admin:listeners"
+    },
+    {
+      "op": "deploy",
+      "case": "add-remove-listener",
+      "statement": "ctx",
+      "epl": "@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deployed",
+      "case": "add-remove-listener",
+      "statement": "ctx"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "add-remove-listener"
+    },
+    {
+      "op": "case",
+      "case": "multiple-statements"
+    },
+    {
+      "op": "deploy",
+      "case": "multiple-statements",
+      "statement": "ctx",
+      "epl": "@name('ctx') @public create context MyContextStartS0EndS1 start SupportBean_S0 as s0 end SupportBean_S1"
+    },
+    {
+      "op": "deployed",
+      "case": "multiple-statements",
+      "statement": "ctx"
+    },
+    {
+      "op": "add-partition-listener",
+      "case": "multiple-statements",
+      "statement": "l0",
+      "name": "ctx"
+    },
+    {
+      "op": "deploy",
+      "case": "multiple-statements",
+      "statement": "a",
+      "epl": "@name('a') context MyContextStartS0EndS1 select count(*) from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "multiple-statements",
+      "statement": "a"
+    },
+    {
+      "op": "deploy",
+      "case": "multiple-statements",
+      "statement": "b",
+      "epl": "@name('b') context MyContextStartS0EndS1 select count(*) from SupportBean_S0"
+    },
+    {
+      "op": "deployed",
+      "case": "multiple-statements",
+      "statement": "b"
+    },
+    {
+      "op": "send",
+      "case": "multiple-statements",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "multiple-statements"
+    }
+  ]
+}

@@ -1,0 +1,1222 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-2021f021c6e12684fb81",
+    "java-runtime-4b1466f2815a381815b2",
+    "java-runtime-410d2c5d3daf011b6c7b",
+    "java-runtime-6dd25578221d74ff6660"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java"
+  ],
+  "javaExecutions": [
+    "ContextAdminListenCategory",
+    "ContextAdminListenNested",
+    "ContextAddRemoveListener",
+    "ContextAdminListenMultipleStatements"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-admin-listen",
+    "steps": [
+      {
+        "op": "case",
+        "case": "category"
+      },
+      {
+        "op": "add-listener",
+        "case": "category",
+        "statement": "l0"
+      },
+      {
+        "op": "deploy",
+        "case": "category",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyContext group by intPrimitive \u003e 0 as pos, group by intPrimitive \u003c 0 as neg from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "category",
+        "statement": "s0",
+        "epl": "@name('s0') context MyContext select count(*) from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "category",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "category",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "category",
+        "statement": "ctx"
+      },
+      {
+        "op": "remove-listeners",
+        "case": "category"
+      },
+      {
+        "op": "case",
+        "case": "nested"
+      },
+      {
+        "op": "add-listener",
+        "case": "nested",
+        "statement": "l0"
+      },
+      {
+        "op": "deploy",
+        "case": "nested",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyContext context ContextPosNeg group by intPrimitive \u003e 0 as pos, group by intPrimitive \u003c 0 as neg from SupportBean, context ByString partition by theString from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "nested",
+        "statement": "s0",
+        "epl": "@name('s0') context MyContext select count(*) from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "nested",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "nested",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "nested",
+        "statement": "s0"
+      },
+      {
+        "op": "undeploy",
+        "case": "nested",
+        "statement": "ctx"
+      },
+      {
+        "op": "remove-listeners",
+        "case": "nested"
+      },
+      {
+        "op": "case",
+        "case": "add-remove-listener"
+      },
+      {
+        "op": "add-listener",
+        "case": "add-remove-listener",
+        "statement": "l0"
+      },
+      {
+        "op": "add-listener",
+        "case": "add-remove-listener",
+        "statement": "l1"
+      },
+      {
+        "op": "add-listener",
+        "case": "add-remove-listener",
+        "statement": "l2"
+      },
+      {
+        "op": "deploy",
+        "case": "add-remove-listener",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1"
+      },
+      {
+        "op": "deployed",
+        "case": "add-remove-listener",
+        "statement": "ctx"
+      },
+      {
+        "op": "remove-listener",
+        "case": "add-remove-listener",
+        "statement": "l0"
+      },
+      {
+        "op": "undeploy",
+        "case": "add-remove-listener",
+        "statement": "ctx"
+      },
+      {
+        "op": "snapshot",
+        "case": "add-remove-listener",
+        "statement": "ctx",
+        "mode": "admin:listeners"
+      },
+      {
+        "op": "remove-listeners",
+        "case": "add-remove-listener"
+      },
+      {
+        "op": "snapshot",
+        "case": "add-remove-listener",
+        "statement": "ctx",
+        "mode": "admin:listeners"
+      },
+      {
+        "op": "deploy",
+        "case": "add-remove-listener",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1"
+      },
+      {
+        "op": "deployed",
+        "case": "add-remove-listener",
+        "statement": "ctx"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "add-remove-listener"
+      },
+      {
+        "op": "case",
+        "case": "multiple-statements"
+      },
+      {
+        "op": "deploy",
+        "case": "multiple-statements",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyContextStartS0EndS1 start SupportBean_S0 as s0 end SupportBean_S1"
+      },
+      {
+        "op": "deployed",
+        "case": "multiple-statements",
+        "statement": "ctx"
+      },
+      {
+        "op": "add-partition-listener",
+        "case": "multiple-statements",
+        "statement": "l0",
+        "name": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "multiple-statements",
+        "statement": "a",
+        "epl": "@name('a') context MyContextStartS0EndS1 select count(*) from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "multiple-statements",
+        "statement": "a"
+      },
+      {
+        "op": "deploy",
+        "case": "multiple-statements",
+        "statement": "b",
+        "epl": "@name('b') context MyContextStartS0EndS1 select count(*) from SupportBean_S0"
+      },
+      {
+        "op": "deployed",
+        "case": "multiple-statements",
+        "statement": "b"
+      },
+      {
+        "op": "send",
+        "case": "multiple-statements",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multiple-statements"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-admin-listen",
+    "records": [
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "statement-added",
+          "runtimeURI": "default",
+          "statementDeploymentId": "s0",
+          "statementName": "s0"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "partition-allocated",
+          "identifier": {
+            "label": "pos",
+            "type": "category"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "partition-allocated",
+          "identifier": {
+            "label": "neg",
+            "type": "category"
+          },
+          "partitionId": 1,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "activated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "statement-removed",
+          "runtimeURI": "default",
+          "statementDeploymentId": "s0",
+          "statementName": "s0"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "deactivated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "destroyed",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "statement-added",
+          "runtimeURI": "default",
+          "statementDeploymentId": "s0",
+          "statementName": "s0"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "activated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "partition-allocated",
+          "identifier": {
+            "identifiers": [
+              {
+                "label": "pos",
+                "type": "category"
+              },
+              {
+                "keys": [
+                  "E1"
+                ],
+                "type": "partitioned"
+              }
+            ],
+            "type": "nested"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "statement-removed",
+          "runtimeURI": "default",
+          "statementDeploymentId": "s0",
+          "statementName": "s0"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "deactivated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "destroyed",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "destroyed",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "destroyed",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "admin",
+        "statement": "ctx",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "listeners": [
+            "l1",
+            "l2"
+          ]
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "admin",
+        "statement": "ctx",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "listeners": []
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "statement-added",
+          "runtimeURI": "default",
+          "statementDeploymentId": "a",
+          "statementName": "a"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "activated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "deployed",
+        "statement": "a",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "statement-added",
+          "runtimeURI": "default",
+          "statementDeploymentId": "b",
+          "statementName": "b"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "deployed",
+        "statement": "b",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "partition-allocated",
+          "identifier": {
+            "initiatingEvent": "SupportBean_S0",
+            "type": "initiatedTerminated"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "statement-removed",
+          "runtimeURI": "default",
+          "statementDeploymentId": "a",
+          "statementName": "a"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "statement-removed",
+          "runtimeURI": "default",
+          "statementDeploymentId": "b",
+          "statementName": "b"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "deactivated",
+          "runtimeURI": "default"
+        }
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-admin-listen",
+    "records": [
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "statement-added",
+          "runtimeURI": "default",
+          "statementDeploymentId": "s0",
+          "statementName": "s0"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "partition-allocated",
+          "identifier": {
+            "label": "pos",
+            "type": "category"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "partition-allocated",
+          "identifier": {
+            "label": "neg",
+            "type": "category"
+          },
+          "partitionId": 1,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "activated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "statement-removed",
+          "runtimeURI": "default",
+          "statementDeploymentId": "s0",
+          "statementName": "s0"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "deactivated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "category",
+        "operation": "context-event",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "destroyed",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "statement-added",
+          "runtimeURI": "default",
+          "statementDeploymentId": "s0",
+          "statementName": "s0"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "activated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "partition-allocated",
+          "identifier": {
+            "identifiers": [
+              {
+                "label": "pos",
+                "type": "category"
+              },
+              {
+                "keys": [
+                  "E1"
+                ],
+                "type": "partitioned"
+              }
+            ],
+            "type": "nested"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "statement-removed",
+          "runtimeURI": "default",
+          "statementDeploymentId": "s0",
+          "statementName": "s0"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "deactivated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "nested",
+        "operation": "context-event",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "destroyed",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "created",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "destroyed",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContext",
+          "event": "destroyed",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "admin",
+        "statement": "ctx",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "listeners": [
+            "l1",
+            "l2"
+          ]
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "admin",
+        "statement": "ctx",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "listeners": []
+        }
+      },
+      {
+        "case": "add-remove-listener",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "statement-added",
+          "runtimeURI": "default",
+          "statementDeploymentId": "a",
+          "statementName": "a"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "activated",
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "deployed",
+        "statement": "a",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "statement-added",
+          "runtimeURI": "default",
+          "statementDeploymentId": "b",
+          "statementName": "b"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "deployed",
+        "statement": "b",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "partition-allocated",
+          "identifier": {
+            "initiatingEvent": "SupportBean_S0",
+            "type": "initiatedTerminated"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "statement-removed",
+          "runtimeURI": "default",
+          "statementDeploymentId": "a",
+          "statementName": "a"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "statement-removed",
+          "runtimeURI": "default",
+          "statementDeploymentId": "b",
+          "statementName": "b"
+        }
+      },
+      {
+        "case": "multiple-statements",
+        "operation": "context-event",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartS0EndS1",
+          "event": "deactivated",
+          "runtimeURI": "default"
+        }
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

@@ -544,7 +544,7 @@ func (e *Engine) activateProtectedModuleLocked(moduleName, deploymentID string) 
 		// non-module context path.
 		e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
 			kind:  contextNotificationCreated,
-			state: ContextStateEvent{ContextName: name},
+			state: ContextStateEvent{RuntimeURI: e.runtimeURI, ContextName: name},
 		})
 	}
 	for key, tableDefinition := range e.env.tables {
@@ -924,6 +924,15 @@ func (e *Engine) retainContextPartitionLocked(contextName, partitionKey string, 
 }
 
 func (e *Engine) releaseContextPartitionLocked(contextName, partitionKey string, runtime ...*statementRuntime) {
+	e.releaseContextPartitionKindLocked(contextName, partitionKey, false, runtime...)
+}
+
+// releaseContextPartitionKindLocked releases one partition reference. The
+// lifecycle flag marks releases driven by the partition's own termination
+// (init-term end events, temporal window expiry); teardown releases
+// (statement/context undeploy) suppress the deallocated notification for
+// flat non-hash kinds, matching Esper's terminateChildContexts gate.
+func (e *Engine) releaseContextPartitionKindLocked(contextName, partitionKey string, lifecycle bool, runtime ...*statementRuntime) {
 	if e == nil || contextName == "" || partitionKey == "" {
 		return
 	}
@@ -987,17 +996,27 @@ func (e *Engine) releaseContextPartitionLocked(contextName, partitionKey string,
 			delete(e.contextPartitionDescriptors, contextName)
 		}
 	}
-	e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
-		kind: contextNotificationPartitionDeallocated,
-		partition: ContextPartitionStateEvent{
-			ContextName: contextName,
-			PartitionID: descriptor.ID,
-			Key:         partitionKey,
-			BaseKey:     descriptor.BaseKey,
-			Descriptor:  descriptor,
-			Allocated:   false,
-		},
-	})
+	// Flat non-hash partitions are context-owned on teardown: Esper gates
+	// per-partition termination on terminateChildContexts, which is false for
+	// a single-level context, so keyed/category/init-term partitions emit no
+	// deallocated event on deactivate. Hash always terminates, nested leaves
+	// terminate via the parent path, and lifecycle termination (init-term end
+	// events, temporal expiry) always notifies.
+	suppressDeallocated := !lifecycle && definitionOK && definition.parent == nil &&
+		definition.kind != ContextHashSegmented
+	if !suppressDeallocated {
+		e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
+			kind: contextNotificationPartitionDeallocated,
+			partition: ContextPartitionStateEvent{
+				ContextName: contextName,
+				PartitionID: descriptor.ID,
+				Key:         partitionKey,
+				BaseKey:     descriptor.BaseKey,
+				Descriptor:  descriptor,
+				Allocated:   false,
+			},
+		})
+	}
 	e.auditContextPartitionLocked(contextName, descriptor.ID, false, e.clock.Now())
 }
 
@@ -1114,7 +1133,7 @@ func (e *Engine) AddContextStateListener(listener ContextStateListener) error {
 	e.mu.Unlock()
 	sort.Strings(contextNames)
 	for _, contextName := range contextNames {
-		listener.OnContextCreated(ContextStateEvent{ContextName: contextName})
+		listener.OnContextCreated(ContextStateEvent{RuntimeURI: e.runtimeURI, ContextName: contextName})
 	}
 	return nil
 }
@@ -1231,8 +1250,8 @@ func (e *Engine) dispatchContextEvents(events []contextNotification) {
 	}
 }
 
-func contextStateEventForStatement(statement *Statement) ContextStateEvent {
-	event := ContextStateEvent{}
+func (e *Engine) contextStateEventForStatement(statement *Statement) ContextStateEvent {
+	event := ContextStateEvent{RuntimeURI: e.runtimeURI}
 	if statement == nil {
 		return event
 	}
@@ -1254,7 +1273,7 @@ func (e *Engine) ensureContextCreatedLocked(contextName string) {
 	e.contextCreated[contextName] = true
 	e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
 		kind:  contextNotificationCreated,
-		state: ContextStateEvent{ContextName: contextName},
+		state: ContextStateEvent{RuntimeURI: e.runtimeURI, ContextName: contextName},
 	})
 }
 
@@ -1266,15 +1285,9 @@ func (e *Engine) queueContextStatementAddedLocked(statement *Statement) {
 	e.ensureContextCreatedLocked(contextName)
 	e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
 		kind:  contextNotificationStatementAdded,
-		state: contextStateEventForStatement(statement),
+		state: e.contextStateEventForStatement(statement),
 	})
 	e.contextStatementRefs[contextName]++
-	if e.contextStatementRefs[contextName] == 1 {
-		e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
-			kind:  contextNotificationActivated,
-			state: ContextStateEvent{ContextName: contextName},
-		})
-	}
 }
 
 // queueContextStatementRemovedLocked returns true when the removed statement
@@ -1290,7 +1303,7 @@ func (e *Engine) queueContextStatementRemovedLocked(statement *Statement) bool {
 	}
 	e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
 		kind:  contextNotificationStatementRemoved,
-		state: contextStateEventForStatement(statement),
+		state: e.contextStateEventForStatement(statement),
 	})
 	e.contextStatementRefs[contextName]--
 	if e.contextStatementRefs[contextName] == 0 {
@@ -1306,7 +1319,7 @@ func (e *Engine) queueContextDeactivatedLocked(contextName string) {
 	}
 	e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
 		kind:  contextNotificationDeactivated,
-		state: ContextStateEvent{ContextName: contextName},
+		state: ContextStateEvent{RuntimeURI: e.runtimeURI, ContextName: contextName},
 	})
 }
 
@@ -1316,7 +1329,7 @@ func (e *Engine) queueContextDestroyedLocked(contextName string) {
 	}
 	e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
 		kind:  contextNotificationDestroyed,
-		state: ContextStateEvent{ContextName: contextName},
+		state: ContextStateEvent{RuntimeURI: e.runtimeURI, ContextName: contextName},
 	})
 }
 
@@ -3066,10 +3079,17 @@ func (e *Engine) deployPreparedRequestsLocked(ctx context.Context, requests []de
 		if definition, ok := e.env.Context(contextName); ok && definition.isTemporal() {
 			_, _ = statement.syncTemporalContextLocked(e.clock.Now())
 		}
-	}
-	for _, statement := range deployment.statements {
+		// Esper activates a context after the first statement's eager
+		// partitions materialize, so allocated events precede activated for
+		// preallocated hash and flat category contexts.
 		e.materializePreallocatedHashContextLocked(statement)
 		e.materializeCategoryContextLocked(statement)
+		if e.contextStatementRefs[contextName] == 1 {
+			e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
+				kind:  contextNotificationActivated,
+				state: ContextStateEvent{RuntimeURI: e.runtimeURI, ContextName: contextName},
+			})
+		}
 	}
 	contextEvents := e.takeContextEventsLocked()
 	auditRecords, auditListeners := e.takeAuditDispatchLocked()
@@ -8744,7 +8764,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
-		s.engine.releaseContextPartitionLocked(s.plan.query.contextName, partitionKey, partition)
+		s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, partitionKey, true, partition)
 	}
 	if changed {
 		result.Sequence = s.runtime.seq.Add(1)
@@ -9323,7 +9343,7 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
-		s.engine.releaseContextPartitionLocked(s.plan.query.contextName, partitionKey, partition)
+		s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, partitionKey, true, partition)
 	}
 	if changed {
 		result.Sequence = s.runtime.seq.Add(1)
@@ -9514,7 +9534,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		// regular output-when assignments when no termination output is set.
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
-		s.engine.releaseContextPartitionLocked(s.plan.query.contextName, partitionKey, partition)
+		s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, partitionKey, true, partition)
 	}
 	if changed {
 		result.Sequence = s.runtime.seq.Add(1)
@@ -9652,7 +9672,7 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 			s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		}
 		delete(s.runtime.partitions, key)
-		s.engine.releaseContextPartitionLocked(s.plan.query.contextName, key, partition)
+		s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, key, true, partition)
 	}
 	if active {
 		if _, exists := s.runtime.partitions[activeKey]; !exists {
@@ -10621,7 +10641,7 @@ func (s *Statement) expireMixedEndPatternsLocked(definition ContextDefinition, n
 		}
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
-		s.engine.releaseContextPartitionLocked(s.plan.query.contextName, partitionKey, partition)
+		s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, partitionKey, true, partition)
 	}
 	if changed {
 		result.Sequence = s.runtime.seq.Add(1)

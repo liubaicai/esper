@@ -44882,6 +44882,77 @@
     "All 9 ContextCategory executions born-differential: eager per-category partitions, fan-out to every matching predicate, context.label/name/id, iterators over empty partitions, category/by-id/filtered selectors, per-partition prior, declared expressions, and compile-error probes.",
     "Shared-core fix: category contexts now fan out via partitionsForEvent + processContextCategoryFanOut at any nesting level (previously first-match only); lazy partitions derive context.label from their own partition key. Residuals: context-bound named-window insert (state.go contextPartitionKey) and table row ownership (faf.go resolveTableContextRowOwnershipLocked) still route to the first matching partition; multi-match events merge into one listener batch rather than one callback per partition. All unexercised by these executions."
    ]
+  },
+  {
+   "id": "case.context-admin-listen",
+   "javaRuntimeIds": [
+    "java-runtime-2021f021c6e12684fb81",
+    "java-runtime-4b1466f2815a381815b2",
+    "java-runtime-410d2c5d3daf011b6c7b",
+    "java-runtime-6dd25578221d74ff6660"
+   ],
+   "javaStaticIds": [
+    "java-3a026095a61c4060c91b",
+    "java-3a026095a61c4060c91b",
+    "java-3a026095a61c4060c91b",
+    "java-3a026095a61c4060c91b"
+   ],
+   "javaNames": [
+    "ContextAdminListenCategory",
+    "ContextAdminListenNested",
+    "ContextAddRemoveListener",
+    "ContextAdminListenMultipleStatements"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunContextAdminListenDirectReplay",
+    "internal/app/parity/run_test.go:TestRunContextAdminListenDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunContextAdminListenDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunContextAdminListenCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunContextAdminListenRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunContextAdminListenRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "context",
+    "admin",
+    "listener",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/context-admin-listen.json",
+    "testdata/parity/context-admin-listen.trace.json",
+    "testdata/parity/context-admin-listen.go.trace.json",
+    "testdata/parity/context-admin-listen.evidence.json",
+    "tools/java-oracle/ContextAdminListenScenarioOracle.java",
+    "tools/java-oracle/run-context-admin-listen.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-2021f021c6e12684fb81",
+    "java-runtime-4b1466f2815a381815b2",
+    "java-runtime-410d2c5d3daf011b6c7b",
+    "java-runtime-6dd25578221d74ff6660"
+   ],
+   "notes": [
+    "ContextAdminListen ords 2/3/4/6 born-differential: eager category allocation, nested-leaf allocation, listener add/remove/registry order, single activation across statements. Ord 5 ContextAdminPartitionAddRemoveListener deferred: scenario B needs nested initiated-parent contexts (NewNestedContext rejects ContextInitiatedTerminated parents).",
+    "Shared-core fixes: ContextStateEvent.RuntimeURI now populated; activated emits after eager partition materialization; deallocated suppressed for flat non-hash kinds on teardown (Esper gates partition termination on terminateChildContexts=false for single-level non-hash controllers); lifecycle termination still notifies via releaseContextPartitionKindLocked."
+   ]
   }
  ],
  "mappings": [
@@ -48016,13 +48087,17 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-category"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-admin-listen"
   }
  ],
  "summary": {
-  "inventoriedCases": 699,
-  "implementedCases": 697,
-  "differentialVerifiedCases": 325,
-  "differentialVerifiedRuntimeIds": 1237,
+  "inventoriedCases": 700,
+  "implementedCases": 698,
+  "differentialVerifiedCases": 326,
+  "differentialVerifiedRuntimeIds": 1241,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48032,13 +48107,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3787,
-  "referencedJavaRuntimeIds": 3414,
+  "runtimeAssociationCount": 3791,
+  "referencedJavaRuntimeIds": 3418,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 722,
+  "unreferencedJavaRuntimeIds": 718,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 699,
+  "totalCases": 700,
   "totalCapabilities": 121
  }
 }

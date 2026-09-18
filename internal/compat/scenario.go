@@ -195,6 +195,9 @@ func (s Scenario) Validate() error {
 			if strings.TrimSpace(step.Epl) == "" {
 				return fmt.Errorf("compat: step %d build-error has no epl", i)
 			}
+		case "add-listener", "add-partition-listener", "remove-listener", "remove-listeners":
+			// Context lifecycle listener registration steps; the runner
+			// pins the full step key, so no field-level checks are needed.
 		default:
 			return fmt.Errorf("compat: step %d has unsupported op %q", i, step.Op)
 		}
@@ -450,7 +453,8 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 			if err := engine.AdvanceTime(ctx, at); err != nil {
 				return trace, err
 			}
-		case "faf", "deploy", "undeploy", "undeploy-all", "read-variable", "set-variable", "types", "deployed":
+		case "faf", "deploy", "undeploy", "undeploy-all", "read-variable", "set-variable", "types", "deployed",
+			"add-listener", "add-partition-listener", "remove-listener", "remove-listeners":
 			handler := handlers[step.Op]
 			if handler == nil {
 				return trace, fmt.Errorf("compat: no %s handler for step %q", step.Op, step.Statement)

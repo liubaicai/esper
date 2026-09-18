@@ -162,10 +162,13 @@ func TestContextStateAndPartitionLifecycleListeners(t *testing.T) {
 	if err := deployment.Undeploy(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if len(listener.removed) != 1 || len(listener.deallocated) != 1 || len(listener.deactivated) != 1 {
+	// Esper's keyed controller gates per-partition termination on
+	// terminateChildContexts, which is false for a single-level context, so a
+	// flat keyed partition emits no deallocated event on teardown.
+	if len(listener.removed) != 1 || len(listener.deallocated) != 0 || len(listener.deactivated) != 1 {
 		t.Fatalf("statement teardown lifecycle: removed=%#v deallocated=%#v deactivated=%#v", listener.removed, listener.deallocated, listener.deactivated)
 	}
-	if len(listener.sequence) < 6 || listener.sequence[len(listener.sequence)-3] != "statement-removed" || listener.sequence[len(listener.sequence)-2] != "partition-deallocated" || listener.sequence[len(listener.sequence)-1] != "deactivated" {
+	if len(listener.sequence) < 5 || listener.sequence[len(listener.sequence)-2] != "statement-removed" || listener.sequence[len(listener.sequence)-1] != "deactivated" {
 		t.Fatalf("teardown lifecycle order = %#v", listener.sequence)
 	}
 	if err := engine.DestroyContext(context.Background(), "lifecycle-context"); err != nil {
@@ -256,11 +259,11 @@ func TestContextPartitionStateListenerUsesSharedLifecycle(t *testing.T) {
 	if err := second.Undeploy(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if len(listener.deallocated) != 2 {
-		t.Fatalf("expected final shared deallocations, got %#v", listener.deallocated)
-	}
-	if listener.deallocated[0].Key != listener.allocated[0].Key || listener.deallocated[1].Key != listener.allocated[1].Key {
-		t.Fatalf("deallocation order/keys = %#v", listener.deallocated)
+	// Esper's keyed controller gates per-partition termination on
+	// terminateChildContexts, which is false for a single-level context, so
+	// flat keyed partitions emit no deallocated event on teardown.
+	if len(listener.deallocated) != 0 {
+		t.Fatalf("unexpected deallocations on flat keyed teardown: %#v", listener.deallocated)
 	}
 	engine.RemoveContextPartitionStateListener("by-symbol", listener)
 	if listeners := engine.ContextPartitionStateListeners("by-symbol"); len(listeners) != 0 {

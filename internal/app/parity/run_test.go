@@ -64165,3 +64165,446 @@ func TestRunContextCategoryRuntimeIDMappingMatchesScenario(t *testing.T) {
 		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
 	}
 }
+
+// contextAdminListenCheckJavaMetadata verifies differential evidence carries
+// the pinned Java commit, runtime IDs, source file and execution names for
+// the ContextAdminListen suite.
+func contextAdminListenCheckJavaMetadata(javaCommit string, runtimeIDs, sourceFiles, executions []string) error {
+	if javaCommit != contextAdminListenJavaCommit {
+		return fmt.Errorf("Java commit = %q, want %q", javaCommit, contextAdminListenJavaCommit)
+	}
+	if !reflect.DeepEqual(runtimeIDs, contextAdminListenJavaRuntimeIDs) {
+		return fmt.Errorf("Java runtime IDs = %v, want %v", runtimeIDs, contextAdminListenJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(sourceFiles, contextAdminListenSources) {
+		return fmt.Errorf("Java source files = %v, want %v", sourceFiles, contextAdminListenSources)
+	}
+	if !reflect.DeepEqual(executions, contextAdminListenJavaExecutions) {
+		return fmt.Errorf("Java executions = %v, want %v", executions, contextAdminListenJavaExecutions)
+	}
+	return nil
+}
+
+func assertContextAdminListenTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != contextAdminListenID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	type line struct {
+		caseName  string
+		operation string
+		statement string
+		name      string
+		sequence  uint64
+		value     string
+	}
+	expected := []line{
+		{"category", "context-event", "", "l0", 1, `map[contextDeploymentId:ctx contextName:MyContext event:created runtimeURI:default]`},
+		{"category", "context-event", "", "l0", 2, `map[contextDeploymentId:ctx contextName:MyContext event:statement-added runtimeURI:default statementDeploymentId:s0 statementName:s0]`},
+		{"category", "context-event", "", "l0", 3, `map[contextDeploymentId:ctx contextName:MyContext event:partition-allocated identifier:map[label:pos type:category] partitionId:0 runtimeURI:default]`},
+		{"category", "context-event", "", "l0", 4, `map[contextDeploymentId:ctx contextName:MyContext event:partition-allocated identifier:map[label:neg type:category] partitionId:1 runtimeURI:default]`},
+		{"category", "context-event", "", "l0", 5, `map[contextDeploymentId:ctx contextName:MyContext event:activated runtimeURI:default]`},
+		{"category", "deployed", "s0", "", 1, ``},
+		{"category", "context-event", "", "l0", 6, `map[contextDeploymentId:ctx contextName:MyContext event:statement-removed runtimeURI:default statementDeploymentId:s0 statementName:s0]`},
+		{"category", "context-event", "", "l0", 7, `map[contextDeploymentId:ctx contextName:MyContext event:deactivated runtimeURI:default]`},
+		{"category", "context-event", "", "l0", 8, `map[contextDeploymentId:ctx contextName:MyContext event:destroyed runtimeURI:default]`},
+		{"nested", "context-event", "", "l0", 1, `map[contextDeploymentId:ctx contextName:MyContext event:created runtimeURI:default]`},
+		{"nested", "context-event", "", "l0", 2, `map[contextDeploymentId:ctx contextName:MyContext event:statement-added runtimeURI:default statementDeploymentId:s0 statementName:s0]`},
+		{"nested", "context-event", "", "l0", 3, `map[contextDeploymentId:ctx contextName:MyContext event:activated runtimeURI:default]`},
+		{"nested", "deployed", "s0", "", 1, ``},
+		{"nested", "context-event", "", "l0", 4, `map[contextDeploymentId:ctx contextName:MyContext event:partition-allocated identifier:map[identifiers:[map[label:pos type:category] map[keys:[E1] type:partitioned]] type:nested] partitionId:0 runtimeURI:default]`},
+		{"nested", "context-event", "", "l0", 5, `map[contextDeploymentId:ctx contextName:MyContext event:statement-removed runtimeURI:default statementDeploymentId:s0 statementName:s0]`},
+		{"nested", "context-event", "", "l0", 6, `map[contextDeploymentId:ctx contextName:MyContext event:partition-deallocated partitionId:0 runtimeURI:default]`},
+		{"nested", "context-event", "", "l0", 7, `map[contextDeploymentId:ctx contextName:MyContext event:deactivated runtimeURI:default]`},
+		{"nested", "context-event", "", "l0", 8, `map[contextDeploymentId:ctx contextName:MyContext event:destroyed runtimeURI:default]`},
+		{"add-remove-listener", "context-event", "", "l0", 1, `map[contextDeploymentId:ctx contextName:MyContext event:created runtimeURI:default]`},
+		{"add-remove-listener", "context-event", "", "l1", 1, `map[contextDeploymentId:ctx contextName:MyContext event:created runtimeURI:default]`},
+		{"add-remove-listener", "context-event", "", "l2", 1, `map[contextDeploymentId:ctx contextName:MyContext event:created runtimeURI:default]`},
+		{"add-remove-listener", "deployed", "ctx", "", 1, ``},
+		{"add-remove-listener", "context-event", "", "l1", 2, `map[contextDeploymentId:ctx contextName:MyContext event:destroyed runtimeURI:default]`},
+		{"add-remove-listener", "context-event", "", "l2", 2, `map[contextDeploymentId:ctx contextName:MyContext event:destroyed runtimeURI:default]`},
+		{"add-remove-listener", "admin", "ctx", "", 0, `map[listeners:[l1 l2]]`},
+		{"add-remove-listener", "admin", "ctx", "", 0, `map[listeners:[]]`},
+		{"add-remove-listener", "deployed", "ctx", "", 2, ``},
+		{"multiple-statements", "deployed", "ctx", "", 1, ``},
+		{"multiple-statements", "context-event", "", "l0", 1, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:statement-added runtimeURI:default statementDeploymentId:a statementName:a]`},
+		{"multiple-statements", "context-event", "", "l0", 2, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:activated runtimeURI:default]`},
+		{"multiple-statements", "deployed", "a", "", 1, ``},
+		{"multiple-statements", "context-event", "", "l0", 3, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:statement-added runtimeURI:default statementDeploymentId:b statementName:b]`},
+		{"multiple-statements", "deployed", "b", "", 1, ``},
+		{"multiple-statements", "context-event", "", "l0", 4, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:partition-allocated identifier:map[initiatingEvent:SupportBean_S0 type:initiatedTerminated] partitionId:0 runtimeURI:default]`},
+		{"multiple-statements", "context-event", "", "l0", 5, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:statement-removed runtimeURI:default statementDeploymentId:a statementName:a]`},
+		{"multiple-statements", "context-event", "", "l0", 6, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:statement-removed runtimeURI:default statementDeploymentId:b statementName:b]`},
+		{"multiple-statements", "context-event", "", "l0", 7, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:deactivated runtimeURI:default]`},
+	}
+	if len(trace.Records) != len(expected) {
+		t.Fatalf("trace records = %d, want %d", len(trace.Records), len(expected))
+	}
+	for index, want := range expected {
+		record := trace.Records[index]
+		got := line{
+			caseName:  record.Case,
+			operation: record.Operation,
+			statement: record.Statement,
+			name:      record.Name,
+			sequence:  record.Sequence,
+			value:     eplVariablesCreateRenderValue(record.Value),
+		}
+		if got != want {
+			t.Fatalf("record %d = %#v, want %#v", index, got, want)
+		}
+	}
+}
+
+func TestRunContextAdminListenDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextAdminListenID,
+		"-scenario", filepath.Join(root, contextAdminListenID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertContextAdminListenTrace(t, trace)
+}
+
+func TestRunContextAdminListenDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), contextAdminListenID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextAdminListenID + "-diff",
+		"-scenario", filepath.Join(root, contextAdminListenID+".json"),
+		"-java-trace", filepath.Join(root, contextAdminListenID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if err := contextAdminListenCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("Java metadata: %v", err)
+	}
+	assertContextAdminListenTrace(t, evidence.JavaTrace)
+	assertContextAdminListenTrace(t, evidence.GoTrace)
+}
+
+func TestRunContextAdminListenDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// Record 3 is ord 2's second eager allocation: the 'neg'
+			// category label must be present.
+			name: "category-neg-label-drift",
+			mutate: func(trace *compat.Trace) {
+				value := trace.Records[3].Value.(map[string]any)
+				value["identifier"] = map[string]any{"label": "pos", "type": "category"}
+			},
+		},
+		{
+			// Record 4 is ord 2's activation ordering: activated follows
+			// the eager allocations.
+			name: "category-activated-order-drift",
+			mutate: func(trace *compat.Trace) {
+				value := trace.Records[4].Value.(map[string]any)
+				value["event"] = "partition-allocated"
+			},
+		},
+		{
+			// Record 13 is ord 3's nested-leaf allocation: identifiers[1]
+			// is the partitioned key ["E1"].
+			name: "nested-leaf-identifier-drift",
+			mutate: func(trace *compat.Trace) {
+				value := trace.Records[13].Value.(map[string]any)
+				value["identifier"] = map[string]any{"type": "nested", "identifiers": []any{
+					map[string]any{"label": "pos", "type": "category"},
+					map[string]any{"keys": []any{"E2"}, "type": "partitioned"},
+				}}
+			},
+		},
+		{
+			// Record 15 is ord 3's teardown: the nested leaf emits
+			// partition-deallocated before deactivated.
+			name: "nested-deallocated-lost",
+			mutate: func(trace *compat.Trace) {
+				value := trace.Records[15].Value.(map[string]any)
+				value["event"] = "deactivated"
+			},
+		},
+		{
+			// Record 22 is ord 4's listener-removal proof: only l1/l2 see
+			// destroyed after l0 is removed.
+			name: "add-remove-destroyed-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[22].Name = "l0"
+			},
+		},
+		{
+			// Record 29 is ord 6's single activation: activated fires once
+			// after the first statement add, before the second.
+			name: "multiple-statements-activated-order-drift",
+			mutate: func(trace *compat.Trace) {
+				value := trace.Records[29].Value.(map[string]any)
+				value["event"] = "statement-added"
+			},
+		},
+		{
+			// Record 33 is ord 6's single partition allocation: one
+			// partition-allocated despite two statements.
+			name: "multiple-statements-allocated-drift",
+			mutate: func(trace *compat.Trace) {
+				value := trace.Records[33].Value.(map[string]any)
+				value["event"] = "partition-deallocated"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:35]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, contextAdminListenID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), contextAdminListenID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", contextAdminListenID + "-diff",
+				"-scenario", filepath.Join(root, contextAdminListenID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunContextAdminListenCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, contextAdminListenID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, contextAdminListenID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, contextAdminListenID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if err := contextAdminListenCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("checked-in Java metadata: %v", err)
+	}
+	assertContextAdminListenTrace(t, javaTrace)
+	assertContextAdminListenTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, contextAdminListenID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		contextAdminListenJavaCommit,
+		contextAdminListenJavaRuntimeIDs,
+		contextAdminListenSources,
+		contextAdminListenJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextAdminListenID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertContextAdminListenTrace(t, replayed)
+}
+
+func TestRunContextAdminListenRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, contextAdminListenID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "unknown-op", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "undeploy-all"`), []byte(`"op": "close-all"`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), contextAdminListenID+".json")
+			if err := os.WriteFile(path, test.mutate(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", contextAdminListenID, "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q was accepted", test.name)
+			}
+		})
+	}
+}
+
+func TestRunContextAdminListenRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", contextAdminListenID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version      string   `json:"version"`
+		ID           string   `json:"id"`
+		Description  string   `json:"description"`
+		JavaCommit   string   `json:"javaCommit"`
+		JavaSource   string   `json:"javaSource"`
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaFlags    []string `json:"javaFlags"`
+		Cases        []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+			Observation   string `json:"observation"`
+			EPL           string `json:"epl"`
+		} `json:"cases"`
+		Steps []struct {
+			Op        string `json:"op"`
+			Case      string `json:"case"`
+			Statement string `json:"statement"`
+			Name      string `json:"name"`
+		} `json:"steps"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != contextAdminListenID ||
+		document.Description != contextAdminListenDescription ||
+		document.JavaCommit != contextAdminListenJavaCommit ||
+		document.JavaSource != contextAdminListenSource {
+		t.Fatalf("scenario identity = %q/%q/%q/%q/%q", document.Version, document.ID,
+			document.Description, document.JavaCommit, document.JavaSource)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, contextAdminListenJavaRuntimeIDs) {
+		t.Fatalf("scenario javaRuntimes = %v, want %v", document.JavaRuntimes, contextAdminListenJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(document.JavaNames, contextAdminListenJavaExecutions) {
+		t.Fatalf("scenario javaNames = %v, want %v", document.JavaNames, contextAdminListenJavaExecutions)
+	}
+	if !reflect.DeepEqual(document.JavaFlags, contextAdminListenJavaFlags) {
+		t.Fatalf("scenario javaFlags = %v, want %v", document.JavaFlags, contextAdminListenJavaFlags)
+	}
+	if len(document.Cases) != len(contextAdminListenCases) {
+		t.Fatalf("scenario cases = %d, want %d", len(document.Cases), len(contextAdminListenCases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != contextAdminListenCases[index] ||
+			entry.Ordinal != contextAdminListenOrdinals[index] ||
+			entry.RuntimeID != contextAdminListenJavaRuntimeIDs[index] ||
+			entry.ExecutionName != contextAdminListenJavaExecutions[index] ||
+			entry.Observation != contextAdminListenCaseObservations[index] ||
+			entry.EPL != contextAdminListenCaseEPLs[index] {
+			t.Fatalf("scenario case %d = %#v", index, entry)
+		}
+	}
+	// Step order per case: case marker, then the pinned case steps.
+	offset := 0
+	for _, caseName := range contextAdminListenCases {
+		if offset >= len(document.Steps) {
+			t.Fatalf("missing case %q", caseName)
+		}
+		if document.Steps[offset].Op != "case" || document.Steps[offset].Case != caseName {
+			t.Fatalf("step %d is not the %q case marker", offset, caseName)
+		}
+		offset++
+		offset += len(contextAdminListenCaseSteps[caseName])
+	}
+	if offset != len(document.Steps) {
+		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
+	}
+}

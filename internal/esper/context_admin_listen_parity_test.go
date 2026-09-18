@@ -177,7 +177,9 @@ func TestContextAdminListenHashParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	statement := deployment.Statements()[0]
-	if got, want := listener.sequence, []string{"created", "statement-added", "activated", "partition-allocated", "partition-allocated"}; !reflect.DeepEqual(got, want) {
+	// Esper's hash controller eagerly materializes every bucket inside
+	// activate, so partition-allocated events precede the activated event.
+	if got, want := listener.sequence, []string{"created", "statement-added", "partition-allocated", "partition-allocated", "activated"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("hash activation sequence = %#v, want %#v", got, want)
 	}
 	if got, want := statement.ContextPartitionKeys(), []string{"hash:0", "hash:1"}; !reflect.DeepEqual(got, want) {
@@ -215,7 +217,7 @@ func TestContextAdminListenHashParity(t *testing.T) {
 	if err := deployment.Undeploy(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := listener.sequence, []string{"created", "statement-added", "activated", "partition-allocated", "partition-allocated", "statement-removed", "partition-deallocated", "partition-deallocated", "deactivated"}; !reflect.DeepEqual(got, want) {
+	if got, want := listener.sequence, []string{"created", "statement-added", "partition-allocated", "partition-allocated", "activated", "statement-removed", "partition-deallocated", "partition-deallocated", "deactivated"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("hash teardown sequence = %#v, want %#v", got, want)
 	}
 	if len(listener.deallocated) != 2 {
@@ -231,7 +233,7 @@ func TestContextAdminListenHashParity(t *testing.T) {
 	if err := engine.DestroyContext(context.Background(), "MyContext"); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := listener.sequence, []string{"created", "statement-added", "activated", "partition-allocated", "partition-allocated", "statement-removed", "partition-deallocated", "partition-deallocated", "deactivated", "destroyed"}; !reflect.DeepEqual(got, want) {
+	if got, want := listener.sequence, []string{"created", "statement-added", "partition-allocated", "partition-allocated", "activated", "statement-removed", "partition-deallocated", "partition-deallocated", "deactivated", "destroyed"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("hash context teardown sequence = %#v, want %#v", got, want)
 	}
 	if len(listener.destroyed) != 1 || listener.destroyed[0].ContextName != "MyContext" {
