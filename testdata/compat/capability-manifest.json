@@ -45039,6 +45039,63 @@
     "java-runtime-1bff58f3130b73dfc99f"
    ],
    "notes": "ords 0/1/2 of ContextWDeclaredExpression; the shared-core fix arms event filters when a composite context start pattern is seeded by a timer branch so and(TimerAt, every(event)) stays active after the timer leg fires"
+  },
+  {
+   "id": "case.infra-table-join",
+   "javaRuntimeIds": [
+    "java-runtime-c7ba930cd8efcf4a0daa",
+    "java-runtime-bd56535c23535c3e90ce",
+    "java-runtime-375040b0fa5a7b77c5aa",
+    "java-runtime-7e0cba3e4899478393ef"
+   ],
+   "javaNames": [
+    "InfraFromClause",
+    "InfraUnkeyedTable",
+    "InfraOuterJoin",
+    "InfraInnerJoinWithOnClause"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableJoin.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraTableJoinDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "join",
+    "from-clause",
+    "unkeyed",
+    "outer-join",
+    "unidirectional",
+    "inner-join",
+    "on-clause",
+    "faf",
+    "undeploy",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-join.json",
+    "testdata/parity/infra-table-join.trace.json",
+    "testdata/parity/infra-table-join.go.trace.json",
+    "testdata/parity/infra-table-join.evidence.json"
+   ],
+   "notes": [
+    "Four InfraTableJoin executions replayed through one scenario: comma join of SupportBean_S0 to the keyed varaggFC table via where va.key=s0.p00 (retained stream rows must not re-emit when the table side refreshes), an unkeyed sum(int) table surviving undeployModuleContaining plus a positional FAF insert into a second table, a unidirectional left outer join of SupportBean to a keyed table with null fill on miss, and an inner join of a keyed table to SupportBean_S1 on a non-key column with select-* fragment access.",
+    "Engine alignment proven by the zero-difference replay: bidirectional joins now refresh table sides before the tuple-diff snapshot so table mutations are invisible to retained stream rows (Java drives table joins only from the triggering stream event), and fire-and-forget/trigger table lookups resolve tables registered after engine construction via ensureTableLockedInModule."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c7ba930cd8efcf4a0daa",
+    "java-runtime-bd56535c23535c3e90ce",
+    "java-runtime-375040b0fa5a7b77c5aa",
+    "java-runtime-7e0cba3e4899478393ef"
+   ]
   }
  ],
  "mappings": [
@@ -48181,13 +48238,21 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-declared-expression"
+  },
+  {
+   "capabilityId": "join.basic",
+   "caseId": "case.infra-table-join"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-join"
   }
  ],
  "summary": {
-  "inventoriedCases": 701,
-  "implementedCases": 699,
-  "differentialVerifiedCases": 327,
-  "differentialVerifiedRuntimeIds": 1247,
+  "inventoriedCases": 702,
+  "implementedCases": 700,
+  "differentialVerifiedCases": 328,
+  "differentialVerifiedRuntimeIds": 1251,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48197,13 +48262,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3797,
-  "referencedJavaRuntimeIds": 3424,
+  "runtimeAssociationCount": 3801,
+  "referencedJavaRuntimeIds": 3428,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 712,
+  "unreferencedJavaRuntimeIds": 708,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 701,
+  "totalCases": 702,
   "totalCapabilities": 121
  }
 }

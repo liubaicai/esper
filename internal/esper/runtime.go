@@ -14376,6 +14376,25 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 	if joinDefinitionHasUnidirectional(definition) {
 		return r.updateUnidirectionalJoin(definition, sources, evaluationOrder, now, newEvents, oldEvents)
 	}
+	// Table sides are current-state lookups, not event streams: Esper never
+	// drives a join from a table mutation, so a retained stream row must not
+	// re-emit when the table content changes. Refresh every table side before
+	// the "before" snapshot so the tuple diff only observes stream-side
+	// inserts/removals from this trigger cycle.
+	for index, source := range sources {
+		base, baseErr := sourceNode(source)
+		if baseErr != nil {
+			return joinDelta{}, baseErr
+		}
+		if base == nil || base.kind != streamTable {
+			continue
+		}
+		side, snapshotErr := r.snapshotTableJoinSide(source, base, now)
+		if snapshotErr != nil {
+			return joinDelta{}, snapshotErr
+		}
+		r.joinState.sides[index] = r.assignJoinLineageIDs(side, r.joinState.sides[index])
+	}
 	before := joinKeyedTuples(definition, r.joinState, now, r)
 	immediatelyEvictedBySide := make(map[int][]Event)
 	for _, event := range newEvents {
@@ -14427,15 +14446,8 @@ func (r *statementRuntime) updateJoin(definition *joinDefinition, now time.Time,
 				continue
 			}
 			if base.kind == streamTable {
-				// A table is a current-state source rather than an event stream.
-				// Refresh its side for every trigger and let the tuple diff emit
-				// the exact old/new pairs caused by table changes. SendEvent holds
-				// the engine lock here, hence the locked snapshot path.
-				side, snapshotErr := r.snapshotTableJoinSide(source, base, now)
-				if snapshotErr != nil {
-					return joinDelta{}, snapshotErr
-				}
-				r.joinState.sides[index] = r.assignJoinLineageIDs(side, r.joinState.sides[index])
+				// Refreshed once before the "before" snapshot above; a table
+				// never consumes the trigger event itself.
 				continue
 			}
 			if base.kind == streamMethod && base.method != nil && len(base.method.dependencies) > 0 {

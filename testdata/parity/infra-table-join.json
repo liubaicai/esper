@@ -1,0 +1,326 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-table-join",
+ "description": "InfraTableJoin ords 0/3/4/5: from-clause comma join of stream to keyed table, unkeyed table surviving module undeploy, unidirectional left outer join with null fill, and inner join with on-clause plus select * fragment access.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableJoin.java",
+ "javaRuntimes": [
+  "java-runtime-c7ba930cd8efcf4a0daa",
+  "java-runtime-bd56535c23535c3e90ce",
+  "java-runtime-375040b0fa5a7b77c5aa",
+  "java-runtime-7e0cba3e4899478393ef"
+ ],
+ "javaNames": [
+  "InfraFromClause",
+  "InfraUnkeyedTable",
+  "InfraOuterJoin",
+  "InfraInnerJoinWithOnClause"
+ ],
+ "javaStaticIds": [
+  "java-810b53325c6857c0d476",
+  "java-353b57ef718eb50ea62e",
+  "java-46bca199882ab8e60624",
+  "java-a70a422119e7d37641a0"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "from-clause",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-c7ba930cd8efcf4a0daa",
+   "executionName": "InfraFromClause",
+   "observation": "listener; comma join of SupportBean_S0 to keyed table varaggFC via where va.key=s0.p00; S0(0,'G1') yields value=100 after SupportBean(G1,100), S0(0,'G2') silent until SupportBean(G2,200) populates the key",
+   "epl": "@public create table varaggFC as (key string primary key, total sum(int)); into table varaggFC select sum(intPrimitive) as total from SupportBean group by theString; @name('s0') select total as value from SupportBean_S0 as s0, varaggFC as va where va.key = s0.p00"
+  },
+  {
+   "case": "unkeyed",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-bd56535c23535c3e90ce",
+   "executionName": "InfraUnkeyedTable",
+   "observation": "listener; unkeyed table MyTable(sumint sum(int)) fed by into-table aggregation survives undeployModuleContaining('into'); join select sumint from MyTable, SupportBean yields 201; SecondTable(a,b) via positional FAF insert values('a1',10) yields a1/10",
+   "epl": "@public create table MyTable (sumint sum(int)); @name('into') into table MyTable select sum(intPrimitive) as sumint from SupportBean; @name('join') select sumint from MyTable, SupportBean; @public create table SecondTable (a string, b int); @name('s0')select a, b from SecondTable, SupportBean"
+  },
+  {
+   "case": "outer-join",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-375040b0fa5a7b77c5aa",
+   "executionName": "InfraOuterJoin",
+   "observation": "listener; unidirectional left outer join of SupportBean to MyTable on theString=p0; FAF insert 'a'/10 then SupportBean('a',0) yields theString=a,p1=10 and SupportBean('b',0) yields theString=b,p1=null",
+   "epl": "@public create table MyTable as (p0 string primary key, p1 int); @name('s0') select theString, p1 from SupportBean unidirectional left outer join MyTable on theString = p0"
+  },
+  {
+   "case": "inner-join-on",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-7e0cba3e4899478393ef",
+   "executionName": "InfraInnerJoinWithOnClause",
+   "observation": "listener; inner join MyTable mt to SupportBean_S1 s1 on p10=prop; S0(0,'K1','A') populates the table, S1(10,'X') silent, S1(11,'A') yields mt.key1=K1,mt.prop=A via select * fragment access",
+   "epl": "create table MyTable(key1 string primary key, prop string);insert into MyTable select p00 as key1, p01 as prop from SupportBean_S0;@name('s0') select * from MyTable as mt inner join SupportBean_S1 as s1 on p10 = prop;"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "from-clause"
+  },
+  {
+   "op": "deploy",
+   "statement": "table",
+   "epl": "@public create table varaggFC as (key string primary key, total sum(int))"
+  },
+  {
+   "op": "deployed",
+   "statement": "table"
+  },
+  {
+   "op": "deploy",
+   "statement": "into",
+   "epl": "into table varaggFC select sum(intPrimitive) as total from SupportBean group by theString"
+  },
+  {
+   "op": "deployed",
+   "statement": "into"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0') select total as value from SupportBean_S0 as s0, varaggFC as va where va.key = s0.p00"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "G2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G2",
+    "intPrimitive": 200
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "G1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "G2"
+   }
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "unkeyed"
+  },
+  {
+   "op": "deploy",
+   "statement": "table",
+   "epl": "@public create table MyTable (sumint sum(int))"
+  },
+  {
+   "op": "deployed",
+   "statement": "table"
+  },
+  {
+   "op": "deploy",
+   "statement": "into",
+   "epl": "@name('into') into table MyTable select sum(intPrimitive) as sumint from SupportBean"
+  },
+  {
+   "op": "deployed",
+   "statement": "into"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 100
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 101
+   }
+  },
+  {
+   "op": "undeploy",
+   "statement": "into"
+  },
+  {
+   "op": "deploy",
+   "statement": "join",
+   "epl": "@name('join') select sumint from MyTable, SupportBean"
+  },
+  {
+   "op": "deployed",
+   "statement": "join"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy",
+   "statement": "join"
+  },
+  {
+   "op": "deploy",
+   "statement": "table2",
+   "epl": "@public create table SecondTable (a string, b int)"
+  },
+  {
+   "op": "deployed",
+   "statement": "table2"
+  },
+  {
+   "op": "faf",
+   "statement": "faf",
+   "epl": "insert into SecondTable values ('a1', 10)"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0')select a, b from SecondTable, SupportBean"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "outer-join"
+  },
+  {
+   "op": "deploy",
+   "statement": "table",
+   "epl": "@public create table MyTable as (p0 string primary key, p1 int)"
+  },
+  {
+   "op": "deployed",
+   "statement": "table"
+  },
+  {
+   "op": "faf",
+   "statement": "faf",
+   "epl": "insert into MyTable select 'a' as p0, 10 as p1"
+  },
+  {
+   "op": "deploy",
+   "statement": "s0",
+   "epl": "@name('s0') select theString, p1 from SupportBean unidirectional left outer join MyTable on theString = p0"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "a",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "b",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "inner-join-on"
+  },
+  {
+   "op": "deploy",
+   "statement": "module",
+   "epl": "create table MyTable(key1 string primary key, prop string);insert into MyTable select p00 as key1, p01 as prop from SupportBean_S0;@name('s0') select * from MyTable as mt inner join SupportBean_S1 as s1 on p10 = prop;"
+  },
+  {
+   "op": "deployed",
+   "statement": "module"
+  },
+  {
+   "op": "deployed",
+   "statement": "s0"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "K1",
+    "p01": "A"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 10,
+    "p10": "X"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 11,
+    "p10": "A"
+   }
+  },
+  {
+   "op": "undeploy-all"
+  }
+ ]
+}

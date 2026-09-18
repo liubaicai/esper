@@ -59,7 +59,7 @@ Active: Draft 4.460 ('context-declared-expression').
 - [x] Roadmap + CHANGELOG entries added.
 - [x] Full gates: `go test ./internal/esper/` 72s green, `go test ./internal/app/parity/` 80s green, `TestCapabilityManifestArtifactValidates` green, gofmt clean, `git diff --check` clean, `go vet` clean.
 - [x] Independent parity review (ParityReview460): FAIL on two manifest P1s (missing capability mapping, stale summary counts); both fixed and re-validated.
-- [ ] Commit + push pending.
+- [x] Committed and pushed as `337b29b3c`.
 
 
 ## Current work unit
@@ -3226,45 +3226,50 @@ Active: Draft 4.456 ('context-variables').
 - [x] Shipped; Git owns identity. Draft 4.456 committed and pushed as `379fbbe66`.
 
 ## Current work unit
-Active: Draft 4.457 ('context-category'): ContextCategory.java, all 9
-executions born-differential.
+Active: Draft 4.461 ('infra-table-join'): InfraTableJoin.java ordinals
+0/3/4/5 born-differential.
 
-- [x] Contract frozen (scouts `NextJavaContract457` + `NextGoSurface457`):
- eager per-category partitions, fan-out to every matching predicate,
- context.label/name/id, iterators incl. empty partitions, selectors,
- per-partition prior, declared expressions, compile-error probes.
-- [x] **Engine fix (shared core)**: category contexts were first-match;
- now `partitionsForEvent` returns every matching `category:<name>` key,
- `partitionRuntime` signals fan-out, `processContextCategoryFanOut`
- dispatches in declaration order with lazy nested-partition creation;
- `filterEventsForPartition`, `contextJoinPartitionEvents`, FAF grouped
- paths, and `processNamedWindowContextLocked` use the plural form.
- Residual: context-bound named-window insert routes to first match only.
-- [x] Assets (worker `AssetWorker457`): scenario (9 cases / 75 records),
- oracle, runner, run.go wiring. Oracle fix: listener dedup keyed by
- statement identity (redeployed s0 in the SODA cycle was skipped).
-- [x] Java trace + Go replay + zero-diff evidence: `-mode
- context-category-diff` passing / 0 differences, 75 records each.
-- [x] Manifest/roadmap/CHANGELOG updated; `make check` green.
-- [x] Parity review round 1 (agent `ParityReview457`): FAIL on one P1 +
- two P2s. P1 FIXED: lazy nested category partitions got the first-match
- label; `contextPropertyValuesForKey` now derives each level's label from
- the partition key segments. P2 FIXED: nested contexts with a category
- PARENT still dispatched first-match; `hasCategoryLevel` now signals
- fan-out at any depth. P2 FIXED: manifest javaNames now carry the
- {isAlias=...} suffixes. P3s documented in manifest notes: named-window
- insert + table row ownership still first-match; multi-match merges into
- one listener batch.
-- [x] Confirmation review (same agent `ParityReview457`): OVERALL PASS.
- Residual P3 fixed in-place: nested-key label derivation now splits on the
- first two \x1f separators so multi-key children still resolve the parent
- label.
-- [x] Shipped; Git owns identity. Draft 4.457 committed and pushed as `c675ce61a`.
+- [x] Contract frozen from the prefetched read-only survey: InfraFromClause
+ (`java-runtime-c7ba930cd8efcf4a0daa`), InfraUnkeyedTable
+ (`java-runtime-bd56535c23535c3e90ce`), InfraOuterJoin
+ (`java-runtime-375040b0fa5a7b77c5aa`), InfraInnerJoinWithOnClause
+ (`java-runtime-7e0cba3e4899478393ef`); Java commit
+ `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; no flags, no virtual time.
+ Every execution attaches the listener after compileDeploy.
+- [x] Scenario `testdata/parity/infra-table-join.json` (4 cases / 50 steps)
+ with byte-exact EPLs pinned per deploy/faf step; runner
+ `internal/app/parity/infra_table_join.go` + run.go wiring; strict loader
+ pins metadata, per-op field whitelists and the full step sequence.
+- [x] Oracle `tools/java-oracle/InfraTableJoinScenarioOracle.java` + run
+ script; Java trace regenerated at the pinned commit and byte-identical to
+ the checked-in `infra-table-join.trace.json` (md5 `cb581b40104189417b15ef9b2f922c06`).
+- [x] **Engine fixes (shared core)**: (1) `updateJoin` refreshes table sides
+ BEFORE the `before` tuple snapshot — Esper drives table joins only from the
+ triggering stream event, so a table mutation must be invisible to retained
+ stream rows; previously S0(G1) re-emitted {200,100} when the table gained
+ the G2 row. (2) `faf.go`/`trigger.go` table lookups now resolve via
+ `ensureTableLockedInModule` so tables registered after engine construction
+ are visible to FAF inserts and on-trigger actions.
+- [x] `TestLiveJoinRefreshesTableSnapshotForEachTrigger` re-pinned to the
+ oracle contract: a retained stream row does not re-emit on table update
+ (2 rows total, not 3).
+- [x] Differential replay: Java 20 records / Go 20 records, 0 differences;
+ evidence `testdata/parity/infra-table-join.evidence.json` status=passing.
+- [x] Three-test family green (passing evidence, 6 trace mutations rejected,
+ runtime-ID mapping).
+- [x] Manifest: new born-DV `case.infra-table-join` (4 runtime IDs) mapped to
+ `join.basic` + `trigger.table-named-window`. Summary: 702 cases / 700
+ implemented / 328 DV cases / 1251 DV runtime IDs / 3801 associations
+ (referenced 3428, unref 708).
+- [x] Independent parity review (`ParityReview461`, read-only): round 1 FAIL
+ on one P2 (md5 transcription) + three P3s (EPL pins not byte-exact, case
+ marker skipped the field whitelist, stale oracle comment). All fixed and
+ re-verified; confirmation review PASS with zero findings.
+- [ ] `make check` final, commit/push.
 
 ## Next work unit (prefetch)
-Candidate: Draft 4.458 ('context-admin-listen'): ContextAdminListen.java, 5
-unreferenced executions. Scouts `NextJavaContract458` + `NextGoSurface458`
-in flight.
+Candidate: next unreferenced cluster per the manifest scan; scouts to be
+dispatched after this unit's review starts.
 
 
 

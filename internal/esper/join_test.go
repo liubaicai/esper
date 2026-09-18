@@ -92,7 +92,7 @@ func TestLiveJoinRefreshesTableSnapshotForEachTrigger(t *testing.T) {
 	if err := engine.SendEvent(context.Background(), joinTableProbe{Symbol: "A"}); err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 3 || rows[1].Get("price").Any() != float64(15) || rows[2].Get("price").Any() != float64(15) {
+	if len(rows) != 2 || rows[1].Get("price").Any() != float64(15) {
 		t.Fatalf("live table join refreshed rows = %#v", rows)
 	}
 }

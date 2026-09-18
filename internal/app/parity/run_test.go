@@ -19968,6 +19968,129 @@ func TestInfraTableIntoTableRuntimeIDMappingMatchesScenario(t *testing.T) {
 		}
 	}
 }
+func TestRunInfraTableJoinDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-join.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "infra-table-join.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-join.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "infra-table-join-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunInfraTableJoinDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "from-clause-retained-event-phantom-row",
+			mutate: func(trace *compat.Trace) {
+				// Java emits one row per triggering S0 event; a retained
+				// S0(G1) re-joining the refreshed table would add value=100.
+				trace.Records[4].New = append(trace.Records[4].New, compat.ResultRecord{
+					Kind:   "row",
+					Fields: map[string]any{"value": 100},
+				})
+			},
+		},
+		{
+			name: "from-clause-keyed-lookup-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["value"] = 999
+			},
+		},
+		{
+			name: "unkeyed-sumint-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].New[0].Fields["sumint"] = 999
+			},
+		},
+		{
+			name: "unkeyed-faf-row-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[12].New = nil
+			},
+		},
+		{
+			name: "outer-join-null-fill-became-match",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[16].New[0].Fields["p1"] = 10
+			},
+		},
+		{
+			name: "inner-join-fragment-key-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[19].New[0].Fields["mt"] = []any{"K9", "A"}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-join.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "infra-table-join.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "infra-table-join-diff",
+				"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-join.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				data, _ := os.ReadFile(evidencePath)
+				t.Fatalf("mutation %q accepted: %s", test.name, string(data))
+			}
+		})
+	}
+}
+
+// TestInfraTableJoinRuntimeIDMappingMatchesScenario pins the per-case
+// runtime-ID mapping: every scenario case's declared runtimeId must equal
+// the engine URI the runner derives, so evidence stays cross-referenceable.
+func TestInfraTableJoinRuntimeIDMappingMatchesScenario(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-join.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		Cases []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if len(scenario.Cases) == 0 {
+		t.Fatal("scenario declares no cases")
+	}
+	for _, entry := range scenario.Cases {
+		if got := infraTableJoinRuntimeID(entry.Case); got != entry.RuntimeID {
+			t.Fatalf("case %q maps to %q, scenario declares %q", entry.Case, got, entry.RuntimeID)
+		}
+	}
+}
 
 func TestRunResultSetQueryTypeHavingDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,

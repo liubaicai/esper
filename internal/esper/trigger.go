@@ -1842,11 +1842,15 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 		result.Old = append(result.Old, eventsToResults(mutation.oldEvents)...)
 		result.New = append(result.New, eventsToResults(mutation.newEvents)...)
 		if len(mutation.oldRows) > 0 || len(mutation.newRows) > 0 {
-			oldResults, convertErr := tableRowsToResults(s.engine.tables[catalogKey(definition.moduleName, definition.table)], definition.table, mutation.oldRows, now)
+			triggerTable, triggerTableOK := s.engine.ensureTableLockedInModule(definition.moduleName, definition.table)
+			if !triggerTableOK {
+				triggerTable = nil
+			}
+			oldResults, convertErr := tableRowsToResults(triggerTable, definition.table, mutation.oldRows, now)
 			if convertErr != nil {
 				return convertErr
 			}
-			newResults, convertErr := tableRowsToResults(s.engine.tables[catalogKey(definition.moduleName, definition.table)], definition.table, mutation.newRows, now)
+			newResults, convertErr := tableRowsToResults(triggerTable, definition.table, mutation.newRows, now)
 			if convertErr != nil {
 				return convertErr
 			}
@@ -1962,8 +1966,8 @@ func executeSelectTableAction(ctx context.Context, engine *Engine, definition *t
 	if engine == nil || definition == nil {
 		return ResultBatch{}, NewError(ErrorDependency, "nil table select trigger")
 	}
-	table := engine.tables[catalogKey(definition.moduleName, definition.table)]
-	if table == nil {
+	table, tableOK := engine.ensureTableLockedInModule(definition.moduleName, definition.table)
+	if !tableOK || table == nil {
 		return ResultBatch{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
 	}
 	scope := contextTableScopeFromVariables(variables)
@@ -2758,8 +2762,8 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 	if definition.target == triggerTargetNamedWindow {
 		return executeNamedWindowAction(ctx, engine, definition, event, now, variables, owner)
 	}
-	table := engine.tables[catalogKey(definition.moduleName, definition.table)]
-	if table == nil {
+	table, tableOK := engine.ensureTableLockedInModule(definition.moduleName, definition.table)
+	if !tableOK || table == nil {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
 	}
 	scope := triggerTableScope(definition, runtime, variables)
@@ -2976,8 +2980,8 @@ func suppressDeletedAggregateTableRows(engine *Engine, definition *triggerDefini
 	if engine == nil || definition == nil || len(mutation.oldRows) == 0 {
 		return
 	}
-	table := engine.tables[catalogKey(definition.moduleName, definition.table)]
-	if table == nil {
+	table, tableOK := engine.ensureTableLockedInModule(definition.moduleName, definition.table)
+	if !tableOK || table == nil {
 		return
 	}
 	tableDefinition := table.Definition()

@@ -1,0 +1,731 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-c7ba930cd8efcf4a0daa",
+    "java-runtime-bd56535c23535c3e90ce",
+    "java-runtime-375040b0fa5a7b77c5aa",
+    "java-runtime-7e0cba3e4899478393ef"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableJoin.java"
+  ],
+  "javaExecutions": [
+    "InfraFromClause",
+    "InfraUnkeyedTable",
+    "InfraOuterJoin",
+    "InfraInnerJoinWithOnClause"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-join",
+    "steps": [
+      {
+        "op": "case",
+        "case": "from-clause"
+      },
+      {
+        "op": "deploy",
+        "statement": "table",
+        "epl": "@public create table varaggFC as (key string primary key, total sum(int))"
+      },
+      {
+        "op": "deployed",
+        "statement": "table"
+      },
+      {
+        "op": "deploy",
+        "statement": "into",
+        "epl": "into table varaggFC select sum(intPrimitive) as total from SupportBean group by theString"
+      },
+      {
+        "op": "deployed",
+        "statement": "into"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0",
+        "epl": "@name('s0') select total as value from SupportBean_S0 as s0, varaggFC as va where va.key = s0.p00"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G2"
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "unkeyed"
+      },
+      {
+        "op": "deploy",
+        "statement": "table",
+        "epl": "@public create table MyTable (sumint sum(int))"
+      },
+      {
+        "op": "deployed",
+        "statement": "table"
+      },
+      {
+        "op": "deploy",
+        "statement": "into",
+        "epl": "@name('into') into table MyTable select sum(intPrimitive) as sumint from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "statement": "into"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 101
+        }
+      },
+      {
+        "op": "undeploy",
+        "statement": "into"
+      },
+      {
+        "op": "deploy",
+        "statement": "join",
+        "epl": "@name('join') select sumint from MyTable, SupportBean"
+      },
+      {
+        "op": "deployed",
+        "statement": "join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "undeploy",
+        "statement": "join"
+      },
+      {
+        "op": "deploy",
+        "statement": "table2",
+        "epl": "@public create table SecondTable (a string, b int)"
+      },
+      {
+        "op": "deployed",
+        "statement": "table2"
+      },
+      {
+        "op": "faf",
+        "statement": "faf",
+        "epl": "insert into SecondTable values ('a1', 10)"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0",
+        "epl": "@name('s0')select a, b from SecondTable, SupportBean"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "outer-join"
+      },
+      {
+        "op": "deploy",
+        "statement": "table",
+        "epl": "@public create table MyTable as (p0 string primary key, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "statement": "table"
+      },
+      {
+        "op": "faf",
+        "statement": "faf",
+        "epl": "insert into MyTable select 'a' as p0, 10 as p1"
+      },
+      {
+        "op": "deploy",
+        "statement": "s0",
+        "epl": "@name('s0') select theString, p1 from SupportBean unidirectional left outer join MyTable on theString = p0"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "a",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "b",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "inner-join-on"
+      },
+      {
+        "op": "deploy",
+        "statement": "module",
+        "epl": "create table MyTable(key1 string primary key, prop string);insert into MyTable select p00 as key1, p01 as prop from SupportBean_S0;@name('s0') select * from MyTable as mt inner join SupportBean_S1 as s1 on p10 = prop;"
+      },
+      {
+        "op": "deployed",
+        "statement": "module"
+      },
+      {
+        "op": "deployed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "K1",
+          "p01": "A"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": "X"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 11,
+          "p10": "A"
+        }
+      },
+      {
+        "op": "undeploy-all"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-join",
+    "records": [
+      {
+        "case": "from-clause",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "from-clause",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "from-clause",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "from-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "from-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "from-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "join",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "listener",
+        "statement": "join",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 201
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "table2",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "a1",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "outer-join",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "outer-join",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "outer-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p1": 10,
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "outer-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p1": null,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "inner-join-on",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "inner-join-on",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "inner-join-on",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mt": [
+                "K1",
+                "A"
+              ],
+              "s1": {
+                "id": 11,
+                "p10": "A"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-join",
+    "records": [
+      {
+        "case": "from-clause",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "from-clause",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "from-clause",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "from-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "from-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "from-clause",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "join",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "listener",
+        "statement": "join",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "sumint": 201
+            }
+          }
+        ]
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "table2",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "unkeyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "a": "a1",
+              "b": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "outer-join",
+        "operation": "deployed",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "outer-join",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "outer-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p1": 10,
+              "theString": "a"
+            }
+          }
+        ]
+      },
+      {
+        "case": "outer-join",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p1": null,
+              "theString": "b"
+            }
+          }
+        ]
+      },
+      {
+        "case": "inner-join-on",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "inner-join-on",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "inner-join-on",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mt": [
+                "K1",
+                "A"
+              ],
+              "s1": {
+                "id": 11,
+                "p10": "A"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

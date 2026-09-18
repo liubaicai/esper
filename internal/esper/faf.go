@@ -709,8 +709,8 @@ func (e *Engine) executeFireAndForgetMultirowInsertLocked(ctx context.Context, p
 	}
 
 	if target.kind == streamTable {
-		table := e.tables[catalogKey(target.moduleName, target.sourceName)]
-		if table == nil {
+		table, ok := e.ensureTableLockedInModule(target.moduleName, target.sourceName)
+		if !ok || table == nil {
 			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", target.sourceName))
 		}
 		snapshot := table.snapshotMutationState()
@@ -1556,8 +1556,8 @@ func (e *Engine) executeContextFireAndForgetMutationLocked(ctx context.Context, 
 			}
 		}
 	case streamTable:
-		table := e.tables[catalogKey(source.moduleName, source.sourceName)]
-		if table == nil {
+		table, ok := e.ensureTableLockedInModule(source.moduleName, source.sourceName)
+		if !ok || table == nil {
 			return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("table %q is not registered", source.sourceName))
 		}
 		rows, err := table.Snapshot(ctx)

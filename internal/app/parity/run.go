@@ -325,6 +325,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadResultsetOutputLimitRowLimitVariableScenario(file)
 	} else if *mode == "expr-filter-in-and-between" || *mode == "expr-filter-in-and-between-diff" {
 		scenario, err = loadEfabScenario(file)
+	} else if *mode == "infra-table-join" || *mode == "infra-table-join-diff" {
+		scenario, err = loadInfraTableJoinScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -3610,6 +3612,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraTableIntoTableJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraTableIntoTableJavaSources),
 				splitMetadata(*javaExecutions, infraTableIntoTableJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-table-join" || *mode == "infra-table-join-diff" {
+		trace, err := runInfraTableJoinScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-join-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraTableJoinJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableJoinJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableJoinJavaSources),
+				splitMetadata(*javaExecutions, infraTableJoinJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
