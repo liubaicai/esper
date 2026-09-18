@@ -63235,3 +63235,457 @@ func TestRunEplVariablesEventTypedRuntimeIDMappingMatchesScenario(t *testing.T) 
 		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
 	}
 }
+
+// contextVariablesCheckJavaMetadata verifies differential evidence carries the
+// pinned Java commit, runtime IDs, source file and execution names for the
+// ContextVariables suite.
+func contextVariablesCheckJavaMetadata(javaCommit string, runtimeIDs, sourceFiles, executions []string) error {
+	if javaCommit != contextVariablesJavaCommit {
+		return fmt.Errorf("Java commit = %q, want %q", javaCommit, contextVariablesJavaCommit)
+	}
+	if !reflect.DeepEqual(runtimeIDs, contextVariablesJavaRuntimeIDs) {
+		return fmt.Errorf("Java runtime IDs = %v, want %v", runtimeIDs, contextVariablesJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(sourceFiles, contextVariablesSources) {
+		return fmt.Errorf("Java source files = %v, want %v", sourceFiles, contextVariablesSources)
+	}
+	if !reflect.DeepEqual(executions, contextVariablesJavaExecutions) {
+		return fmt.Errorf("Java executions = %v, want %v", executions, contextVariablesJavaExecutions)
+	}
+	return nil
+}
+
+func assertContextVariablesTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != contextVariablesID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	type line struct {
+		caseName  string
+		operation string
+		statement string
+		name      string
+		sequence  uint64
+		newRows   string
+		oldRows   string
+		value     string
+	}
+	expected := []line{
+		{"segmented-by-key", "deployed", "ctx", "", 1, "", "", ""},
+		{"segmented-by-key", "deployed", "var", "", 1, "", "", ""},
+		{"segmented-by-key", "deployed", "upd", "", 1, "", "", ""},
+		{"segmented-by-key", "deployed", "s0", "", 1, "", "", ""},
+		{"segmented-by-key", "listener", "s0", "", 1, "mycontextvar:10", "", ""},
+		{"segmented-by-key", "listener", "s0", "", 2, "mycontextvar:11", "", ""},
+		{"segmented-by-key", "listener", "s0", "", 3, "mycontextvar:10", "", ""},
+		{"segmented-by-key", "listener", "s0", "", 4, "mycontextvar:11", "", ""},
+		{"segmented-by-key", "listener", "s0", "", 5, "mycontextvar:0", "", ""},
+		{"segmented-by-key", "listener", "s0", "", 6, "mycontextvar:12", "", ""},
+		{"overlapping", "deployed", "ctx", "", 1, "", "", ""},
+		{"overlapping", "deployed", "var", "", 1, "", "", ""},
+		{"overlapping", "deployed", "upd", "", 1, "", "", ""},
+		{"overlapping", "deployed", "upd-all", "", 1, "", "", ""},
+		{"overlapping", "deployed", "s0", "", 1, "", "", ""},
+		{"overlapping", "listener", "s0", "", 1, "mycontextvar:5", "", ""},
+		{"overlapping", "listener", "s0", "", 2, "mycontextvar:10", "", ""},
+		{"overlapping", "listener", "s0", "", 3, "mycontextvar:-1", "", ""},
+		{"overlapping", "listener", "s0", "", 4, "mycontextvar:-1", "", ""},
+		{"overlapping", "listener", "s0", "", 5, "mycontextvar:20", "", ""},
+		{"overlapping", "listener", "s0", "", 6, "mycontextvar:21", "", ""},
+		{"overlapping", "listener", "s0", "", 7, "mycontextvar:5", "", ""},
+		{"overlapping", "deployed", "module", "", 1, "", "", ""},
+		{"iterate-and-listen", "deployed", "ctx", "", 1, "", "", ""},
+		{"iterate-and-listen", "deployed", "var", "", 1, "", "", ""},
+		{"iterate-and-listen", "deployed", "upd", "", 1, "", "", ""},
+		{"iterate-and-listen", "listener", "var", "", 1, "mycontextvar:100", "mycontextvar:5", ""},
+		{"iterate-and-listen", "listener", "upd", "", 1, "mycontextvar:100", "", ""},
+		{"iterate-and-listen", "snapshot", "upd", "", 0, "mycontextvar:100", "", ""},
+		{"iterate-and-listen", "listener", "var", "", 2, "mycontextvar:101", "mycontextvar:5", ""},
+		{"iterate-and-listen", "listener", "upd", "", 2, "mycontextvar:101", "", ""},
+		{"iterate-and-listen", "snapshot", "upd", "", 0, "mycontextvar:100;mycontextvar:101", "", ""},
+		{"iterate-and-listen", "snapshot", "var", "", 0, "mycontextvar:100;mycontextvar:101", "", ""},
+		{"get-set-api", "deployed", "ctx", "", 1, "", "", ""},
+		{"get-set-api", "deployed", "var", "", 1, "", "", ""},
+		{"get-set-api", "deployed", "upd", "", 1, "", "", ""},
+		{"get-set-api", "variable", "var", "mycontextvar", 0, "", "", "5"},
+		{"get-set-api", "variable", "var", "mycontextvar", 0, "", "", "10"},
+		{"get-set-api", "variable", "var", "mycontextvar", 0, "", "", "5"},
+		{"get-set-api", "variable", "var", "mycontextvar", 0, "", "", "11"},
+		{"get-set-api", "deployed", "globalvar", "", 1, "", "", ""},
+		{"get-set-api", "set-variable-error", "globalvar", "myglobarvar", 0, "", "", "Variable by name 'myglobarvar' is a global variable and not context-partitioned"},
+		{"get-set-api", "variable-error", "globalvar", "myglobarvar", 0, "", "", "Variable by name 'myglobarvar' is a global variable and not context-partitioned"},
+		{"invalid", "deployed", "ctx-one", "", 1, "", "", ""},
+		{"invalid", "deployed", "ctx-two", "", 1, "", "", ""},
+		{"invalid", "deployed", "var", "", 1, "", "", ""},
+		{"invalid", "compile-error", "invalid-context", "", 0, "", "", "Context by name 'MyCtx' could not be found"},
+		{"invalid", "compile-error", "wrong-context", "", 0, "", "", "Variable 'myctxone_int' defined for use with context 'MyCtxOne' is not available for use with context 'MyCtxTwo'"},
+		{"invalid", "compile-error", "outside-context-select", "", 0, "", "", "Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"},
+		{"invalid", "compile-error", "outside-context-expr-window", "", 0, "", "", "Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"},
+		{"invalid", "compile-error", "outside-context-limit", "", 0, "", "", "Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"},
+		{"invalid", "compile-error", "outside-context-offset", "", 0, "", "", "Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"},
+		{"invalid", "compile-error", "outside-context-output-every", "", 0, "", "", "Failed to validate the output rate limiting clause: Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"},
+	}
+	if len(trace.Records) != len(expected) {
+		t.Fatalf("trace records = %d, want %d", len(trace.Records), len(expected))
+	}
+	for index, want := range expected {
+		record := trace.Records[index]
+		got := line{
+			caseName:  record.Case,
+			operation: record.Operation,
+			statement: record.Statement,
+			name:      record.Name,
+			sequence:  record.Sequence,
+			newRows:   eplVariablesCreateRenderRows(record.New),
+			oldRows:   eplVariablesCreateRenderRows(record.Old),
+			value:     eplVariablesCreateRenderValue(record.Value),
+		}
+		if got != want {
+			t.Fatalf("record %d = %#v, want %#v", index, got, want)
+		}
+	}
+}
+
+func TestRunContextVariablesDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextVariablesID,
+		"-scenario", filepath.Join(root, contextVariablesID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertContextVariablesTrace(t, trace)
+}
+
+func TestRunContextVariablesDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), contextVariablesID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextVariablesID + "-diff",
+		"-scenario", filepath.Join(root, contextVariablesID+".json"),
+		"-java-trace", filepath.Join(root, contextVariablesID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if err := contextVariablesCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("Java metadata: %v", err)
+	}
+	assertContextVariablesTrace(t, evidence.JavaTrace)
+	assertContextVariablesTrace(t, evidence.GoTrace)
+}
+
+func TestRunContextVariablesDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// Record 6 is ord 0's per-partition isolation proof: P1 still
+			// reads 10 after P2 was set to 11.
+			name: "segmented-partition-isolation-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[0].Fields["mycontextvar"] = json.Number("11")
+			},
+		},
+		{
+			// Record 18 is ord 1's all-partition uncorrelated write: the
+			// intPrimitive<0 set overwrote P1 as well as P2.
+			name: "overlapping-broadcast-write-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[18].New[0].Fields["mycontextvar"] = json.Number("5")
+			},
+		},
+		{
+			// Record 21 is ord 1's reset proof: the re-initiated P1 partition
+			// reads the initial 5 after termination.
+			name: "overlapping-reinit-reset-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[21].New[0].Fields["mycontextvar"] = json.Number("21")
+			},
+		},
+		{
+			// Record 26 is ord 2's IR pair: the create-variable listener sees
+			// new=100 against old=5 (the initial value).
+			name: "iterate-listen-irpair-old-loss",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[26].Old = nil
+			},
+		},
+		{
+			// Record 31 is ord 2's per-partition iterator: both live
+			// partitions yield their current values in partition-id order.
+			name: "iterate-listen-iterator-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[31].New = trace.Records[31].New[:1]
+			},
+		},
+		{
+			// Record 41 is ord 3's global-variable rejection: the partition
+			// set API must refuse a non-context variable.
+			name: "get-set-global-rejection-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[41].Value = "<no-error>"
+			},
+		},
+		{
+			// Record 52 is ord 4's output-rate probe: a context variable in
+			// `output every N events` must stay a compile rejection.
+			name: "invalid-output-every-probe-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[52].Value = "<no-error>"
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:50]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, contextVariablesID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), contextVariablesID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", contextVariablesID + "-diff",
+				"-scenario", filepath.Join(root, contextVariablesID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunContextVariablesCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, contextVariablesID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, contextVariablesID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, contextVariablesID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if err := contextVariablesCheckJavaMetadata(evidence.JavaCommit, evidence.JavaRuntimeIDs,
+		evidence.JavaSourceFiles, evidence.JavaExecutions); err != nil {
+		t.Fatalf("checked-in Java metadata: %v", err)
+	}
+	assertContextVariablesTrace(t, javaTrace)
+	assertContextVariablesTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, contextVariablesID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatal("checked-in evidence scenario differs from checked-in scenario")
+	}
+
+	canonicalEvidence, err := compat.NewDifferentialEvidence(
+		contextVariablesJavaCommit,
+		contextVariablesJavaRuntimeIDs,
+		contextVariablesSources,
+		contextVariablesJavaExecutions,
+		scenario, javaTrace, evidence.GoTrace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if canonicalEvidence.Status != "passing" || len(canonicalEvidence.Differences) != 0 {
+		t.Fatalf("checked-in Java trace is not a passing comparison: %#v", canonicalEvidence.Differences)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", contextVariablesID,
+		"-scenario", scenarioPath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if differences := compat.DiffTraces(evidence.GoTrace, replayed); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from current replay: %#v", differences)
+	}
+	assertContextVariablesTrace(t, replayed)
+}
+
+func TestRunContextVariablesRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, contextVariablesID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "unknown-op", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"op": "undeploy-all"`), []byte(`"op": "close-all"`), 1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), contextVariablesID+".json")
+			if err := os.WriteFile(path, test.mutate(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{"-mode", contextVariablesID, "-scenario", path}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q was accepted", test.name)
+			}
+		})
+	}
+}
+
+func TestRunContextVariablesRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", contextVariablesID+".json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		Version      string   `json:"version"`
+		ID           string   `json:"id"`
+		Description  string   `json:"description"`
+		JavaCommit   string   `json:"javaCommit"`
+		JavaSource   string   `json:"javaSource"`
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		JavaFlags    []string `json:"javaFlags"`
+		Cases        []struct {
+			Case          string `json:"case"`
+			Ordinal       int    `json:"ordinal"`
+			RuntimeID     string `json:"runtimeId"`
+			ExecutionName string `json:"executionName"`
+			Observation   string `json:"observation"`
+			EPL           string `json:"epl"`
+		} `json:"cases"`
+		Steps []struct {
+			Op        string `json:"op"`
+			Case      string `json:"case"`
+			Statement string `json:"statement"`
+			Name      string `json:"name"`
+		} `json:"steps"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if document.Version != compat.ScenarioVersion || document.ID != contextVariablesID ||
+		document.Description != contextVariablesDescription ||
+		document.JavaCommit != contextVariablesJavaCommit ||
+		document.JavaSource != contextVariablesSource {
+		t.Fatalf("scenario identity = %q/%q/%q/%q/%q", document.Version, document.ID,
+			document.Description, document.JavaCommit, document.JavaSource)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, contextVariablesJavaRuntimeIDs) {
+		t.Fatalf("scenario javaRuntimes = %v, want %v", document.JavaRuntimes, contextVariablesJavaRuntimeIDs)
+	}
+	if !reflect.DeepEqual(document.JavaNames, contextVariablesJavaExecutions) {
+		t.Fatalf("scenario javaNames = %v, want %v", document.JavaNames, contextVariablesJavaExecutions)
+	}
+	if !reflect.DeepEqual(document.JavaFlags, contextVariablesJavaFlags) {
+		t.Fatalf("scenario javaFlags = %v, want %v", document.JavaFlags, contextVariablesJavaFlags)
+	}
+	if len(document.Cases) != len(contextVariablesCases) {
+		t.Fatalf("scenario cases = %d, want %d", len(document.Cases), len(contextVariablesCases))
+	}
+	for index, entry := range document.Cases {
+		if entry.Case != contextVariablesCases[index] ||
+			entry.Ordinal != contextVariablesOrdinals[index] ||
+			entry.RuntimeID != contextVariablesJavaRuntimeIDs[index] ||
+			entry.ExecutionName != contextVariablesJavaExecutions[index] ||
+			entry.Observation != contextVariablesCaseObservations[index] ||
+			entry.EPL != contextVariablesCaseEPLs[index] {
+			t.Fatalf("scenario case %d = %#v", index, entry)
+		}
+	}
+	// Step order per case: case marker, then the pinned case steps.
+	offset := 0
+	for _, caseName := range contextVariablesCases {
+		if offset >= len(document.Steps) {
+			t.Fatalf("missing case %q", caseName)
+		}
+		if document.Steps[offset].Op != "case" || document.Steps[offset].Case != caseName {
+			t.Fatalf("step %d is not the %q case marker", offset, caseName)
+		}
+		offset++
+		offset += len(contextVariablesCaseSteps[caseName])
+	}
+	if offset != len(document.Steps) {
+		t.Fatalf("scenario has %d trailing steps", len(document.Steps)-offset)
+	}
+}

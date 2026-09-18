@@ -866,13 +866,26 @@ func (e *Engine) allocateContextPartitionIDLocked(contextName, partitionKey stri
 	return id
 }
 
-func (e *Engine) allocateOverlappingContextPartitionKeyLocked(contextName, baseKey string) string {
-	if e == nil || contextName == "" {
-		return baseKey
+// overlappingContextPartitionKey derives the partition key for one
+// overlapping initiation: the initiating event's identity (or underlying
+// value when no identity token exists) plus a per-statement ordinal for
+// repeated identical starts. Every statement observing the same start event
+// derives the same key, so context variables are shared across statements
+// within one agent instance — the global per-context counter used before
+// gave each statement a different partition for the same event.
+func overlappingContextPartitionKey(baseKey string, event Event, partitions map[string]*statementRuntime) string {
+	identity := encodeKey([]any{event.Underlying()})
+	if event.identity != nil {
+		identity = fmt.Sprintf("token:%p", event.identity)
 	}
-	next := e.contextPartitionInstanceNextIDs[contextName]
-	e.contextPartitionInstanceNextIDs[contextName] = next + 1
-	return fmt.Sprintf("%s\x1einstance:%d", baseKey, next)
+	key := baseKey + overlappingContextPartitionSeparator + identity
+	allocationKey := key
+	for ordinal := 1; ; ordinal++ {
+		if _, exists := partitions[allocationKey]; !exists {
+			return allocationKey
+		}
+		allocationKey = fmt.Sprintf("%s#%d", key, ordinal)
+	}
 }
 
 func (e *Engine) retainContextPartitionLocked(contextName, partitionKey string, runtime ...*statementRuntime) {
@@ -8526,14 +8539,7 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 			// variables are shared across statements), while repeated
 			// identical start events within one statement still allocate
 			// distinct overlapping partitions.
-			baseKey := "initiated:pattern" + overlappingContextPartitionSeparator + encodeKey([]any{event.Underlying()})
-			allocationKey = baseKey
-			for ordinal := 1; ; ordinal++ {
-				if _, exists := s.runtime.partitions[allocationKey]; !exists {
-					break
-				}
-				allocationKey = fmt.Sprintf("%s#%d", baseKey, ordinal)
-			}
+			allocationKey = overlappingContextPartitionKey(allocationKey, event, s.runtime.partitions)
 		} else if _, exists := s.runtime.partitions[allocationKey]; exists {
 			continue
 		}
@@ -9197,7 +9203,9 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 		}
 		allocationKey := "initiated:pattern"
 		if definition.initiatedOverlapping {
-			allocationKey = s.engine.allocateOverlappingContextPartitionKeyLocked(s.plan.query.contextName, allocationKey)
+			// Timer-driven starts key by the firing instant: every statement
+			// observing this firing derives the same partition.
+			allocationKey = overlappingContextPartitionKey(allocationKey, Event{underlying: now}, s.runtime.partitions)
 		}
 		if _, exists := s.runtime.partitions[allocationKey]; exists {
 			continue
@@ -9338,7 +9346,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 	if startOK && start && (definition.initiatedOverlapping || s.runtime.partitions[key] == nil) {
 		allocationKey := key
 		if definition.initiatedOverlapping {
-			allocationKey = s.engine.allocateOverlappingContextPartitionKeyLocked(s.plan.query.contextName, key)
+			allocationKey = overlappingContextPartitionKey(key, event, s.runtime.partitions)
 		}
 		query := s.runtime.query
 		query.contextName = ""

@@ -3733,6 +3733,16 @@ func visitQueryExpressions(environment *Environment, query Query, visit func(Exp
 	if err := visit(query.output.When); err != nil {
 		return err
 	}
+	// Expression-valued output rates carry the same scope rules as any other
+	// statement expression: a context variable inside `output every N events`
+	// or `output snapshot every <expr>` must be validated like Java's
+	// output-rate-limiting clause check.
+	if err := visit(query.output.CountExpr); err != nil {
+		return err
+	}
+	if err := visit(query.output.IntervalExpr); err != nil {
+		return err
+	}
 	if query.limitExprSet {
 		if err := visit(query.limitExpr); err != nil {
 			return err

@@ -3230,12 +3230,44 @@ Active: Draft 4.455 ('epl-variables-event-typed').
  ord 5's approved difference.
 - [x] Shipped; Git owns identity. Draft 4.455 committed and pushed as `bd862d900`.
 
-## Next work unit (prefetch)
-Candidate: Draft 4.456 ('context-variables'): ContextVariables.java, 5
-executions sharing `java-runtime-2443c804eb31da7902e7` (SegmentedByKey /
-Overlapping / IterateAndListen / GetSetAPI RUNTIMEOPS / Invalid). Scouts
-`NextJavaContract456` + `NextGoSurface456` in flight.
+## Current work unit
+Active: Draft 4.456 ('context-variables').
 
+- [x] Contract frozen (scouts `NextJavaContract456` + `NextGoSurface456`):
+ ContextVariables.java 5 executions sharing static `java-2443c804eb31da7902e7`
+ (SegmentedByKey `java-runtime-700973f399356686a11e`, Overlapping
+ `java-runtime-821c37bbc3256af33468`, IterateAndListen
+ `java-runtime-ea85235554e99c41e863`, GetSetAPI `java-runtime-4d98fe6487ed39e7d1de`
+ RUNTIMEOPS, Invalid `java-runtime-c7b860b3ff30ed78f3f5`); contract at
+ .omp/contract-456.md.
+- [x] Shared-core: `visitQueryExpressions` now visits output
+ CountExpr/IntervalExpr so context variables in output-rate expressions hit
+ scope validation (ord-4 probe 7).
+- [x] Assets authored (worker `AssetWorker456`): scenario (5 cases / 53
+ records), oracle, runner, run.go wiring.
+- [x] **Engine fix (shared core)**: overlapping context partition keys were
+ allocated from a global per-context counter, so each statement got a
+ different partition for the same start event and on-set writes never
+ reached the partition a correlated select read. Keys now derive from the
+ initiating event identity + per-statement ordinal
+ (`overlappingContextPartitionKey`), matching the event-driven pattern
+ path's existing scheme; timer-driven starts key by firing instant.
+- [x] Java trace + Go replay + zero-diff evidence: `-mode
+ context-variables-diff` passing / 0 differences, 53 records each.
+- [x] Manifest/roadmap/CHANGELOG updated; `make check` green.
+- [x] Parity review round 1 (agent `ParityReview456`): FAIL on one P2 —
+ buildError recorded pinned Java prefixes without verifying the Go error.
+ Fixed: per-probe expected code+substring gate (UnknownName for
+ invalid-context, InvalidRule + scope wording for the rest), mirroring the
+ isContextVariablesNotFound pattern. P3s noted: dead
+ contextPartitionInstanceNextIDs counter retained (still referenced by FAF
+ snapshot round-trip), oracle path-accumulation on ord-3 globalvar deploy
+ (immaterial), run-script classes-dir cleanup (inherited pattern).
+- [x] Confirmation review (same agent `ParityReview456`): OVERALL PASS.
+ Residual P3s accepted: dead contextPartitionInstanceNextIDs kept for FAF
+ snapshot round-trip; globalvar path accumulation immaterial; run-script
+ cleanup is the inherited pattern.
+- [x] Shipped; Git owns identity.
 
 ## Delegation checkpoint (recent)
 

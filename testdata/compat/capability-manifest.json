@@ -1543,7 +1543,9 @@
         "internal/esper/context_keyed_subquery_parity_test.go",
         "internal/app/parity/context_keyed_subquery.go",
         "internal/esper/context_key_segmented_w_init_term_prioritized_parity_test.go",
-        "internal/esper/context_nested_initiated_parity_test.go"
+        "internal/esper/context_nested_initiated_parity_test.go",
+        "internal/app/parity/context_variables.go",
+        "internal/app/parity/run_test.go"
       ],
       "phase": 1,
       "status": "implemented",
@@ -44725,6 +44727,71 @@
         "java-runtime-0794ac05da19ce34dbaf"
       ],
       "notes": "6 executions, 61 records, 0 differences. SetVariablePropExpr added to shared core: copy-on-write property write on struct/map/Event variable values with name.prop output columns; snapshotQuery aligned to emit per-column values."
+    },
+    {
+      "id": "case.context-variables",
+      "javaRuntimeIds": [
+        "java-runtime-700973f399356686a11e",
+        "java-runtime-821c37bbc3256af33468",
+        "java-runtime-ea85235554e99c41e863",
+        "java-runtime-4d98fe6487ed39e7d1de",
+        "java-runtime-c7b860b3ff30ed78f3f5"
+      ],
+      "javaStaticIds": [
+        "java-2443c804eb31da7902e7",
+        "java-2443c804eb31da7902e7",
+        "java-2443c804eb31da7902e7",
+        "java-2443c804eb31da7902e7",
+        "java-2443c804eb31da7902e7"
+      ],
+      "javaNames": [
+        "ContextVariablesSegmentedByKey",
+        "ContextVariablesOverlapping",
+        "ContextVariablesIterateAndListen",
+        "ContextVariablesGetSetAPI",
+        "ContextVariablesInvalid"
+      ],
+      "javaSourceFiles": [
+        "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextVariables.java"
+      ],
+      "goTests": [
+        "TestRunContextVariablesDirectReplay",
+        "TestRunContextVariablesDiffWritesPassingEvidence",
+        "TestRunContextVariablesCheckedInEvidenceMatchesTraceAndReplay",
+        "TestRunContextVariablesDiffRejectsTraceMutations",
+        "TestRunContextVariablesRejectsMalformedRawScenario",
+        "TestRunContextVariablesRuntimeIDMappingMatchesScenario"
+      ],
+      "tags": [
+        "context",
+        "variable",
+        "partitioned",
+        "on-set",
+        "runtime-api"
+      ],
+      "status": "differential-verified",
+      "evidence": [
+        "java-runtime-inventory",
+        "java-source",
+        "java-oracle",
+        "go-unit",
+        "differential-evidence",
+        "mutation"
+      ],
+      "difference": "Go has no deployable create-variable statement: `context X create variable` is an env-scoped RegisterContextVariable registration fixture, its listener IR pairs ride VariableChangeListener (Old/New/PartitionID/PartitionKey), and its per-partition iterator rides ContextVariableStates — the established approved difference. Ord-4 compile probes pin the Go error wording/category while the oracle asserts Java's exact prefix messages internally; the reclaim_group_aged hint probe is oracle-only because Go hints are string-typed with no expression surface. Ord-1's module tail (distinct initiator + integer keyword) is a registration fixture since env-scoped registrations persist past undeployAll.",
+      "verification": [
+        "inventoried",
+        "implemented",
+        "differential-verified"
+      ],
+      "differentialVerifiedRuntimeIds": [
+        "java-runtime-700973f399356686a11e",
+        "java-runtime-821c37bbc3256af33468",
+        "java-runtime-ea85235554e99c41e863",
+        "java-runtime-4d98fe6487ed39e7d1de",
+        "java-runtime-c7b860b3ff30ed78f3f5"
+      ],
+      "notes": "5 executions, 53 records, 0 differences. Two shared-core fixes: overlapping context partition keys now derive from the initiating event identity + per-statement ordinal (previously a global per-context counter gave each statement a different partition for the same start event, so on-set writes never reached the partition a correlated select read); visitQueryExpressions now covers output CountExpr/IntervalExpr so context variables in output-rate clauses hit scope validation."
     }
   ],
   "mappings": [
@@ -47851,13 +47918,17 @@
     {
       "capabilityId": "epl.variable-onset",
       "caseId": "case.epl-variables-event-typed"
+    },
+    {
+      "capabilityId": "context.partition",
+      "caseId": "case.context-variables"
     }
   ],
   "summary": {
-    "inventoriedCases": 697,
-    "implementedCases": 695,
-    "differentialVerifiedCases": 323,
-    "differentialVerifiedRuntimeIds": 1223,
+    "inventoriedCases": 698,
+    "implementedCases": 696,
+    "differentialVerifiedCases": 324,
+    "differentialVerifiedRuntimeIds": 1228,
     "intentionallyDifferentCases": 29,
     "representativeVerifiedCases": 119,
     "nfrVerifiedCases": 0,
@@ -47867,13 +47938,13 @@
     "intentionallyDifferentCapabilities": 8,
     "representativeVerifiedCapabilities": 11,
     "nfrVerifiedCapabilities": 0,
-    "runtimeAssociationCount": 3773,
-    "referencedJavaRuntimeIds": 3409,
+    "runtimeAssociationCount": 3778,
+    "referencedJavaRuntimeIds": 3414,
     "totalJavaRuntimeIds": 4136,
-    "unreferencedJavaRuntimeIds": 727,
+    "unreferencedJavaRuntimeIds": 722,
     "representativeScenarioTotal": 122,
     "representativeScenarioPassing": 122,
-    "totalCases": 697,
+    "totalCases": 698,
     "totalCapabilities": 121
   }
 }

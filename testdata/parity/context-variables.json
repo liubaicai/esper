@@ -1,0 +1,754 @@
+{
+  "version": "esper-parity/v1",
+  "id": "context-variables",
+  "description": "ContextVariables context-partitioned variable semantics: segmented key context where an uncorrelated on-set fires only for the partition the event keys into, allocating it if absent (ord 0); overlapping initiated/terminated context with correlated and uncorrelated (all-partition) on-set writes and reset-to-initial on re-initiation, plus a deploy/undeploy module tail using the integer keyword and a distinct initiator (ord 1); create-variable listener IR pairs and per-partition iterators on the on-set and variable statements (ord 2); partition-id-addressed variable get/set with global-variable rejection (ord 3); and compile-failure probes for unknown context, wrong-context variable, and out-of-context variable use in select, expr-window, limit, offset and output-every positions (ord 4). listener records on 'var' mirror the create-variable statement's IR pairs; snapshot records mirror statement iterators; variable records mirror getVariableValue reads (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextVariables.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextVariables.java",
+  "javaRuntimes": [
+    "java-runtime-700973f399356686a11e",
+    "java-runtime-821c37bbc3256af33468",
+    "java-runtime-ea85235554e99c41e863",
+    "java-runtime-4d98fe6487ed39e7d1de",
+    "java-runtime-c7b860b3ff30ed78f3f5"
+  ],
+  "javaNames": [
+    "ContextVariablesSegmentedByKey",
+    "ContextVariablesOverlapping",
+    "ContextVariablesIterateAndListen",
+    "ContextVariablesGetSetAPI",
+    "ContextVariablesInvalid"
+  ],
+  "javaStaticIds": [
+    "java-2443c804eb31da7902e7",
+    "java-2443c804eb31da7902e7",
+    "java-2443c804eb31da7902e7",
+    "java-2443c804eb31da7902e7",
+    "java-2443c804eb31da7902e7"
+  ],
+  "javaFlags": [
+    "RUNTIMEOPS"
+  ],
+  "cases": [
+    {
+      "case": "segmented-by-key",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-700973f399356686a11e",
+      "executionName": "ContextVariablesSegmentedByKey",
+      "observation": "listener; an uncorrelated on-set fires only for the partition the event keys into, allocating it if absent: SupportBean(\"P1\",0) allocates without setting, SupportBean(\"P2\",11) allocates and sets in one event, and S0(5,\"P3\") allocates P3 which reads back the initial 0",
+      "epl": "@name('s0') context MyCtx select mycontextvar from SupportBean_S0"
+    },
+    {
+      "case": "overlapping",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-821c37bbc3256af33468",
+      "executionName": "ContextVariablesOverlapping",
+      "observation": "listener; correlated on-set writes the initiating partition while the uncorrelated intPrimitive<0 on-set writes every live partition (P1 reads -1 after the P2-targeted write); terminated partitions reset to the initial 5 on re-initiation; the module tail deploys and undeploys a distinct-initiator context with an integer-typed variable",
+      "epl": "@name('s0') context MyCtx select mycontextvar from SupportBean_S2(p20 = context.s0.p00)"
+    },
+    {
+      "case": "iterate-and-listen",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-ea85235554e99c41e863",
+      "executionName": "ContextVariablesIterateAndListen",
+      "observation": "listener+snapshot; the create-variable statement listener fires one IR pair per set (new=assigned, old=previous including the initial 5) only for the updated partition and stays silent on partition creation; iterators on 'upd' and 'var' yield one row per live partition, 'upd' ordered by partition id and 'var' any-order",
+      "epl": "@name('upd') context MyCtx on SupportBean(theString = context.s0.p00) set mycontextvar = intPrimitive"
+    },
+    {
+      "case": "get-set-api",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-4d98fe6487ed39e7d1de",
+      "executionName": "ContextVariablesGetSetAPI",
+      "observation": "variable+set-variable-error+variable-error; partition-id-addressed variable get/set (partition 0 reads 5 then 10, partition 1 reads 5 then 11) and VariableNotFoundException for a global variable via the partition-scoped APIs",
+      "epl": "context MyCtx on SupportBean(theString = context.s0.p00) set mycontextvar = intPrimitive"
+    },
+    {
+      "case": "invalid",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-c7b860b3ff30ed78f3f5",
+      "executionName": "ContextVariablesInvalid",
+      "observation": "compile-error; probes pin context-not-found, wrong-context variable, and out-of-context variable use in select, expr-window, limit, offset and output-every positions; the reclaim_group_aged hint probe is asserted inside the oracle only (Go hints are string-typed with no expression surface)",
+      "epl": "context MyCtx create variable int mycontext_invalid1 = 0"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "segmented-by-key"
+    },
+    {
+      "op": "deploy",
+      "case": "segmented-by-key",
+      "statement": "ctx",
+      "epl": "@public create context MyCtx as partition by theString from SupportBean, p00 from SupportBean_S0"
+    },
+    {
+      "op": "deployed",
+      "case": "segmented-by-key",
+      "statement": "ctx"
+    },
+    {
+      "op": "deploy",
+      "case": "segmented-by-key",
+      "statement": "var",
+      "epl": "@public context MyCtx create variable int mycontextvar = 0"
+    },
+    {
+      "op": "deployed",
+      "case": "segmented-by-key",
+      "statement": "var"
+    },
+    {
+      "op": "deploy",
+      "case": "segmented-by-key",
+      "statement": "upd",
+      "epl": "context MyCtx on SupportBean(intPrimitive > 0) set mycontextvar = intPrimitive"
+    },
+    {
+      "op": "deployed",
+      "case": "segmented-by-key",
+      "statement": "upd"
+    },
+    {
+      "op": "deploy",
+      "case": "segmented-by-key",
+      "statement": "s0",
+      "epl": "@name('s0') context MyCtx select mycontextvar from SupportBean_S0"
+    },
+    {
+      "op": "deployed",
+      "case": "segmented-by-key",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P1",
+        "intPrimitive": 0
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1,
+        "p00": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P2",
+        "intPrimitive": 11
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 2,
+        "p00": "P2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 3,
+        "p00": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 4,
+        "p00": "P2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 5,
+        "p00": "P3"
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P3",
+        "intPrimitive": 12
+      }
+    },
+    {
+      "op": "send",
+      "case": "segmented-by-key",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 6,
+        "p00": "P3"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "segmented-by-key"
+    },
+    {
+      "op": "case",
+      "case": "overlapping"
+    },
+    {
+      "op": "deploy",
+      "case": "overlapping",
+      "statement": "ctx",
+      "epl": "@public create context MyCtx as initiated by SupportBean_S0 s0 terminated by SupportBean_S1(p10 = s0.p00)"
+    },
+    {
+      "op": "deployed",
+      "case": "overlapping",
+      "statement": "ctx"
+    },
+    {
+      "op": "deploy",
+      "case": "overlapping",
+      "statement": "var",
+      "epl": "@public context MyCtx create variable int mycontextvar = 5"
+    },
+    {
+      "op": "deployed",
+      "case": "overlapping",
+      "statement": "var"
+    },
+    {
+      "op": "deploy",
+      "case": "overlapping",
+      "statement": "upd",
+      "epl": "context MyCtx on SupportBean(theString = context.s0.p00) set mycontextvar = intPrimitive"
+    },
+    {
+      "op": "deployed",
+      "case": "overlapping",
+      "statement": "upd"
+    },
+    {
+      "op": "deploy",
+      "case": "overlapping",
+      "statement": "upd-all",
+      "epl": "context MyCtx on SupportBean(intPrimitive < 0) set mycontextvar = intPrimitive"
+    },
+    {
+      "op": "deployed",
+      "case": "overlapping",
+      "statement": "upd-all"
+    },
+    {
+      "op": "deploy",
+      "case": "overlapping",
+      "statement": "s0",
+      "epl": "@name('s0') context MyCtx select mycontextvar from SupportBean_S2(p20 = context.s0.p00)"
+    },
+    {
+      "op": "deployed",
+      "case": "overlapping",
+      "statement": "s0"
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S2",
+      "payload": {
+        "id": 1,
+        "p20": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "P2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P2",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S2",
+      "payload": {
+        "id": 2,
+        "p20": "P2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P2",
+        "intPrimitive": -1
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S2",
+      "payload": {
+        "id": 2,
+        "p20": "P2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S2",
+      "payload": {
+        "id": 2,
+        "p20": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P2",
+        "intPrimitive": 20
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P1",
+        "intPrimitive": 21
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S2",
+      "payload": {
+        "id": 2,
+        "p20": "P2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S2",
+      "payload": {
+        "id": 2,
+        "p20": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 0,
+        "p10": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 0,
+        "p10": "P2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "overlapping",
+      "eventType": "SupportBean_S2",
+      "payload": {
+        "id": 1,
+        "p20": "P1"
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "overlapping"
+    },
+    {
+      "op": "deploy",
+      "case": "overlapping",
+      "statement": "module",
+      "epl": "@Name(\"context\")\ncreate context MyContext\ninitiated by distinct(theString) SupportBean as input\nterminated by SupportBean(theString = input.theString);\n\n@Name(\"ctx variable counter\")\ncontext MyContext create variable integer counter = 0;\n",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deployed",
+      "case": "overlapping",
+      "statement": "module"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "overlapping"
+    },
+    {
+      "op": "case",
+      "case": "iterate-and-listen"
+    },
+    {
+      "op": "deploy",
+      "case": "iterate-and-listen",
+      "statement": "ctx",
+      "epl": "@name('ctx') @public create context MyCtx as initiated by SupportBean_S0 s0 terminated after 24 hours"
+    },
+    {
+      "op": "deployed",
+      "case": "iterate-and-listen",
+      "statement": "ctx"
+    },
+    {
+      "op": "deploy",
+      "case": "iterate-and-listen",
+      "statement": "var",
+      "epl": "@name('var') @public context MyCtx create variable int mycontextvar = 5"
+    },
+    {
+      "op": "deployed",
+      "case": "iterate-and-listen",
+      "statement": "var"
+    },
+    {
+      "op": "deploy",
+      "case": "iterate-and-listen",
+      "statement": "upd",
+      "epl": "@name('upd') context MyCtx on SupportBean(theString = context.s0.p00) set mycontextvar = intPrimitive"
+    },
+    {
+      "op": "deployed",
+      "case": "iterate-and-listen",
+      "statement": "upd"
+    },
+    {
+      "op": "send",
+      "case": "iterate-and-listen",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "P1"
+      }
+    },
+    {
+      "op": "send",
+      "case": "iterate-and-listen",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P1",
+        "intPrimitive": 100
+      }
+    },
+    {
+      "op": "snapshot",
+      "case": "iterate-and-listen",
+      "statement": "upd"
+    },
+    {
+      "op": "send",
+      "case": "iterate-and-listen",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "P2"
+      }
+    },
+    {
+      "op": "send",
+      "case": "iterate-and-listen",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "P2",
+        "intPrimitive": 101
+      }
+    },
+    {
+      "op": "snapshot",
+      "case": "iterate-and-listen",
+      "statement": "upd"
+    },
+    {
+      "op": "snapshot",
+      "case": "iterate-and-listen",
+      "statement": "var",
+      "mode": "any"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "iterate-and-listen"
+    },
+    {
+      "op": "case",
+      "case": "get-set-api"
+    },
+    {
+      "op": "deploy",
+      "case": "get-set-api",
+      "statement": "ctx",
+      "epl": "@public create context MyCtx as initiated by SupportBean_S0 s0 terminated after 24 hours"
+    },
+    {
+      "op": "deployed",
+      "case": "get-set-api",
+      "statement": "ctx"
+    },
+    {
+      "op": "deploy",
+      "case": "get-set-api",
+      "statement": "var",
+      "epl": "@name('var') @public context MyCtx create variable int mycontextvar = 5"
+    },
+    {
+      "op": "deployed",
+      "case": "get-set-api",
+      "statement": "var"
+    },
+    {
+      "op": "deploy",
+      "case": "get-set-api",
+      "statement": "upd",
+      "epl": "context MyCtx on SupportBean(theString = context.s0.p00) set mycontextvar = intPrimitive"
+    },
+    {
+      "op": "deployed",
+      "case": "get-set-api",
+      "statement": "upd"
+    },
+    {
+      "op": "send",
+      "case": "get-set-api",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "P1"
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "get-set-api",
+      "statement": "var",
+      "name": "mycontextvar",
+      "ids": [0]
+    },
+    {
+      "op": "set-variable",
+      "case": "get-set-api",
+      "statement": "var",
+      "name": "mycontextvar",
+      "payload": 10,
+      "ids": [0]
+    },
+    {
+      "op": "read-variable",
+      "case": "get-set-api",
+      "statement": "var",
+      "name": "mycontextvar",
+      "ids": [0]
+    },
+    {
+      "op": "send",
+      "case": "get-set-api",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 0,
+        "p00": "P2"
+      }
+    },
+    {
+      "op": "read-variable",
+      "case": "get-set-api",
+      "statement": "var",
+      "name": "mycontextvar",
+      "ids": [1]
+    },
+    {
+      "op": "set-variable",
+      "case": "get-set-api",
+      "statement": "var",
+      "name": "mycontextvar",
+      "payload": 11,
+      "ids": [1]
+    },
+    {
+      "op": "read-variable",
+      "case": "get-set-api",
+      "statement": "var",
+      "name": "mycontextvar",
+      "ids": [1]
+    },
+    {
+      "op": "deploy",
+      "case": "get-set-api",
+      "statement": "globalvar",
+      "epl": "@name('globalvar') create variable int myglobarvar = 0"
+    },
+    {
+      "op": "deployed",
+      "case": "get-set-api",
+      "statement": "globalvar"
+    },
+    {
+      "op": "set-variable",
+      "case": "get-set-api",
+      "statement": "globalvar",
+      "name": "myglobarvar",
+      "payload": 11,
+      "expectError": "Variable by name 'myglobarvar' is a global variable and not context-partitioned",
+      "ids": [0]
+    },
+    {
+      "op": "read-variable",
+      "case": "get-set-api",
+      "statement": "globalvar",
+      "name": "myglobarvar",
+      "expectError": "Variable by name 'myglobarvar' is a global variable and not context-partitioned",
+      "ids": [1]
+    },
+    {
+      "op": "undeploy-all",
+      "case": "get-set-api"
+    },
+    {
+      "op": "case",
+      "case": "invalid"
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "ctx-one",
+      "epl": "@public create context MyCtxOne as partition by theString from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "invalid",
+      "statement": "ctx-one"
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "ctx-two",
+      "epl": "@public create context MyCtxTwo as partition by p00 from SupportBean_S0"
+    },
+    {
+      "op": "deployed",
+      "case": "invalid",
+      "statement": "ctx-two"
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "var",
+      "epl": "@public context MyCtxOne create variable int myctxone_int = 0"
+    },
+    {
+      "op": "deployed",
+      "case": "invalid",
+      "statement": "var"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "invalid-context",
+      "epl": "context MyCtx create variable int mycontext_invalid1 = 0",
+      "expectError": "Context by name 'MyCtx' could not be found"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "wrong-context",
+      "epl": "context MyCtxTwo select myctxone_int from SupportBean_S0",
+      "expectError": "Variable 'myctxone_int' defined for use with context 'MyCtxOne' is not available for use with context 'MyCtxTwo'"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "outside-context-select",
+      "epl": "select myctxone_int from SupportBean_S0",
+      "expectError": "Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "outside-context-expr-window",
+      "epl": "select * from SupportBean_S0#expr(myctxone_int > 5)",
+      "expectError": "Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "outside-context-limit",
+      "epl": "select * from SupportBean_S0#keepall limit myctxone_int",
+      "expectError": "Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "outside-context-offset",
+      "epl": "select * from SupportBean_S0#keepall limit 10 offset myctxone_int",
+      "expectError": "Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "outside-context-output-every",
+      "epl": "select * from SupportBean_S0#keepall output every myctxone_int events",
+      "expectError": "Failed to validate the output rate limiting clause: Variable 'myctxone_int' defined for use with context 'MyCtxOne' can only be accessed within that context"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "invalid"
+    }
+  ]
+}

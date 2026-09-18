@@ -133,6 +133,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWConsumerScenario(file)
 	} else if *mode == "epl-variables-create" || *mode == "epl-variables-create-diff" {
 		scenario, err = loadEplVariablesCreateScenario(file)
+	} else if *mode == "context-variables" || *mode == "context-variables-diff" {
+		scenario, err = loadContextVariablesScenario(file)
 	} else if *mode == "epl-variables-event-typed" || *mode == "epl-variables-event-typed-diff" {
 		scenario, err = loadEplVariablesEventTypedScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
@@ -4739,6 +4741,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplVariablesCreateJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplVariablesCreateSources),
 				splitMetadata(*javaExecutions, eplVariablesCreateJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "context-variables" || *mode == "context-variables-diff" {
+		trace, err := runContextVariablesScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-variables-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, contextVariablesJavaCommit,
+				splitMetadata(*javaRuntimeIDs, contextVariablesJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextVariablesSources),
+				splitMetadata(*javaExecutions, contextVariablesJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
