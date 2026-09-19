@@ -92,7 +92,11 @@ Active: Draft 4.473 ('context-nested-initterm').
    Go lacks field-name validation so the Java rejection is not reproduced), covered `remaining`
    entries trimmed, prose counts corrected to 339 DV / 1290 DV runtime IDs, trailing newline restored.
 - [x] Post-review re-validation: context-nested-initterm-diff passing / 0 differences; all seven
-  output-last/context regression diffs re-run green; `make check` re-run after fixes.
+  output-last/context regression diffs re-run green; `make check` exit 0 after fixes.
+- [x] Confirmation review (same agent ParityReview4473): OVERALL PASS, all findings verified fixed;
+  residual non-blocking note — untyped category/hash parents cannot model Java's declared-type gate
+  for foreign-typed events (inherent to the untyped Go parent API, latent, unexercised).
+- [x] Shipped; Git owns identity. Draft 4.473 committed and pushed as `ee8f84d9e`.
 
 ## Current work unit
 Active: Draft 4.453 ('expr-filter-in-and-between').
