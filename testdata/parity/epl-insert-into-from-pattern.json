@@ -1,0 +1,87 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-insert-into-from-pattern",
+ "description": "EPL insert-into from-pattern parity replaying all four EPLInsertIntoFromPattern executions with one fresh runtime per case: pattern-wildcard-props replays EPLInsertIntoPropsWildcard, an insert-into with an explicit column list (es0id, es1id) selecting the tag properties es0.id/es1.id from pattern [every (es0=SupportBean_S0 or es1=SupportBean_S1)] into MyThirdStream, observed through the s0 select-* listener; pattern-explicit-props replays EPLInsertIntoProps, an insert-into with an explicit column list (s0, s1) selecting the tagged events themselves into MySecondStream, observed through the s0 listener selecting s0.id as es0id, s1.id as es1id; pattern-no-props replays EPLInsertIntoNoProps, an insert-into without a column list selecting the tagged events into MyStream (default tag-named columns), observed through the s0 listener over MyStream#length(10); pattern-named-window replays EPLInsertIntoFromPatternNamedWindow, a PositionW named window with win:time(1 hour).std:unique(intPrimitive) retention fed from SupportBean and an s1 insert-into selecting * from pattern[every a = PositionW -> every b = PositionW], observed through the s1 listener on the insert-into statement itself. The first three cases send SupportBean_S1{id:10,p10:\"\"} then SupportBean_S0{id:20,p00:\"\"} and observe the absent OR-branch tag projecting null; the named-window case sends SupportBean{theString:E1,intPrimitive:1} then SupportBean{theString:E2,intPrimitive:1} and observes exactly one listener row carrying the a/b tagged events projected to {theString,intPrimitive}.",
+ "javaRuntimes": [
+  "java-runtime-4dc2b394114fdaf84056",
+  "java-runtime-98eba92039ca0e871ad6",
+  "java-runtime-1dd189e49dda82f29078",
+  "java-runtime-9092d240993543259d6e"
+ ],
+ "cases": [
+  {
+   "case": "pattern-wildcard-props",
+   "runtimeId": "java-runtime-4dc2b394114fdaf84056"
+  },
+  {
+   "case": "pattern-explicit-props",
+   "runtimeId": "java-runtime-98eba92039ca0e871ad6"
+  },
+  {
+   "case": "pattern-no-props",
+   "runtimeId": "java-runtime-1dd189e49dda82f29078"
+  },
+  {
+   "case": "pattern-named-window",
+   "runtimeId": "java-runtime-9092d240993543259d6e"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "pattern-wildcard-props"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {"id": 10, "p10": ""}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {"id": 20, "p00": ""}
+  },
+  {
+   "op": "case",
+   "case": "pattern-explicit-props"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {"id": 10, "p10": ""}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {"id": 20, "p00": ""}
+  },
+  {
+   "op": "case",
+   "case": "pattern-no-props"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {"id": 10, "p10": ""}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {"id": 20, "p00": ""}
+  },
+  {
+   "op": "case",
+   "case": "pattern-named-window"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {"theString": "E1", "intPrimitive": 1}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {"theString": "E2", "intPrimitive": 1}
+  }
+ ]
+}

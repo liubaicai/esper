@@ -3620,6 +3620,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "epl-insert-into-from-pattern" || *mode == "epl-insert-into-from-pattern-diff" {
+		trace, err := runEplInsertIntoFromPatternScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-insert-into-from-pattern-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplInsertIntoFromPatternJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplInsertIntoFromPatternJavaSources),
+				splitMetadata(*javaExecutions, eplInsertIntoFromPatternJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "infra-table-into-table" || *mode == "infra-table-into-table-diff" {
 		trace, err := runInfraTableIntoTableScenario(context.Background(), scenario)
 		if err != nil {

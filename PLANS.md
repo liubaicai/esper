@@ -3495,7 +3495,35 @@ ords 0-1 — four executions, insert-into column typing.
  per-runner convention; contract-464 pseudocode doc nit.
 - [x] Post-review re-validation: diff still `passing` / 0 differences,
  typed-columns tests green, `make check` re-run.
-- [ ] Commit/push.
+- [x] `make check` GREEN (post-review-fix); committed and pushed as
+ `4fab3e118`. Git owns identity.
+
+## Current work unit
+Active: Draft 4.465 ('epl-insert-into-from-pattern').
+
+- [x] Contract frozen (scouts `NextJavaContract465` + `NextGoSurface465`;
+ both hit yield-schema bugs — reports recovered via hub replies; see the
+ prefetch section below for the full contract).
+- [x] Runner `internal/app/parity/epl_insert_into_from_pattern.go` +
+ run.go wiring (`epl-insert-into-from-pattern[-diff]`): 4 cases, ops
+ case/send; s0/s1 listener records. Compiles clean.
+- [x] Scenario JSON (4 cases / 12 steps) + oracle + run script —
+ parity-asset-worker `AssetWriter465` (disjoint file ownership; yield
+ schema failed, report recovered via transcript). Oracle verified:
+ 7 records, EPLs byte-exact, per-case fresh runtime.
+- [x] Differential replay: Java 7 records / Go 7 records, status
+ `passing`, 0 differences.
+- [x] Tests: TestRunEplInsertIntoFromPatternDiffWritesPassingEvidence +
+ 7 trace mutations (absent-tag null, tag id, bean-column id, default
+ column id, named-window row lost/extra, tagged-event payload) — all
+ green.
+- [x] Manifest: `case.epl-insert-into-from-pattern` born-DV with the 4
+ IDs; capability `epl.insertinto-pattern` DV IDs +4, three suite entries
+ removed from remaining, PropsWildcard removed from javaRefs, goRefs
+ extended; summary 705/331/1270/3820/3446/690; validator green.
+ Roadmap + CHANGELOG entries added.
+- [x] `make check` GREEN (pre-review).
+- [ ] Parity review; commit/push.
 
 ## Next work unit (prefetch)
 Frozen: Draft 4.465 ('epl-insert-into-from-pattern') — EPLInsertIntoFromPattern

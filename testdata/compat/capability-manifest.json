@@ -4661,20 +4661,16 @@
    "domain": "insert-into",
    "level": "G",
    "summary": "Insert pattern match results into a derived stream, consuming from the derived stream. OR pattern with every matches S0 or S1 events, projects tagged fields (es0id/es1id) into a new stream via InsertInto. EPLInsertIntoPopulateUndStreamSelect closed at 3/4 executions differential-verified (47 records, 0 differences): on-merge supertype-column population with subtype fragments, per-rep wildcard transpose matrices with widening/subset/override across six representations; Invalid execution implemented-not-DV with go-unit route-validation pins and verbatim Java diagnostics preserved.",
-   "javaRefs": [
-    "EPLInsertIntoPropsWildcard"
-   ],
+   "javaRefs": [],
    "goRefs": [
     "internal/esper/insert_pattern_parity_test.go",
     "internal/app/parity/epl_insert_into_typed_columns.go",
-    "internal/compat/scenario.go"
+    "internal/compat/scenario.go",
+    "internal/app/parity/epl_insert_into_from_pattern.go"
    ],
    "phase": 2,
    "status": "implemented",
    "remaining": [
-    "EPLInsertIntoProps",
-    "EPLInsertIntoNoProps",
-    "EPLInsertIntoFromPatternNamedWindow",
     "EPLInsertIntoIRStreamFunc",
     "EPLInsertIntoPopulateCreateStream suite",
     "EPLInsertIntoPopulateSingleColByMethodCall",
@@ -4691,7 +4687,11 @@
     "java-runtime-0870abe075dc95308a27",
     "java-runtime-d585492dbeef1deee74f",
     "java-runtime-2fb237744f8a8b010414",
-    "java-runtime-700d690d1c5c019ec414"
+    "java-runtime-700d690d1c5c019ec414",
+    "java-runtime-4dc2b394114fdaf84056",
+    "java-runtime-98eba92039ca0e871ad6",
+    "java-runtime-1dd189e49dda82f29078",
+    "java-runtime-9092d240993543259d6e"
    ]
   },
   {
@@ -45241,6 +45241,61 @@
     "java-runtime-2fb237744f8a8b010414",
     "java-runtime-700d690d1c5c019ec414"
    ]
+  },
+  {
+   "id": "case.epl-insert-into-from-pattern",
+   "javaRuntimeIds": [
+    "java-runtime-4dc2b394114fdaf84056",
+    "java-runtime-98eba92039ca0e871ad6",
+    "java-runtime-1dd189e49dda82f29078",
+    "java-runtime-9092d240993543259d6e"
+   ],
+   "javaNames": [
+    "EPLInsertIntoPropsWildcard",
+    "EPLInsertIntoProps",
+    "EPLInsertIntoNoProps",
+    "EPLInsertIntoFromPatternNamedWindow"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoFromPattern.java"
+   ],
+   "javaStaticIds": [
+    "java-ca3f03a679a887265f3f",
+    "java-6ea239f49004ae40f1f7",
+    "java-9fd8106cb703d660e4d9",
+    "java-3dc830b6ab1131cd3d36"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunEplInsertIntoFromPatternDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "epl",
+    "insert-into",
+    "pattern",
+    "named-window",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-insert-into-from-pattern.json",
+    "testdata/parity/epl-insert-into-from-pattern.trace.json",
+    "testdata/parity/epl-insert-into-from-pattern.go.trace.json",
+    "testdata/parity/epl-insert-into-from-pattern.evidence.json"
+   ],
+   "notes": [
+    "All four EPLInsertIntoFromPattern executions (7 records, 0 differences): wildcard tag-property projection with an explicit column list (absent OR-branch tag -> null), bean-typed tag columns consumed through nested s0.id/s1.id reads, default tag-named columns over MyStream#length(10), and a named-window pattern source (PositionW win:time(1 hour).std:unique(intPrimitive)) feeding 'insert into Foo select * from pattern[every a = PositionW -> every b = PositionW]' observed on the insert-into statement's own listener — exactly one {a:E1,b:E2} row, pinning count=1 where Java only asserts invoked. Approved differences: select * over a tagged pattern expands to per-tag Alias(tag, PatternEvent(tag)) (zero-selection tagged patterns are Build-rejected); insert-into column lists map to alias names; Foo pre-registers Event columns with the bean nested schema (Java auto-creates the type)."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-4dc2b394114fdaf84056",
+    "java-runtime-98eba92039ca0e871ad6",
+    "java-runtime-1dd189e49dda82f29078",
+    "java-runtime-9092d240993543259d6e"
+   ]
   }
  ],
  "mappings": [
@@ -48399,13 +48454,17 @@
   {
    "capabilityId": "epl.insertinto-pattern",
    "caseId": "case.epl-insert-into-typed-columns"
+  },
+  {
+   "capabilityId": "epl.insertinto-pattern",
+   "caseId": "case.epl-insert-into-from-pattern"
   }
  ],
  "summary": {
-  "inventoriedCases": 704,
-  "implementedCases": 702,
-  "differentialVerifiedCases": 330,
-  "differentialVerifiedRuntimeIds": 1266,
+  "inventoriedCases": 705,
+  "implementedCases": 703,
+  "differentialVerifiedCases": 331,
+  "differentialVerifiedRuntimeIds": 1270,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48415,13 +48474,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3816,
-  "referencedJavaRuntimeIds": 3443,
+  "runtimeAssociationCount": 3820,
+  "referencedJavaRuntimeIds": 3446,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 693,
+  "unreferencedJavaRuntimeIds": 690,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 704,
+  "totalCases": 705,
   "totalCapabilities": 121
  }
 }

@@ -19153,6 +19153,121 @@ func TestRunEplInsertIntoTypedColumnsDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunEplInsertIntoFromPatternDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-from-pattern.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-from-pattern.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-from-pattern.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-insert-into-from-pattern-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplInsertIntoFromPatternDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "absent-tag-null-lost",
+			mutate: func(trace *compat.Trace) {
+				// The unmatched OR-branch tag must project null, not a
+				// value.
+				trace.Records[0].New[0].Fields["es0id"] = 99
+			},
+		},
+		{
+			name: "tag-id-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[1].New[0].Fields["es0id"] = 21
+			},
+		},
+		{
+			name: "bean-column-id-drift",
+			mutate: func(trace *compat.Trace) {
+				// The bean-typed s1 column must expose its id through the
+				// consumer's nested read.
+				trace.Records[2].New[0].Fields["es1id"] = 11
+			},
+		},
+		{
+			name: "default-column-id-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["es1id"] = 10
+			},
+		},
+		{
+			name: "named-window-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// every a -> every b over the window insert stream must
+				// deliver exactly one row.
+				trace.Records[6].New = nil
+			},
+		},
+		{
+			name: "named-window-extra-row",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New = append(trace.Records[6].New, trace.Records[6].New[0])
+			},
+		},
+		{
+			name: "tagged-event-payload-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[6].New[0].Fields["b"].(map[string]any)["fields"].(map[string]any)["theString"] = "E9"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-from-pattern.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-from-pattern.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-from-pattern.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-insert-into-from-pattern-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunResultsetOrderbyRowPerGroupDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-orderby-row-per-group.evidence.json"),
