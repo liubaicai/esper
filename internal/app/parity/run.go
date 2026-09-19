@@ -67,6 +67,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-subselect-prev-prior and context-key-segmented-subselect-prev-prior-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-invalid and context-key-segmented-invalid-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-allocation-time and context-key-segmented-allocation-time-diff")
+		fmt.Fprintln(stderr, "runner modes include context-nested-initterm and context-nested-initterm-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -3257,6 +3258,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, contextKeySegmentedAllocationTimeJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, contextKeySegmentedAllocationTimeJavaSources),
 				splitMetadata(*javaExecutions, contextKeySegmentedAllocationTimeJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "context-nested-initterm" || *mode == "context-nested-initterm-diff" {
+		trace, err := runContextNestedInitTermScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-nested-initterm-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextNestedInitTermJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextNestedInitTermJavaSources),
+				splitMetadata(*javaExecutions, contextNestedInitTermJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -1538,23 +1538,24 @@
     "ContextInitTermWithDistinct"
    ],
    "goRefs": [
+    "internal/app/parity/context_key_segmented_allocation_time.go",
+    "internal/app/parity/context_key_segmented_invalid.go",
+    "internal/app/parity/context_key_segmented_subselect_prev_prior.go",
+    "internal/app/parity/context_keyed_subquery.go",
+    "internal/app/parity/context_nested_initterm.go",
+    "internal/app/parity/context_output.go",
+    "internal/app/parity/context_variables.go",
+    "internal/app/parity/high_cardinality.go",
+    "internal/app/parity/run_test.go",
     "internal/esper/context.go",
+    "internal/esper/context_key_segmented_w_init_term_prioritized_parity_test.go",
+    "internal/esper/context_keyed_subquery_parity_test.go",
+    "internal/esper/context_nested_initiated_parity_test.go",
+    "internal/esper/context_output_termination_parity_test.go",
     "internal/esper/context_selector.go",
     "internal/esper/context_test.go",
-    "internal/esper/context_output_termination_parity_test.go",
-    "internal/app/parity/context_output.go",
     "internal/esper/high_cardinality_context_parity_test.go",
-    "internal/app/parity/high_cardinality.go",
-    "internal/esper/context_keyed_subquery_parity_test.go",
-    "internal/app/parity/context_keyed_subquery.go",
-    "internal/esper/context_key_segmented_w_init_term_prioritized_parity_test.go",
-    "internal/esper/context_nested_initiated_parity_test.go",
-    "internal/app/parity/context_variables.go",
-    "internal/app/parity/run_test.go",
-    "internal/app/parity/context_key_segmented_subselect_prev_prior.go",
-    "internal/app/parity/context_key_segmented_invalid.go",
-    "internal/esper/state.go",
-    "internal/app/parity/context_key_segmented_allocation_time.go"
+    "internal/esper/state.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1572,16 +1573,21 @@
     "intentionally-different"
    ],
    "differentialVerifiedRuntimeIds": [
-    "java-runtime-64ed27d8c2b0325c1cbd",
-    "java-runtime-5d429404e8e55f30567a",
-    "java-runtime-c5406f66fdd34533bcb2",
-    "java-runtime-4b19317271be7df8b569",
-    "java-runtime-bd4672ec90862ee08790",
-    "java-runtime-9aa54450b89fbc94ab73",
+    "java-runtime-0c5d14d415a1162de7e4",
     "java-runtime-2afbd86618b752a6dd5b",
+    "java-runtime-4b19317271be7df8b569",
     "java-runtime-57199db349abfe7ad70e",
+    "java-runtime-5d429404e8e55f30567a",
+    "java-runtime-64ed27d8c2b0325c1cbd",
+    "java-runtime-754484318bed39b8eea2",
+    "java-runtime-820bb6f72b84ad070ce4",
+    "java-runtime-8598d1eb6dbd61614f4f",
     "java-runtime-9356c517931472be6cad",
-    "java-runtime-820bb6f72b84ad070ce4"
+    "java-runtime-9539162a80f17616650f",
+    "java-runtime-9aa54450b89fbc94ab73",
+    "java-runtime-bd4672ec90862ee08790",
+    "java-runtime-c5406f66fdd34533bcb2",
+    "java-runtime-c91629ba5a771e1725db"
    ],
    "representativeScenarioIds": [
     "context-hash-segmented",
@@ -1590,7 +1596,7 @@
     "context-keyed-subquery",
     "context-key-segmented-allocation-time"
    ],
-   "difference": "Ord 19 ContextKeySegmentedInvalid: probes 1 (per-stream partition filter) and 6 (subtype/supertype duplicate) are unrepresentable in the typed Go API — KeyContextStream has no Filter field and Go has no type inheritance; the other seven probes pin Go rejection boundaries with Java message prefixes."
+   "difference": "Ord 19 ContextKeySegmentedInvalid: probe 6 (subtype/supertype duplicate) is unrepresentable in the typed Go API (no type inheritance); probe 1 is expressible via KeyContextStream.Filter but Go does not validate unknown filter field names at build time, so the Java rejection is not reproduced; the other seven probes pin Go rejection boundaries with Java message prefixes."
   },
   {
    "id": "dataflow.graph",
@@ -30395,31 +30401,32 @@
     "hash",
     "invalid"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-runtime-inventory",
-    "java-source",
-    "java-junit",
-    "go-unit"
+    "testdata/parity/context-nested-initterm.evidence.json"
    ],
    "verification": [
     "inventoried",
-    "implemented"
+    "implemented",
+    "differential-verified"
    ],
    "goTests": [
-    "TestContextNestedSingleEventTriggerParity",
-    "TestContextNestedNestingFilterCorrectnessParity",
-    "TestContextNestedInvalidParity"
+    "internal/app/parity/context_nested_initterm.go"
    ],
    "remaining": [
     "temporal outer/child nested contexts (TemporalOverCategoryOverPartition, TemporalFixedOverHash, CategoryOverTemporalOverlapping, FixedTemporalOverPartitioned, PartitionedOverFixedTemporal, TemporalOverlapOverPartition)",
     "initiated/pattern nested lifecycle semantics (CategoryOverPatternInitiated, FourContextsNested, PartitionedOverPatternInitiated, OverlappingAndPattern, NonOverlapping, InitWStartNow variants, KeyedStartStop, KeyedFilter)",
-    "nested iterator/targeted partition selectors and late-coming statement lifecycle",
-    "multi-props/init-term/end-event nested combinations",
-    "full Java differential trace for the covered ContextNested executions"
+    "nested iterator/targeted partition selectors and late-coming statement lifecycle"
    ],
    "difference": "Go covers non-temporal nested contexts with CreateNestedContext over key/category/hash children: three-level key partition isolation with context property paths, category-over-key/hash routing, nested selectors, duplicate child-name rejection (registration duplicate classified ErrorDependency/DuplicateModuleObjectError; Java's declaration-scoped message text remains an approved difference of the level-by-level composition API), and keyed-parent over initiated-terminated child termination (PartitionedOverPatternInitiated includes its termination event in aggregate state). Temporal, remaining initiated/pattern and iterator-targeted nested lifecycles remain open.",
-   "notes": "Draft 4.404 (2026-09-14) closed the go-unit coverage gap recorded by the 4.402 reconciliation: TestContextNestedInvalidParity pins Java ContextNestedInvalid. Duplicate sub-context names within a nested composition are rejected at the registration boundary (ErrorDependency, DeploymentResourceContext, exact name). The segmented event-type requirement is now enforced in Go (plan.go validateSegmentedContextEventType): a plain statement bound to a context tree with a type-bearing segmented level (NewKeyContextByStreams streamKeys) must source a listed type, rejected ErrorInvalidRule with the Java-verbatim template naming the top-level context and the source type, ahead of key resolution; named-window consumers pass (Java-analyzer faithful); pattern sources also pass as a documented relaxation - Java validates pattern-internal filter types; single-type key/hash constructors carry no listable types and stay unenforced; joins keep their documented looser relaxation; positive controls compile for listed types. Approved differences: the Java scene's crontab-over-segmented composition uses a segmented+key stand-in (temporal nesting remains in remaining), and message text is classified rather than reproduced."
+   "notes": "Five ContextNested executions verified: filter-overlap/non-overlap partitioned, multi-props+term, category-over-initterm-distinct, key-segmented-with-initterm-end-event. Two shared-core fixes: distinct key evaluates against the initiating event (not ContextInitiatingEvent), and output-last-when-terminated trims the aggregate snapshot to the last row per group key.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-8598d1eb6dbd61614f4f",
+    "java-runtime-9539162a80f17616650f",
+    "java-runtime-c91629ba5a771e1725db",
+    "java-runtime-0c5d14d415a1162de7e4",
+    "java-runtime-754484318bed39b8eea2"
+   ]
   },
   {
    "id": "case.inventory.resultset-output-limit-aggregate-grouped",
@@ -49009,8 +49016,8 @@
  "summary": {
   "inventoriedCases": 714,
   "implementedCases": 712,
-  "differentialVerifiedCases": 338,
-  "differentialVerifiedRuntimeIds": 1285,
+  "differentialVerifiedCases": 339,
+  "differentialVerifiedRuntimeIds": 1290,
   "intentionallyDifferentCases": 32,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,

@@ -1,0 +1,371 @@
+{
+ "version": "esper-parity/v1",
+ "id": "context-nested-initterm",
+ "description": "ContextNested initiated-terminated child executions (ords 4/5/17/33/34): filter-overlap partitions S0 by id under a start/end child correlated on S1(id=te.id) and delivers the per-inner-partition firstEvent to a subscriber (p00 sequence A,B,B per iteration, two iterations, silent re-termination no-op); filter-nonoverlap-broadcast fans S0 initiations out to every existing filtered parent partition and broadcasts parent-stream events to all child leaves (two grouped-sum rows for E1,6), with virtual time seeded to 2002-05-01T08:00:00 and never advanced; multikey-correlated-term ends only the (E1,0) leaf via a two-property correlated end under a two-key parent, emitting one output-last row {E1,0,2}; category-initterm-distinct proves distinct initiation suppression, parent-scoped termination and re-initiation through the cnt sequence 1,2,1,1,(none),1,2,(none),1; initterm-endevent-projection emits one output-all-when-terminated row carrying context.id plus the named startevent/endevent. Java milestones, repeated setSubscriber calls, the assertContextPropsNested descriptor assertions and the filter-service-count assertion are harness no-ops and carry no steps.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextNested.java",
+ "javaRuntimes": [
+  "java-runtime-8598d1eb6dbd61614f4f",
+  "java-runtime-9539162a80f17616650f",
+  "java-runtime-c91629ba5a771e1725db",
+  "java-runtime-0c5d14d415a1162de7e4",
+  "java-runtime-754484318bed39b8eea2"
+ ],
+ "javaNames": [
+  "ContextNestedPartitionedWithFilterOverlap",
+  "ContextNestedPartitionedWithFilterNonOverlap",
+  "ContextNestedPartitionWithMultiPropsAndTerm",
+  "ContextNestedCategoryOverInitTermDistinct",
+  "ContextNestedKeySegmentedWInitTermEndEvent"
+ ],
+ "javaStaticIds": [
+  "java-164dcbb28335ea23e599",
+  "java-67a496a87a950b8f1fdc",
+  "java-d7ee3d087f59bf2f413d",
+  "java-96fb9f490d5d27fc6b0d",
+  "java-85c09b49c24546d35def"
+ ],
+ "javaFlags": [
+  "OBSERVEROPS"
+ ],
+ "cases": [
+  {
+   "case": "filter-overlap",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-8598d1eb6dbd61614f4f",
+   "executionName": "ContextNestedPartitionedWithFilterOverlap",
+   "observation": "subscriber; each S0 delivered while its inner partition is active emits one row carrying the firstEvent event; per iteration p00 = A,B,B (the C row proves firstevent windows are per-inner-partition) and the repeated S1(1) re-termination is a silent no-op"
+  },
+  {
+   "case": "filter-nonoverlap-broadcast",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-9539162a80f17616650f",
+   "executionName": "ContextNestedPartitionedWithFilterNonOverlap",
+   "observation": "listener; S0 initiations broadcast to every existing SegByString parent partition and parent-stream events broadcast to all child leaves, so SB(E1,6) emits two rows {S0_1,E1,8} and {S0_2,E1,6}; terminated after 60 seconds never fires (no time advance)"
+  },
+  {
+   "case": "multikey-correlated-term",
+   "ordinal": 17,
+   "runtimeId": "java-runtime-c91629ba5a771e1725db",
+   "executionName": "ContextNestedPartitionWithMultiPropsAndTerm",
+   "observation": "listener; S0(0,E1) terminates only the (E1,0) leaf via the correlated end id=e1.intPrimitive and p00=e1.theString, emitting one output-last-when-terminated row {E1,0,2}; the (E2,1) partition stays open and never outputs"
+  },
+  {
+   "case": "category-initterm-distinct",
+   "ordinal": 33,
+   "runtimeId": "java-runtime-0c5d14d415a1162de7e4",
+   "executionName": "ContextNestedCategoryOverInitTermDistinct",
+   "observation": "listener; per-send cnt sequence 1,2,1,1,(none),1,2,(none),1 proves distinct initiation suppression (second A/10 counted in the existing partition), routed termination (B/10 kills grp3's children while grp1's -5 survives to cnt=2) and re-initiation"
+  },
+  {
+   "case": "initterm-endevent-projection",
+   "ordinal": 34,
+   "runtimeId": "java-runtime-754484318bed39b8eea2",
+   "executionName": "ContextNestedKeySegmentedWInitTermEndEvent",
+   "observation": "listener; output all when terminated emits one row {id,c0,c1} where c0/c1 carry the named startevent/endevent events and the terminating intPrimitive=0 event is filtered out of the statement stream"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "filter-overlap"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "A"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": "B"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": "C"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "A"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": "B"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": "C"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "case",
+   "case": "filter-nonoverlap-broadcast"
+  },
+  {
+   "op": "advance-time",
+   "at": "2002-05-01T08:00:00Z"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 1,
+    "p00": "S0_1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": -5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 3
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 2,
+    "p00": "S0_2"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 6
+   }
+  },
+  {
+   "op": "case",
+   "case": "multikey-correlated-term"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0,
+    "longPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 1,
+    "longPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "E1"
+   }
+  },
+  {
+   "op": "case",
+   "case": "category-initterm-distinct"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": -5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": -4
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": -5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "B",
+    "intPrimitive": -5
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": -5
+   }
+  },
+  {
+   "op": "case",
+   "case": "initterm-endevent-projection"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "A",
+    "intPrimitive": 0
+   }
+  }
+ ]
+}

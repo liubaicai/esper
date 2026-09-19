@@ -6531,13 +6531,32 @@ type statementRuntime struct {
 	iterableLastEventSet     bool
 	patternAggregateGroup    []Event
 	patternAggregateTags     []map[string]Event
-	contextStartPatternState *patternRuntimeState
-	contextEndPatternState   *patternRuntimeState
 	contextPatternTags       map[string]Event
 	contextPatternTagValues  map[string][]Event
-	rowRecogState            *rowRecogRuntimeState
-	outputState              *outputRuntimeState
-	distinctCounts           map[string]int
+	contextStartPatternState *patternRuntimeState
+	contextEndPatternState   *patternRuntimeState
+	// nestedParents tracks live parent-level partitions of a nested
+	// initiated-terminated context, keyed by the parent segment of the
+	// nested partition key. The stored event is the event that allocated
+	// the parent partition; leaf context properties evaluate parent-level
+	// keys against it. Esper keeps parent partitions alive for the
+	// statement's lifetime so later initiations fan into them.
+	nestedParents map[string]Event
+	// nestedParentIDs records each parent partition's own context
+	// partition ID so `context.<ParentName>.id` reports the parent's ID,
+	// not the leaf's. IDs come from nestedParentNextID, a counter
+	// independent of the leaf partition-ID sequence so leaf `context.id`
+	// values stay dense from zero.
+	nestedParentIDs    map[string]int
+	nestedParentNextID int
+	// nestedParentKey records, on a leaf partition runtime, the parent
+	// segment of its nested partition key. The encoded key cannot be split
+	// back reliably (encoded parent keys themselves contain \x1f), so the
+	// leaf carries its parent identity directly.
+	nestedParentKey string
+	rowRecogState   *rowRecogRuntimeState
+	outputState     *outputRuntimeState
+	distinctCounts  map[string]int
 	// viewReclaimSweeps holds the per-groupwin-node next-sweep anchor for
 	// reclaim_group_aged/freq hints on grouped-view chains (Java's
 	// GroupByViewReclaimAged.nextSweepTime is per agent instance).
@@ -9463,9 +9482,10 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 	}
 	return result, changed
 }
-
 func (s *Statement) processInitiatedTerminated(definition ContextDefinition, event Event, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
-
+	if definition.parent != nil {
+		return s.processNestedInitiatedTerminated(definition, event, now, variables)
+	}
 	if s == nil || s.engine == nil {
 		return ResultBatch{}, false, NewError(ErrorDependency, "initiated-terminated context has no engine")
 	}
@@ -9675,6 +9695,314 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 	}
 	result.Time = now
 	return result, changed, nil
+}
+
+// processNestedInitiatedTerminated drives a nested context whose leaf level
+// is initiated-terminated below a segmented/category parent. Unlike the flat
+// path, Esper semantics here are parent-scoped: an event whose type is
+// declared by the parent routes to its parent partition(s) and is evaluated
+// against child conditions only inside those partitions; an event of any
+// other type is evaluated against child conditions in EVERY live parent
+// partition (broadcast initiation/termination); and a parent-typed event is
+// processed into every child leaf under its routed parents.
+func (s *Statement) processNestedInitiatedTerminated(definition ContextDefinition, event Event, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
+	if s == nil || s.engine == nil {
+		return ResultBatch{}, false, NewError(ErrorDependency, "initiated-terminated context has no engine")
+	}
+	if s.runtime.partitions == nil {
+		s.runtime.partitions = make(map[string]*statementRuntime)
+	}
+	if s.runtime.nestedParents == nil {
+		s.runtime.nestedParents = make(map[string]Event)
+	}
+	if s.runtime.nestedParentIDs == nil {
+		s.runtime.nestedParentIDs = make(map[string]int)
+	}
+	parent := definition.parent
+
+	// Resolve the parent partitions this event routes to. A typed parent
+	// (streamKeys or a stream filter) restricts routing to its declared
+	// types; an untyped parent (category, or keyed/hash without declared
+	// streams) resolves every event to its own partition(s) or drops it
+	// when no partition resolves (category no-match).
+	parentTyped := len(parent.streamKeys) > 0 || len(parent.streamFilters) > 0
+	var routedParents []string
+	if parentTyped {
+		if parent.declaresEventType(event) {
+			keys, active, err := parent.partitionsForEvent(event, now, variables)
+			if err != nil {
+				return ResultBatch{}, false, err
+			}
+			if !active {
+				// A declared-type event that fails the parent's stream filter
+				// (or matches no category) never enters the context: no
+				// initiation, no termination, no statement delivery.
+				return ResultBatch{}, false, nil
+			}
+			routedParents = keys
+		}
+	} else {
+		keys, active, err := parent.partitionsForEvent(event, now, variables)
+		if err != nil {
+			return ResultBatch{}, false, err
+		}
+		if !active {
+			// An untyped parent that evaluates the event to no partition —
+			// a category parent whose predicates all fail — drops it:
+			// Java's nested category controller gates leaf filters with the
+			// category item's filter addendum, so a non-matching event fires
+			// no initiation, termination, or statement delivery anywhere.
+			return ResultBatch{}, false, nil
+		}
+		routedParents = keys
+	}
+	for _, parentKey := range routedParents {
+		if _, exists := s.runtime.nestedParents[parentKey]; !exists {
+			s.runtime.nestedParents[parentKey] = event
+			s.runtime.nestedParentIDs[parentKey] = s.runtime.nestedParentNextID
+			s.runtime.nestedParentNextID++
+		}
+	}
+	parentKeySet := make(map[string]struct{}, len(routedParents))
+	for _, parentKey := range routedParents {
+		parentKeySet[parentKey] = struct{}{}
+	}
+	// The evaluation scope: routed parents for parent-typed events, every
+	// live parent otherwise.
+	evalParents := routedParents
+	if len(routedParents) == 0 {
+		evalParents = evalParents[:0]
+		for parentKey := range s.runtime.nestedParents {
+			evalParents = append(evalParents, parentKey)
+		}
+		sort.Strings(evalParents)
+	}
+
+	startValue := definition.start.eval(EvalContext{Event: event, Now: now, Variables: variables})
+	start, startOK := boolValue(startValue)
+	var initiationBatch ResultBatch
+	initiationChanged := false
+	if startOK && start {
+		for _, parentKey := range evalParents {
+			childKey, childActive, err := definition.partitionLocal(event, now, variables)
+			if err != nil {
+				return ResultBatch{}, false, err
+			}
+			if !childActive {
+				continue
+			}
+			baseKey := encodeKey([]any{"nested", parentKey, childKey})
+			allocationKey := baseKey
+			if definition.initiatedOverlapping {
+				allocationKey = overlappingContextPartitionKey(baseKey, event, s.runtime.partitions)
+			} else if definition.initiatedDistinct {
+				if _, exists := s.runtime.partitions[baseKey]; exists {
+					continue
+				}
+			} else if nestedParentHasLeaf(s.runtime.partitions, parentKey) {
+				// Non-overlapping children allow one active leaf per parent.
+				continue
+			}
+			parentEvent := s.runtime.nestedParents[parentKey]
+			query := s.runtime.query
+			query.contextName = ""
+			partitionRuntime := newStatementRuntime(query)
+			partitionRuntime.engine = s.engine
+			partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
+			partitionRuntime.partitionContextName = s.plan.query.contextName
+			partitionRuntime.partitionKey = allocationKey
+			partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
+			partitionRuntime.nestedParentKey = parentKey
+			partitionRuntime.contextProperties = definition.contextPropertyValuesForNestedKey(event, parentEvent, now, variables, partitionRuntime.partitionID, allocationKey, s.runtime.nestedParentIDs[parentKey])
+			partitionRuntime.contextProperties["initiating_event"] = Present(event)
+			partitionRuntime.contextProperties["startTime"] = Present(now)
+			if definition.endPattern != nil {
+				partitionRuntime.contextEndPatternState = &patternRuntimeState{distinct: make(map[string]struct{})}
+				initializeContextPatternTimer(&partitionRuntime.contextEndPatternState, definition.endPattern, now, partitionRuntime.variables)
+			}
+			partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
+			partitionRuntime.initializeAt(now)
+			partitionValue := ptrStatementRuntime(partitionRuntime)
+			s.runtime.partitions[allocationKey] = partitionValue
+			s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partitionValue)
+			if s.plan.query.sourceLess && s.plan.query.output.Termination != OutputOnlyOnTermination {
+				partitionValue.variables = partitionValue.withContextProperties(variables)
+				if partitionValue.sourceLessRowMatches(s.plan.query, now) {
+					row := partitionValue.batch(eventDelta{newEvents: []Event{{}}}, s.plan, now)
+					row = partitionValue.applyOutput(s.plan.query.output, row, false, now, s.plan)
+					initiationBatch.New = append(initiationBatch.New, row.New...)
+					initiationBatch.Old = append(initiationBatch.Old, row.Old...)
+					initiationChanged = initiationChanged || !row.empty() || row.forced
+				}
+			}
+		}
+	}
+
+	keys := make([]string, 0, len(s.runtime.partitions))
+	for partitionKey := range s.runtime.partitions {
+		keys = append(keys, partitionKey)
+	}
+	sort.Strings(keys)
+	if len(keys) == 0 {
+		return ResultBatch{}, false, nil
+	}
+
+	// Termination scope: parent-typed events evaluate the end condition only
+	// inside leaves under the routed parents; other events evaluate it in
+	// every leaf (Esper broadcasts cross-type lifecycle events).
+	terminationKeys := keys
+	if len(routedParents) > 0 {
+		terminationKeys = nil
+		for _, partitionKey := range keys {
+			if nestedLeafUnderParents(s.runtime.partitions[partitionKey], parentKeySet) {
+				terminationKeys = append(terminationKeys, partitionKey)
+			}
+		}
+	}
+	terminating := make(map[string]bool, len(terminationKeys))
+	for _, partitionKey := range terminationKeys {
+		partition := s.runtime.partitions[partitionKey]
+		if partition == nil {
+			continue
+		}
+		if definition.end == nil {
+			continue
+		}
+		partitionVariables := partition.withContextVariables(variablesWithEngine(variables, s.engine))
+		partitionVariables = partition.withContextProperties(partitionVariables)
+		endValue := definition.end.eval(EvalContext{Event: event, Now: now, Variables: partitionVariables, Tags: partition.contextPatternTags})
+		if end, ok := boolValue(endValue); ok && end {
+			if partition.contextProperties == nil {
+				partition.contextProperties = make(map[string]Value)
+			}
+			partition.contextProperties["terminating_event"] = Present(event)
+			terminating[partitionKey] = true
+		}
+	}
+	if definition.endPattern != nil {
+		for _, partitionKey := range terminationKeys {
+			partition := s.runtime.partitions[partitionKey]
+			if partition == nil {
+				continue
+			}
+			partitionVariables := partition.withContextVariables(variablesWithEngine(variables, s.engine))
+			partitionVariables = partition.withContextProperties(partitionVariables)
+			matches := advanceContextPattern(
+				&partition.contextEndPatternState,
+				definition.endPattern,
+				event,
+				now,
+				partitionVariables,
+				partition.contextPatternTags,
+				partition.contextPatternTagValues,
+				s.engine.env,
+				partition,
+				"end",
+			)
+			if len(matches) == 0 {
+				continue
+			}
+			match := matches[0]
+			partition.contextPatternTags = clonePatternTags(match.tags)
+			partition.contextPatternTagValues = clonePatternTagValues(match.tagValues)
+			applyContextPatternProperties(partition, match.tags)
+			if partition.contextProperties == nil {
+				partition.contextProperties = make(map[string]Value)
+			}
+			partition.contextProperties["terminating_event"] = Present(event)
+			terminating[partitionKey] = true
+		}
+	}
+
+	accepts := statementAcceptsEvent(s.plan.query, event)
+	processKeys := keys
+	if len(routedParents) > 0 {
+		processKeys = nil
+		for _, partitionKey := range keys {
+			if nestedLeafUnderParents(s.runtime.partitions[partitionKey], parentKeySet) {
+				processKeys = append(processKeys, partitionKey)
+			}
+		}
+	}
+	var result ResultBatch
+	var changed bool
+	if accepts {
+		for _, partitionKey := range processKeys {
+			// Nested initiated children process the termination event before
+			// the snapshot, matching Java's nested behavior.
+			partition := s.runtime.partitions[partitionKey]
+			if partition == nil {
+				continue
+			}
+			var batch ResultBatch
+			var partitionChanged bool
+			var err error
+			if s.plan.query.trigger != nil {
+				batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
+				partitionChanged = !batch.empty() || batch.forced
+			} else {
+				batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables), streamFilterVerdict{})
+			}
+			if err != nil {
+				return ResultBatch{}, false, err
+			}
+			result.New = append(result.New, batch.New...)
+			result.Old = append(result.Old, batch.Old...)
+			changed = changed || partitionChanged
+		}
+	}
+	for _, partitionKey := range keys {
+		if !terminating[partitionKey] {
+			continue
+		}
+		partition := s.runtime.partitions[partitionKey]
+		if partition == nil {
+			continue
+		}
+		partition.variables = s.contextPartitionVariables(partition, variables)
+		if s.plan.query.output.Termination != OutputNoTermination {
+			terminationBatch := partition.outputAtTermination(s.plan, now)
+			result.New = append(result.New, terminationBatch.New...)
+			result.Old = append(result.Old, terminationBatch.Old...)
+			changed = changed || !terminationBatch.empty() || terminationBatch.forced
+		}
+		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
+		delete(s.runtime.partitions, partitionKey)
+		s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, partitionKey, true, partition)
+	}
+	if initiationChanged {
+		result.New = append(initiationBatch.New, result.New...)
+		result.Old = append(initiationBatch.Old, result.Old...)
+		changed = true
+	}
+	if changed {
+		result.Sequence = s.runtime.seq.Add(1)
+	}
+	result.Time = now
+	return result, changed, nil
+}
+
+// nestedLeafUnderParents reports whether a leaf partition runtime sits under
+// one of the given parent key segments. The leaf carries its parent identity
+// in nestedParentKey because the encoded partition key cannot be split back
+// reliably (encoded parent keys themselves contain \x1f).
+func nestedLeafUnderParents(partition *statementRuntime, parentKeys map[string]struct{}) bool {
+	if partition == nil {
+		return false
+	}
+	_, exists := parentKeys[partition.nestedParentKey]
+	return exists
+}
+
+// nestedParentHasLeaf reports whether any live leaf partition sits under the
+// given parent key segment.
+func nestedParentHasLeaf(partitions map[string]*statementRuntime, parentKey string) bool {
+	for _, partition := range partitions {
+		if partition != nil && partition.nestedParentKey == parentKey {
+			return true
+		}
+	}
+	return false
 }
 
 func initiatedContextKeyAvailable(definition ContextDefinition, event Event, now time.Time, variables map[string]Value) bool {
@@ -12358,6 +12686,32 @@ func outputGroupKey(keys []string, index int) string {
 	}
 	return "\x00esper-output-global"
 }
+
+// lastOutputRows reduces a batch to the last row per output key, matching
+// Esper's `output last` semantics where each group's final state replaces
+// earlier rows. Rows without an output key keep only the final row.
+func lastOutputRows(batch ResultBatch) ResultBatch {
+	if len(batch.New) <= 1 {
+		return batch
+	}
+	lastByKey := make(map[string]int, len(batch.New))
+	for index := range batch.New {
+		lastByKey[outputGroupKey(batch.outputKeysNew, index)] = index
+	}
+	result := batch.clone()
+	result.New = result.New[:0]
+	result.outputKeysNew = result.outputKeysNew[:0]
+	for index := range batch.New {
+		key := outputGroupKey(batch.outputKeysNew, index)
+		if lastByKey[key] == index {
+			result.New = append(result.New, batch.New[index])
+			if index < len(batch.outputKeysNew) {
+				result.outputKeysNew = append(result.outputKeysNew, batch.outputKeysNew[index])
+			}
+		}
+	}
+	return result
+}
 func mergeLastOutputBatch(existing *ResultBatch, incoming ResultBatch) ResultBatch {
 	if incoming.empty() {
 		if existing == nil {
@@ -12509,6 +12863,13 @@ func (r *statementRuntime) outputAtTermination(plan Plan, now time.Time) ResultB
 		(policy.Kind == OutputLastPolicy && plan.query.aggregate != nil)
 	if snapshot {
 		result = r.snapshotBatch(plan, now)
+		if policy.Kind == OutputLastPolicy {
+			// `output last when terminated` emits the last row per group key,
+			// not the full per-event snapshot: the iterator-style snapshot
+			// above yields one row per retained event for row-for-event
+			// aggregates, so trim to each key's final row.
+			result = lastOutputRows(result)
+		}
 		if result.empty() && unboundedRowInput(plan.query.input) {
 			// An unbounded row-per-event source has no snapshot state; the
 			// termination output flushes the rows buffered since the last
@@ -12754,9 +13115,9 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 		result.outputKeysNew = append(result.outputKeysNew, entry.key)
 	}
 	if plan.query.distinct {
-		result.New = distinctSnapshotResults(result.New)
+		result.New, result.outputKeysNew = distinctSnapshotResultsSide(result.New, result.outputKeysNew)
 	}
-	result.New = applyResultWindow(result.New, plan.query, r.variables)
+	result.New, result.outputKeysNew = applyResultWindowSide(result.New, result.outputKeysNew, plan.query, r.variables)
 	return result
 }
 
@@ -13143,9 +13504,9 @@ func (r *statementRuntime) snapshotAggregateStateBatchInternal(plan Plan, now ti
 		result.outputKeysNew = append(result.outputKeysNew, entry.key)
 	}
 	if plan.query.distinct {
-		result.New = distinctSnapshotResults(result.New)
+		result.New, result.outputKeysNew = distinctSnapshotResultsSide(result.New, result.outputKeysNew)
 	}
-	result.New = applyResultWindow(result.New, plan.query, r.variables)
+	result.New, result.outputKeysNew = applyResultWindowSide(result.New, result.outputKeysNew, plan.query, r.variables)
 	return result
 }
 
@@ -13385,6 +13746,34 @@ func distinctSnapshotResults(results []Result) []Result {
 		unique = append(unique, result)
 	}
 	return unique
+}
+
+// distinctSnapshotResultsSide deduplicates rows while retaining aggregate
+// output keys. Keys are private runtime metadata and must remain positional
+// with rows for deferred grouped-output processing.
+func distinctSnapshotResultsSide(results []Result, keys []string) ([]Result, []string) {
+	if len(results) < 2 {
+		return results, keys
+	}
+	seen := make(map[string]struct{}, len(results))
+	unique := make([]Result, 0, len(results))
+	uniqueKeys := make([]string, 0, len(results))
+	keyed := len(keys) == len(results)
+	for index, result := range results {
+		key := resultKey(result)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		unique = append(unique, result)
+		if keyed {
+			uniqueKeys = append(uniqueKeys, keys[index])
+		}
+	}
+	if !keyed {
+		return unique, nil
+	}
+	return unique, uniqueKeys
 }
 
 func (r *statementRuntime) currentStreamEvents(node *streamNode, now time.Time) []Event {

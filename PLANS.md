@@ -49,18 +49,50 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
-Active: Draft 4.460 ('context-declared-expression').
+Active: Draft 4.473 ('context-nested-initterm').
 
-- [x] Contract frozen: ContextWDeclaredExpression ords 0/1/2 (Simple `java-runtime-9acc9abebb2846f8b439`, Alias `java-runtime-77b90f33562c2c0f9548`, WFilter `java-runtime-1bff58f3130b73dfc99f`; static IDs `java-999bc7e77f2d48538dc3`/`java-33045a26365f5dd7f45b`/`java-f4bff32df9aeaf56d49c`; no flags). Category context `MyCtx` (intPrimitive<0→n, >0→p) with declared expressions resolving `context.label`; ord 2 uses `initiated @now and pattern[every(SupportBean(THE_EXPRESSION))] terminated after 10 minutes` with `THE_EXPRESSION` as both initiation and statement pattern filter.
-- [x] Scenario `testdata/parity/context-declared-expression.json` (3 cases / 33 steps) + oracle `tools/java-oracle/ContextDeclaredExpressionScenarioOracle.java` + runner `internal/app/parity/context_declared_expression.go` + run.go wiring.
-- [x] **Engine fix (shared core)**: `initializeContextPatternTimer` seeded composite start patterns without arming event filters, so `and(TimerAt, every(event))` was dropped after the timer leg fired (event leg reported inactive). Added `armPatternProgressFilters(progress)` after `armPatternProgressTimers` in the seed path. Verified: partition now allocates on x, s0 fires c0=1/c1=2.
-- [x] Differential replay: Java 16 records / Go 16 records, 0 differences. Evidence `testdata/parity/context-declared-expression.evidence.json` status `passing`.
-- [x] Manifest: `case.context-declared-expression` born-DV with 3 runtime IDs; summary 701 cases / 699 implemented / 327 DV / 1247 DV runtime IDs / 3797 associations (referenced 3424, unreferenced 712).
-- [x] Roadmap + CHANGELOG entries added.
-- [x] Full gates: `go test ./internal/esper/` 72s green, `go test ./internal/app/parity/` 80s green, `TestCapabilityManifestArtifactValidates` green, gofmt clean, `git diff --check` clean, `go vet` clean.
-- [x] Independent parity review (ParityReview460): FAIL on two manifest P1s (missing capability mapping, stale summary counts); both fixed and re-validated.
-- [x] Committed and pushed as `337b29b3c`.
-
+- [x] Contract frozen from prefetched read-only scouts (agents NextJavaContract6 + NextGoSurface6):
+ ContextNested ordinals 4 `ContextNestedPartitionedWithFilterOverlap` (`java-runtime-8598d1eb6dbd61614f4f`),
+ 5 `ContextNestedPartitionedWithFilterNonOverlap` (`java-runtime-9539162a80f17616650f`),
+ 17 `ContextNestedPartitionWithMultiPropsAndTerm` (`java-runtime-c91629ba5a771e1725db`),
+ 33 `ContextNestedCategoryOverInitTermDistinct` (`java-runtime-0c5d14d415a1162de7e4`),
+ 34 `ContextNestedKeySegmentedWInitTermEndEvent` (`java-runtime-754484318bed39b8eea2`).
+ Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`; no flags.
+- [x] Scenario `testdata/parity/context-nested-initterm.json` (5 cases / 18 steps) with EPLs verbatim
+ from the Java source; runner `internal/app/parity/context_nested_initterm.go` + run.go wiring;
+ oracle `tools/java-oracle/ContextNestedInitTermScenarioOracle.java`.
+- [x] **Engine fix 1 (shared core)**: `NewDistinctInitiatedTerminatedContext` distinct key evaluated
+ `Property[int](ContextInitiatingEvent(), "intPrimitive")` which is nil at initiation, so `-4`/`-5`
+ shared one distinct key and the second leaf was suppressed. Fixed to evaluate `intPrimitive`
+ directly against the initiating event.
+- [x] **Engine fix 2 (shared core)**: `output last when terminated` emitted the full per-event
+ aggregate snapshot (row-for-event aggregates produce one row per retained event). Added
+ `lastOutputRows` trimming the snapshot to the last row per output key.
+- [x] Differential replay: Java 18 records; Go 18 records; 0 differences; evidence
+ `testdata/parity/context-nested-initterm.evidence.json` status passing.
+- [x] Regression: all existing output-last-when-terminated diffs re-run green
+ (context-init-term-correlated/inclusive-equals/with-now/key-segmented-end-event,
+ epl-other-from-clause-optional, resultset-output-limit-parameterized-context, rollup-dimensionality).
+- [x] Manifest/roadmap/CHANGELOG updated: 714 cases / 339 DV / 1290 DV runtime IDs;
+ `case.inventory.context-nested` promoted to differential-verified with the 5 IDs;
+ `context.partition` goRefs + DV IDs extended; summary recomputed (HEAD summary was stale).
+- [x] Full local gates GREEN: `make check` exit 0 (check-layout, go vet, full go test;
+ parity 81s, internal/esper 72s, compat 0.16s). gofmt clean.
+- [x] Contract correction: scout-reported ordinals 9/10/14/5/29 were wrong; inventory-verified
+ ordinals are 4/5/17/33/34 (scenario metadata already correct).
+- [x] Independent parity review (agent ParityReview4473): areas A-D/F/G PASS; verdict FAIL on one
+ latent P2 + three P3s, all FIXED and re-verified:
+ - P2 FIXED: untyped category parent broadcast — a declared-type event matching no category now
+   drops (Java's filter-addendum model) instead of broadcasting to every live parent.
+ - P3 FIXED: `context.<Parent>.id` reported the leaf ID; nestedParentIDs now tracks each parent
+   partition's own ID from an independent counter (leaf context.id stays dense from zero).
+ - P3 FIXED: lastOutputRows key misalignment — distinct/resultWindow now trim outputKeysNew
+   alongside New via new distinctSnapshotResultsSide + existing applyResultWindowSide.
+ - P3 FIXED: manifest difference text reworded (probe 1 now expressible via KeyContextStream.Filter;
+   Go lacks field-name validation so the Java rejection is not reproduced), covered `remaining`
+   entries trimmed, prose counts corrected to 339 DV / 1290 DV runtime IDs, trailing newline restored.
+- [x] Post-review re-validation: context-nested-initterm-diff passing / 0 differences; all seven
+  output-last/context regression diffs re-run green; `make check` re-run after fixes.
 
 ## Current work unit
 Active: Draft 4.453 ('expr-filter-in-and-between').

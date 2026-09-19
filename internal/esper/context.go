@@ -131,6 +131,7 @@ type ContextDefinition struct {
 	key                   Expr
 	keys                  []Expr
 	streamKeys            map[string][]Expr
+	streamFilters         map[string]Expr
 	partitions            int
 	preallocate           bool
 	hashAlgorithm         HashAlgorithm
@@ -199,6 +200,10 @@ func NewKeyContext(name string, keys ...Expr) (ContextDefinition, error) {
 type KeyContextStream struct {
 	Type string
 	Keys []Expr
+	// Filter optionally restricts which events of Type enter the context,
+	// mirroring Esper's `partition by k from T(filter)` form. Events that
+	// fail the filter neither allocate partitions nor reach statements.
+	Filter Expr
 }
 
 // NewKeyContextByStreams declares a segmented context partitioning multiple
@@ -213,6 +218,7 @@ func NewKeyContextByStreams(name string, streams ...KeyContextStream) (ContextDe
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "context requires at least one stream")
 	}
 	streamKeys := make(map[string][]Expr, len(streams))
+	streamFilters := make(map[string]Expr, len(streams))
 	keyCount := -1
 	for _, stream := range streams {
 		if strings.TrimSpace(stream.Type) == "" {
@@ -231,8 +237,11 @@ func NewKeyContextByStreams(name string, streams ...KeyContextStream) (ContextDe
 			return ContextDefinition{}, NewError(ErrorInvalidRule, fmt.Sprintf("the event type %q is listed twice", stream.Type))
 		}
 		streamKeys[stream.Type] = copyContextKeys(stream.Keys)
+		if stream.Filter != nil {
+			streamFilters[stream.Type] = stream.Filter
+		}
 	}
-	definition := ContextDefinition{name: name, kind: ContextKeySegmented, streamKeys: streamKeys}
+	definition := ContextDefinition{name: name, kind: ContextKeySegmented, streamKeys: streamKeys, streamFilters: streamFilters}
 	first := streams[0]
 	definition.key = first.Keys[0]
 	definition.keys = copyContextKeys(first.Keys)
@@ -1004,6 +1013,71 @@ func (d ContextDefinition) contextKeysForEvent(event Event) []Expr {
 	return nil
 }
 
+// streamFilterForEvent returns the declared stream filter for the event's
+// type (or a supertype's), or nil when the type is undeclared or unfiltered.
+func (d ContextDefinition) streamFilterForEvent(event Event) Expr {
+	if len(d.streamFilters) == 0 || event.Underlying() == nil {
+		return nil
+	}
+	if filter, ok := d.streamFilters[event.Schema().Name()]; ok {
+		return filter
+	}
+	visited := map[string]struct{}{event.Schema().Name(): {}}
+	queue := append([]string(nil), event.Schema().ParentNames()...)
+	for len(queue) > 0 {
+		name := queue[0]
+		queue = queue[1:]
+		if _, seen := visited[name]; seen {
+			continue
+		}
+		visited[name] = struct{}{}
+		if filter, ok := d.streamFilters[name]; ok {
+			return filter
+		}
+		if d.patternEnvironment != nil {
+			if schema, ok := d.patternEnvironment.Schema(name); ok {
+				queue = append(queue, schema.ParentNames()...)
+			}
+		}
+	}
+	return nil
+}
+
+// declaresEventType reports whether the event's schema is one of the context's
+// declared stream types or a transitive subtype of one. Untyped contexts
+// (no streamKeys) declare nothing.
+func (d ContextDefinition) declaresEventType(event Event) bool {
+	if len(d.streamKeys) == 0 || event.Underlying() == nil {
+		return false
+	}
+	name := event.Schema().Name()
+	if _, ok := d.streamKeys[name]; ok {
+		return true
+	}
+	if d.patternEnvironment != nil {
+		for declared := range d.streamKeys {
+			if d.patternEnvironment.acceptsEventType(declared, name) {
+				return true
+			}
+		}
+		return false
+	}
+	visited := map[string]struct{}{name: {}}
+	queue := append([]string(nil), event.Schema().ParentNames()...)
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		if _, seen := visited[current]; seen {
+			continue
+		}
+		visited[current] = struct{}{}
+		if _, ok := d.streamKeys[current]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 func (d ContextDefinition) evaluatedKeyValues(event Event, now time.Time, variables map[string]Value) []any {
 	results := d.evaluatedKeyResults(event, now, variables)
 	values := make([]any, 0, len(results)*2)
@@ -1125,6 +1199,61 @@ func temporalPartitionKey(start time.Time) string {
 	return fmt.Sprintf("temporal:%d", start.UnixNano())
 }
 
+func (d ContextDefinition) contextPropertyValues(event Event, now time.Time, variables map[string]Value, partitionID int) map[string]Value {
+	return d.contextPropertyValuesForKey(event, now, variables, partitionID, "")
+}
+
+// contextPropertyValuesForNestedKey resolves context properties for one
+// nested leaf partition. The parent level's key/category properties evaluate
+// against the event that allocated the parent partition (not the initiating
+// event, which may be of a different type), while the leaf level evaluates
+// against the initiating event.
+func (d ContextDefinition) contextPropertyValuesForNestedKey(event, parentEvent Event, now time.Time, variables map[string]Value, partitionID int, partitionKey string, parentPartitionID int) map[string]Value {
+	properties := make(map[string]Value)
+	localKey := partitionKey
+	if d.parent != nil {
+		parentKey := ""
+		if partitionKey != "" {
+			parts := strings.SplitN(partitionKey, "\x1f", 3)
+			if len(parts) == 3 {
+				parentKey = unquoteEncodedKeyPart(parts[1])
+				localKey = unquoteEncodedKeyPart(parts[2])
+			}
+		}
+		for name, value := range d.parent.contextPropertyValuesForKey(parentEvent, now, variables, parentPartitionID, parentKey) {
+			properties["parent."+name] = value
+		}
+	}
+	properties["name"] = Present(d.name)
+	properties["id"] = Present(partitionID)
+	keyResults := d.evaluatedKeyResults(event, now, variables)
+	for index, value := range keyResults {
+		properties[fmt.Sprintf("key%d", index+1)] = value
+	}
+	switch d.kind {
+	case ContextCategorySegmented:
+		label := ""
+		if strings.HasPrefix(localKey, "category:") {
+			label = strings.TrimPrefix(localKey, "category:")
+		} else {
+			for _, category := range d.categories {
+				value := category.predicate.eval(EvalContext{Event: event, Now: now, Variables: variables})
+				matched, ok := boolValue(value)
+				if ok && matched {
+					label = category.name
+					break
+				}
+			}
+		}
+		if label != "" {
+			properties["label"] = Present(label)
+		}
+	case ContextHashSegmented:
+		properties["hash"] = Present(int64(d.hashBucket(event, now, variables)))
+	}
+	return properties
+}
+
 func activeTemporalContextPartitionKey(engine *Engine, definition ContextDefinition, now time.Time) string {
 	if engine == nil || !definition.isTemporal() {
 		return ""
@@ -1152,9 +1281,6 @@ func activeTemporalContextPartitionKey(engine *Engine, definition ContextDefinit
 // statement running inside one context partition. The internal map is merged
 // into EvalContext variables by statementRuntime; callers use ContextField and
 // do not need to know the reserved variable names.
-func (d ContextDefinition) contextPropertyValues(event Event, now time.Time, variables map[string]Value, partitionID int) map[string]Value {
-	return d.contextPropertyValuesForKey(event, now, variables, partitionID, "")
-}
 
 // contextPropertyValuesForKey resolves context properties for one partition.
 // The partition key pins each level's category label so a lazily created
@@ -1540,6 +1666,16 @@ func (d ContextDefinition) partitionLocal(event Event, now time.Time, variables 
 	case ContextHashSegmented:
 		return fmt.Sprintf("hash:%d", d.hashBucket(event, now, variables)), true, nil
 	case ContextKeySegmented:
+		if filter := d.streamFilterForEvent(event); filter != nil {
+			value := filter.eval(EvalContext{Event: event, Now: now, Variables: variables})
+			matched, ok := boolValue(value)
+			if !ok || !matched {
+				// Esper's `partition by k from T(filter)` keeps filtered-out
+				// events out of the context entirely: no allocation, no
+				// fan-out, no statement delivery.
+				return "", false, nil
+			}
+		}
 		return encodeKey(d.evaluatedKeyValues(event, now, variables)), true, nil
 	case ContextInitiatedTerminated:
 		return "initiated:" + encodeKey(d.evaluatedKeyValues(event, now, variables)), true, nil
