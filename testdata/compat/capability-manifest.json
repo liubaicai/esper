@@ -4660,7 +4660,7 @@
    "id": "epl.insertinto-pattern",
    "domain": "insert-into",
    "level": "G",
-   "summary": "Insert pattern match results into a derived stream, consuming from the derived stream. OR pattern with every matches S0 or S1 events, projects tagged fields (es0id/es1id) into a new stream via InsertInto. EPLInsertIntoPopulateUndStreamSelect closed at 3/4 executions differential-verified (47 records, 0 differences): on-merge supertype-column population with subtype fragments, per-rep wildcard transpose matrices with widening/subset/override across six representations; Invalid execution implemented-not-DV with go-unit route-validation pins and verbatim Java diagnostics preserved.",
+   "summary": "Insert pattern match results into a derived stream, consuming from the derived stream. OR pattern with every matches S0 or S1 events, projects tagged fields (es0id/es1id) into a new stream via InsertInto. EPLInsertIntoPopulateUndStreamSelect closed at 3/4 executions differential-verified (47 records, 0 differences): on-merge supertype-column population with subtype fragments, per-rep wildcard transpose matrices with widening/subset/override across six representations; Invalid execution implemented-not-DV with go-unit route-validation pins and verbatim Java diagnostics preserved. EPLInsertIntoPopulateSingleColByMethodCall closed differential-verified (23 records, 0 differences): nine implicit/configured single-column method-call insert-into rounds across bean/map/object-array/Avro/JSON representations.",
    "javaRefs": [],
    "goRefs": [
     "internal/esper/insert_pattern_parity_test.go",
@@ -4670,13 +4670,13 @@
     "internal/app/parity/epl_insert_into_wrapper.go",
     "internal/esper/faf.go",
     "internal/esper/runtime.go",
-    "internal/app/parity/epl_insert_into_istream_func.go"
+    "internal/app/parity/epl_insert_into_istream_func.go",
+    "internal/app/parity/epl_insert_into_populate_single_col_method_call.go"
    ],
    "phase": 2,
    "status": "implemented",
    "remaining": [
     "EPLInsertIntoPopulateCreateStream suite",
-    "EPLInsertIntoPopulateSingleColByMethodCall",
     "EPLInsertIntoPopulateUndStreamSelect Invalid execution (java-runtime-9c96c9930655f732930a): implemented-not-DV — Go-unit route-validation pins only ('route projection \"otherprop\" is not a field of target schema', transpose-to-typed-target rejection); verbatim Java diagnostics preserved in test header."
    ],
    "verification": [
@@ -4696,7 +4696,8 @@
     "java-runtime-79356b0865c8de3ace17",
     "java-runtime-32434556dcbd672d7cf7",
     "java-runtime-581a1f109ff2588c6cde",
-    "java-runtime-033d9d0dabb864fd8179"
+    "java-runtime-033d9d0dabb864fd8179",
+    "java-runtime-abe5e5cbda9667e7e112"
    ]
   },
   {
@@ -33876,6 +33877,47 @@
    "notes": "Java/Go 10 records each, 0 differences. 'insert irstream into' = WithOldStream + WithIRStreamRoute (the 4.466 routeSelector split): i0 sees proper IR pairs while the MyStream consumer sees both routed rows flattened as newData; istream() returns true on insert rows and false on routed-remove rows; the join leg uses a plain Query(WithOldStream()) whose listener sees the IR pair."
   },
   {
+   "id": "case.epl-insert-into-populate-single-col-method-call",
+   "javaRuntimeIds": [
+    "java-runtime-abe5e5cbda9667e7e112"
+   ],
+   "javaNames": [
+    "EPLInsertIntoPopulateSingleColByMethodCall"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateSingleColByMethodCall.java"
+   ],
+   "goTests": [
+    "internal/app/parity/epl_insert_into_populate_single_col_method_call.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "epl.insert-into"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-insert-into-populate-single-col-method-call.json",
+    "testdata/parity/epl-insert-into-populate-single-col-method-call.trace.json",
+    "testdata/parity/epl-insert-into-populate-single-col-method-call.go.trace.json",
+    "testdata/parity/epl-insert-into-populate-single-col-method-call.evidence.json",
+    "tools/java-oracle/EplInsertIntoPopulateSingleColByMethodCallScenarioOracle.java",
+    "tools/java-oracle/run-epl-insert-into-populate-single-col-method-call.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "javaStaticIds": [
+    "java-9db09f558176cc93b13e"
+   ],
+   "difference": "Approved differences: Esper auto-creates the <Prefix>_Stream insert-into targets while Go pre-registers them with the origin's representation and fields; Java's statement/delivered-event class assertions (BeanEventType/WrapperEventType/underlyingType subclass checks) are pinned as value records carrying the schema kind name (Struct/Map/ObjectArray/Avro/JSON); the implicit-json s1 wildcard uses explicit one/two column aliases because Transpose to a JSON target requires a string payload; the configured-json Object.class assertions are tautological; bean rows render the asserted-field projection {theString,intPrimitive}; the Java undeploys between rounds are modelled as nine cases with fresh runtimes.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-abe5e5cbda9667e7e112"
+   ],
+   "notes": "Java/Go 23 records each, 0 differences. Nine rounds of single-column method-call insert-into population: implicit rounds route 'select *' (s1, silent) and 'select <fn>(s0)' (s2) into the pre-registered <Prefix>_Stream; configured rounds route '<fn>(s0)' into the preconfigured target observed by 'select *' (s0). Each UDF passes field one through and wraps field two in pipes; the bean UDF maps SupportMarketDataBean{symbol,volume} to SupportBean{theString,intPrimitive}. Value records pin the schema kind per asserted statement."
+  },
+  {
    "id": "case.context-key-segmented-aggregate-access-only",
    "javaRuntimeIds": [
     "java-runtime-bda884ca4af42004b1ca"
@@ -48538,13 +48580,17 @@
   {
    "capabilityId": "epl.insertinto-pattern",
    "caseId": "case.epl-insert-into-wrapper"
+  },
+  {
+   "capabilityId": "query.insert-into-route",
+   "caseId": "case.epl-insert-into-populate-single-col-method-call"
   }
  ],
  "summary": {
-  "inventoriedCases": 706,
-  "implementedCases": 704,
-  "differentialVerifiedCases": 333,
-  "differentialVerifiedRuntimeIds": 1274,
+  "inventoriedCases": 707,
+  "implementedCases": 705,
+  "differentialVerifiedCases": 334,
+  "differentialVerifiedRuntimeIds": 1275,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48554,13 +48600,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3823,
-  "referencedJavaRuntimeIds": 3449,
+  "runtimeAssociationCount": 3824,
+  "referencedJavaRuntimeIds": 3450,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 687,
+  "unreferencedJavaRuntimeIds": 686,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 706,
+  "totalCases": 707,
   "totalCapabilities": 121
  }
 }

@@ -19152,6 +19152,120 @@ func TestRunEplInsertIntoTypedColumnsDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+func TestRunEplInsertIntoPopulateSingleColMethodCallDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-populate-single-col-method-call.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-populate-single-col-method-call.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-populate-single-col-method-call.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-insert-into-populate-single-col-method-call-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplInsertIntoPopulateSingleColMethodCallDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "implicit-bean-kind-drift",
+			mutate: func(trace *compat.Trace) {
+				// s1's output type must be the bean representation.
+				trace.Records[0].Value = "Map"
+			},
+		},
+		{
+			name: "implicit-bean-field-drift",
+			mutate: func(trace *compat.Trace) {
+				// convertEvent maps symbol -> theString.
+				trace.Records[2].New[0].Fields["theString"] = "DEF"
+			},
+		},
+		{
+			name: "implicit-map-wrap-lost",
+			mutate: func(trace *compat.Trace) {
+				// convertEventMap wraps field two in pipes.
+				trace.Records[5].New[0].Fields["two"] = "2"
+			},
+		},
+		{
+			name: "configured-map-listener-lost",
+			mutate: func(trace *compat.Trace) {
+				// The configured round's s0 must see the converted row.
+				trace.Records[6].New = nil
+			},
+		},
+		{
+			name: "configured-oa-kind-drift",
+			mutate: func(trace *compat.Trace) {
+				// The delivered OAOne row's underlying is Object[].
+				trace.Records[12].Value = "Map"
+			},
+		},
+		{
+			name: "implicit-avro-wrap-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[15].New[0].Fields["two"] = "|3|"
+			},
+		},
+		{
+			name: "configured-json-kind-drift",
+			mutate: func(trace *compat.Trace) {
+				// The delivered JsonOne row's underlying is JSON.
+				trace.Records[22].Value = "Map"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-populate-single-col-method-call.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-populate-single-col-method-call.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-populate-single-col-method-call.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-insert-into-populate-single-col-method-call-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
 
 func TestRunEplInsertIntoFromPatternDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,

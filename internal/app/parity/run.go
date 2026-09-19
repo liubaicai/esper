@@ -3620,6 +3620,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
+	if *mode == "epl-insert-into-populate-single-col-method-call" || *mode == "epl-insert-into-populate-single-col-method-call-diff" {
+		trace, err := runEplInsertIntoSingleColMethodCallScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-insert-into-populate-single-col-method-call-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplInsertIntoSingleColMethodCallJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplInsertIntoSingleColMethodCallJavaSources),
+				splitMetadata(*javaExecutions, eplInsertIntoSingleColMethodCallJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
 	if *mode == "epl-insert-into-from-pattern" || *mode == "epl-insert-into-from-pattern-diff" {
 		trace, err := runEplInsertIntoFromPatternScenario(context.Background(), scenario)
 		if err != nil {

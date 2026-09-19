@@ -1,0 +1,627 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-abe5e5cbda9667e7e112"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoPopulateSingleColByMethodCall.java"
+  ],
+  "javaExecutions": [
+    "EPLInsertIntoPopulateSingleColByMethodCall"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-populate-single-col-method-call",
+    "steps": [
+      {
+        "op": "case",
+        "case": "implicit-bean"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportMarketDataBean",
+        "payload": {
+          "symbol": "ACME",
+          "price": 0,
+          "volume": 0,
+          "feed": null
+        }
+      },
+      {
+        "op": "case",
+        "case": "implicit-map"
+      },
+      {
+        "op": "send",
+        "eventType": "MapTwo",
+        "payload": {
+          "one": "1",
+          "two": "2"
+        }
+      },
+      {
+        "op": "case",
+        "case": "configured-map"
+      },
+      {
+        "op": "send",
+        "eventType": "MapTwo",
+        "payload": {
+          "one": "3",
+          "two": "4"
+        }
+      },
+      {
+        "op": "case",
+        "case": "implicit-oa"
+      },
+      {
+        "op": "send",
+        "eventType": "OATwo",
+        "payload": {
+          "one": "1",
+          "two": "2"
+        }
+      },
+      {
+        "op": "case",
+        "case": "configured-oa"
+      },
+      {
+        "op": "send",
+        "eventType": "OATwo",
+        "payload": {
+          "one": "3",
+          "two": "4"
+        }
+      },
+      {
+        "op": "case",
+        "case": "implicit-avro"
+      },
+      {
+        "op": "send",
+        "eventType": "AvroTwo",
+        "payload": {
+          "one": "1",
+          "two": "2"
+        }
+      },
+      {
+        "op": "case",
+        "case": "configured-avro"
+      },
+      {
+        "op": "send",
+        "eventType": "AvroTwo",
+        "payload": {
+          "one": "3",
+          "two": "4"
+        }
+      },
+      {
+        "op": "case",
+        "case": "implicit-json"
+      },
+      {
+        "op": "send",
+        "eventType": "JsonTwo",
+        "payload": {
+          "one": "1",
+          "two": "2"
+        }
+      },
+      {
+        "op": "case",
+        "case": "configured-json"
+      },
+      {
+        "op": "send",
+        "eventType": "JsonTwo",
+        "payload": {
+          "one": "3",
+          "two": "4"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-populate-single-col-method-call",
+    "records": [
+      {
+        "case": "implicit-bean",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "Struct"
+      },
+      {
+        "case": "implicit-bean",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "Struct"
+      },
+      {
+        "case": "implicit-bean",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 0,
+              "theString": "ACME"
+            }
+          }
+        ]
+      },
+      {
+        "case": "implicit-map",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "Map"
+      },
+      {
+        "case": "implicit-map",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "Map"
+      },
+      {
+        "case": "implicit-map",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "1",
+              "two": "|2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "3",
+              "two": "|4|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "Map"
+      },
+      {
+        "case": "implicit-oa",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "ObjectArray"
+      },
+      {
+        "case": "implicit-oa",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "ObjectArray"
+      },
+      {
+        "case": "implicit-oa",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "1",
+              "two": "|2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-oa",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "3",
+              "two": "|4|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-oa",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "ObjectArray"
+      },
+      {
+        "case": "implicit-avro",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "Avro"
+      },
+      {
+        "case": "implicit-avro",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "Avro"
+      },
+      {
+        "case": "implicit-avro",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "1",
+              "two": "|2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "3",
+              "two": "|4|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-avro",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "Avro"
+      },
+      {
+        "case": "implicit-json",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "JSON"
+      },
+      {
+        "case": "implicit-json",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "JSON"
+      },
+      {
+        "case": "implicit-json",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "1",
+              "two": "|2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "3",
+              "two": "|4|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-json",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "JSON"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-populate-single-col-method-call",
+    "records": [
+      {
+        "case": "implicit-bean",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "Struct"
+      },
+      {
+        "case": "implicit-bean",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "Struct"
+      },
+      {
+        "case": "implicit-bean",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 0,
+              "theString": "ACME"
+            }
+          }
+        ]
+      },
+      {
+        "case": "implicit-map",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "Map"
+      },
+      {
+        "case": "implicit-map",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "Map"
+      },
+      {
+        "case": "implicit-map",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "1",
+              "two": "|2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "3",
+              "two": "|4|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "Map"
+      },
+      {
+        "case": "implicit-oa",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "ObjectArray"
+      },
+      {
+        "case": "implicit-oa",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "ObjectArray"
+      },
+      {
+        "case": "implicit-oa",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "1",
+              "two": "|2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-oa",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "3",
+              "two": "|4|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-oa",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "ObjectArray"
+      },
+      {
+        "case": "implicit-avro",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "Avro"
+      },
+      {
+        "case": "implicit-avro",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "Avro"
+      },
+      {
+        "case": "implicit-avro",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "1",
+              "two": "|2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "3",
+              "two": "|4|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-avro",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "Avro"
+      },
+      {
+        "case": "implicit-json",
+        "operation": "value",
+        "statement": "s1",
+        "sequence": 0,
+        "value": "JSON"
+      },
+      {
+        "case": "implicit-json",
+        "operation": "value",
+        "statement": "s2",
+        "sequence": 0,
+        "value": "JSON"
+      },
+      {
+        "case": "implicit-json",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "1",
+              "two": "|2|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "one": "3",
+              "two": "|4|"
+            }
+          }
+        ]
+      },
+      {
+        "case": "configured-json",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "JSON"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

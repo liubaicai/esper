@@ -3536,7 +3536,51 @@ Active: Draft 4.467 ('epl-insert-into-istream-func').
  `f167beae5`. Git owns identity.
 
 
-## Next work unit (prefetch)
+## Current work unit
+Active: Draft 4.468 ('epl-insert-into-populate-single-col-by-method-call').
+
+- [x] Contract FROZEN by read-only scouts `NextJavaContract468` +
+      `NextGoSurface468` (dispatched during 4.467's review; reports recovered
+      via hub replies) and re-verified line-by-line by the primary agent
+      against the Java source, SupportStaticMethodLib UDFs, SupportEventInfra
+      send helpers, TestSuiteEPLInsertInto.configure preconfigured types, and
+      the Go surface (Transpose/Func1/EventValue, Register*, Send*, route
+      projection). Full contract: `.omp/contract-468.md`.
+- [x] Runner `internal/app/parity/epl_insert_into_populate_single_col_method_call.go`
+- [x] Assets (scenario 9 cases/18 steps + oracle + run script) via
+      parity-asset-worker `AssetWriter468` (disjoint file ownership). Oracle
+      correction verified: implicit-bean asserts BeanEventType (not
+      WrapperEventType); kindOf checks JsonEventObject before Map
+      (JsonEventObject extends Map). Run script extended with Avro/Jackson
+      jar resolution (optional/provided-scope deps absent from the runtime
+      classpath, same fix as und-stream-select).
+- [x] Java oracle trace: 23 records (implicit cases: value s1, value s2,
+      listener s2; configured: listener s0, value s0). Go replay 23 records.
+      Runner fix: Avro UDF input is *esper.AvroRecord (EventValue[map] never
+      fires on Avro underlyings).
+- [x] Differential replay: status `passing`, 0 differences. Evidence
+      `testdata/parity/epl-insert-into-populate-single-col-method-call.evidence.json`.
+- [x] Tests: passing-evidence + 7 trace mutations all green.
+- [x] Manifest: NEW case `case.epl-insert-into-populate-single-col-method-call`
+      born-DV (runtime `java-runtime-abe5e5cbda9667e7e112`, static
+      `java-9db09f558176cc93b13e`), mapping to `query.insert-into-route`;
+      capability `epl.insertinto-pattern` DV IDs +1, remaining narrowed,
+      goRefs +1, summary extended. Summary: 707/705/334/1275/3824/3450/686.
+      Roadmap + CHANGELOG entries added. Manifest validator green.
+- [x] `make check` GREEN (parity 80.5s, internal/esper 69.3s). Parity review
+      `ParityReview468` (read-only): OVERALL PASS, three P3s — contract prose
+      corrected (BeanEventType for implicit-bean), dead `"{}"` marshal
+      fallback removed (Go trace byte-identical after the fix), and a
+      contract-sanctioned protocol note (value records pin the registered
+      schema kind, not the delivered underlying class). N+1 scouts
+      `NextJavaContract469`/`NextGoSurface469` returned: the `epl/other`
+      cluster splits into EPLOtherSelectWildcardWAdditional remainder (6
+      unreferenced, largely expressible via explicit wildcard expansion /
+      Transpose+companion Alias) and EPLOtherFromClauseOptional (6
+      unreferenced, mostly blocked — source-less FAF where/having and
+      context FAF gaps; inlined_class is JVM-only).
+
+## Prefetch archive (contract source for the active unit)
 Frozen: Draft 4.468 ('epl-insert-into-populate-single-col-by-method-call')
 - EPLInsertIntoPopulateSingleColByMethodCall (single execution, ord 0,
 `java-runtime-abe5e5cbda9667e7e112`, static `java-9db09f558176cc93b13e`,

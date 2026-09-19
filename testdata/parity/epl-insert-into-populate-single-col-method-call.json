@@ -1,0 +1,129 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-insert-into-populate-single-col-method-call",
+ "description": "EPL insert-into populate-single-column-by-method-call parity replaying the single EPLInsertIntoPopulateSingleColByMethodCall execution (java-runtime-abe5e5cbda9667e7e112) across nine cases with one fresh runtime per case: the implicit rounds implicit-bean, implicit-map, implicit-oa, implicit-avro and implicit-json deploy '@name('s1') @public insert into {Prefix}_Stream select * from {origin}' then '@name('s2') @public insert into {Prefix}_Stream select com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.{fn}(s0) from {eventType} as s0' — s1's listener is attached but stays silent because the sent event is the sibling type — while the configured rounds configured-map, configured-oa, configured-avro and configured-json deploy '@name('insert') insert into {target} select com.espertech.esper.regressionlib.support.epl.SupportStaticMethodLib.{fn}(s0) from {origin} as s0' then '@name('s0') select * from {target}'. Each SupportStaticMethodLib.convertEvent* UDF wraps the source event's 'two' property in pipe characters (convertEvent maps SupportMarketDataBean to a SupportBean carrying the symbol and intValue'd volume), and each round sends exactly one event observed through a listener record on the asserted statement (s2 implicit, s0 configured) plus value records pinning the underlying-kind assertions (Struct/Map/ObjectArray/Avro/JSON): implicit cases emit value(s1) and value(s2) at deploy time before the send's listener record, configured cases emit value(s0) after the send's listener record",
+ "javaRuntimes": [
+  "java-runtime-abe5e5cbda9667e7e112"
+ ],
+ "cases": [
+  {
+   "case": "implicit-bean",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  },
+  {
+   "case": "implicit-map",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  },
+  {
+   "case": "configured-map",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  },
+  {
+   "case": "implicit-oa",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  },
+  {
+   "case": "configured-oa",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  },
+  {
+   "case": "implicit-avro",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  },
+  {
+   "case": "configured-avro",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  },
+  {
+   "case": "implicit-json",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  },
+  {
+   "case": "configured-json",
+   "runtimeId": "java-runtime-abe5e5cbda9667e7e112"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "implicit-bean"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportMarketDataBean",
+   "payload": {"symbol": "ACME", "price": 0, "volume": 0, "feed": null}
+  },
+  {
+   "op": "case",
+   "case": "implicit-map"
+  },
+  {
+   "op": "send",
+   "eventType": "MapTwo",
+   "payload": {"one": "1", "two": "2"}
+  },
+  {
+   "op": "case",
+   "case": "configured-map"
+  },
+  {
+   "op": "send",
+   "eventType": "MapTwo",
+   "payload": {"one": "3", "two": "4"}
+  },
+  {
+   "op": "case",
+   "case": "implicit-oa"
+  },
+  {
+   "op": "send",
+   "eventType": "OATwo",
+   "payload": {"one": "1", "two": "2"}
+  },
+  {
+   "op": "case",
+   "case": "configured-oa"
+  },
+  {
+   "op": "send",
+   "eventType": "OATwo",
+   "payload": {"one": "3", "two": "4"}
+  },
+  {
+   "op": "case",
+   "case": "implicit-avro"
+  },
+  {
+   "op": "send",
+   "eventType": "AvroTwo",
+   "payload": {"one": "1", "two": "2"}
+  },
+  {
+   "op": "case",
+   "case": "configured-avro"
+  },
+  {
+   "op": "send",
+   "eventType": "AvroTwo",
+   "payload": {"one": "3", "two": "4"}
+  },
+  {
+   "op": "case",
+   "case": "implicit-json"
+  },
+  {
+   "op": "send",
+   "eventType": "JsonTwo",
+   "payload": {"one": "1", "two": "2"}
+  },
+  {
+   "op": "case",
+   "case": "configured-json"
+  },
+  {
+   "op": "send",
+   "eventType": "JsonTwo",
+   "payload": {"one": "3", "two": "4"}
+  }
+ ]
+}
