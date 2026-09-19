@@ -5238,3 +5238,5 @@ unreferenced executions (ords 0-3: Invalid `java-runtime-c8c49c4c40e41d383d25` F
 IterateStatement `java-runtime-6dd5b9086935002cc50d`, NamedWindowQuery `java-runtime-bf4cefd62580e2abd2c6`
 FIREANDFORGET, FAFNestedNamedWindowQuery `java-runtime-f51a1493ad61c1f0d0d1` FIREANDFORGET).
 Scouts launched: NextJavaContract8-2 (Java contract) + NextGoSurface8-2 (Go surface), read-only.
+
+- [x] Shipped; Git owns identity. Draft 4.475 committed and pushed as `9b84da02f`.
