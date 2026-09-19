@@ -671,6 +671,14 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 		if err := e.validateSourceLess(query.selections); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "select-once", err)
 		}
+		if err := e.validateSourceLessPredicate(query.where, "where"); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "select-once", err)
+		}
+		if err := e.validateSourceLessPredicate(query.having, "having"); err != nil {
+			return Plan{}, WrapError(ErrorInvalidRule, "select-once", err)
+		}
+	} else if query.where != nil || query.having != nil {
+		return Plan{}, NewError(ErrorInvalidRule, "where/having on a sourced query is expressed with Filter/Having on the stream builders")
 	} else if query.trigger != nil {
 		if err := e.validateTrigger(query.trigger); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "trigger", err)
@@ -758,6 +766,10 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 				}
 				return Plan{}, WrapError(ErrorInvalidRule, fmt.Sprintf("context source %d", index), err)
 			}
+		} else if query.sourceLess {
+			// A source-less context statement has no stream to validate; the
+			// lifecycle drives partition instantiation and the projections
+			// read only context properties and variables.
 		} else if err := e.validateSegmentedContextEventType(definition, query.input); err != nil {
 			// The event-type requirement precedes key resolution: a type the
 			// segmented context does not list has no keys to resolve, and the
@@ -6856,6 +6868,34 @@ func (e *Environment) validateSourceLess(selections []Selection) error {
 		}
 	}
 	return nil
+}
+
+// validateSourceLessPredicate checks a where/having predicate on a
+// source-less query: the same expression validation as projections, plus a
+// boolean result requirement.
+func (e *Environment) validateSourceLessPredicate(predicate Expr, clause string) error {
+	if predicate == nil {
+		return nil
+	}
+	node := predicate.node()
+	if node == nil {
+		return NewError(ErrorInvalidRule, fmt.Sprintf("source-less %s requires an expression", clause))
+	}
+	if node.typ != typeOf[bool]() {
+		return NewError(ErrorTypeMismatch, fmt.Sprintf("source-less %s requires a boolean expression", clause))
+	}
+	if err := e.validateExpressionReferences(node, make(map[string]bool)); err != nil {
+		return err
+	}
+	if err := e.validateExprVariables(predicate); err != nil {
+		return err
+	}
+	var fields []string
+	node.referencedFields(&fields)
+	if len(fields) > 0 {
+		return NewError(ErrorDependency, fmt.Sprintf("source-less %s cannot reference event fields", clause))
+	}
+	return e.validateExpressionSubqueries(node)
 }
 
 func validateOutputPolicy(policy OutputPolicy) error {

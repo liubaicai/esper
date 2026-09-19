@@ -5363,6 +5363,40 @@
     "java-runtime-d01d8e953908acc44955",
     "java-runtime-5371694959860be64ff6"
    ]
+  },
+  {
+   "id": "epl.other.from-clause-optional",
+   "domain": "epl",
+   "level": "G",
+   "summary": "Source-less (no from-clause) select semantics: deployed statements under an initiated-terminated context deliver the initiating event at partition start and at termination via output-when-terminated, iterators yield one row per live partition, and fire-and-forget evaluates per partition honoring selectors, distinct, where and having",
+   "javaRefs": [
+    "EPLOtherFromClauseOptional"
+   ],
+   "goRefs": [
+    "internal/esper/stream.go",
+    "internal/esper/plan.go",
+    "internal/esper/runtime.go",
+    "internal/esper/faf.go",
+    "internal/app/parity/epl_other_from_clause_optional.go"
+   ],
+   "phase": 1,
+   "status": "differential-verified",
+   "remaining": [
+    "EPLOtherFromOptionalFAFNoContext (ord 3): no-context source-less FAF over variables, named-window/table subselects, script expressions and JVM-only inlined_class — deferred to a separate unit"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "intentionally-different"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0e96acf48376ed71c690",
+    "java-runtime-f54b77f9c8381d0cc12c",
+    "java-runtime-00d22c5518b7c57f1ba7",
+    "java-runtime-4f6e15a0c30a5e95b1f6"
+   ],
+   "difference": "Invalid execution (ord 5): source-less subselect, wildcard projection and multi-selector FAF are unrepresentable in the typed API; Go pins its nearest rejection boundaries (empty projection, subquery-in-source-less rejection, unconditional source-less order-by rejection) with the Java message prefixes recorded."
   }
  ],
  "cases": [
@@ -45414,6 +45448,99 @@
     "java-runtime-581a1f109ff2588c6cde"
    ],
    "notes": "Java/Go 6 records each, 0 differences. Engine change: the insert-into route selector is decoupled from the select-clause stream keyword — Query.routeSelector defaults to istream-only (matching Esper's plain 'insert into'), and new WithIRStreamRoute()/WithRStreamRoute() QueryOptions model 'insert irstream into'/'insert rstream into' (removes-as-inserts). Existing 'insert irstream/rstream into' call sites updated; facade regenerated."
+  },
+  {
+   "id": "case.epl-other-from-clause-optional",
+   "javaRuntimeIds": [
+    "java-runtime-0e96acf48376ed71c690",
+    "java-runtime-f54b77f9c8381d0cc12c",
+    "java-runtime-00d22c5518b7c57f1ba7",
+    "java-runtime-4f6e15a0c30a5e95b1f6"
+   ],
+   "javaNames": [
+    "EPLOtherFromOptionalContext{soda=false}",
+    "EPLOtherFromOptionalContext{soda=true}",
+    "EPLOtherFromOptionalNoContext",
+    "EPLOtherFromOptionalFAFContext"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherFromClauseOptional.java"
+   ],
+   "goTests": [
+    "internal/app/parity/epl_other_from_clause_optional.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "epl.other",
+    "context"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-from-clause-optional.json",
+    "testdata/parity/epl-other-from-clause-optional.trace.json",
+    "testdata/parity/epl-other-from-clause-optional.go.trace.json",
+    "testdata/parity/epl-other-from-clause-optional.evidence.json",
+    "tools/java-oracle/EplOtherFromClauseOptionalScenarioOracle.java",
+    "tools/java-oracle/run-epl-other-from-clause-optional.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "javaStaticIds": [
+    "java-0c9a8913a4dafbcd91e2",
+    "java-0c9a8913a4dafbcd91e2",
+    "java-0c9a8913a4dafbcd91e2",
+    "java-0c9a8913a4dafbcd91e2"
+   ],
+   "difference": "Approved differences: Java initiated-by allocates one partition per initiation event, expressed with CreateOverlappingInitiatedTerminatedContext; context.s0 maps to ContextInitiatingEvent with Property for nested reads; the SODA round differs only in the Java compile path; ord 5 invalid probes live in case.epl-other-from-clause-optional-invalid.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-0e96acf48376ed71c690",
+    "java-runtime-f54b77f9c8381d0cc12c",
+    "java-runtime-00d22c5518b7c57f1ba7",
+    "java-runtime-4f6e15a0c30a5e95b1f6"
+   ],
+   "notes": "Java/Go 34 records each, 0 differences. Source-less context statements deliver ctxs0=<initiating S0> at partition initiation (s0) and termination (s1, output-when-terminated); iterators yield one row per live partition; source-less FAF over two partitions honors all/by-id selectors, distinct, where and having."
+  },
+  {
+   "id": "case.epl-other-from-clause-optional-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-6d948697a80bca6a0dac"
+   ],
+   "javaNames": [
+    "EPLOtherFromOptionalInvalid"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherFromClauseOptional.java"
+   ],
+   "goTests": [
+    "internal/app/parity/epl_other_from_clause_optional.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "epl.other",
+    "context"
+   ],
+   "status": "intentionally-different",
+   "evidence": [
+    "testdata/parity/epl-other-from-clause-optional.json",
+    "testdata/parity/epl-other-from-clause-optional.trace.json",
+    "testdata/parity/epl-other-from-clause-optional.go.trace.json",
+    "testdata/parity/epl-other-from-clause-optional.evidence.json",
+    "tools/java-oracle/EplOtherFromClauseOptionalScenarioOracle.java",
+    "tools/java-oracle/run-epl-other-from-clause-optional.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "javaStaticIds": [
+    "java-0c9a8913a4dafbcd91e2"
+   ],
+   "difference": "Compile-only: source-less subselect, wildcard projection and multi-selector FAF are unrepresentable in the typed API; Go pins its nearest rejection boundaries (empty projection, subquery-in-source-less rejection, unconditional source-less order-by rejection) with the Java message prefixes recorded as compile-error records.",
+   "notes": "The scenario records the five pinned Java message prefixes; Go verifies each expressible rejection boundary before recording the pinned value."
   }
  ],
  "mappings": [
@@ -48584,29 +48711,37 @@
   {
    "capabilityId": "query.insert-into-route",
    "caseId": "case.epl-insert-into-populate-single-col-method-call"
+  },
+  {
+   "capabilityId": "epl.other.from-clause-optional",
+   "caseId": "case.epl-other-from-clause-optional"
+  },
+  {
+   "capabilityId": "epl.other.from-clause-optional",
+   "caseId": "case.epl-other-from-clause-optional-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 707,
-  "implementedCases": 705,
-  "differentialVerifiedCases": 334,
-  "differentialVerifiedRuntimeIds": 1275,
-  "intentionallyDifferentCases": 29,
+  "inventoriedCases": 709,
+  "implementedCases": 707,
+  "differentialVerifiedCases": 335,
+  "differentialVerifiedRuntimeIds": 1279,
+  "intentionallyDifferentCases": 30,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
-  "inventoriedCapabilities": 121,
-  "implementedCapabilities": 120,
-  "differentialVerifiedCapabilities": 40,
-  "intentionallyDifferentCapabilities": 8,
+  "inventoriedCapabilities": 122,
+  "implementedCapabilities": 121,
+  "differentialVerifiedCapabilities": 41,
+  "intentionallyDifferentCapabilities": 9,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3824,
-  "referencedJavaRuntimeIds": 3450,
+  "runtimeAssociationCount": 3829,
+  "referencedJavaRuntimeIds": 3455,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 686,
+  "unreferencedJavaRuntimeIds": 681,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 707,
-  "totalCapabilities": 121
+  "totalCases": 709,
+  "totalCapabilities": 122
  }
 }

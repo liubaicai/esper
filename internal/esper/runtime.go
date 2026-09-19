@@ -8594,6 +8594,18 @@ func (s *Statement) processPatternInitiatedTerminated(definition ContextDefiniti
 		s.runtime.partitions[allocationKey] = partition
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
 		startedByMatch[allocationKey] = true
+		if s.plan.query.sourceLess && s.plan.query.output.Termination != OutputOnlyOnTermination {
+			// Source-less context statements deliver their single projected
+			// row at partition initiation (see processInitiatedTerminated).
+			partition.variables = partition.withContextProperties(variables)
+			if partition.sourceLessRowMatches(s.plan.query, now) {
+				row := partition.batch(eventDelta{newEvents: []Event{{}}}, s.plan, now)
+				row = partition.applyOutput(s.plan.query.output, row, false, now, s.plan)
+				result.New = append(result.New, row.New...)
+				result.Old = append(result.Old, row.Old...)
+				changed = changed || !row.empty() || row.forced
+			}
+		}
 		if definition.initiatedOverlapping || definition.startPatternInclusive {
 			// Esper's @Inclusive (and the overlapping controller's default
 			// for pattern-initiated contexts) evaluates the start pattern's
@@ -9378,6 +9390,8 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 	startValue := definition.start.eval(EvalContext{Event: event, Now: now, Variables: variables})
 	start, startOK := boolValue(startValue)
 	keyAvailable := initiatedContextKeyAvailable(definition, event, now, variables)
+	var initiationBatch ResultBatch
+	initiationChanged := false
 	if startOK && start && (definition.initiatedOverlapping || s.runtime.partitions[key] == nil) {
 		allocationKey := key
 		if definition.initiatedOverlapping {
@@ -9403,6 +9417,20 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		partitionValue := ptrStatementRuntime(partitionRuntime)
 		s.runtime.partitions[allocationKey] = partitionValue
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partitionValue)
+		if s.plan.query.sourceLess && s.plan.query.output.Termination != OutputOnlyOnTermination {
+			// A source-less context statement produces its single projected
+			// row when the partition initiates, matching Esper's delivery of
+			// `context Ctx select context.s0 as ctxs0` at partition start.
+			// Termination-only policies suppress the initiation row.
+			partitionValue.variables = partitionValue.withContextProperties(variables)
+			if partitionValue.sourceLessRowMatches(s.plan.query, now) {
+				row := partitionValue.batch(eventDelta{newEvents: []Event{{}}}, s.plan, now)
+				row = partitionValue.applyOutput(s.plan.query.output, row, false, now, s.plan)
+				initiationBatch.New = append(initiationBatch.New, row.New...)
+				initiationBatch.Old = append(initiationBatch.Old, row.Old...)
+				initiationChanged = initiationChanged || !row.empty() || row.forced
+			}
+		}
 	}
 
 	keys := make([]string, 0, len(s.runtime.partitions))
@@ -9547,6 +9575,11 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
 		delete(s.runtime.partitions, partitionKey)
 		s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, partitionKey, true, partition)
+	}
+	if initiationChanged {
+		result.New = append(initiationBatch.New, result.New...)
+		result.Old = append(initiationBatch.Old, result.Old...)
+		changed = true
 	}
 	if changed {
 		result.Sequence = s.runtime.seq.Add(1)
@@ -12412,7 +12445,12 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 		return r.snapshotRowRecog(plan, now, r.variables)
 	}
 	var events []Event
-	if plan.query.iterableUnbound && r.iterableLastEventSet && len(streamWindowNodes(plan.query.input)) == 0 {
+	if plan.query.sourceLess {
+		// A source-less statement projects one synthetic row per partition
+		// (or once for an unpartitioned statement); the empty event carries
+		// no fields and projections may not reference any.
+		events = []Event{{}}
+	} else if plan.query.iterableUnbound && r.iterableLastEventSet && len(streamWindowNodes(plan.query.input)) == 0 {
 		// iterableUnbound unwindowed selects iterate the last stream event,
 		// transformed through the projection below; on windowed inputs Java's
 		// annotation is a no-op and the iterator reads the window contents.
@@ -12421,6 +12459,9 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 		events = r.currentStreamEvents(plan.query.input, now)
 	}
 	if len(events) == 0 {
+		return ResultBatch{Time: now}
+	}
+	if plan.query.sourceLess && !r.sourceLessRowMatches(plan.query, now) {
 		return ResultBatch{Time: now}
 	}
 	result := ResultBatch{Time: now}
@@ -12448,6 +12489,28 @@ func (r *statementRuntime) snapshotBatch(plan Plan, now time.Time) ResultBatch {
 		result.Sequence = r.seq.Add(1)
 	}
 	return result
+}
+
+// sourceLessRowMatches evaluates a source-less query's where/having
+// predicates against the single synthetic row scope: the partition's context
+// properties and variables, with no event fields. Both clauses share the
+// same scope in Esper when no from-clause is present.
+func (r *statementRuntime) sourceLessRowMatches(query Query, now time.Time) bool {
+	if query.where == nil && query.having == nil {
+		return true
+	}
+	evalCtx := EvalContext{Now: now, Variables: r.variables}
+	if query.where != nil {
+		if value, ok := boolValue(query.where.eval(evalCtx)); !ok || !value {
+			return false
+		}
+	}
+	if query.having != nil {
+		if value, ok := boolValue(query.having.eval(evalCtx)); !ok || !value {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *statementRuntime) snapshotAggregateBatch(plan Plan, now time.Time) ResultBatch {

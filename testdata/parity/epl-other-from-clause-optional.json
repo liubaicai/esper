@@ -1,0 +1,133 @@
+{
+  "version": "esper-parity/v1",
+  "id": "epl-other-from-clause-optional",
+  "description": "EPLOtherFromClauseOptional source-less (no from-clause) EPL semantics: initiated/terminated context partitions delivering context.s0 at initiation (s0) and at termination via output-when-terminated (s1) in EPL and SODA compile paths (ords 0/1, byte-identical steps since soda only changes env.compileDeploy(soda, epl, path)); a no-context 'select 1 as value' deployed statement whose iterator yields one projected row (ord 2); fire-and-forget source-less queries over live context partitions covering all-partitions, a by-id partition selector, distinct, and where/having filters (ord 4); and the invalid probes (ord 5, intentionally-different) recording the pinned Java message prefixes for a source-less subselect, wildcard select and FAF wildcard, a multi-selector FAF execute rejection, and context+order-by FAF compile rejection. Deploy attaches listeners only to statements named s0/s1 (the count(*) feeder in faf-context deploys without listener semantics). The faf-multi-selector build-error step is special: the oracle compiles the FAF successfully, then executes with a two-element ContextPartitionSelector array and records the thrown IllegalArgumentException; the Go runner pins its own nearest boundary. The two plain-compile probes (subselect-no-from, wildcard) carry compileWithoutPath mirroring env.tryInvalidCompile's path-less compile; the faf-* probes compile via compileQuery with the runtime path mirroring tryInvalidFAFCompile.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherFromClauseOptional.java",
+  "javaRuntimes": [
+    "java-runtime-0e96acf48376ed71c690",
+    "java-runtime-f54b77f9c8381d0cc12c",
+    "java-runtime-00d22c5518b7c57f1ba7",
+    "java-runtime-4f6e15a0c30a5e95b1f6",
+    "java-runtime-6d948697a80bca6a0dac"
+  ],
+  "javaNames": [
+    "EPLOtherFromOptionalContext{soda=false}",
+    "EPLOtherFromOptionalContext{soda=true}",
+    "EPLOtherFromOptionalNoContext",
+    "EPLOtherFromOptionalFAFContext",
+    "EPLOtherFromOptionalInvalid"
+  ],
+  "javaStaticIds": [
+    "java-0c9a8913a4dafbcd91e2",
+    "java-0c9a8913a4dafbcd91e2",
+    "java-0c9a8913a4dafbcd91e2",
+    "java-0c9a8913a4dafbcd91e2",
+    "java-0c9a8913a4dafbcd91e2"
+  ],
+  "javaFlags": ["FIREANDFORGET", "INVALIDITY"],
+  "cases": [
+    {
+      "case": "context-soda-false",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-0e96acf48376ed71c690",
+      "executionName": "EPLOtherFromOptionalContext{soda=false}",
+      "observation": "listener+snapshot; s0 fires ctxs0=<initiating S0> at partition initiation and s1 fires at termination via output-when-terminated; iterators yield one row per live partition",
+      "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id)"
+    },
+    {
+      "case": "context-soda-true",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-f54b77f9c8381d0cc12c",
+      "executionName": "EPLOtherFromOptionalContext{soda=true}",
+      "observation": "listener+snapshot; identical steps to context-soda-false; soda only changes the Java compile path (eplToModel round-trip for the s0/s1 deploys)",
+      "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id)"
+    },
+    {
+      "case": "no-context",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-00d22c5518b7c57f1ba7",
+      "executionName": "EPLOtherFromOptionalNoContext",
+      "observation": "snapshot; deployed 'select 1 as value' yields exactly one row {value:1} from its iterator with no events sent",
+      "epl": "@name('s0') select 1 as value"
+    },
+    {
+      "case": "faf-context",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-4f6e15a0c30a5e95b1f6",
+      "executionName": "EPLOtherFromOptionalFAFContext",
+      "observation": "faf; source-less FAF over two live partitions yields one row per partition, honors a by-id selector, distinct, and where/having filters",
+      "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id);\ncontext MyContext select count(*) from SupportBean;\n"
+    },
+    {
+      "case": "invalid",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-6d948697a80bca6a0dac",
+      "executionName": "EPLOtherFromOptionalInvalid",
+      "observation": "compile-error; source-less subselect, wildcard select/FAF, multi-selector FAF execute (compileFAF succeeds, execute with two selectors throws), and context+order-by FAF probes record the pinned Java message prefixes",
+      "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id);"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "context-soda-false"},
+    {"op": "deploy", "case": "context-soda-false", "statement": "ctx", "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id)"},
+    {"op": "deploy", "case": "context-soda-false", "statement": "s0", "epl": "@name('s0') context MyContext select context.s0 as ctxs0"},
+    {"op": "deploy", "case": "context-soda-false", "statement": "s1", "epl": "@name('s1') context MyContext select context.s0 as ctxs0 output when terminated"},
+    {"op": "send", "case": "context-soda-false", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "A", "p01": null, "p02": null, "p03": null}},
+    {"op": "snapshot", "case": "context-soda-false", "statement": "s0", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "send", "case": "context-soda-false", "eventType": "SupportBean_S0", "payload": {"id": 20, "p00": "B", "p01": null, "p02": null, "p03": null}},
+    {"op": "snapshot", "case": "context-soda-false", "statement": "s0", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "snapshot", "case": "context-soda-false", "statement": "s1", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "send", "case": "context-soda-false", "eventType": "SupportBean_S1", "payload": {"id": 10, "p10": "A", "p11": null, "p12": null, "p13": null}},
+    {"op": "snapshot", "case": "context-soda-false", "statement": "s0", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "snapshot", "case": "context-soda-false", "statement": "s1", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "send", "case": "context-soda-false", "eventType": "SupportBean_S1", "payload": {"id": 20, "p10": "A", "p11": null, "p12": null, "p13": null}},
+    {"op": "snapshot", "case": "context-soda-false", "statement": "s0", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "snapshot", "case": "context-soda-false", "statement": "s1", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "undeploy-all", "case": "context-soda-false"},
+
+    {"op": "case", "case": "context-soda-true"},
+    {"op": "deploy", "case": "context-soda-true", "statement": "ctx", "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id)"},
+    {"op": "deploy", "case": "context-soda-true", "statement": "s0", "epl": "@name('s0') context MyContext select context.s0 as ctxs0"},
+    {"op": "deploy", "case": "context-soda-true", "statement": "s1", "epl": "@name('s1') context MyContext select context.s0 as ctxs0 output when terminated"},
+    {"op": "send", "case": "context-soda-true", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "A", "p01": null, "p02": null, "p03": null}},
+    {"op": "snapshot", "case": "context-soda-true", "statement": "s0", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "send", "case": "context-soda-true", "eventType": "SupportBean_S0", "payload": {"id": 20, "p00": "B", "p01": null, "p02": null, "p03": null}},
+    {"op": "snapshot", "case": "context-soda-true", "statement": "s0", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "snapshot", "case": "context-soda-true", "statement": "s1", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "send", "case": "context-soda-true", "eventType": "SupportBean_S1", "payload": {"id": 10, "p10": "A", "p11": null, "p12": null, "p13": null}},
+    {"op": "snapshot", "case": "context-soda-true", "statement": "s0", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "snapshot", "case": "context-soda-true", "statement": "s1", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "send", "case": "context-soda-true", "eventType": "SupportBean_S1", "payload": {"id": 20, "p10": "A", "p11": null, "p12": null, "p13": null}},
+    {"op": "snapshot", "case": "context-soda-true", "statement": "s0", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "snapshot", "case": "context-soda-true", "statement": "s1", "mode": "ordered", "fields": ["ctxs0"]},
+    {"op": "undeploy-all", "case": "context-soda-true"},
+
+    {"op": "case", "case": "no-context"},
+    {"op": "deploy", "case": "no-context", "statement": "s0", "epl": "@name('s0') select 1 as value"},
+    {"op": "snapshot", "case": "no-context", "statement": "s0", "mode": "ordered", "fields": ["value"]},
+    {"op": "undeploy-all", "case": "no-context"},
+
+    {"op": "case", "case": "faf-context"},
+    {"op": "deploy", "case": "faf-context", "statement": "ctx", "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id)"},
+    {"op": "deploy", "case": "faf-context", "statement": "feeder", "epl": "context MyContext select count(*) from SupportBean"},
+    {"op": "send", "case": "faf-context", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "A", "p01": "x", "p02": null, "p03": null}},
+    {"op": "send", "case": "faf-context", "eventType": "SupportBean_S0", "payload": {"id": 20, "p00": "B", "p01": "x", "p02": null, "p03": null}},
+    {"op": "faf", "case": "faf-context", "statement": "faf-all", "epl": "context MyContext select context.s0.p00 as id", "fields": ["id"]},
+    {"op": "faf", "case": "faf-context", "statement": "faf-by-id", "epl": "context MyContext select context.s0.p00 as id", "fields": ["id"], "selector": "ids", "ids": [1]},
+    {"op": "faf", "case": "faf-context", "statement": "faf-distinct", "epl": "context MyContext select distinct context.s0.p01 as p01", "fields": ["p01"]},
+    {"op": "faf", "case": "faf-context", "statement": "faf-where-false", "epl": "context MyContext select 1 as value where 'a'='b'", "fields": ["value"]},
+    {"op": "faf", "case": "faf-context", "statement": "faf-where-id", "epl": "context MyContext select context.s0.p00 as value where context.s0.id=10", "fields": ["value"]},
+    {"op": "faf", "case": "faf-context", "statement": "faf-having-id", "epl": "context MyContext select context.s0.p00 as value having context.s0.id=10", "fields": ["value"]},
+    {"op": "undeploy-all", "case": "faf-context"},
+
+    {"op": "case", "case": "invalid"},
+    {"op": "deploy", "case": "invalid", "statement": "ctx", "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id);"},
+    {"op": "build-error", "case": "invalid", "statement": "subselect-no-from", "epl": "select (select 1)", "expectError": "Incorrect syntax near ')'", "compileWithoutPath": true},
+    {"op": "build-error", "case": "invalid", "statement": "wildcard", "epl": "select *", "expectError": "Wildcard cannot be used when the from-clause is not provided", "compileWithoutPath": true},
+    {"op": "build-error", "case": "invalid", "statement": "faf-wildcard", "epl": "select *", "expectError": "Wildcard cannot be used when the from-clause is not provided"},
+    {"op": "build-error", "case": "invalid", "statement": "faf-multi-selector", "epl": "context MyContext select context.s0.p00 as id", "expectError": "Fire-and-forget queries without a from-clause allow only a single context partition selector"},
+    {"op": "build-error", "case": "invalid", "statement": "faf-order-by", "epl": "context MyContext select context.s0.p00 as p00 order by p00 desc", "expectError": "Fire-and-forget queries without a from-clause and with context do not allow order-by"},
+    {"op": "undeploy-all", "case": "invalid"}
+  ]
+}

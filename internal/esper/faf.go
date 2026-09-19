@@ -413,15 +413,61 @@ func (e *Engine) executeFireAndForget(ctx context.Context, plan Plan, selector C
 		e.refreshVariablesLocked()
 		variables := bindParameterValues(cloneValues(e.variables), parameters)
 		now := e.clock.Now()
+		if plan.query.contextName == "" {
+			e.mu.Unlock()
+			runtime := newStatementRuntime(plan.query)
+			runtime.engine = e
+			runtime.initializeAt(now)
+			runtime.ctx = ctx
+			runtime.variables = variablesWithEngine(variables, e)
+			if !runtime.sourceLessRowMatches(plan.query, now) {
+				return QueryResult{Batch: ResultBatch{Time: now}}, nil
+			}
+			batch := runtime.batch(eventDelta{newEvents: []Event{{}}}, plan, now)
+			batch = runtime.applyOutput(plan.query.output, batch, false, now, plan)
+			return QueryResult{Batch: batch}, nil
+		}
+		// Source-less fire-and-forget under a context evaluates the
+		// projection once per live partition, honoring the caller's
+		// partition selector, matching Esper's context FAF over an
+		// initiated-terminated lifecycle.
+		descriptors := e.contextPartitionDescriptors[plan.query.contextName]
+		keys := make([]string, 0, len(descriptors))
+		for key := range descriptors {
+			keys = append(keys, key)
+		}
+		sort.Slice(keys, func(i, j int) bool {
+			return descriptors[keys[i]].ID < descriptors[keys[j]].ID
+		})
+		result := ResultBatch{Time: now}
+		for _, key := range keys {
+			descriptor := descriptors[key]
+			if !contextPartitionSelectedWithDescriptor(selector, descriptor) {
+				continue
+			}
+			runtime := newStatementRuntime(plan.query)
+			runtime.engine = e
+			runtime.partitionContextName = plan.query.contextName
+			runtime.partitionKey = key
+			runtime.partitionID = descriptor.ID
+			runtime.contextProperties = cloneValues(descriptor.properties)
+			runtime.initializeAt(now)
+			runtime.ctx = ctx
+			runtime.variables = runtime.withContextVariables(variablesWithEngine(cloneValues(variables), e))
+			runtime.variables = runtime.withContextProperties(runtime.variables)
+			if !runtime.sourceLessRowMatches(plan.query, now) {
+				continue
+			}
+			batch := runtime.batch(eventDelta{newEvents: []Event{{}}}, plan, now)
+			batch = runtime.applyOutput(plan.query.output, batch, false, now, plan)
+			result.New = append(result.New, batch.New...)
+			result.Old = append(result.Old, batch.Old...)
+		}
 		e.mu.Unlock()
-		runtime := newStatementRuntime(plan.query)
-		runtime.engine = e
-		runtime.initializeAt(now)
-		runtime.ctx = ctx
-		runtime.variables = variablesWithEngine(variables, e)
-		batch := runtime.batch(eventDelta{newEvents: []Event{{}}}, plan, now)
-		batch = runtime.applyOutput(plan.query.output, batch, false, now, plan)
-		return QueryResult{Batch: batch}, nil
+		if plan.query.distinct {
+			result.New = distinctSnapshotResults(result.New)
+		}
+		return QueryResult{Batch: result}, nil
 	}
 	if plan.query.join != nil {
 		if plan.query.contextName != "" {

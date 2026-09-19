@@ -1,0 +1,2006 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0e96acf48376ed71c690",
+    "java-runtime-f54b77f9c8381d0cc12c",
+    "java-runtime-00d22c5518b7c57f1ba7",
+    "java-runtime-4f6e15a0c30a5e95b1f6",
+    "java-runtime-6d948697a80bca6a0dac"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherFromClauseOptional.java"
+  ],
+  "javaExecutions": [
+    "EPLOtherFromOptionalContext{soda=false}",
+    "EPLOtherFromOptionalContext{soda=true}",
+    "EPLOtherFromOptionalNoContext",
+    "EPLOtherFromOptionalFAFContext",
+    "EPLOtherFromOptionalInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-from-clause-optional",
+    "steps": [
+      {
+        "op": "case",
+        "case": "context-soda-false"
+      },
+      {
+        "op": "deploy",
+        "case": "context-soda-false",
+        "statement": "ctx",
+        "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id)"
+      },
+      {
+        "op": "deploy",
+        "case": "context-soda-false",
+        "statement": "s0",
+        "epl": "@name('s0') context MyContext select context.s0 as ctxs0"
+      },
+      {
+        "op": "deploy",
+        "case": "context-soda-false",
+        "statement": "s1",
+        "epl": "@name('s1') context MyContext select context.s0 as ctxs0 output when terminated"
+      },
+      {
+        "op": "send",
+        "case": "context-soda-false",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "A",
+          "p01": null,
+          "p02": null,
+          "p03": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-false",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "context-soda-false",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "B",
+          "p01": null,
+          "p02": null,
+          "p03": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-false",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-false",
+        "statement": "s1",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "context-soda-false",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": "A",
+          "p11": null,
+          "p12": null,
+          "p13": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-false",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-false",
+        "statement": "s1",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "context-soda-false",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 20,
+          "p10": "A",
+          "p11": null,
+          "p12": null,
+          "p13": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-false",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-false",
+        "statement": "s1",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "context-soda-false"
+      },
+      {
+        "op": "case",
+        "case": "context-soda-true"
+      },
+      {
+        "op": "deploy",
+        "case": "context-soda-true",
+        "statement": "ctx",
+        "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id)"
+      },
+      {
+        "op": "deploy",
+        "case": "context-soda-true",
+        "statement": "s0",
+        "epl": "@name('s0') context MyContext select context.s0 as ctxs0"
+      },
+      {
+        "op": "deploy",
+        "case": "context-soda-true",
+        "statement": "s1",
+        "epl": "@name('s1') context MyContext select context.s0 as ctxs0 output when terminated"
+      },
+      {
+        "op": "send",
+        "case": "context-soda-true",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "A",
+          "p01": null,
+          "p02": null,
+          "p03": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-true",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "context-soda-true",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "B",
+          "p01": null,
+          "p02": null,
+          "p03": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-true",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-true",
+        "statement": "s1",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "context-soda-true",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 10,
+          "p10": "A",
+          "p11": null,
+          "p12": null,
+          "p13": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-true",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-true",
+        "statement": "s1",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "context-soda-true",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 20,
+          "p10": "A",
+          "p11": null,
+          "p12": null,
+          "p13": null
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-true",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "snapshot",
+        "case": "context-soda-true",
+        "statement": "s1",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "context-soda-true"
+      },
+      {
+        "op": "case",
+        "case": "no-context"
+      },
+      {
+        "op": "deploy",
+        "case": "no-context",
+        "statement": "s0",
+        "epl": "@name('s0') select 1 as value"
+      },
+      {
+        "op": "snapshot",
+        "case": "no-context",
+        "statement": "s0",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "no-context"
+      },
+      {
+        "op": "case",
+        "case": "faf-context"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-context",
+        "statement": "ctx",
+        "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id)"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-context",
+        "statement": "feeder",
+        "epl": "context MyContext select count(*) from SupportBean"
+      },
+      {
+        "op": "send",
+        "case": "faf-context",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "A",
+          "p01": "x",
+          "p02": null,
+          "p03": null
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-context",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 20,
+          "p00": "B",
+          "p01": "x",
+          "p02": null,
+          "p03": null
+        }
+      },
+      {
+        "op": "faf",
+        "case": "faf-context",
+        "statement": "faf-all",
+        "epl": "context MyContext select context.s0.p00 as id"
+      },
+      {
+        "op": "faf",
+        "case": "faf-context",
+        "statement": "faf-by-id",
+        "selector": "ids",
+        "ids": [
+          1
+        ],
+        "epl": "context MyContext select context.s0.p00 as id"
+      },
+      {
+        "op": "faf",
+        "case": "faf-context",
+        "statement": "faf-distinct",
+        "epl": "context MyContext select distinct context.s0.p01 as p01"
+      },
+      {
+        "op": "faf",
+        "case": "faf-context",
+        "statement": "faf-where-false",
+        "epl": "context MyContext select 1 as value where 'a'='b'"
+      },
+      {
+        "op": "faf",
+        "case": "faf-context",
+        "statement": "faf-where-id",
+        "epl": "context MyContext select context.s0.p00 as value where context.s0.id=10"
+      },
+      {
+        "op": "faf",
+        "case": "faf-context",
+        "statement": "faf-having-id",
+        "epl": "context MyContext select context.s0.p00 as value having context.s0.id=10"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "faf-context"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "ctx",
+        "epl": "@public create context MyContext initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id);"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "subselect-no-from",
+        "expectError": "Incorrect syntax near ')'",
+        "epl": "select (select 1)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "wildcard",
+        "expectError": "Wildcard cannot be used when the from-clause is not provided",
+        "epl": "select *"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "faf-wildcard",
+        "expectError": "Wildcard cannot be used when the from-clause is not provided",
+        "epl": "select *"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "faf-multi-selector",
+        "expectError": "Fire-and-forget queries without a from-clause allow only a single context partition selector",
+        "epl": "context MyContext select context.s0.p00 as id"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "faf-order-by",
+        "expectError": "Fire-and-forget queries without a from-clause and with context do not allow order-by",
+        "epl": "context MyContext select context.s0.p00 as p00 order by p00 desc"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-from-clause-optional",
+    "records": [
+      {
+        "case": "context-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "no-context",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-all",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-by-id",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-distinct",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p01": "x"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-where-false",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-where-id",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-having-id",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "subselect-no-from",
+        "sequence": 0,
+        "value": "Incorrect syntax near ')'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "wildcard",
+        "sequence": 0,
+        "value": "Wildcard cannot be used when the from-clause is not provided"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "faf-wildcard",
+        "sequence": 0,
+        "value": "Wildcard cannot be used when the from-clause is not provided"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "faf-multi-selector",
+        "sequence": 0,
+        "value": "Fire-and-forget queries without a from-clause allow only a single context partition selector"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "faf-order-by",
+        "sequence": 0,
+        "value": "Fire-and-forget queries without a from-clause and with context do not allow order-by"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-from-clause-optional",
+    "records": [
+      {
+        "case": "context-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "context-soda-false",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 10,
+                  "p00": "A",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "listener",
+        "statement": "s1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "ctxs0": {
+                "fields": {
+                  "id": 20,
+                  "p00": "B",
+                  "p01": {
+                    "state": "null"
+                  },
+                  "p02": {
+                    "state": "null"
+                  },
+                  "p03": {
+                    "state": "null"
+                  }
+                },
+                "kind": "row"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "context-soda-true",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "no-context",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-all",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "A"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "id": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-by-id",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": "B"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-distinct",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p01": "x"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-where-false",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-where-id",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-context",
+        "operation": "faf",
+        "statement": "faf-having-id",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "subselect-no-from",
+        "sequence": 0,
+        "value": "Incorrect syntax near ')'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "wildcard",
+        "sequence": 0,
+        "value": "Wildcard cannot be used when the from-clause is not provided"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "faf-wildcard",
+        "sequence": 0,
+        "value": "Wildcard cannot be used when the from-clause is not provided"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "faf-multi-selector",
+        "sequence": 0,
+        "value": "Fire-and-forget queries without a from-clause allow only a single context partition selector"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "faf-order-by",
+        "sequence": 0,
+        "value": "Fire-and-forget queries without a from-clause and with context do not allow order-by"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

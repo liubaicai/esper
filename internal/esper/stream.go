@@ -3432,10 +3432,72 @@ type Query struct {
 	eventPrecedence            Expr
 	deliveryMode               deliveryKind
 	deliveryExprs              []Expr
+	// where and having are the source-less query predicates: Esper allows
+	// WHERE/HAVING on a select without a from-clause, where both filter the
+	// single projected row. They are rejected at build time for sourced
+	// queries, which use Filter/Having on the stream builders instead.
+	where  Expr
+	having Expr
 }
 
 func (q Query) Name() string   { return q.name }
 func (q Query) Module() string { return q.moduleName }
+
+// Named returns a copy of the query with the statement name set, the fluent
+// counterpart of the StatementName query option for terminal constructors
+// such as SelectOnce that do not take an option list.
+func (q Query) Named(name string) Query {
+	q.name = name
+	return q
+}
+
+// WithContext returns a copy of the query bound to the named context, the
+// fluent counterpart of the WithContext query option. Source-less queries
+// under an initiated-terminated context instantiate once per partition and
+// observe the partition's context properties (for example
+// ContextInitiatingEvent).
+func (q Query) WithContext(name string) Query {
+	q.contextName = name
+	return q
+}
+
+// WithOutput returns a copy of the query with the output policy applied, the
+// fluent counterpart of the WithOutput query option.
+func (q Query) WithOutput(policy OutputPolicy) Query {
+	q.output = policy
+	return q
+}
+
+// WithDistinct returns a copy of the query that collapses duplicate result
+// rows, the fluent counterpart of the WithDistinct query option.
+func (q Query) WithDistinct() Query {
+	q.distinct = true
+	return q
+}
+
+// WithWhere returns a copy of the query with a predicate evaluated against
+// the projected row scope. It is valid only on source-less queries
+// (SelectOnce), matching Esper's WHERE on a select without a from-clause;
+// sourced queries express filters with Filter on the stream builders.
+func (q Query) WithWhere(predicate Expr) Query {
+	q.where = predicate
+	return q
+}
+
+// WithHaving returns a copy of the query with a post-aggregation predicate.
+// For source-less queries it is evaluated in the same scope as WithWhere,
+// matching Esper's HAVING on a select without a from-clause.
+func (q Query) WithHaving(predicate Expr) Query {
+	q.having = predicate
+	return q
+}
+
+// WithOrderBy returns a copy of the query with result ordering applied, the
+// fluent counterpart of the OrderBy query option.
+func (q Query) WithOrderBy(keys ...SortKey) Query {
+	q.orderBy = append([]SortKey(nil), keys...)
+	return q
+}
 
 // TypedDescription returns the compiler's stable structural description of
 // this fluent Query. It supports logging and object-model inspection but is

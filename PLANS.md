@@ -3537,106 +3537,60 @@ Active: Draft 4.467 ('epl-insert-into-istream-func').
 
 
 ## Current work unit
-Active: Draft 4.468 ('epl-insert-into-populate-single-col-by-method-call').
+Active: Draft 4.469 ('epl-other-from-clause-optional').
 
-- [x] Contract FROZEN by read-only scouts `NextJavaContract468` +
-      `NextGoSurface468` (dispatched during 4.467's review; reports recovered
-      via hub replies) and re-verified line-by-line by the primary agent
-      against the Java source, SupportStaticMethodLib UDFs, SupportEventInfra
-      send helpers, TestSuiteEPLInsertInto.configure preconfigured types, and
-      the Go surface (Transpose/Func1/EventValue, Register*, Send*, route
-      projection). Full contract: `.omp/contract-468.md`.
-- [x] Runner `internal/app/parity/epl_insert_into_populate_single_col_method_call.go`
-- [x] Assets (scenario 9 cases/18 steps + oracle + run script) via
-      parity-asset-worker `AssetWriter468` (disjoint file ownership). Oracle
-      correction verified: implicit-bean asserts BeanEventType (not
-      WrapperEventType); kindOf checks JsonEventObject before Map
-      (JsonEventObject extends Map). Run script extended with Avro/Jackson
-      jar resolution (optional/provided-scope deps absent from the runtime
-      classpath, same fix as und-stream-select).
-- [x] Java oracle trace: 23 records (implicit cases: value s1, value s2,
-      listener s2; configured: listener s0, value s0). Go replay 23 records.
-      Runner fix: Avro UDF input is *esper.AvroRecord (EventValue[map] never
-      fires on Avro underlyings).
-- [x] Differential replay: status `passing`, 0 differences. Evidence
-      `testdata/parity/epl-insert-into-populate-single-col-method-call.evidence.json`.
-- [x] Tests: passing-evidence + 7 trace mutations all green.
-- [x] Manifest: NEW case `case.epl-insert-into-populate-single-col-method-call`
-      born-DV (runtime `java-runtime-abe5e5cbda9667e7e112`, static
-      `java-9db09f558176cc93b13e`), mapping to `query.insert-into-route`;
-      capability `epl.insertinto-pattern` DV IDs +1, remaining narrowed,
-      goRefs +1, summary extended. Summary: 707/705/334/1275/3824/3450/686.
-      Roadmap + CHANGELOG entries added. Manifest validator green.
-- [x] `make check` GREEN (parity 80.5s, internal/esper 69.3s). Parity review
-      `ParityReview468` (read-only): OVERALL PASS, three P3s — contract prose
-      corrected (BeanEventType for implicit-bean), dead `"{}"` marshal
-      fallback removed (Go trace byte-identical after the fix), and a
-      contract-sanctioned protocol note (value records pin the registered
-      schema kind, not the delivered underlying class). N+1 scouts
-      `NextJavaContract469`/`NextGoSurface469` returned: the `epl/other`
-      cluster splits into EPLOtherSelectWildcardWAdditional remainder (6
-      unreferenced, largely expressible via explicit wildcard expansion /
-      Transpose+companion Alias) and EPLOtherFromClauseOptional (6
-      unreferenced, mostly blocked — source-less FAF where/having and
-      context FAF gaps; inlined_class is JVM-only).
-- [x] Shipped; Git owns identity. Draft 4.468 committed and pushed as
-      `31ae91fe0`.
+- [x] Contract FROZEN (`.omp/contract-469.md`) by read-only scouts
+      `NextJavaContract469` + `NextGoSurface469` (dispatched during 4.468's
+      review) and re-verified line-by-line by the primary agent against the
+      Java source. Scope: `EPLOtherFromClauseOptional` ords 0/1
+      (`java-runtime-0e96acf48376ed71c690` / `java-runtime-f54b77f9c8381d0cc12c`,
+      source-less `context MyContext select context.s0 as ctxs0` with and
+      without `output when terminated`, per-partition listener + iterator
+      semantics), ord 2 (`java-runtime-00d22c5518b7c57f1ba7`, deployed
+      `select 1 as value` iterator), ord 4
+      (`java-runtime-4f6e15a0c30a5e95b1f6`, source-less FAF under context:
+      all/ids selectors, distinct, where, having), ord 5
+      (`java-runtime-6d948697a80bca6a0dac`, intentionally-different:
+      unrepresentable subselect/wildcard/multi-selector + Go's unconditional
+      source-less order-by rejection). Ord 3
+      (`java-runtime-80d10cc89f5410ff790e`) DEFERRED — heterogeneous
+      FIREANDFORGET mix incl. JVM-only `inlined_class`.
+- [x] Go gaps probed and confirmed: deployed source-less `Snapshot` yields 0
+      rows (Java: 1); `SelectOnce` takes no options (no context/output/name);
+      source-less FAF ignores contextName/selector/distinct; no where/having
+      surface for source-less queries.
+- [x] Engine extension (`internal/esper`, primary agent only): source-less
+      statements gained the full lifecycle — `Query` fluent methods
+      `Named`/`WithContext`/`WithOutput`/`WithDistinct`/`WithWhere`/`WithHaving`/
+      `WithOrderBy` (where/having restricted to source-less), per-partition
+      initiation/termination delivery via `output when terminated`, per-partition
+      snapshot/iterator rows, and context-aware FAF honoring all/by-id selectors,
+      distinct, where and having. Reused the existing
+      `CreateOverlappingInitiatedTerminatedContext` (one partition per initiation
+      event) and `ContextInitiatingEvent` + `Property` for `context.s0` reads.
+- [x] Parity assets: `tools/java-oracle/EplOtherFromClauseOptionalScenarioOracle.java`
+      + `run-epl-other-from-clause-optional.sh` (parity-asset writer, disjoint
+      files); scenario `testdata/parity/epl-other-from-clause-optional.json`
+      (5 cases / 56 steps); runner
+      `internal/app/parity/epl_other_from_clause_optional.go` + run.go wiring +
+      strict scenario loader (duplicate-key rejection, pinned case metadata,
+      per-step and per-payload field whitelists).
+- [x] Differential replay: Java 34 records / Go 34 records, 0 differences;
+      `-mode epl-other-from-clause-optional-diff` status `passing`; evidence at
+      `testdata/parity/epl-other-from-clause-optional.evidence.json`.
+- [x] Manifest: new capability `epl.other.from-clause-optional` (born-DV) +
+      `case.epl-other-from-clause-optional` (4 DV runtime IDs) +
+      `case.epl-other-from-clause-optional-invalid` (intentionally-different);
+      summary 709 cases / 707 implemented / 335 DV / 1279 DV runtime IDs /
+      3829 associations; compat validator green.
+- [x] Test family green: 7 trace mutations + 6 raw-scenario mutations all
+      rejected; runtime-ID mapping and help-listing tests pass.
+
 
 ## Prefetch archive (contract source for the active unit)
-Frozen: Draft 4.468 ('epl-insert-into-populate-single-col-by-method-call')
-- EPLInsertIntoPopulateSingleColByMethodCall (single execution, ord 0,
-`java-runtime-abe5e5cbda9667e7e112`, static `java-9db09f558176cc93b13e`,
-variant "direct", flags []; scouts `NextJavaContract468` +
-`NextGoSurface468`; both hit yield-schema bugs — reports recovered via
-hub replies). Single execution = 9 rounds (5 implicit-type + 4
-configured-type; bean has NO configured variant), each exactly 1
-newData + 0 oldData on the asserted listener.
-- Implicit variant (Java file:89-120): s1 `@name('s1') @public insert
- into {Prefix}_Stream select * from {origin}` (listener attached but
- SILENT — sent event is the sibling type) + s2 `@name('s2') @public
- insert into {Prefix}_Stream select SupportStaticMethodLib.{fn}(s0)
- from {eventType} as s0`; assert s1/s2 eventType underlying, send ONE
- event, assertEventNew("s2") [type class + underlying + props];
- undeploy s2 then s1.
-- Configured variant (file:123-148): `@name('insert') insert into
- {target} select SupportStaticMethodLib.{fn}(s0) from {origin} as s0`
- (no listener) + `@name('s0') select * from {target}`; send ONE origin
- event, assertEventNew("s0"); undeploy s0 then insert.
-- Rounds: bean implicit (SupportBean origin, convertEvent,
- SupportMarketDataBean("ACME",0,0L,null); assert theString="ACME" ONLY);
- map implicit+configured (MapOne/MapTwo, convertEventMap, {one,two} ->
- {one,"|two|"}); OA implicit+configured (OAOne/OATwo,
- convertEventObjectArray); avro implicit+configured (AvroOne/AvroTwo,
- convertEventAvro); json implicit+configured (JsonOne/JsonTwo created
- mid-run via `create json schema`, convertEventJson returns a JSON
- STRING re-parsed into the Json underlying; configured round's type
- assertions tautological Object.class).
-- UDF semantics (SupportStaticMethodLib.java:308-336): each takes the
- source event's underlying, returns same-rep underlying with field
- 'two' wrapped "|…|"; bean variant returns SupportBean(symbol,
- volume.intValue()).
-- Go surface (scout `NextGoSurface468`): NO engine work — all
- primitives proven. Route = Select(...).InsertInto(target,
- StatementName(...)); single-column event-typed projection =
- Transpose[T](Func1("convertEvent*", conv, EventValue[T]()));
- EventValue[T] works for every rep (struct/map/[]any/*AvroRecord/map);
- registrations RegisterStruct/Map/ObjectArray/Avro/JSON all exist;
- sends via SendEvent/SendRecord/SendObjectArray/SendJSON/Send;
- listener-on-inserting-statement precedent iupsSubscribe; statement
- type assertions -> "value" records (typed_columns precedent).
- Workarounds: pre-register {Prefix}_Stream with same kind/fields as
- origin (approved difference, transpose-stream precedent); JVM-internal
- class assertions unobservable -> schema Kind()/TypeName "value"
- records; avro UDF returns map[string]any into RegisterAvro target;
- json UDF returns string into RegisterJSON target.
-- Runner: internal/app/parity/epl_insert_into_populate_single_col_by_
- method_call.go mirroring epl_insert_into_populate_und_stream_select.go;
- 9 cases (implicit-bean, implicit-map, configured-map, implicit-oa,
- configured-oa, implicit-avro, configured-avro, implicit-json,
- configured-json); manifest new case
- case.epl-insert-into-populate-single-col-by-method-call born-DV under
- capability query.insert-into-route (sibling mapping); remove the entry
- from epl.insertinto-pattern remaining.
+Frozen: Draft 4.469 ('epl-other-from-clause-optional') — see
+`.omp/contract-469.md` for the full frozen contract (per-ordinal runtime
+IDs, Java observable contract, Go surface work list, file ownership).
 
 ## Delegation checkpoint (recent)
 
