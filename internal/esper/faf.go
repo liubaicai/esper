@@ -241,7 +241,7 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 		return NewError(ErrorInvalidRule, "fire-and-forget routes do not allow event-precedence")
 	}
 
-	results := routeResults(plan.query.selector, result.Batch)
+	results := routeResults(plan.query.routeSelector, result.Batch)
 	if len(results) == 0 {
 		return nil
 	}
@@ -281,7 +281,6 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 		routedEvent, routeErr := e.routeResultLocked(routeStatement, item, now)
 		if routeErr != nil {
 			rollback()
-			e.mu.Unlock()
 			return routeErr
 		}
 		routedEvent.owner = routeStatement
@@ -348,6 +347,11 @@ func (e *Engine) RouteFireAndForget(ctx context.Context, plan Plan, result Query
 	return nil
 }
 
+// routeResults selects the routed portion of a statement batch by the
+// plan's route selector. Esper's insert-into route selector is
+// independent of the select-clause stream keyword: plain 'insert into'
+// routes istream-only, 'insert irstream into' routes new+old as inserts,
+// and 'insert rstream into' routes old-only as inserts.
 func routeResults(selector StreamSelector, batch ResultBatch) []Result {
 	var results []Result
 	switch selector {

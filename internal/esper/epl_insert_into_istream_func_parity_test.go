@@ -49,7 +49,7 @@ func testEPLInsertIntoIRStreamFuncLastEvent(t *testing.T) {
 			From[insertIntoSupportBean](env, "SupportBean").Window(LastEvent()),
 			Alias("c0", Field[insertIntoSupportBean, string]("theString")),
 			Alias("c1", IStream()),
-		).InsertInto("MyStream", StatementName("s0"), WithOldStream()),
+		).InsertInto("MyStream", StatementName("s0"), WithOldStream(), WithIRStreamRoute()),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -136,7 +136,7 @@ func testEPLInsertIntoIRStreamFuncJoin(t *testing.T) {
 			SelectFrom(0, "c0", JoinField[string](0, "theString")),
 			SelectFrom(1, "c1", JoinField[int](1, "id")),
 			SelectFrom(0, "c2", IStream()),
-		).InsertInto("MyStream", StatementName("s0"), WithOldStream()),
+		).InsertInto("MyStream", StatementName("s0"), WithOldStream(), WithIRStreamRoute()),
 	)
 	if err != nil {
 		t.Fatal(err)

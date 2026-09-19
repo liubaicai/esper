@@ -211,7 +211,7 @@ func TestEPLOtherRStreamInsertIntoRStreamParity(t *testing.T) {
 		Select(
 			From[irStreamBean](env, "SupportBean").Window(LengthWindow(3)),
 			Alias("theString", Field[irStreamBean, string]("theString")),
-		).InsertInto("NextStream", StatementName("s0"), WithRemoveStreamOnly()),
+		).InsertInto("NextStream", StatementName("s0"), WithRemoveStreamOnly(), WithRStreamRoute()),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -365,7 +365,7 @@ func TestEPLOtherIStreamInsertIntoRStreamParity(t *testing.T) {
 		Select(
 			From[irStreamBean](env, "SupportBean").Window(LengthWindow(1)),
 			Alias("theString", Field[irStreamBean, string]("theString")),
-		).InsertInto("NextStream", StatementName("s0-route"), WithRemoveStreamOnly()),
+		).InsertInto("NextStream", StatementName("s0-route"), WithRemoveStreamOnly(), WithRStreamRoute()),
 	)
 	if err != nil {
 		t.Fatal(err)

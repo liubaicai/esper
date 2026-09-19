@@ -4666,7 +4666,10 @@
     "internal/esper/insert_pattern_parity_test.go",
     "internal/app/parity/epl_insert_into_typed_columns.go",
     "internal/compat/scenario.go",
-    "internal/app/parity/epl_insert_into_from_pattern.go"
+    "internal/app/parity/epl_insert_into_from_pattern.go",
+    "internal/app/parity/epl_insert_into_wrapper.go",
+    "internal/esper/faf.go",
+    "internal/esper/runtime.go"
    ],
    "phase": 2,
    "status": "implemented",
@@ -4675,7 +4678,6 @@
     "EPLInsertIntoPopulateCreateStream suite",
     "EPLInsertIntoPopulateSingleColByMethodCall",
     "EPLInsertIntoTransposePattern suite",
-    "EPLInsertIntoWrapper suite",
     "EPLInsertIntoPopulateUndStreamSelect Invalid execution (java-runtime-9c96c9930655f732930a): implemented-not-DV — Go-unit route-validation pins only ('route projection \"otherprop\" is not a field of target schema', transpose-to-typed-target rejection); verbatim Java diagnostics preserved in test header."
    ],
    "verification": [
@@ -4691,7 +4693,10 @@
     "java-runtime-4dc2b394114fdaf84056",
     "java-runtime-98eba92039ca0e871ad6",
     "java-runtime-1dd189e49dda82f29078",
-    "java-runtime-9092d240993543259d6e"
+    "java-runtime-9092d240993543259d6e",
+    "java-runtime-79356b0865c8de3ace17",
+    "java-runtime-32434556dcbd672d7cf7",
+    "java-runtime-581a1f109ff2588c6cde"
    ]
   },
   {
@@ -45296,6 +45301,62 @@
     "java-runtime-1dd189e49dda82f29078",
     "java-runtime-9092d240993543259d6e"
    ]
+  },
+  {
+   "id": "case.epl-insert-into-wrapper",
+   "javaRuntimeIds": [
+    "java-runtime-79356b0865c8de3ace17",
+    "java-runtime-32434556dcbd672d7cf7",
+    "java-runtime-581a1f109ff2588c6cde"
+   ],
+   "javaStaticIds": [
+    "java-70e97824e1f97c1b9eee",
+    "java-b3c8191c6b0c0831cb61",
+    "java-08f6aa413ec9ca217168"
+   ],
+   "javaNames": [
+    "EPLInsertIntoWrapperBean",
+    "EPLInsertInto3StreamWrapper",
+    "EPLInsertIntoOnSplitForkJoin"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoWrapper.java"
+   ],
+   "goTests": [
+    "internal/app/parity/epl_insert_into_wrapper.go",
+    "internal/app/parity/run_test.go",
+    "internal/esper/faf.go",
+    "internal/esper/stream.go"
+   ],
+   "tags": [
+    "epl",
+    "insert-into",
+    "wrapper",
+    "transpose",
+    "split-stream",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-insert-into-wrapper.json",
+    "testdata/parity/epl-insert-into-wrapper.trace.json",
+    "testdata/parity/epl-insert-into-wrapper.go.trace.json",
+    "testdata/parity/epl-insert-into-wrapper.evidence.json",
+    "tools/java-oracle/EplInsertIntoWrapperScenarioOracle.java",
+    "tools/java-oracle/run-epl-insert-into-wrapper.sh"
+   ],
+   "difference": "Approved differences: Esper auto-creates wrapper event types while Go pre-registers the targets (WrappedBean/StreamA/StreamB/StreamC as map schemas, the split-fork streams as the MyEvent struct schema); 'select *, intPrimitive as p0' and 'select sb' use the Transpose + companion-Alias form (a companion column unlocks struct-payload flattening into a Map target, and Alias(\"p0\", NullLiteral[int]()) pins the unprovided column to null); 'select irstream *' is WithOldStream() on the insert-into route (Esper's plain insert-into route selector is istream-only, so the route posts new rows and each downstream #length(2) window expires the matching row itself); 'on X insert into Y select * where cond' is SplitFirst/SplitIntoWhen, 'output all' is SplitAll, and the transpose(UDF) producer is a continuous Select+Transpose+InsertInto; milestone ops are no-ops.",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-79356b0865c8de3ace17",
+    "java-runtime-32434556dcbd672d7cf7",
+    "java-runtime-581a1f109ff2588c6cde"
+   ],
+   "notes": "Java/Go 6 records each, 0 differences. Engine change: the insert-into route selector is decoupled from the select-clause stream keyword — Query.routeSelector defaults to istream-only (matching Esper's plain 'insert into'), and new WithIRStreamRoute()/WithRStreamRoute() QueryOptions model 'insert irstream into'/'insert rstream into' (removes-as-inserts). Existing 'insert irstream/rstream into' call sites updated; facade regenerated."
   }
  ],
  "mappings": [
@@ -48458,13 +48519,17 @@
   {
    "capabilityId": "epl.insertinto-pattern",
    "caseId": "case.epl-insert-into-from-pattern"
+  },
+  {
+   "capabilityId": "epl.insertinto-pattern",
+   "caseId": "case.epl-insert-into-wrapper"
   }
  ],
  "summary": {
-  "inventoriedCases": 705,
-  "implementedCases": 703,
-  "differentialVerifiedCases": 331,
-  "differentialVerifiedRuntimeIds": 1270,
+  "inventoriedCases": 706,
+  "implementedCases": 704,
+  "differentialVerifiedCases": 332,
+  "differentialVerifiedRuntimeIds": 1273,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48474,13 +48539,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3820,
-  "referencedJavaRuntimeIds": 3446,
+  "runtimeAssociationCount": 3823,
+  "referencedJavaRuntimeIds": 3449,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 690,
+  "unreferencedJavaRuntimeIds": 687,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 705,
+  "totalCases": 706,
   "totalCapabilities": 121
  }
 }

@@ -3499,60 +3499,74 @@ ords 0-1 — four executions, insert-into column typing.
  `4fab3e118`. Git owns identity.
 
 ## Current work unit
-Active: Draft 4.465 ('epl-insert-into-from-pattern').
+Active: Draft 4.466 ('epl-insert-into-wrapper').
 
-- [x] Contract frozen (scouts `NextJavaContract465` + `NextGoSurface465`;
+- [x] Contract frozen (scouts `NextJavaContract466` + `NextGoSurface466`;
  both hit yield-schema bugs — reports recovered via hub replies; see the
  prefetch section below for the full contract).
-- [x] Runner `internal/app/parity/epl_insert_into_from_pattern.go` +
- run.go wiring (`epl-insert-into-from-pattern[-diff]`): 4 cases, ops
- case/send; s0/s1 listener records. Compiles clean.
-- [x] Scenario JSON (4 cases / 12 steps) + oracle + run script —
- parity-asset-worker `AssetWriter465` (disjoint file ownership; yield
- schema failed, report recovered via transcript). Oracle verified:
- 7 records, EPLs byte-exact, per-case fresh runtime.
-- [x] Differential replay: Java 7 records / Go 7 records, status
+- [x] Runner `internal/app/parity/epl_insert_into_wrapper.go` + run.go
+ wiring (`epl-insert-into-wrapper[-diff]`): 3 cases, ops case/send;
+ i1/i2/s2/final listener records. Compiles clean.
+- [x] Scenario JSON (3 cases / 10 steps) + oracle + run script —
+ parity-asset-worker `AssetWriter466` (disjoint file ownership; stopped
+ mid-work, resumed via hub). Oracle verified: 6 records, EPLs
+ byte-exact, per-case fresh runtime.
+- [x] **Engine fix (shared core)**: the insert-into route selector is
+ decoupled from the select-clause stream keyword — Query.routeSelector
+ defaults to istream-only (matching Esper's plain 'insert into'), and
+ new `WithIRStreamRoute()`/`WithRStreamRoute()` QueryOptions model
+ 'insert irstream into'/'insert rstream into' (removes-as-inserts).
+ Existing 'insert irstream/rstream into' call sites updated
+ (epl_insert_into_istream_func_parity_test.go ×2,
+ epl_insert_into_parity_test.go ×2,
+ epl_other_istream_rstream_parity_test.go ×2, route_test.go ×1);
+ facade regenerated. First attempt (removes-as-removes machinery:
+ routedEvent.remove + processRoutedRemove + WithRemoveStreamRoute) was
+ reverted after the parity reviewer showed Java's plain 'insert into'
+ routes istream-only regardless of the select-clause keyword — the
+ faithful model needs no remove-routing machinery.
+- [x] Differential replay: Java 6 records / Go 6 records, status
  `passing`, 0 differences.
-- [x] Tests: TestRunEplInsertIntoFromPatternDiffWritesPassingEvidence +
- 7 trace mutations (absent-tag null, tag id, bean-column id, default
- column id, named-window row lost/extra, tagged-event payload) — all
- green.
-- [x] Manifest: `case.epl-insert-into-from-pattern` born-DV with the 4
- IDs; capability `epl.insertinto-pattern` DV IDs +4, three suite entries
- removed from remaining, PropsWildcard removed from javaRefs, goRefs
- extended; summary 705/331/1270/3820/3446/690; validator green.
- Roadmap + CHANGELOG entries added.
-- [x] `make check` GREEN (pre-review).
-- [ ] Parity review; commit/push.
+- [x] Tests: TestRunEplInsertIntoWrapperDiffWritesPassingEvidence + 7
+ trace mutations (extra-column drift, unprovided-column null, nested-bean
+ property, irstream old-row lost/drift, split-fork-join row lost/id
+ drift) — all green. Regression: TestEPLInsertIntoIRStreamFunc +
+ TestEPLInsertIntoParity + TestEPLOtherIStreamRStream + TestRoute green.
+- [x] Manifest: `case.epl-insert-into-wrapper` born-DV with the 3 IDs;
+ capability `epl.insertinto-pattern` DV IDs +3, EPLInsertIntoWrapper
+ removed from remaining, goRefs extended; summary
+ 706/332/1273/3823/3449/687; validator green. Roadmap + CHANGELOG
+ entries added.
+- [ ] `make check`; parity review; commit/push.
 
 ## Next work unit (prefetch)
-Frozen: Draft 4.465 ('epl-insert-into-from-pattern') — EPLInsertIntoFromPattern
-ALL FOUR executions (ords 0-3; EPLInsertIntoFromPatternNamedWindow is an
-inner class at ord 3, not a separate file). Scout corrections: the
-assignment's `java-runtime-98eba92039ca0e871a06` was a typo for
-`...1ad6` (ord 1 EPLInsertIntoProps); `java-runtime-79356b0865c8de3ace17`
-is EPLInsertIntoWrapperBean (different suite — stays out).
-- ord 0 EPLInsertIntoPropsWildcard `java-runtime-4dc2b394114fdaf84056`:
- `insert into MyThirdStream(es0id, es1id) select es0.id, es1.id from
- pattern[every (es0=SupportBean_S0 or es1=SupportBean_S1)]`; S1{id:10} ->
- {es0id:null,es1id:10}; milestone; S0{id:20} -> {es0id:20,es1id:null}.
-- ord 1 EPLInsertIntoProps `java-runtime-98eba92039ca0e871ad6`: bean-typed
- s0/s1 columns; consumer `select s0.id as es0id, s1.id as es1id`.
-- ord 2 EPLInsertIntoNoProps `java-runtime-1dd189e49dda82f29078`: default
- tag-named columns; consumer over MyStream#length(10).
-- ord 3 EPLInsertIntoFromPatternNamedWindow `java-runtime-9092d240993543259d6e`:
- `create window PositionW.win:time(1 hour).std:unique(intPrimitive)` +
- feed + `insert into Foo select * from pattern[every a=PositionW ->
- every b=PositionW]`; listener on s1; E1,E2 (intPrimitive=1) -> exactly
- one row {a:E1,b:E2} (pin count=1, stronger than Java's invoked flag).
-- Go surface (scout `NextGoSurface465`): NO engine work. select * over
- tagged pattern expands to per-tag Alias(tag, PatternEvent(tag))
- (zero-selection Build-rejected); column-list insert-into uses alias
- names; Foo pre-registered as map schema with Event columns + nested
- schemas; named-window pattern source via PatternFromRecord(
- FromNamedWindow); composite retention IntersectWindows(TimeWindow,
- Unique); consumer nested reads via NestedField; #length(10) via
- LengthWindow. New runner epl_insert_into_from_pattern.go + mode.
+Frozen: Draft 4.466 ('epl-insert-into-wrapper') — EPLInsertIntoWrapper.java
+ALL THREE executions (scouts `NextJavaContract466` + `NextGoSurface466`;
+both hit yield-schema bugs — reports recovered via hub replies):
+- ord 0 EPLInsertIntoWrapperBean `java-runtime-79356b0865c8de3ace17`
+ (static `java-70e97824e1f97c1b9eee`): i1 `insert into WrappedBean
+ select *, intPrimitive as p0 from SupportBean` -> {E1,1,p0:1}; i2
+ `insert into WrappedBean select sb from SupportEventContainsSupportBean
+ sb` -> {E2,2,p0:null} ('sb' resolves to the nested-bean PROPERTY, not
+ the stream alias; unprovided p0 -> null). Listeners on i1/i2.
+- ord 1 EPLInsertInto3StreamWrapper `java-runtime-32434556dcbd672d7cf7`
+ (static `java-b3c8191c6b0c0831cb61`): three chained `insert into
+ select irstream *` producers over #length(2) with || concat columns;
+ listener on s2; e1,e2,e3 -> s2 new {e3,e3AB} old {e1,e1AB} (rstream
+ cascade removes e1's fully-wrapped row in the same invocation).
+- ord 2 EPLInsertIntoOnSplitForkJoin `java-runtime-581a1f109ff2588c6cde`
+ (static `java-08f6aa413ec9ca217168`): single module, byte-exact EPL
+ (mixed @Name/@name, blank lines, trailing ';\n'); transpose(UDF(event))
+ -> MyEvent; on-trigger multi-clause splits by where; `output all` dual
+ inserts; S0(1,T,T,F) -> final id=1; S0(1,T,T,T) -> final NOT invoked.
+- Go surface (scout `NextGoSurface466`): NO engine work. Transpose+
+ companion-Alias unlocks struct-payload flattening into Map targets
+ ('select *, p0' and 'select sb' + NullLiteral companion); irstream =
+ WithOldStream() on the route; on-trigger splits = SplitFirst/
+ SplitIntoWhen / SplitAll ('output all'); transpose(UDF) =
+ Transpose(Func1(...)); pre-registered Map/struct targets for
+ auto-created wrapper types (approved difference). New runner
+ epl_insert_into_wrapper.go + mode.
 
 ## Delegation checkpoint (recent)
 

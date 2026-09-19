@@ -1,0 +1,351 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-79356b0865c8de3ace17",
+    "java-runtime-32434556dcbd672d7cf7",
+    "java-runtime-581a1f109ff2588c6cde"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoWrapper.java"
+  ],
+  "javaExecutions": [
+    "EPLInsertIntoWrapperBean",
+    "EPLInsertInto3StreamWrapper",
+    "EPLInsertIntoOnSplitForkJoin"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-wrapper",
+    "steps": [
+      {
+        "op": "case",
+        "case": "wrapper-bean"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportEventContainsSupportBean",
+        "payload": {
+          "sb": {
+            "theString": "E2",
+            "intPrimitive": 2
+          }
+        }
+      },
+      {
+        "op": "case",
+        "case": "three-stream-wrapper"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanSimple",
+        "payload": {
+          "myString": "e1",
+          "myInt": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanSimple",
+        "payload": {
+          "myString": "e2",
+          "myInt": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBeanSimple",
+        "payload": {
+          "myString": "e3",
+          "myInt": 1
+        }
+      },
+      {
+        "op": "case",
+        "case": "split-fork-join"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": "1",
+          "p00": "true",
+          "p01": "true",
+          "p02": "false",
+          "p03": ""
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": "1",
+          "p00": "true",
+          "p01": "true",
+          "p02": "true",
+          "p03": ""
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-wrapper",
+    "records": [
+      {
+        "case": "wrapper-bean",
+        "operation": "listener",
+        "statement": "i1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "p0": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wrapper-bean",
+        "operation": "listener",
+        "statement": "i2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "p0": {
+                "state": "null"
+              },
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "three-stream-wrapper",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myInt": 1,
+              "myString": "e1",
+              "propA": "e1A",
+              "propB": "e1AB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "three-stream-wrapper",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myInt": 1,
+              "myString": "e2",
+              "propA": "e2A",
+              "propB": "e2AB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "three-stream-wrapper",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myInt": 1,
+              "myString": "e3",
+              "propA": "e3A",
+              "propB": "e3AB"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "myInt": 1,
+              "myString": "e1",
+              "propA": "e1A",
+              "propB": "e1AB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "split-fork-join",
+        "operation": "listener",
+        "statement": "final",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "propOne": true,
+              "propThree": false,
+              "propTwo": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-wrapper",
+    "records": [
+      {
+        "case": "wrapper-bean",
+        "operation": "listener",
+        "statement": "i1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 1,
+              "p0": 1,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "wrapper-bean",
+        "operation": "listener",
+        "statement": "i2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "p0": {
+                "state": "null"
+              },
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "three-stream-wrapper",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myInt": 1,
+              "myString": "e1",
+              "propA": "e1A",
+              "propB": "e1AB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "three-stream-wrapper",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myInt": 1,
+              "myString": "e2",
+              "propA": "e2A",
+              "propB": "e2AB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "three-stream-wrapper",
+        "operation": "listener",
+        "statement": "s2",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myInt": 1,
+              "myString": "e3",
+              "propA": "e3A",
+              "propB": "e3AB"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "myInt": 1,
+              "myString": "e1",
+              "propA": "e1A",
+              "propB": "e1AB"
+            }
+          }
+        ]
+      },
+      {
+        "case": "split-fork-join",
+        "operation": "listener",
+        "statement": "final",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "id": 1,
+              "propOne": true,
+              "propThree": false,
+              "propTwo": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

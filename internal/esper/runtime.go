@@ -5584,7 +5584,7 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 	if e == nil || statement == nil || statement.plan.query.routeTarget == "" {
 		return nil
 	}
-	results := routeResults(statement.plan.query.selector, batch)
+	results := routeResults(statement.plan.query.routeSelector, batch)
 	precedenceExpr := statement.plan.query.eventPrecedence
 	for _, result := range results {
 		routed, err := e.routeResultLocked(statement, result, now)

@@ -749,6 +749,7 @@ func (j JoinQuery) Query(options ...QueryOption) Query {
 		statementUserObject:        spec.statementUserObject,
 		statementMetadata:          cloneStatementMetadata(spec.statementMetadata),
 		selector:                   spec.selector,
+		routeSelector:              spec.routeSelector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
 		output:                     spec.output,
@@ -1380,6 +1381,7 @@ func (s OnDemandStream) query(action onDemandAction, predicate Expr, assignments
 		name:                 spec.name,
 		statementMetadata:    cloneStatementMetadata(spec.statementMetadata),
 		selector:             spec.selector,
+		routeSelector:        spec.routeSelector,
 		output:               spec.output,
 		contextName:          spec.contextName,
 		onDemand:             &onDemandDefinition{action: action, predicate: predicate, assignments: append([]TableAssignment(nil), assignments...)},
@@ -1586,6 +1588,7 @@ func (a AggregateStream) Query(options ...QueryOption) Query {
 		statementUserObject:        spec.statementUserObject,
 		statementMetadata:          cloneStatementMetadata(spec.statementMetadata),
 		selector:                   spec.selector,
+		routeSelector:              spec.routeSelector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
 		output:                     spec.output,
@@ -3028,6 +3031,7 @@ type querySpec struct {
 	statementUserObject        any
 	statementMetadata          statementMetadata
 	selector                   StreamSelector
+	routeSelector              StreamSelector
 	selections                 []Selection
 	routeTarget                string
 	tableTarget                string
@@ -3237,6 +3241,20 @@ func WithOldStream() QueryOption {
 	return func(spec *querySpec) { spec.selector = SelectIRStream }
 }
 
+// WithIRStreamRoute models 'insert irstream into X': the route posts the
+// statement's remove-stream rows as inserts into the target. It does not
+// change the statement's own output selector — pair with WithOldStream
+// for 'insert irstream into X select irstream *'.
+func WithIRStreamRoute() QueryOption {
+	return func(spec *querySpec) { spec.routeSelector = SelectIRStream }
+}
+
+// WithRStreamRoute models 'insert rstream into X': the route posts only
+// the statement's remove-stream rows, as inserts into the target. Pair
+// with WithRemoveStreamOnly for 'insert rstream into X select rstream *'.
+func WithRStreamRoute() QueryOption {
+	return func(spec *querySpec) { spec.routeSelector = SelectRStream }
+}
 func WithRemoveStreamOnly() QueryOption {
 	return func(spec *querySpec) { spec.selector = SelectRStream }
 }
@@ -3345,7 +3363,7 @@ func newQuery(env *Environment, node *streamNode, selections []Selection, option
 			option(&spec)
 		}
 	}
-	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, selfSubselectPosteval: spec.selfSubselectPosteval, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, limitExpr: spec.limitExpr, offsetExpr: spec.offsetExpr, limitExprSet: spec.limitExprSet, offsetExprSet: spec.offsetExprSet, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence, deliveryMode: spec.deliveryMode, deliveryExprs: append([]Expr(nil), spec.deliveryExprs...)}
+	return Query{env: env, input: node, selections: spec.selections, routeTarget: spec.routeTarget, tableTarget: spec.tableTarget, namedWindowDirect: false, name: spec.name, statementUserObject: spec.statementUserObject, statementMetadata: cloneStatementMetadata(spec.statementMetadata), selector: spec.selector, routeSelector: spec.routeSelector, sink: spec.sink, contextName: spec.contextName, output: spec.output, distinct: spec.distinct, discardPartialsOnMatch: spec.discardPartialsOnMatch, suppressOverlappingMatches: spec.suppressOverlappingMatches, iterableUnbound: spec.iterableUnbound, selfSubselectPosteval: spec.selfSubselectPosteval, orderBy: append([]SortKey(nil), spec.orderBy...), limit: spec.limit, offset: spec.offset, limitExpr: spec.limitExpr, offsetExpr: spec.offsetExpr, limitExprSet: spec.limitExprSet, offsetExprSet: spec.offsetExprSet, indexHints: append([]indexHint(nil), spec.indexHints...), statementPriority: spec.statementPriority, statementPrioritySet: spec.statementPrioritySet, statementDrop: spec.statementDrop, subscriberDisallowed: spec.subscriberDisallowed, eventPrecedence: spec.eventPrecedence, deliveryMode: spec.deliveryMode, deliveryExprs: append([]Expr(nil), spec.deliveryExprs...)}
 }
 
 func SelectOnce(env *Environment, selections ...Selection) Query {
@@ -3389,6 +3407,7 @@ type Query struct {
 	statementUserObject        any
 	statementMetadata          statementMetadata
 	selector                   StreamSelector
+	routeSelector              StreamSelector
 	sink                       Sink
 	contextName                string
 	sourceLess                 bool

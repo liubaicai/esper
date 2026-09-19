@@ -364,7 +364,7 @@ func TestEPLInsertIntoRStreamOMToStmtParity(t *testing.T) {
 		From[insertIntoSupportBean](env, "SupportBean"),
 		Alias("intPrimitive", Field[insertIntoSupportBean, int]("intPrimitive")),
 		Alias("intBoxed", Field[insertIntoSupportBean, int]("intBoxed")),
-	).InsertInto("Event_1_RSOM", StatementName("s0"), WithRemoveStreamOnly())
+	).InsertInto("Event_1_RSOM", StatementName("s0"), WithRemoveStreamOnly(), WithRStreamRoute())
 	plan, err := env.Build(buildQuery)
 	if err != nil {
 		t.Fatal(err)
@@ -374,7 +374,7 @@ func TestEPLInsertIntoRStreamOMToStmtParity(t *testing.T) {
 		From[insertIntoSupportBean](env, "SupportBean").Window(LengthWindow(1)),
 		Alias("intPrimitive", Field[insertIntoSupportBean, int]("intPrimitive")),
 		Alias("intBoxed", Field[insertIntoSupportBean, int]("intBoxed")),
-	).InsertInto("Event_1_RSOM", StatementName("s0-windowed"), WithRemoveStreamOnly())
+	).InsertInto("Event_1_RSOM", StatementName("s0-windowed"), WithRemoveStreamOnly(), WithRStreamRoute())
 	windowedPlan, err := env.Build(windowedQuery)
 	if err != nil {
 		t.Fatal(err)

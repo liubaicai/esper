@@ -1,0 +1,73 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-insert-into-wrapper",
+ "description": "EPL insert-into wrapper parity replaying all three EPLInsertIntoWrapper executions with one fresh runtime per case: wrapper-bean replays EPLInsertIntoWrapperBean (ord 0), two @public producers into one shared wrapper type — i1 'insert into WrappedBean select *, intPrimitive as p0 from SupportBean' observed through the i1 listener as {theString:E1,intPrimitive:1,p0:1}, and i2 'insert into WrappedBean select sb from SupportEventContainsSupportBean sb' observed through the i2 listener as {theString:E2,intPrimitive:2,p0:null} ('sb' resolves to the nested-bean property and the unprovided p0 column projects null); three-stream-wrapper replays EPLInsertInto3StreamWrapper (ord 1), three chained 'insert into select irstream *' producers over #length(2) windows with || concat columns (StreamA -> StreamB propA -> StreamC propB), observed through the s2 listener which sees e3's new row and e1's fully-wrapped old row in one invocation when the rstream cascade removes e1 through all three windows; split-fork-join replays EPLInsertIntoOnSplitForkJoin (ord 2), a single module of on-trigger multi-clause splits — transpose(UDF(event)) maps SupportBean_S0 to MyEvent, where-filtered fork branches route through BStream/DStreamOne/DStreamTwo/FStreamOne/FStreamTwo, and 'output all' dual inserts feed FinalStream — observed through the final listener, which fires once for S0(1,true,true,false) and is not invoked for S0(1,true,true,true). Milestone calls in the Java source emit no records and are omitted.",
+ "javaRuntimes": [
+  "java-runtime-79356b0865c8de3ace17",
+  "java-runtime-32434556dcbd672d7cf7",
+  "java-runtime-581a1f109ff2588c6cde"
+ ],
+ "cases": [
+  {
+   "case": "wrapper-bean",
+   "runtimeId": "java-runtime-79356b0865c8de3ace17"
+  },
+  {
+   "case": "three-stream-wrapper",
+   "runtimeId": "java-runtime-32434556dcbd672d7cf7"
+  },
+  {
+   "case": "split-fork-join",
+   "runtimeId": "java-runtime-581a1f109ff2588c6cde"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "wrapper-bean"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {"theString": "E1", "intPrimitive": 1}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportEventContainsSupportBean",
+   "payload": {"sb": {"theString": "E2", "intPrimitive": 2}}
+  },
+  {
+   "op": "case",
+   "case": "three-stream-wrapper"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanSimple",
+   "payload": {"myString": "e1", "myInt": 1}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanSimple",
+   "payload": {"myString": "e2", "myInt": 1}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBeanSimple",
+   "payload": {"myString": "e3", "myInt": 1}
+  },
+  {
+   "op": "case",
+   "case": "split-fork-join"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {"id": "1", "p00": "true", "p01": "true", "p02": "false", "p03": ""}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {"id": "1", "p00": "true", "p01": "true", "p02": "true", "p03": ""}
+  }
+ ]
+}

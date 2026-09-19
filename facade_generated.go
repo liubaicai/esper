@@ -7997,6 +7997,14 @@ func WithDivisionByZeroReturnsNull(enabled bool) DivisionOption {
 	return internalengine.WithDivisionByZeroReturnsNull(enabled)
 }
 
+// WithIRStreamRoute models 'insert irstream into X': the route posts the
+// statement's remove-stream rows as inserts into the target. It does not
+// change the statement's own output selector — pair with WithOldStream
+// for 'insert irstream into X select irstream *'.
+func WithIRStreamRoute() QueryOption {
+	return internalengine.WithIRStreamRoute()
+}
+
 // WithInboundWorkers enables SendAsync and its representation-specific
 // variants. Each task still enters the Engine's serialized transaction
 // boundary; workers decouple producer latency and provide bounded admission.
@@ -8213,6 +8221,13 @@ func WithPropertySetter(name string, typ reflect.Type, setter PropertySetter) Sc
 // one value and returning either nothing or error.
 func WithPropertySetterMethod(name, method string, typ ...reflect.Type) SchemaOption {
 	return internalengine.WithPropertySetterMethod(name, method, typ...)
+}
+
+// WithRStreamRoute models 'insert rstream into X': the route posts only
+// the statement's remove-stream rows, as inserts into the target. Pair
+// with WithRemoveStreamOnly for 'insert rstream into X select rstream *'.
+func WithRStreamRoute() QueryOption {
+	return internalengine.WithRStreamRoute()
 }
 
 func WithRemoveStreamOnly() QueryOption {

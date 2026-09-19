@@ -19267,6 +19267,122 @@ func TestRunEplInsertIntoFromPatternDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+func TestRunEplInsertIntoWrapperDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-wrapper.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-wrapper.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-wrapper.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-insert-into-wrapper-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplInsertIntoWrapperDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "extra-column-drift",
+			mutate: func(trace *compat.Trace) {
+				// 'select *, intPrimitive as p0' must copy intPrimitive
+				// into the p0 column.
+				trace.Records[0].New[0].Fields["p0"] = 2
+			},
+		},
+		{
+			name: "unprovided-column-null-lost",
+			mutate: func(trace *compat.Trace) {
+				// 'select sb' leaves the unprovided p0 column null.
+				trace.Records[1].New[0].Fields["p0"] = 2
+			},
+		},
+		{
+			name: "nested-bean-property-drift",
+			mutate: func(trace *compat.Trace) {
+				// 'sb' resolves to the nested-bean property, not the
+				// stream alias.
+				trace.Records[1].New[0].Fields["theString"] = "E9"
+			},
+		},
+		{
+			name: "irstream-old-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// The rstream cascade must deliver e1's fully-wrapped
+				// old row in e3's invocation.
+				trace.Records[4].Old = nil
+			},
+		},
+		{
+			name: "wrapped-old-row-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[4].Old[0].Fields["propB"] = "e1AX"
+			},
+		},
+		{
+			name: "split-fork-join-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// The T,T,F path must reach FinalStream exactly once.
+				trace.Records[5].New = nil
+			},
+		},
+		{
+			name: "split-fork-join-id-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[5].New[0].Fields["id"] = 2
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-wrapper.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-wrapper.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-wrapper.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-insert-into-wrapper-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
 
 func TestRunResultsetOrderbyRowPerGroupDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,

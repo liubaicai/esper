@@ -316,6 +316,7 @@ func (q RowRecogQuery) Query(options ...QueryOption) Query {
 		statementUserObject:        spec.statementUserObject,
 		statementMetadata:          cloneStatementMetadata(spec.statementMetadata),
 		selector:                   spec.selector,
+		routeSelector:              spec.routeSelector,
 		sink:                       spec.sink,
 		contextName:                spec.contextName,
 		output:                     spec.output,

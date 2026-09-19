@@ -562,6 +562,7 @@ func TestInsertIntoRoutesRemoveStreamFromWindowEviction(t *testing.T) {
 		"RouteRemove",
 		StatementName("route-remove"),
 		WithRemoveStreamOnly(),
+		WithRStreamRoute(),
 	))
 	if err != nil {
 		t.Fatal(err)
@@ -619,7 +620,7 @@ func TestTimeOrderRemoveStreamRouteMatchesEsper(t *testing.T) {
 	routePlan, err := env.Build(Select(
 		From[externalTrade](env, "SupportBeanTimestamp").Window(TimeOrder(timestamp, 10*time.Second)),
 		Alias("id", Field[externalTrade, string]("symbol")),
-	).InsertInto("OrderedStream", StatementName("time-order-remove-route"), WithRemoveStreamOnly()))
+	).InsertInto("OrderedStream", StatementName("time-order-remove-route"), WithRemoveStreamOnly(), WithRStreamRoute()))
 	if err != nil {
 		t.Fatal(err)
 	}
