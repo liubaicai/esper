@@ -3529,42 +3529,68 @@ Active: Draft 4.467 ('epl-insert-into-istream-func').
  (EPLInsertIntoIRStreamFunc + stale EPLInsertIntoTransposePattern suite
  removed), goRefs extended; summary 706/333/1274/3823/3449/687;
  validator green. Roadmap + CHANGELOG entries added.
-- [ ] `make check`; parity review; commit/push.
+- [x] `make check` GREEN; parity review (agent `ParityReview467`,
+ read-only): OVERALL PASS, three P3 informational nits (step-count doc
+ nit fixed; unreferenced javaCommit const and capability-mapping
+ asymmetry are established conventions). Committed and pushed as
+ `f167beae5`. Git owns identity.
 
 
 ## Next work unit (prefetch)
-Frozen: Draft 4.467 ('epl-insert-into-istream-func') —
-EPLInsertIntoIRStreamFunc (single execution, ord 0,
-`java-runtime-033d9d0dabb864fd8179`, static `java-e3ea88d6389f41414b12`,
-variant "direct", flags []; scouts `NextJavaContract467` +
-`NextGoSurface467`; both hit yield-schema bugs — reports recovered via
-hub replies). NOTE: the epl.insertinto-pattern `remaining` list was
-stale — EPLInsertIntoTransposePattern was already DV'd in Draft 4.189
-(case.epl-insert-into-transpose-pattern, commit caed0e656); the scouts
-corrected the candidate to IRStreamFunc.
-- Leg 1 (lastevent-irstream): `@name('i0') @public insert irstream into
- MyStream select irstream theString as c0, istream() as c1 from
- SupportBean#lastevent` + `@name('s0') select * from MyStream`. Sends
- E1/E2/E3: i0 sees IR pairs (new{E2,true} old{E1,false}); s0 sees BOTH
- routed rows flattened as newData ({E2,true},{E1,false}) — 'insert
- irstream into' = removes-as-inserts (WithOldStream +
- WithIRStreamRoute). SODA leg `select istream() from SupportBean`
- asserts property type Boolean — compile-only, no trace record.
-- Leg 2 (join-irstream): `@name('s0') select irstream theString as c0,
- id as c1, istream() as c2 from SupportBean#lastevent,
- SupportBean_S0#lastevent`. Send SupportBean E1, SupportBean_S0(10),
- SupportBean E2 -> s0 new{E1,10,true} then new{E2,10,true}
- old{E1,10,false}.
-- Go surface (scout `NextGoSurface467`): NO engine work — full surface
- exists and is unit-proven (epl_insert_into_istream_func_parity_test.go).
- 'insert irstream into' = WithOldStream + WithIRStreamRoute (the 4.466
- routeSelector split); istream() = esper.IStream() (true on insert rows,
- false on routed-remove rows); join leg = Join + LastEvent + SelectFrom/
- JoinField + IStream(); SODA leg = no trace record (approved difference).
- Runner epl_insert_into_istream_func.go + mode; manifest upgrades
- existing case.epl-insert-into-istream-func implemented -> DV and drops
- EPLInsertIntoIRStreamFunc + EPLInsertIntoTransposePattern suite from
- the capability remaining list.
+Frozen: Draft 4.468 ('epl-insert-into-populate-single-col-by-method-call')
+- EPLInsertIntoPopulateSingleColByMethodCall (single execution, ord 0,
+`java-runtime-abe5e5cbda9667e7e112`, static `java-9db09f558176cc93b13e`,
+variant "direct", flags []; scouts `NextJavaContract468` +
+`NextGoSurface468`; both hit yield-schema bugs — reports recovered via
+hub replies). Single execution = 9 rounds (5 implicit-type + 4
+configured-type; bean has NO configured variant), each exactly 1
+newData + 0 oldData on the asserted listener.
+- Implicit variant (Java file:89-120): s1 `@name('s1') @public insert
+ into {Prefix}_Stream select * from {origin}` (listener attached but
+ SILENT — sent event is the sibling type) + s2 `@name('s2') @public
+ insert into {Prefix}_Stream select SupportStaticMethodLib.{fn}(s0)
+ from {eventType} as s0`; assert s1/s2 eventType underlying, send ONE
+ event, assertEventNew("s2") [type class + underlying + props];
+ undeploy s2 then s1.
+- Configured variant (file:123-148): `@name('insert') insert into
+ {target} select SupportStaticMethodLib.{fn}(s0) from {origin} as s0`
+ (no listener) + `@name('s0') select * from {target}`; send ONE origin
+ event, assertEventNew("s0"); undeploy s0 then insert.
+- Rounds: bean implicit (SupportBean origin, convertEvent,
+ SupportMarketDataBean("ACME",0,0L,null); assert theString="ACME" ONLY);
+ map implicit+configured (MapOne/MapTwo, convertEventMap, {one,two} ->
+ {one,"|two|"}); OA implicit+configured (OAOne/OATwo,
+ convertEventObjectArray); avro implicit+configured (AvroOne/AvroTwo,
+ convertEventAvro); json implicit+configured (JsonOne/JsonTwo created
+ mid-run via `create json schema`, convertEventJson returns a JSON
+ STRING re-parsed into the Json underlying; configured round's type
+ assertions tautological Object.class).
+- UDF semantics (SupportStaticMethodLib.java:308-336): each takes the
+ source event's underlying, returns same-rep underlying with field
+ 'two' wrapped "|…|"; bean variant returns SupportBean(symbol,
+ volume.intValue()).
+- Go surface (scout `NextGoSurface468`): NO engine work — all
+ primitives proven. Route = Select(...).InsertInto(target,
+ StatementName(...)); single-column event-typed projection =
+ Transpose[T](Func1("convertEvent*", conv, EventValue[T]()));
+ EventValue[T] works for every rep (struct/map/[]any/*AvroRecord/map);
+ registrations RegisterStruct/Map/ObjectArray/Avro/JSON all exist;
+ sends via SendEvent/SendRecord/SendObjectArray/SendJSON/Send;
+ listener-on-inserting-statement precedent iupsSubscribe; statement
+ type assertions -> "value" records (typed_columns precedent).
+ Workarounds: pre-register {Prefix}_Stream with same kind/fields as
+ origin (approved difference, transpose-stream precedent); JVM-internal
+ class assertions unobservable -> schema Kind()/TypeName "value"
+ records; avro UDF returns map[string]any into RegisterAvro target;
+ json UDF returns string into RegisterJSON target.
+- Runner: internal/app/parity/epl_insert_into_populate_single_col_by_
+ method_call.go mirroring epl_insert_into_populate_und_stream_select.go;
+ 9 cases (implicit-bean, implicit-map, configured-map, implicit-oa,
+ configured-oa, implicit-avro, configured-avro, implicit-json,
+ configured-json); manifest new case
+ case.epl-insert-into-populate-single-col-by-method-call born-DV under
+ capability query.insert-into-route (sibling mapping); remove the entry
+ from epl.insertinto-pattern remaining.
 
 ## Delegation checkpoint (recent)
 
