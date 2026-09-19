@@ -1542,6 +1542,7 @@
     "internal/app/parity/context_key_segmented_invalid.go",
     "internal/app/parity/context_key_segmented_subselect_prev_prior.go",
     "internal/app/parity/context_keyed_subquery.go",
+    "internal/app/parity/context_lifecycle.go",
     "internal/app/parity/context_nested_initterm.go",
     "internal/app/parity/context_output.go",
     "internal/app/parity/context_variables.go",
@@ -1555,6 +1556,7 @@
     "internal/esper/context_selector.go",
     "internal/esper/context_test.go",
     "internal/esper/high_cardinality_context_parity_test.go",
+    "internal/esper/split_stream.go",
     "internal/esper/state.go"
    ],
    "phase": 1,
@@ -1585,9 +1587,13 @@
     "java-runtime-9356c517931472be6cad",
     "java-runtime-9539162a80f17616650f",
     "java-runtime-9aa54450b89fbc94ab73",
+    "java-runtime-a80d326a65c440aa438f",
+    "java-runtime-ba7774dedca1bd391c8c",
     "java-runtime-bd4672ec90862ee08790",
     "java-runtime-c5406f66fdd34533bcb2",
-    "java-runtime-c91629ba5a771e1725db"
+    "java-runtime-c91629ba5a771e1725db",
+    "java-runtime-d59fd16257279a2118a7",
+    "java-runtime-f04b99d603d61f3808fb"
    ],
    "representativeScenarioIds": [
     "context-hash-segmented",
@@ -45813,6 +45819,75 @@
     "java-f9f4b6fe3adcdae63ef4"
    ],
    "notes": "Ord 25/28/6 ContextKeySegmented.java. Pattern-fire-when-allocated pins timer:interval(0) firing synchronously at partition allocation for both a select-from-pattern statement and an on-pattern statement; subtype resolves the partition key through the event type's supertype chain (ISupportAImpl -> ISupportA -> ISupportBaseAB). Engine fix: merged allocBatch.Time into the statement batch when partition.process returned a zero-Time batch (timer-only pattern)."
+  },
+  {
+   "id": "case.context-lifecycle",
+   "javaRuntimeIds": [
+    "java-runtime-d59fd16257279a2118a7",
+    "java-runtime-a80d326a65c440aa438f",
+    "java-runtime-f04b99d603d61f3808fb",
+    "java-runtime-ba7774dedca1bd391c8c"
+   ],
+   "javaStaticIds": [
+    "java-1d9805ba018e9b1bed1d",
+    "java-15148b122e0ca21c3681",
+    "java-1a96001402ca3a4c074e",
+    "java-407112a1151ec755e45b"
+   ],
+   "javaNames": [
+    "ContextLifecycleSplitStream",
+    "ContextLifecycleNWOtherContextOnExpr",
+    "ContextLifecycleInvalid",
+    "ContextLifecycleSimple"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextLifecycle.java"
+   ],
+   "goTests": [
+    "internal/app/parity/context_lifecycle.go"
+   ],
+   "status": "differential-verified",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "evidence": [
+    "testdata/parity/context-lifecycle.evidence.json"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d59fd16257279a2118a7",
+    "java-runtime-a80d326a65c440aa438f",
+    "java-runtime-f04b99d603d61f3808fb",
+    "java-runtime-ba7774dedca1bd391c8c"
+   ],
+   "notes": "Draft 4.473 follow-on: four ContextLifecycle executions differential-verified (ords 0/2/3/4). Shared-core fixes: split-stream named-window inserts deferred until all branch selects evaluate (subquery sees pre-trigger window state); ScheduleCountOverall counts one schedule per temporal context with deployed statements. Ord 1 VirtualDataWindow split into case.context-lifecycle-vdw (intentionally-different)."
+  },
+  {
+   "id": "case.context-lifecycle-vdw",
+   "javaRuntimeIds": [
+    "java-runtime-38ddfd09bd97e862e438"
+   ],
+   "javaStaticIds": [
+    "java-724063e9b5a1a2b3d83a"
+   ],
+   "javaNames": [
+    "ContextLifecycleVirtualDataWindow"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextLifecycle.java"
+   ],
+   "goTests": [
+    "internal/app/parity/context_lifecycle.go"
+   ],
+   "status": "intentionally-different",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "difference": "Java's virtual-data-window SPI contract — one provider-instantiated window per context partition plus destroy() on each window and the factory at undeploy — has no Go boundary: VirtualDataWindowProvider is registered but never invoked, and there is no test:vdw()-style plugin-window binding. The pinned unrepresentable record documents the contract without claiming a Go surface.",
+   "notes": "Split from case.context-lifecycle (Draft 4.474): the execution is SPI-internal with no event output; unrepresentable in the typed Go API."
   }
  ],
  "mappings": [
@@ -49011,14 +49086,22 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-key-segmented-allocation-time"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-lifecycle"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-lifecycle-vdw"
   }
  ],
  "summary": {
-  "inventoriedCases": 714,
-  "implementedCases": 712,
-  "differentialVerifiedCases": 339,
-  "differentialVerifiedRuntimeIds": 1290,
-  "intentionallyDifferentCases": 32,
+  "inventoriedCases": 716,
+  "implementedCases": 714,
+  "differentialVerifiedCases": 340,
+  "differentialVerifiedRuntimeIds": 1294,
+  "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 122,
@@ -49027,13 +49110,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3839,
-  "referencedJavaRuntimeIds": 3465,
+  "runtimeAssociationCount": 3844,
+  "referencedJavaRuntimeIds": 3470,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 671,
+  "unreferencedJavaRuntimeIds": 666,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 714,
+  "totalCases": 716,
   "totalCapabilities": 122
  }
 }

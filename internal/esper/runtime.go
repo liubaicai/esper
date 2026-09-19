@@ -2117,6 +2117,23 @@ func (e *Engine) ScheduleCountOverall(ctx context.Context) (int, error) {
 		total += statementScheduleCount(&statement.runtime, statement.plan.query, now, variables)
 		statement.mu.RUnlock()
 	}
+	// A temporal context owns one pending start/end schedule while at least
+	// one statement is deployed against it — shared across statements, so
+	// two statements on NineToFive still count a single callback. Go's
+	// temporal contexts are recurring, so a boundary is always pending while
+	// deployed; a Java non-recurring `start @now end after` context whose
+	// end already passed would report zero, an approximation this count
+	// does not model.
+	for contextName, refs := range e.contextStatementRefs {
+		if refs <= 0 {
+			continue
+		}
+		definition, ok := e.env.Context(contextName)
+		if !ok || !definition.isTemporal() {
+			continue
+		}
+		total++
+	}
 	_ = ctx
 	return total, nil
 }

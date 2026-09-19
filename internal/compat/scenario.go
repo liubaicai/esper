@@ -139,6 +139,19 @@ func (s Scenario) Validate() error {
 			if step.Count == nil {
 				return fmt.Errorf("compat: step %d schedule-count-overall has no count", i)
 			}
+		case "context-count":
+			// Pins the number of registered/deployed context definitions
+			// (SupportContextMgmtHelper.getContextCount counterpart).
+			if step.Count == nil {
+				return fmt.Errorf("compat: step %d context-count has no count", i)
+			}
+		case "undeploy-error":
+			// Pins an undeploy precondition failure (for example a context
+			// still referenced by a deployment); expectError carries the
+			// pinned Java message prefix.
+			if strings.TrimSpace(step.ExpectError) == "" {
+				return fmt.Errorf("compat: step %d undeploy-error has no expectError", i)
+			}
 		case "read-variable":
 			if strings.TrimSpace(step.Name) == "" {
 				return fmt.Errorf("compat: step %d read-variable has no name", i)
@@ -204,6 +217,13 @@ func (s Scenario) Validate() error {
 		case "add-listener", "add-partition-listener", "remove-listener", "remove-listeners":
 			// Context lifecycle listener registration steps; the runner
 			// pins the full step key, so no field-level checks are needed.
+		case "unrepresentable":
+			// Pins a Java surface with no Go boundary (for example the
+			// virtual-data-window SPI lifecycle); the runner emits the
+			// pinned record verbatim from expectError.
+			if strings.TrimSpace(step.ExpectError) == "" {
+				return fmt.Errorf("compat: step %d unrepresentable has no expectError", i)
+			}
 		case "value", "faf-insert", "faf-delete":
 			// Typed-column insert-into ops: value pins an event-type-name
 			// assertion, faf-insert/faf-delete run fire-and-forget

@@ -214,6 +214,14 @@ func (s *Statement) processSplitStreamRuntime(ctx context.Context, runtime *stat
 		}
 	}
 	result := ResultBatch{Time: now}
+	// Esper evaluates every matching insert clause's select before any
+	// named-window insert is applied, and the route queue drains only after
+	// the whole trigger statement completes: window deliveries accumulate
+	// across ALL candidates of this trigger event so a later candidate's
+	// branch subquery still observes the pre-trigger window state. Stream
+	// routes already queue for post-trigger delivery; deferred window
+	// inserts still land before queued routes cascade.
+	var windowDeliveries []func() error
 	processCandidate := func(candidate Event) error {
 		matched := false
 		for _, branch := range definition.splitBranches {
@@ -238,7 +246,16 @@ func (s *Statement) processSplitStreamRuntime(ctx context.Context, runtime *stat
 			if err != nil {
 				return err
 			}
-			if err := s.deliverSplitStreamEvent(ctx, branch, routed, now, variables); err != nil {
+			isWindow := false
+			if s.engine != nil && s.engine.env != nil {
+				_, isWindow = s.engine.env.NamedWindow(branch.Target)
+			}
+			if isWindow {
+				branch, routed := branch, routed
+				windowDeliveries = append(windowDeliveries, func() error {
+					return s.deliverSplitStreamEvent(ctx, branch, routed, now, variables)
+				})
+			} else if err := s.deliverSplitStreamEvent(ctx, branch, routed, now, variables); err != nil {
 				return err
 			}
 			matched = true
@@ -269,6 +286,11 @@ func (s *Statement) processSplitStreamRuntime(ctx context.Context, runtime *stat
 	if err != nil {
 		return ResultBatch{}, err
 	}
+	for _, deliver := range windowDeliveries {
+		if err := deliver(); err != nil {
+			return ResultBatch{}, err
+		}
+	}
 	if !result.empty() {
 		result.Sequence = runtime.seq.Add(1)
 	}
@@ -283,6 +305,10 @@ func (s *Statement) processSplitStreamRuntime(ctx context.Context, runtime *stat
 func (s *Statement) processSplitStreamBranchSources(ctx context.Context, runtime *statementRuntime, definition *triggerDefinition, now time.Time, event Event, variables map[string]Value) (ResultBatch, error) {
 	result := ResultBatch{Time: now}
 	matched := false
+	// As in processSplitStreamRuntime, named-window inserts are deferred
+	// until every matching branch's select has been evaluated so a later
+	// branch's subquery observes the pre-trigger window state.
+	var windowDeliveries []func() error
 	for _, branch := range definition.splitBranches {
 		input := definition.input
 		if branch.source != nil {
@@ -308,7 +334,16 @@ func (s *Statement) processSplitStreamBranchSources(ctx context.Context, runtime
 			if err != nil {
 				return err
 			}
-			if err := s.deliverSplitStreamEvent(ctx, branch, routed, now, variables); err != nil {
+			isWindow := false
+			if s.engine != nil && s.engine.env != nil {
+				_, isWindow = s.engine.env.NamedWindow(branch.Target)
+			}
+			if isWindow {
+				branch, routed := branch, routed
+				windowDeliveries = append(windowDeliveries, func() error {
+					return s.deliverSplitStreamEvent(ctx, branch, routed, now, variables)
+				})
+			} else if err := s.deliverSplitStreamEvent(ctx, branch, routed, now, variables); err != nil {
 				return err
 			}
 			branchMatched = true
@@ -337,6 +372,11 @@ func (s *Statement) processSplitStreamBranchSources(ctx context.Context, runtime
 			if !definition.splitAll {
 				break
 			}
+		}
+	}
+	for _, deliver := range windowDeliveries {
+		if err := deliver(); err != nil {
+			return ResultBatch{}, err
 		}
 	}
 	if !matched {

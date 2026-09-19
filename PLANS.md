@@ -96,7 +96,53 @@ Active: Draft 4.473 ('context-nested-initterm').
 - [x] Confirmation review (same agent ParityReview4473): OVERALL PASS, all findings verified fixed;
   residual non-blocking note — untyped category/hash parents cannot model Java's declared-type gate
   for foreign-typed events (inherent to the untyped Go parent API, latent, unexercised).
-- [x] Shipped; Git owns identity. Draft 4.473 committed and pushed as `ee8f84d9e`.
+- [x] Shipped; Git owns identity. Draft 4.473 committed and pushed as `ee8f84d9e` (+ `5e020557e` checkpoint).
+
+## Current work unit
+Active: Draft 4.474 ('context-lifecycle').
+
+- [x] Contract frozen from read-only scouts (agents NextJavaContract7-2 + NextGoSurface7-2):
+ ContextLifecycle.java all 5 executions — ord 0 SplitStream `java-runtime-d59fd16257279a2118a7`
+ (static `java-1d9805ba018e9b1bed1d`), ord 1 VirtualDataWindow `java-runtime-38ddfd09bd97e862e438`
+ (static `java-724063e9b5a1a2b3d83a`), ord 2 NWOtherContextOnExpr `java-runtime-a80d326a65c440aa438f`
+ (static `java-15148b122e0ca21c3681`), ord 3 Invalid `java-runtime-f04b99d603d61f3808fb` INVALIDITY
+ (static `java-1a96001402ca3a4c074e`), ord 4 Simple `java-runtime-ba7774dedca1bd391c8c` STATICHOOK
+ (static `java-407112a1151ec755e45b`). Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c`.
+- [x] Ord 1 VirtualDataWindow is UNREPRESENTABLE: Go's VirtualDataWindowProvider is registered but
+ never invoked — no test:vdw() plugin-window binding, no per-partition instantiation, no destroy
+ hooks. Recorded as intentionally-different probe (Java SPI contract pinned, no Go boundary).
+- [x] **Engine fix 1 (shared core, split_stream.go)**: named-window split-branch inserts deferred
+ until every matching branch's select is evaluated — Java evaluates all insert-clause selects
+ before applying window inserts, so a later branch's subquery sees pre-trigger window state
+ (ord 0 pins mymax = null,null,100). Preemptive visibility preserved: deferred inserts still land
+ before queued stream routes cascade (TestSplitStreamPreemptiveNamedWindowParity green).
+- [x] **Engine fix 2 (shared core, runtime.go)**: ScheduleCountOverall now counts one pending
+ schedule per temporal context with deployed statements (shared across statements) — ord 4 pins
+ sched=1 while ≥1 NineToFive statement is deployed, 0 otherwise.
+- [x] Parity assets delivered by LifecycleAssets (parity-asset-worker; first stream stalled before
+ any writes, revived and completed): runner internal/app/parity/context_lifecycle.go, run.go wiring,
+ scenario testdata/parity/context-lifecycle.json (5 cases / 70 pinned steps), oracle
+ tools/java-oracle/ContextLifecycleScenarioOracle.java + run-context-lifecycle.sh.
+- [x] Shared validator additions (internal/compat/scenario.go, primary-owned): whitelisted
+ `unrepresentable` (expectError required), `context-count` (count required), `undeploy-error`
+ (expectError required) step ops.
+- [x] Java trace generated via run-context-lifecycle.sh against the pinned checkout (26 records);
+ Go trace 26 records; `-mode context-lifecycle-diff` status passing / 0 differences; evidence
+ testdata/parity/context-lifecycle.evidence.json.
+- [x] Manifest/roadmap/CHANGELOG updated: 716 cases / 340 DV / 1294 DV runtime IDs; new cases
+ case.context-lifecycle (DV, ords 0/2/3/4) + case.context-lifecycle-vdw (intentionally-different,
+ ord 1) + mappings; context.partition goRefs/DV IDs extended.
+- [x] Full local gates GREEN: `make check` exit 0 (parity 80s, internal/esper 69s, compat 0.16s);
+ split-stream + schedule-count targeted tests green; viewgroup-merge-view-diff re-run passing.
+- [x] Independent parity review (agent ParityReview4474): OVERALL PASS, no P0/P1/P2; two P3s
+ addressed post-review:
+ - P3 FIXED: windowDeliveries hoisted to trigger-event scope in processSplitStreamRuntime so a
+   later candidate's branch subquery observes pre-trigger window state (Java drains the route
+   queue only after the whole trigger statement).
+ - P3 documented: ScheduleCountOverall counts temporal contexts unconditionally while deployed;
+   comment records the recurring-model approximation vs Java's non-recurring past-end case.
+- [x] Post-review re-validation: context-lifecycle-diff passing / 0 differences; split/schedule
+  targeted tests green; `make check` re-run after fixes.
 
 ## Current work unit
 Active: Draft 4.453 ('expr-filter-in-and-between').

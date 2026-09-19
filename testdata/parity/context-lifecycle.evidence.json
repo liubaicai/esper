@@ -1,0 +1,944 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-d59fd16257279a2118a7",
+    "java-runtime-38ddfd09bd97e862e438",
+    "java-runtime-a80d326a65c440aa438f",
+    "java-runtime-f04b99d603d61f3808fb",
+    "java-runtime-ba7774dedca1bd391c8c"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextLifecycle.java"
+  ],
+  "javaExecutions": [
+    "ContextLifecycleSplitStream",
+    "ContextLifecycleVirtualDataWindow",
+    "ContextLifecycleNWOtherContextOnExpr",
+    "ContextLifecycleInvalid",
+    "ContextLifecycleSimple"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-lifecycle",
+    "steps": [
+      {
+        "op": "case",
+        "case": "split-stream"
+      },
+      {
+        "op": "deploy",
+        "case": "split-stream",
+        "statement": "ctx",
+        "epl": "@public create context CtxSegmentedByTarget partition by theString from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "split-stream",
+        "statement": "out",
+        "epl": "@Name('out') @public context CtxSegmentedByTarget on SupportBean insert into NewSupportBean select * where intPrimitive = 100"
+      },
+      {
+        "op": "deploy",
+        "case": "split-stream",
+        "statement": "s0",
+        "epl": "@name('s0') select * from NewSupportBean"
+      },
+      {
+        "op": "send",
+        "case": "split-stream",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "split-stream",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "split-stream"
+      },
+      {
+        "op": "deploy",
+        "case": "split-stream",
+        "statement": "ctx",
+        "epl": "@public create context CtxSegmentedByTarget partition by theString from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "split-stream",
+        "statement": "window",
+        "epl": "@public context CtxSegmentedByTarget create window NewEvent#unique(theString) as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "split-stream",
+        "statement": "out",
+        "epl": "@Name('out') @public context CtxSegmentedByTarget on SupportBean insert into NewEvent select * where intPrimitive = 100 insert into NewEventTwo select (select max(intPrimitive) from NewEvent) as mymax  output all"
+      },
+      {
+        "op": "deploy",
+        "case": "split-stream",
+        "statement": "s0",
+        "epl": "@name('s0') select * from NewEventTwo"
+      },
+      {
+        "op": "send",
+        "case": "split-stream",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "split-stream",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "split-stream",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "split-stream"
+      },
+      {
+        "op": "case",
+        "case": "vdw-unrepresentable"
+      },
+      {
+        "op": "deploy",
+        "case": "vdw-unrepresentable",
+        "statement": "ctx",
+        "epl": "@public create context CtxSegmented as partition by theString from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "vdw-unrepresentable",
+        "statement": "window",
+        "epl": "@public context CtxSegmented create window TestVDWWindow.test:vdw() as SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "vdw-unrepresentable",
+        "statement": "s0",
+        "epl": "select * from TestVDWWindow"
+      },
+      {
+        "op": "send",
+        "case": "vdw-unrepresentable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "vdw-unrepresentable",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "vdw-unrepresentable"
+      },
+      {
+        "op": "unrepresentable",
+        "case": "vdw-unrepresentable",
+        "statement": "virtual-data-window",
+        "expectError": "virtual data window SPI: one VirtualDataWindow instance per context partition (two partitions observed for E1/E2), every window and the factory destroyed on undeploy; no Go plugin-window boundary"
+      },
+      {
+        "op": "case",
+        "case": "nw-other-context-onexpr"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-other-context-onexpr",
+        "statement": "ctx-nine",
+        "epl": "@public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-other-context-onexpr",
+        "statement": "ctx-ten",
+        "epl": "@public create context TenToFive as start (0, 10, *, *, *) end (0, 17, *, *, *)"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-other-context-onexpr",
+        "statement": "createwindow",
+        "epl": "@name('createwindow') @public context NineToFive create window MyWindow#keepall as SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "nw-other-context-onexpr",
+        "statement": "trigger-no-context",
+        "expectError": "Cannot create on-trigger expression: Named window 'MyWindow' was declared with context 'NineToFive', please declare the same context name",
+        "epl": "on SupportBean_S0 s0 merge MyWindow mw when matched then update set intPrimitive = 1"
+      },
+      {
+        "op": "build-error",
+        "case": "nw-other-context-onexpr",
+        "statement": "trigger-other-context",
+        "expectError": "Cannot create on-trigger expression: Named window 'MyWindow' was declared with context 'NineToFive', please use the same context instead",
+        "epl": "context TenToFive on SupportBean_S0 s0 merge MyWindow mw when matched then update set intPrimitive = 1"
+      },
+      {
+        "op": "undeploy",
+        "case": "nw-other-context-onexpr",
+        "statement": "createwindow"
+      },
+      {
+        "op": "deploy",
+        "case": "nw-other-context-onexpr",
+        "statement": "window-two",
+        "epl": "@public create window MyWindowTwo#keepall as SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "nw-other-context-onexpr",
+        "statement": "trigger-contextless-window",
+        "expectError": "Cannot create on-trigger expression: Named window 'MyWindowTwo' was declared without a context",
+        "epl": "context TenToFive on SupportBean_S0 s0 merge MyWindowTwo mw when matched then update set intPrimitive = 1"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nw-other-context-onexpr"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "duplicate-context",
+        "expectError": "Context by name 'NineToFive' already exists",
+        "epl": "@name('ctx') @public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "s0",
+        "epl": "context NineToFive select * from SupportBean"
+      },
+      {
+        "op": "undeploy-error",
+        "case": "invalid",
+        "statement": "ctx",
+        "expectError": "A precondition is not satisfied: Context 'NineToFive' cannot be un-deployed as it is referenced by deployment"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "context-not-found",
+        "expectError": "Context by name 'EightToSix' could not be found",
+        "epl": "context EightToSix select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "abc-stream",
+        "epl": "@public insert into ABCStream select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "ctx-segmented",
+        "epl": "@Name('context') @public create context SegmentedByAString partition by theString from ABCStream"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "update-istream-context",
+        "expectError": "Update IStream is not supported in conjunction with a context",
+        "epl": "context SegmentedByAString update istream ABCStream set intPrimitive = (select id from SupportBean_S0#lastevent) where intPrimitive \u003c 0"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "ctx-abc",
+        "epl": "@public create context ABC start @now end after 5 seconds"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "create-context-in-context",
+        "expectError": "A create-context statement cannot itself be associated to a context, please declare a nested context instead",
+        "epl": "context ABC create context DEF start @now end after 5 seconds"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "context-field-no-context",
+        "expectError": "Failed to validate select-clause expression 'context.sb.theString': Failed to resolve property 'context.sb.theString' to a stream or nested property in a stream",
+        "epl": "select context.sb.theString from SupportBean as sb"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid"
+      },
+      {
+        "op": "case",
+        "case": "simple"
+      },
+      {
+        "op": "context-count",
+        "case": "simple",
+        "count": 0
+      },
+      {
+        "op": "schedule-count-overall",
+        "case": "simple",
+        "count": 0
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "ctx",
+        "epl": "@Name('context') @public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+      },
+      {
+        "op": "context-count",
+        "case": "simple",
+        "count": 1
+      },
+      {
+        "op": "schedule-count-overall",
+        "case": "simple",
+        "count": 0
+      },
+      {
+        "op": "undeploy",
+        "case": "simple",
+        "statement": "ctx"
+      },
+      {
+        "op": "context-count",
+        "case": "simple",
+        "count": 0
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "ctx",
+        "epl": "@Name('context') @public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+      },
+      {
+        "op": "context-count",
+        "case": "simple",
+        "count": 1
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "s0",
+        "epl": "@Name('s0') context NineToFive select * from SupportBean"
+      },
+      {
+        "op": "schedule-count-overall",
+        "case": "simple",
+        "count": 1
+      },
+      {
+        "op": "undeploy",
+        "case": "simple",
+        "statement": "s0"
+      },
+      {
+        "op": "schedule-count-overall",
+        "case": "simple",
+        "count": 0
+      },
+      {
+        "op": "undeploy",
+        "case": "simple",
+        "statement": "ctx"
+      },
+      {
+        "op": "context-count",
+        "case": "simple",
+        "count": 0
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "ctx",
+        "epl": "@Name('context') @public create context NineToFive as start (0, 9, *, *, *) end (0, 17, *, *, *)"
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "c",
+        "epl": "@Name('C') context NineToFive select * from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "simple",
+        "statement": "d",
+        "epl": "@Name('D') context NineToFive select * from SupportBean"
+      },
+      {
+        "op": "schedule-count-overall",
+        "case": "simple",
+        "count": 1
+      },
+      {
+        "op": "undeploy-all",
+        "case": "simple"
+      },
+      {
+        "op": "context-count",
+        "case": "simple",
+        "count": 0
+      },
+      {
+        "op": "schedule-count-overall",
+        "case": "simple",
+        "count": 0
+      },
+      {
+        "op": "undeploy-all",
+        "case": "simple"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-lifecycle",
+    "records": [
+      {
+        "case": "split-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 100,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "split-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymax": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "split-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymax": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "split-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymax": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "vdw-unrepresentable",
+        "operation": "unrepresentable",
+        "statement": "virtual-data-window",
+        "sequence": 0,
+        "value": "virtual data window SPI: one VirtualDataWindow instance per context partition (two partitions observed for E1/E2), every window and the factory destroyed on undeploy; no Go plugin-window boundary"
+      },
+      {
+        "case": "nw-other-context-onexpr",
+        "operation": "compile-error",
+        "statement": "trigger-no-context",
+        "sequence": 0,
+        "value": "Cannot create on-trigger expression: Named window 'MyWindow' was declared with context 'NineToFive', please declare the same context name"
+      },
+      {
+        "case": "nw-other-context-onexpr",
+        "operation": "compile-error",
+        "statement": "trigger-other-context",
+        "sequence": 0,
+        "value": "Cannot create on-trigger expression: Named window 'MyWindow' was declared with context 'NineToFive', please use the same context instead"
+      },
+      {
+        "case": "nw-other-context-onexpr",
+        "operation": "compile-error",
+        "statement": "trigger-contextless-window",
+        "sequence": 0,
+        "value": "Cannot create on-trigger expression: Named window 'MyWindowTwo' was declared without a context"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-context",
+        "sequence": 0,
+        "value": "Context by name 'NineToFive' already exists"
+      },
+      {
+        "case": "invalid",
+        "operation": "undeploy-error",
+        "statement": "ctx",
+        "sequence": 0,
+        "value": "A precondition is not satisfied: Context 'NineToFive' cannot be un-deployed as it is referenced by deployment"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "context-not-found",
+        "sequence": 0,
+        "value": "Context by name 'EightToSix' could not be found"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "update-istream-context",
+        "sequence": 0,
+        "value": "Update IStream is not supported in conjunction with a context"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "create-context-in-context",
+        "sequence": 0,
+        "value": "A create-context statement cannot itself be associated to a context, please declare a nested context instead"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "context-field-no-context",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'context.sb.theString': Failed to resolve property 'context.sb.theString' to a stream or nested property in a stream"
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 1
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 1
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 1
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 1
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 0
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-lifecycle",
+    "records": [
+      {
+        "case": "split-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 100,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "split-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymax": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "split-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymax": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "split-stream",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "mymax": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "vdw-unrepresentable",
+        "operation": "unrepresentable",
+        "statement": "virtual-data-window",
+        "sequence": 0,
+        "value": "virtual data window SPI: one VirtualDataWindow instance per context partition (two partitions observed for E1/E2), every window and the factory destroyed on undeploy; no Go plugin-window boundary"
+      },
+      {
+        "case": "nw-other-context-onexpr",
+        "operation": "compile-error",
+        "statement": "trigger-no-context",
+        "sequence": 0,
+        "value": "Cannot create on-trigger expression: Named window 'MyWindow' was declared with context 'NineToFive', please declare the same context name"
+      },
+      {
+        "case": "nw-other-context-onexpr",
+        "operation": "compile-error",
+        "statement": "trigger-other-context",
+        "sequence": 0,
+        "value": "Cannot create on-trigger expression: Named window 'MyWindow' was declared with context 'NineToFive', please use the same context instead"
+      },
+      {
+        "case": "nw-other-context-onexpr",
+        "operation": "compile-error",
+        "statement": "trigger-contextless-window",
+        "sequence": 0,
+        "value": "Cannot create on-trigger expression: Named window 'MyWindowTwo' was declared without a context"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-context",
+        "sequence": 0,
+        "value": "Context by name 'NineToFive' already exists"
+      },
+      {
+        "case": "invalid",
+        "operation": "undeploy-error",
+        "statement": "ctx",
+        "sequence": 0,
+        "value": "A precondition is not satisfied: Context 'NineToFive' cannot be un-deployed as it is referenced by deployment"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "context-not-found",
+        "sequence": 0,
+        "value": "Context by name 'EightToSix' could not be found"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "update-istream-context",
+        "sequence": 0,
+        "value": "Update IStream is not supported in conjunction with a context"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "create-context-in-context",
+        "sequence": 0,
+        "value": "A create-context statement cannot itself be associated to a context, please declare a nested context instead"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "context-field-no-context",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'context.sb.theString': Failed to resolve property 'context.sb.theString' to a stream or nested property in a stream"
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 1
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 1
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 1
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 1
+      },
+      {
+        "case": "simple",
+        "operation": "context-count",
+        "sequence": 0,
+        "count": 0
+      },
+      {
+        "case": "simple",
+        "operation": "schedule-count-overall",
+        "sequence": 0,
+        "count": 0
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

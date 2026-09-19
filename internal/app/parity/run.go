@@ -68,6 +68,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-invalid and context-key-segmented-invalid-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-allocation-time and context-key-segmented-allocation-time-diff")
 		fmt.Fprintln(stderr, "runner modes include context-nested-initterm and context-nested-initterm-diff")
+		fmt.Fprintln(stderr, "runner modes include context-lifecycle and context-lifecycle-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -155,6 +156,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadContextKeySegmentedSubselectPrevPriorScenario(file)
 	} else if *mode == "context-key-segmented-invalid" || *mode == "context-key-segmented-invalid-diff" {
 		scenario, err = loadContextKeySegmentedInvalidScenario(file)
+	} else if *mode == "context-lifecycle" || *mode == "context-lifecycle-diff" {
+		scenario, err = loadContextLifecycleScenario(file)
 	} else if *mode == "epl-variables-event-typed" || *mode == "epl-variables-event-typed-diff" {
 		scenario, err = loadEplVariablesEventTypedScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
@@ -3274,6 +3277,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, contextNestedInitTermJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, contextNestedInitTermJavaSources),
 				splitMetadata(*javaExecutions, contextNestedInitTermJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "context-lifecycle" || *mode == "context-lifecycle-diff" {
+		trace, err := runContextLifecycleScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-lifecycle-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, contextLifecycleJavaCommit,
+				splitMetadata(*javaRuntimeIDs, contextLifecycleJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextLifecycleSources),
+				splitMetadata(*javaExecutions, contextLifecycleJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
