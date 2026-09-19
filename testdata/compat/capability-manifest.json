@@ -4616,17 +4616,19 @@
     "internal/app/parity/epl_other_for_group_delivery.go",
     "internal/esper/stream.go",
     "internal/esper/runtime.go",
-    "internal/esper/plan.go"
+    "internal/esper/plan.go",
+    "internal/app/parity/epl_other_select_expr_stream_selector_remainder.go"
    ],
    "phase": 2,
    "status": "implemented",
    "remaining": [
-    "EPLOtherSelectExprStreamSelector suite partially covered (10/17 executions); uncovered: EPLOtherInvalidSelectWildcardProperty, EPLOtherInsertTransposeNestedProperty, EPLOtherInsertFromPattern, EPLOtherObjectModelJoinAlias, EPLOtherNoJoinWithAliasWithProperties, EPLOtherJoinWithAliasWithProperties, EPLOtherInvalidSelect"
+    "EPLOtherSelectExprStreamSelector suite: 16/17 executions covered; ord 3 EPLOtherObjectModelJoinAlias intentionally-different (SODA/eplToModel JVM-only compile path; runtime contract covered by ords 8/9)"
    ],
    "verification": [
     "inventoried",
     "implemented",
-    "differential-verified"
+    "differential-verified",
+    "intentionally-different"
    ],
    "differentialVerifiedRuntimeIds": [
     "java-runtime-043dced54921cbf3b571",
@@ -4653,8 +4655,11 @@
     "java-runtime-1b0fc79aaff7449c2c6e",
     "java-runtime-6238688d054ca4ece96e",
     "java-runtime-8cf7563abbca0f451537",
-    "java-runtime-1a7765c6b98eb79db7ce"
-   ]
+    "java-runtime-1a7765c6b98eb79db7ce",
+    "java-runtime-784378ea15f390e587b2",
+    "java-runtime-68b49a5d4a1630d85f75"
+   ],
+   "difference": "Ord 3 EPLOtherObjectModelJoinAlias: SODA object-model compile path has no Go counterpart (intentionally-different). Ords 0/16 invalid probes pin Go rejection boundaries with Java message prefixes (intentionally-different)."
   },
   {
    "id": "epl.insertinto-pattern",
@@ -45541,6 +45546,99 @@
    ],
    "difference": "Compile-only: source-less subselect, wildcard projection and multi-selector FAF are unrepresentable in the typed API; Go pins its nearest rejection boundaries (empty projection, subquery-in-source-less rejection, unconditional source-less order-by rejection) with the Java message prefixes recorded as compile-error records.",
    "notes": "The scenario records the five pinned Java message prefixes; Go verifies each expressible rejection boundary before recording the pinned value."
+  },
+  {
+   "id": "case.epl-other-select-expr-stream-selector-remainder",
+   "javaRuntimeIds": [
+    "java-runtime-784378ea15f390e587b2",
+    "java-runtime-68b49a5d4a1630d85f75"
+   ],
+   "javaNames": [
+    "EPLOtherInsertTransposeNestedProperty",
+    "EPLOtherInsertFromPattern"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java"
+   ],
+   "goTests": [
+    "internal/app/parity/epl_other_select_expr_stream_selector_remainder.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "epl.other",
+    "stream-selector",
+    "insert-into",
+    "pattern"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/epl-other-select-expr-stream-selector-remainder.json",
+    "testdata/parity/epl-other-select-expr-stream-selector-remainder.trace.json",
+    "testdata/parity/epl-other-select-expr-stream-selector-remainder.go.trace.json",
+    "testdata/parity/epl-other-select-expr-stream-selector-remainder.evidence.json",
+    "tools/java-oracle/EplOtherSelectExprStreamSelectorRemainderScenarioOracle.java",
+    "tools/java-oracle/run-epl-other-select-expr-stream-selector-remainder.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "javaStaticIds": [
+    "java-5dcc72bb024241a1c003",
+    "java-587f1eac414f59c3f257"
+   ],
+   "difference": "Approved differences: `nested.*` maps to Transpose(Field nested) into a struct-registered StreamA; `a.*` maps to Transpose(PatternEvent(\"a\")) routing the tagged event underlying; Java auto-created streamB (Pair) is a pre-registered Map target; types records pin the Java-asserted underlying/property surface; Java listener order (producer-first for chains, reverse-registration for same-level producers) is pinned by the runner flush order.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-784378ea15f390e587b2",
+    "java-runtime-68b49a5d4a1630d85f75"
+   ],
+   "notes": "Java/Go 15 records each, 0 differences. transpose-nested: insert-into transpose of the nested fragment bean into StreamA plus a nestedValue consumer; insert-from-pattern: unguarded and timer:within-guarded pattern transposes deliver the sent SupportBean underlying per match, plus a transpose+literal insert into streamB (Pair shape)."
+  },
+  {
+   "id": "case.epl-other-select-expr-stream-selector-invalid",
+   "javaRuntimeIds": [
+    "java-runtime-0fe17586d141b87f3cff",
+    "java-runtime-fb00a9a05a09d998736d",
+    "java-runtime-ee69f9fe048d908e8a1b"
+   ],
+   "javaNames": [
+    "EPLOtherInvalidSelectWildcardProperty",
+    "EPLOtherInvalidSelect",
+    "EPLOtherObjectModelJoinAlias"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java"
+   ],
+   "goTests": [
+    "internal/app/parity/epl_other_select_expr_stream_selector_remainder.go",
+    "internal/app/parity/run_test.go"
+   ],
+   "tags": [
+    "epl.other",
+    "stream-selector"
+   ],
+   "status": "intentionally-different",
+   "evidence": [
+    "testdata/parity/epl-other-select-expr-stream-selector-remainder.json",
+    "testdata/parity/epl-other-select-expr-stream-selector-remainder.trace.json",
+    "testdata/parity/epl-other-select-expr-stream-selector-remainder.go.trace.json",
+    "testdata/parity/epl-other-select-expr-stream-selector-remainder.evidence.json",
+    "tools/java-oracle/EplOtherSelectExprStreamSelectorRemainderScenarioOracle.java",
+    "tools/java-oracle/run-epl-other-select-expr-stream-selector-remainder.sh"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "intentionally-different"
+   ],
+   "javaStaticIds": [
+    "java-53aaecf8c98ebdd1c538",
+    "java-0b8c93bdcb738bd64543",
+    "java-2da944929b02a2eb610c"
+   ],
+   "difference": "Compile-only/object-model: ord 0 property-wildcard-with-alias is unrepresentable (no Go property-wildcard syntax; named Transpose is accepted); ord 16 probes pin Go rejection boundaries (duplicate alias, join source index, unnamed join selections) with Java message prefixes; ord 3 SODA object-model/eplToModel has no Go compile path.",
+   "notes": "The scenario records the five pinned Java message prefixes; Go verifies each expressible rejection boundary before recording the pinned value."
   }
  ],
  "mappings": [
@@ -48719,29 +48817,37 @@
   {
    "capabilityId": "epl.other.from-clause-optional",
    "caseId": "case.epl-other-from-clause-optional-invalid"
+  },
+  {
+   "capabilityId": "eplother.stream-selector",
+   "caseId": "case.epl-other-select-expr-stream-selector-remainder"
+  },
+  {
+   "capabilityId": "eplother.stream-selector",
+   "caseId": "case.epl-other-select-expr-stream-selector-invalid"
   }
  ],
  "summary": {
-  "inventoriedCases": 709,
-  "implementedCases": 707,
-  "differentialVerifiedCases": 335,
-  "differentialVerifiedRuntimeIds": 1279,
-  "intentionallyDifferentCases": 30,
+  "inventoriedCases": 711,
+  "implementedCases": 709,
+  "differentialVerifiedCases": 336,
+  "differentialVerifiedRuntimeIds": 1281,
+  "intentionallyDifferentCases": 31,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 122,
   "implementedCapabilities": 121,
   "differentialVerifiedCapabilities": 41,
-  "intentionallyDifferentCapabilities": 9,
+  "intentionallyDifferentCapabilities": 10,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3829,
-  "referencedJavaRuntimeIds": 3455,
+  "runtimeAssociationCount": 3834,
+  "referencedJavaRuntimeIds": 3460,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 681,
+  "unreferencedJavaRuntimeIds": 676,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 709,
+  "totalCases": 711,
   "totalCapabilities": 122
  }
 }

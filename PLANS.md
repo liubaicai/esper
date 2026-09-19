@@ -3537,54 +3537,49 @@ Active: Draft 4.467 ('epl-insert-into-istream-func').
 
 
 ## Current work unit
-Active: Draft 4.469 ('epl-other-from-clause-optional').
+Active: Draft 4.470 ('epl-other-select-expr-stream-selector-remainder') — IN REVIEW.
 
-- [x] Contract FROZEN (`.omp/contract-469.md`) by read-only scouts
-      `NextJavaContract469` + `NextGoSurface469` (dispatched during 4.468's
-      review) and re-verified line-by-line by the primary agent against the
-      Java source. Scope: `EPLOtherFromClauseOptional` ords 0/1
-      (`java-runtime-0e96acf48376ed71c690` / `java-runtime-f54b77f9c8381d0cc12c`,
-      source-less `context MyContext select context.s0 as ctxs0` with and
-      without `output when terminated`, per-partition listener + iterator
-      semantics), ord 2 (`java-runtime-00d22c5518b7c57f1ba7`, deployed
-      `select 1 as value` iterator), ord 4
-      (`java-runtime-4f6e15a0c30a5e95b1f6`, source-less FAF under context:
-      all/ids selectors, distinct, where, having), ord 5
-      (`java-runtime-6d948697a80bca6a0dac`, intentionally-different:
-      unrepresentable subselect/wildcard/multi-selector + Go's unconditional
-      source-less order-by rejection). Ord 3
-      (`java-runtime-80d10cc89f5410ff790e`) DEFERRED — heterogeneous
-      FIREANDFORGET mix incl. JVM-only `inlined_class`.
-- [x] Go gaps probed and confirmed: deployed source-less `Snapshot` yields 0
-      rows (Java: 1); `SelectOnce` takes no options (no context/output/name);
-      source-less FAF ignores contextName/selector/distinct; no where/having
-      surface for source-less queries.
-- [x] Engine extension (`internal/esper`, primary agent only): source-less
-      statements gained the full lifecycle — `Query` fluent methods
-      `Named`/`WithContext`/`WithOutput`/`WithDistinct`/`WithWhere`/`WithHaving`/
-      `WithOrderBy` (where/having restricted to source-less), per-partition
-      initiation/termination delivery via `output when terminated`, per-partition
-      snapshot/iterator rows, and context-aware FAF honoring all/by-id selectors,
-      distinct, where and having. Reused the existing
-      `CreateOverlappingInitiatedTerminatedContext` (one partition per initiation
-      event) and `ContextInitiatingEvent` + `Property` for `context.s0` reads.
-- [x] Parity assets: `tools/java-oracle/EplOtherFromClauseOptionalScenarioOracle.java`
-      + `run-epl-other-from-clause-optional.sh` (parity-asset writer, disjoint
-      files); scenario `testdata/parity/epl-other-from-clause-optional.json`
-      (5 cases / 56 steps); runner
-      `internal/app/parity/epl_other_from_clause_optional.go` + run.go wiring +
-      strict scenario loader (duplicate-key rejection, pinned case metadata,
-      per-step and per-payload field whitelists).
-- [x] Differential replay: Java 34 records / Go 34 records, 0 differences;
-      `-mode epl-other-from-clause-optional-diff` status `passing`; evidence at
-      `testdata/parity/epl-other-from-clause-optional.evidence.json`.
-- [x] Manifest: new capability `epl.other.from-clause-optional` (born-DV) +
-      `case.epl-other-from-clause-optional` (4 DV runtime IDs) +
-      `case.epl-other-from-clause-optional-invalid` (intentionally-different);
-      summary 709 cases / 707 implemented / 335 DV / 1279 DV runtime IDs /
-      3829 associations; compat validator green.
-- [x] Test family green: 7 trace mutations + 6 raw-scenario mutations all
+- [x] Contract FROZEN (`.omp/contract-470.md`) by read-only scouts
+      `NextJavaContract470` + `NextGoSurface470` during 4.469's review.
+- [x] Engine extension (`internal/esper`, primary agent only): pattern-source
+      transpose — `validatePattern`/`resultSchema` allow unnamed transpose
+      selections bound to a pattern-event tag; `validateRoute` transpose block
+      covers pattern queries; `validateTransposeExpression` accepts Event
+      payloads (runtime unwraps the tagged event's underlying);
+      `evaluatePatternMatch` returns Result and materializes the transpose
+      route (bean underlying into struct target, flatten+merge into Map
+      target for companion columns). Latent named-Transpose-in-pattern
+      misroute closed.
+- [x] Parity assets (AssetWriter470, disjoint files): oracle + run script +
+      scenario `testdata/parity/epl-other-select-expr-stream-selector-remainder.json`
+      (3 cases / 22 steps). Runner
+      `internal/app/parity/epl_other_select_expr_stream_selector_remainder.go`
+      + run.go wiring + strict loader (per-step and per-payload whitelists).
+      Listener ordering pinned: Java delivers producer-before-consumer for
+      chains but reverse-registration for same-level producers; the runner
+      buffers per-send and reverses only for insert-from-pattern.
+- [x] Differential replay: Java 15 records / Go 15 records, 0 differences;
+      `-mode epl-other-select-expr-stream-selector-remainder-diff` passing;
+      evidence at testdata/parity/epl-other-select-expr-stream-selector-remainder.evidence.json.
+- [x] Manifest: `eplother.stream-selector` extended (16/17 executions);
+      `case.epl-other-select-expr-stream-selector-remainder` born-DV (2 IDs)
+      + `case.epl-other-select-expr-stream-selector-invalid`
+      (intentionally-different, ords 0/16/3); summary 711 cases / 709
+      implemented / 336 DV / 1281 DV runtime IDs / 3834 associations;
+      compat validator green.
+- [x] Test family green: 6 trace mutations + 6 raw-scenario mutations all
       rejected; runtime-ID mapping and help-listing tests pass.
+- [x] Independent parity review (`ParityReview470`): initial FAIL with 4 P2 +
+      3 P3 findings, all fixed and re-probed; confirmation review PASS, zero
+      findings. Fixes: Transpose(nil) panic guard (validatePattern +
+      resultSchema), restored null-kind rejection, Event early-accept scoped
+      to pattern queries via new `pattern` param, no-route companion/multi/
+      named transpose rejections, 22-step + case-name pinning in the strict
+      loader, roadmap prose correction. Regression file
+      `internal/esper/pattern_transpose_invalid_test.go` pins all boundaries.
+- [x] Full `make check` green after every fix (parity 80s, internal/esper 71s);
+      diff re-run passing / 0 differences.
+- [x] Shipped; Git owns identity.
 
 
 ## Prefetch archive (contract source for the active unit)

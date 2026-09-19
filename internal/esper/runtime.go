@@ -20334,11 +20334,11 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				}
 				if transition.complete {
 					completed = true
-					if row, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
+					if result, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 						if plan.query.iterableUnbound {
-							r.patternState.iterableRows = []Result{resultRow(row)}
+							r.patternState.iterableRows = []Result{result}
 						}
-						batch.New = append(batch.New, resultRow(row))
+						batch.New = append(batch.New, result)
 					}
 
 					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
@@ -20387,11 +20387,11 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 				}
 				if transition.complete {
 					completed = true
-					if row, visible := r.evaluatePatternMatch(definition, started, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, started) {
+					if result, visible := r.evaluatePatternMatch(definition, started, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, started) {
 						if plan.query.iterableUnbound {
-							r.patternState.iterableRows = []Result{resultRow(row)}
+							r.patternState.iterableRows = []Result{result}
 						}
-						batch.New = append(batch.New, resultRow(row))
+						batch.New = append(batch.New, result)
 					}
 					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition, pool) {
 						nextActive = append(nextActive, started)
@@ -20484,8 +20484,8 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 			dueAt := r.patternState.timerNext
 			match := patternMatch{current: Event{}, startedAt: dueAt}
 			if patternGuardAllows(plan.query.pattern, Event{}, now, r.variables) {
-				if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, now, r.variables); visible {
-					batch.New = append(batch.New, resultRow(row))
+				if result, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, now, r.variables); visible {
+					batch.New = append(batch.New, result)
 				}
 			}
 			if !definition.every {
@@ -20507,8 +20507,8 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 		if !r.patternState.timerEmitted && !now.Before(r.patternState.timerNext) {
 			match := patternMatch{current: Event{}, startedAt: r.patternState.timerNext}
 			if patternGuardAllows(plan.query.pattern, Event{}, now, r.variables) {
-				if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, now, r.variables); visible {
-					batch.New = append(batch.New, resultRow(row))
+				if result, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, now, r.variables); visible {
+					batch.New = append(batch.New, result)
 				}
 			}
 			r.patternState.timerEmitted = true
@@ -20520,8 +20520,8 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 				dueAt := r.patternState.schedulePeriod.next
 				match := patternMatch{current: Event{}, startedAt: dueAt}
 				if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-					if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
-						batch.New = append(batch.New, resultRow(row))
+					if result, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+						batch.New = append(batch.New, result)
 					}
 				}
 				advancePatternTimerScheduleRuntime(r.patternState.schedulePeriod)
@@ -20531,8 +20531,8 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 				dueAt := root.schedule[r.patternState.scheduleIndex]
 				match := patternMatch{current: Event{}, startedAt: dueAt}
 				if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-					if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
-						batch.New = append(batch.New, resultRow(row))
+					if result, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+						batch.New = append(batch.New, result)
 					}
 				}
 				r.patternState.scheduleIndex++
@@ -20550,8 +20550,8 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 			dueAt := r.patternState.cronNext
 			match := patternMatch{current: Event{}, startedAt: dueAt}
 			if patternGuardAllows(plan.query.pattern, Event{}, dueAt, r.variables) {
-				if row, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
-					batch.New = append(batch.New, resultRow(row))
+				if result, visible := r.evaluatePatternMatch(plan.query.pattern, match, plan, dueAt, r.variables); visible {
+					batch.New = append(batch.New, result)
 				}
 			}
 			if root.cronOneShot {
@@ -20625,11 +20625,11 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 			}
 			if transition.complete {
 				completed = true
-				if row, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
+				if result, visible := r.evaluatePatternMatch(definition, candidate, plan, now, r.variables); visible && r.patternState.acceptPatternMatch(plan.query, candidate) {
 					if plan.query.iterableUnbound {
-						r.patternState.iterableRows = []Result{resultRow(row)}
+						r.patternState.iterableRows = []Result{result}
 					}
-					batch.New = append(batch.New, resultRow(row))
+					batch.New = append(batch.New, result)
 				}
 				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
@@ -20696,21 +20696,21 @@ func clonePatternMatch(match patternMatch) patternMatch {
 	}
 }
 
-func (r *statementRuntime) evaluatePatternMatch(definition *patternDefinition, match patternMatch, plan Plan, now time.Time, variables map[string]Value) (Row, bool) {
+func (r *statementRuntime) evaluatePatternMatch(definition *patternDefinition, match patternMatch, plan Plan, now time.Time, variables map[string]Value) (Result, bool) {
 	ctx := EvalContext{Event: match.current, Tags: match.tags, TagValues: match.tagValues, Now: now, Variables: variables}
 	if plan.query.patternWhere != nil {
 		// Esper's where-clause after "from pattern [...]" filters completed
 		// matches without affecting pattern state.
 		value := plan.query.patternWhere.eval(ctx)
 		if allowed, ok := boolValue(value); !ok || !allowed {
-			return Row{}, false
+			return Result{}, false
 		}
 	}
 	if len(plan.query.patternSelections) == 0 {
 		// select * over a tagless pattern (for example every
 		// timer:interval) yields one empty row per match, matching the
 		// output shape of Esper's select-all projection.
-		return newRow(plan.resultSchema, nil), true
+		return resultRow(newRow(plan.resultSchema, nil)), true
 	}
 	if patternSelectionsHaveAggregate(plan.query.patternSelections) {
 		// Ungrouped aggregates over a pattern stream see one representative
@@ -20722,11 +20722,60 @@ func (r *statementRuntime) evaluatePatternMatch(definition *patternDefinition, m
 		ctx.Group = r.patternAggregateGroup
 		ctx.GroupTags = r.patternAggregateTags
 	}
+	if transpose, transposeIndex, ok := patternTransposeSelection(plan.query); ok {
+		// A transpose selection routes the tagged event's underlying into
+		// the insert-into target (Java's `a.*` over `from pattern [...]`).
+		// The marker unwraps to the tagged Event; its underlying is coerced
+		// into the target schema and companion columns merge by name.
+		payloadValue := transpose.Expr.eval(ctx)
+		marker, ok := payloadValue.Any().(transposeValue)
+		if !ok || marker.value == nil {
+			return Result{}, false
+		}
+		payload := marker.value
+		if tagged, isEvent := payload.(Event); isEvent {
+			payload = tagged.Underlying()
+		}
+		props := make(map[string]any, len(plan.query.patternSelections))
+		for index, selection := range plan.query.patternSelections {
+			if index == transposeIndex || isTransposeExpression(selection.Expr) {
+				continue
+			}
+			if strings.TrimSpace(selection.Name) == "" {
+				continue
+			}
+			props[selection.Name] = selection.Expr.eval(ctx).Any()
+		}
+		underlying, err := buildTransposeUnderlying(plan.resultSchema, payload, props)
+		if err != nil {
+			return Result{}, false
+		}
+		routed, err := newEvent(plan.resultSchema, underlying, now)
+		if err != nil {
+			return Result{}, false
+		}
+		return resultEvent(routed), true
+	}
 	values := make([]Value, 0, len(plan.query.patternSelections))
 	for _, selection := range plan.query.patternSelections {
 		values = append(values, selection.Expr.eval(ctx))
 	}
-	return newRow(plan.resultSchema, values), true
+	return resultRow(newRow(plan.resultSchema, values)), true
+}
+
+// patternTransposeSelection reports whether a pattern query carries a
+// transpose selection (Java's `a.*` over `from pattern [...]` routing the
+// tagged event's underlying into the insert-into target).
+func patternTransposeSelection(query Query) (Selection, int, bool) {
+	if query.pattern == nil {
+		return Selection{}, -1, false
+	}
+	for index, selection := range query.patternSelections {
+		if isTransposeExpression(selection.Expr) {
+			return selection, index, true
+		}
+	}
+	return Selection{}, -1, false
 }
 
 // patternSelectionsHaveAggregate reports whether any pattern projection is a

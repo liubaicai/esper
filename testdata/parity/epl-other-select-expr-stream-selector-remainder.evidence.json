@@ -1,0 +1,553 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-784378ea15f390e587b2",
+    "java-runtime-68b49a5d4a1630d85f75",
+    "java-runtime-0fe17586d141b87f3cff",
+    "java-runtime-fb00a9a05a09d998736d"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java"
+  ],
+  "javaExecutions": [
+    "EPLOtherInsertTransposeNestedProperty",
+    "EPLOtherInsertFromPattern",
+    "EPLOtherInvalidSelectWildcardProperty",
+    "EPLOtherInvalidSelect"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-select-expr-stream-selector-remainder",
+    "steps": [
+      {
+        "op": "case",
+        "case": "transpose-nested"
+      },
+      {
+        "op": "deploy",
+        "case": "transpose-nested",
+        "statement": "l1",
+        "epl": "@name('l1') @public insert into StreamA select nested.* from SupportBeanComplexProps as s0"
+      },
+      {
+        "op": "types",
+        "case": "transpose-nested",
+        "statement": "l1"
+      },
+      {
+        "op": "deploy",
+        "case": "transpose-nested",
+        "statement": "l2",
+        "epl": "@name('l2') select nestedValue from StreamA"
+      },
+      {
+        "op": "types",
+        "case": "transpose-nested",
+        "statement": "l2"
+      },
+      {
+        "op": "send",
+        "case": "transpose-nested",
+        "eventType": "SupportBeanComplexProps",
+        "payload": {
+          "simpleProperty": "simple",
+          "mapped": {
+            "keyOne": "valueOne",
+            "keyTwo": "valueTwo"
+          },
+          "indexed": [
+            1,
+            2
+          ],
+          "mapProperty": {
+            "xOne": "yOne",
+            "xTwo": "yTwo"
+          },
+          "arrayProperty": [
+            10,
+            20,
+            30
+          ],
+          "nested": {
+            "nestedValue": "nestedValue",
+            "nestedNestedValue": "nestedNestedValue"
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "transpose-nested"
+      },
+      {
+        "op": "case",
+        "case": "insert-from-pattern"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-from-pattern",
+        "statement": "l1",
+        "epl": "@name('l1') insert into streamA select a.* from pattern [every a=SupportBean]"
+      },
+      {
+        "op": "deploy",
+        "case": "insert-from-pattern",
+        "statement": "l2",
+        "epl": "@name('l2') insert into streamA select a.* from pattern [every a=SupportBean where timer:within(30 sec)]"
+      },
+      {
+        "op": "types",
+        "case": "insert-from-pattern",
+        "statement": "l1"
+      },
+      {
+        "op": "send",
+        "case": "insert-from-pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "insert-from-pattern",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "insert-from-pattern",
+        "statement": "l3",
+        "epl": "@name('l3') insert into streamB select a.*, 'abc' as abc from pattern [every a=SupportBean where timer:within(30 sec)]"
+      },
+      {
+        "op": "types",
+        "case": "insert-from-pattern",
+        "statement": "l3"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insert-from-pattern"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "wildcard-property-column-name",
+        "expectError": "The property wildcard syntax must be used without column name",
+        "epl": "select simpleProperty.* as a from SupportBeanComplexProps as s0"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "duplicate-column-name",
+        "expectError": "Column name 'theString' appears more then once in select clause",
+        "epl": "select theString.* as theString, theString from SupportBean#length(3) as theString"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "unknown-stream-selector",
+        "expectError": "Stream selector 's1.*' does not match any stream name in the from clause [",
+        "epl": "select s1.* as abc from SupportBean#length(3) as s0"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "duplicate-stream-alias",
+        "expectError": "Column name 'abc' appears more then once in select clause",
+        "epl": "select s0.* as abc, s0.* as abc from SupportBean#length(3) as s0"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "multi-stream-wildcard",
+        "expectError": "A column name must be supplied for all but one stream if multiple streams are selected via the stream.* notation",
+        "epl": "select s0.*, s1.* from SupportBean#keepall as s0, SupportBean#keepall as s1"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-select-expr-stream-selector-remainder",
+    "records": [
+      {
+        "case": "transpose-nested",
+        "operation": "types",
+        "statement": "l1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "underlying": "SupportBeanSpecialGetterNested"
+        }
+      },
+      {
+        "case": "transpose-nested",
+        "operation": "types",
+        "statement": "l2",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "nestedValue": "String"
+          }
+        }
+      },
+      {
+        "case": "transpose-nested",
+        "operation": "listener",
+        "statement": "l1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "nestedNested": {
+                "fields": {
+                  "nestedNestedValue": "nestedNestedValue"
+                },
+                "kind": "row"
+              },
+              "nestedValue": "nestedValue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "transpose-nested",
+        "operation": "listener",
+        "statement": "l2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "nestedValue": "nestedValue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "types",
+        "statement": "l1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "underlying": "SupportBean"
+        }
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "listener",
+        "statement": "l2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "listener",
+        "statement": "l1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "listener",
+        "statement": "l2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "listener",
+        "statement": "l1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "types",
+        "statement": "l3",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "abc": "String",
+            "theString": "String"
+          },
+          "underlying": "Pair"
+        }
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "wildcard-property-column-name",
+        "sequence": 0,
+        "value": "The property wildcard syntax must be used without column name"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-column-name",
+        "sequence": 0,
+        "value": "Column name 'theString' appears more then once in select clause"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "unknown-stream-selector",
+        "sequence": 0,
+        "value": "Stream selector 's1.*' does not match any stream name in the from clause ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-stream-alias",
+        "sequence": 0,
+        "value": "Column name 'abc' appears more then once in select clause"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "multi-stream-wildcard",
+        "sequence": 0,
+        "value": "A column name must be supplied for all but one stream if multiple streams are selected via the stream.* notation"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-other-select-expr-stream-selector-remainder",
+    "records": [
+      {
+        "case": "transpose-nested",
+        "operation": "types",
+        "statement": "l1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "underlying": "SupportBeanSpecialGetterNested"
+        }
+      },
+      {
+        "case": "transpose-nested",
+        "operation": "types",
+        "statement": "l2",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "nestedValue": "String"
+          }
+        }
+      },
+      {
+        "case": "transpose-nested",
+        "operation": "listener",
+        "statement": "l1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "nestedNested": {
+                "fields": {
+                  "nestedNestedValue": "nestedNestedValue"
+                },
+                "kind": "row"
+              },
+              "nestedValue": "nestedValue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "transpose-nested",
+        "operation": "listener",
+        "statement": "l2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "nestedValue": "nestedValue"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "types",
+        "statement": "l1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "underlying": "SupportBean"
+        }
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "listener",
+        "statement": "l2",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "listener",
+        "statement": "l1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "listener",
+        "statement": "l2",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "listener",
+        "statement": "l1",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 10,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "insert-from-pattern",
+        "operation": "types",
+        "statement": "l3",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "abc": "String",
+            "theString": "String"
+          },
+          "underlying": "Pair"
+        }
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "wildcard-property-column-name",
+        "sequence": 0,
+        "value": "The property wildcard syntax must be used without column name"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-column-name",
+        "sequence": 0,
+        "value": "Column name 'theString' appears more then once in select clause"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "unknown-stream-selector",
+        "sequence": 0,
+        "value": "Stream selector 's1.*' does not match any stream name in the from clause ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-stream-alias",
+        "sequence": 0,
+        "value": "Column name 'abc' appears more then once in select clause"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "multi-stream-wildcard",
+        "sequence": 0,
+        "value": "A column name must be supplied for all but one stream if multiple streams are selected via the stream.* notation"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

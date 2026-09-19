@@ -63,6 +63,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include view-intersect and view-intersect-diff")
 		fmt.Fprintln(stderr, "runner modes include infra-named-window-final-views and infra-named-window-final-views-diff")
 		fmt.Fprintln(stderr, "runner modes include epl-other-from-clause-optional and epl-other-from-clause-optional-diff")
+		fmt.Fprintln(stderr, "runner modes include epl-other-select-expr-stream-selector-remainder and epl-other-select-expr-stream-selector-remainder-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -144,6 +145,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadContextCategoryScenario(file)
 	} else if *mode == "epl-other-from-clause-optional" || *mode == "epl-other-from-clause-optional-diff" {
 		scenario, err = loadEplOtherFromClauseOptionalScenario(file)
+	} else if *mode == "epl-other-select-expr-stream-selector-remainder" || *mode == "epl-other-select-expr-stream-selector-remainder-diff" {
+		scenario, err = loadEplOtherSelectExprStreamSelectorRemainderScenario(file)
 	} else if *mode == "epl-variables-event-typed" || *mode == "epl-variables-event-typed-diff" {
 		scenario, err = loadEplVariablesEventTypedScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
@@ -3649,6 +3652,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, eplOtherFromClauseOptionalJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, eplOtherFromClauseOptionalJavaSources),
 				splitMetadata(*javaExecutions, eplOtherFromClauseOptionalJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "epl-other-select-expr-stream-selector-remainder" || *mode == "epl-other-select-expr-stream-selector-remainder-diff" {
+		trace, err := runEplOtherSelectExprStreamSelectorRemainderScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "epl-other-select-expr-stream-selector-remainder-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, eplOtherSelectExprStreamSelectorRemainderJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, eplOtherSelectExprStreamSelectorRemainderJavaSources),
+				splitMetadata(*javaExecutions, eplOtherSelectExprStreamSelectorRemainderJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

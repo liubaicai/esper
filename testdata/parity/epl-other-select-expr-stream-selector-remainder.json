@@ -1,0 +1,204 @@
+{
+  "version": "esper-parity/v1",
+  "id": "epl-other-select-expr-stream-selector-remainder",
+  "description": "EPLOtherSelectExprStreamSelector remainder executions: transpose-nested (ord 1) routes nested.* of a SupportBeanComplexProps default bean into @public StreamA whose consumer selects nestedValue, both listeners delivering nestedValue=\"nestedValue\"; insert-from-pattern (ord 2) transposes the tagged SupportBean underlying out of every-pattern matches into streamA (l1 unasserted but recorded, l2 asserted by underlying identity) and, after the sends, into streamB with an added 'abc' constant (Pair underlying, no listener, zero deliveries); invalid (ords 0+16) records the five pinned compile-error prefixes for property-wildcard-with-column-name, duplicate column names, an unknown stream selector and multi-stream stream.* without a column name. Ord 3 (EPLOtherObjectModelJoinAlias) is intentionally-different (SODA/eplToModel JVM-only) and carries no steps.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/other/EPLOtherSelectExprStreamSelector.java",
+  "javaRuntimes": [
+    "java-runtime-784378ea15f390e587b2",
+    "java-runtime-68b49a5d4a1630d85f75",
+    "java-runtime-0fe17586d141b87f3cff",
+    "java-runtime-fb00a9a05a09d998736d"
+  ],
+  "javaNames": [
+    "EPLOtherInsertTransposeNestedProperty",
+    "EPLOtherInsertFromPattern",
+    "EPLOtherInvalidSelectWildcardProperty",
+    "EPLOtherInvalidSelect"
+  ],
+  "javaStaticIds": [
+    "java-5dcc72bb024241a1c003",
+    "java-587f1eac414f59c3f257",
+    "java-53aaecf8c98ebdd1c538",
+    "java-0b8c93bdcb738bd64543"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "transpose-nested",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-784378ea15f390e587b2",
+      "executionName": "EPLOtherInsertTransposeNestedProperty",
+      "observation": "listener+types; @public insert-into transposes the nested fragment into StreamA (underlying SupportBeanSpecialGetterNested) and the consumer selects nestedValue; one default bean delivers nestedValue=\"nestedValue\" to both listeners; the second undeployAll in the Java source is a no-op and carries no step",
+      "epl": "@name('l1') @public insert into StreamA select nested.* from SupportBeanComplexProps as s0"
+    },
+    {
+      "case": "insert-from-pattern",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-68b49a5d4a1630d85f75",
+      "executionName": "EPLOtherInsertFromPattern",
+      "observation": "listener+types; two pattern-source transposes insert the sent SupportBean underlying into streamA per send (l1 unasserted but recorded, l2 asserted); l3 deploys after the sends into streamB (underlying Pair, abc/theString String) with no listener and zero deliveries",
+      "epl": "@name('l1') insert into streamA select a.* from pattern [every a=SupportBean]"
+    },
+    {
+      "case": "invalid",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-0fe17586d141b87f3cff",
+      "executionName": "EPLOtherInvalidSelectWildcardProperty",
+      "observation": "compile-error; ord-0 property-wildcard-with-column-name probe plus ord-16's four stream-selector probes record the pinned Java message prefixes in one pass (ord 16's runtime java-runtime-fb00a9a05a09d998736d is covered by this pass)",
+      "epl": "select simpleProperty.* as a from SupportBeanComplexProps as s0"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "transpose-nested"
+    },
+    {
+      "op": "deploy",
+      "case": "transpose-nested",
+      "statement": "l1",
+      "epl": "@name('l1') @public insert into StreamA select nested.* from SupportBeanComplexProps as s0"
+    },
+    {
+      "op": "types",
+      "case": "transpose-nested",
+      "statement": "l1"
+    },
+    {
+      "op": "deploy",
+      "case": "transpose-nested",
+      "statement": "l2",
+      "epl": "@name('l2') select nestedValue from StreamA"
+    },
+    {
+      "op": "types",
+      "case": "transpose-nested",
+      "statement": "l2"
+    },
+    {
+      "op": "send",
+      "case": "transpose-nested",
+      "eventType": "SupportBeanComplexProps",
+      "payload": {
+        "simpleProperty": "simple",
+        "mapped": {
+          "keyOne": "valueOne",
+          "keyTwo": "valueTwo"
+        },
+        "indexed": [1, 2],
+        "mapProperty": {
+          "xOne": "yOne",
+          "xTwo": "yTwo"
+        },
+        "arrayProperty": [10, 20, 30],
+        "nested": {
+          "nestedValue": "nestedValue",
+          "nestedNestedValue": "nestedNestedValue"
+        }
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "transpose-nested"
+    },
+    {
+      "op": "case",
+      "case": "insert-from-pattern"
+    },
+    {
+      "op": "deploy",
+      "case": "insert-from-pattern",
+      "statement": "l1",
+      "epl": "@name('l1') insert into streamA select a.* from pattern [every a=SupportBean]"
+    },
+    {
+      "op": "deploy",
+      "case": "insert-from-pattern",
+      "statement": "l2",
+      "epl": "@name('l2') insert into streamA select a.* from pattern [every a=SupportBean where timer:within(30 sec)]"
+    },
+    {
+      "op": "types",
+      "case": "insert-from-pattern",
+      "statement": "l1"
+    },
+    {
+      "op": "send",
+      "case": "insert-from-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E1",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "send",
+      "case": "insert-from-pattern",
+      "eventType": "SupportBean",
+      "payload": {
+        "theString": "E2",
+        "intPrimitive": 10
+      }
+    },
+    {
+      "op": "deploy",
+      "case": "insert-from-pattern",
+      "statement": "l3",
+      "epl": "@name('l3') insert into streamB select a.*, 'abc' as abc from pattern [every a=SupportBean where timer:within(30 sec)]"
+    },
+    {
+      "op": "types",
+      "case": "insert-from-pattern",
+      "statement": "l3"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "insert-from-pattern"
+    },
+    {
+      "op": "case",
+      "case": "invalid"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "wildcard-property-column-name",
+      "epl": "select simpleProperty.* as a from SupportBeanComplexProps as s0",
+      "expectError": "The property wildcard syntax must be used without column name",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "duplicate-column-name",
+      "epl": "select theString.* as theString, theString from SupportBean#length(3) as theString",
+      "expectError": "Column name 'theString' appears more then once in select clause",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "unknown-stream-selector",
+      "epl": "select s1.* as abc from SupportBean#length(3) as s0",
+      "expectError": "Stream selector 's1.*' does not match any stream name in the from clause [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "duplicate-stream-alias",
+      "epl": "select s0.* as abc, s0.* as abc from SupportBean#length(3) as s0",
+      "expectError": "Column name 'abc' appears more then once in select clause",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "multi-stream-wildcard",
+      "epl": "select s0.*, s1.* from SupportBean#keepall as s0, SupportBean#keepall as s1",
+      "expectError": "A column name must be supplied for all but one stream if multiple streams are selected via the stream.* notation",
+      "compileWithoutPath": true
+    }
+  ]
+}

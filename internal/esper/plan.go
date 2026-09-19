@@ -693,7 +693,7 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 			return Plan{}, WrapError(ErrorInvalidRule, "match-recognize", err)
 		}
 	} else if query.pattern != nil {
-		if err := e.validatePattern(query.pattern, query.patternSelections); err != nil {
+		if err := e.validatePattern(query.pattern, query.patternSelections, query.routeTarget); err != nil {
 			return Plan{}, WrapError(ErrorInvalidRule, "pattern", err)
 		}
 	} else if query.aggregate != nil {
@@ -1670,18 +1670,18 @@ func (e *Environment) validateRoute(query Query) error {
 	if target.kind == SchemaVariant && target.variantMode == VariantPredefined {
 		return fmt.Errorf("projected rows cannot route to predefined variant %q without a member identity", target.Name())
 	}
-	// Transpose routing applies to a plain record projection (no aggregate,
-	// join, pattern, match-recognize or trigger select). The transpose
-	// function must occur alone in the select clause unless the companion
-	// columns coexist inside a Wrapper-type target, which the Go API models
-	// as a pre-registered Map target accepting the payload, merged by
-	// property name. These errors are validated before the per-selection
-	// field loop so transpose selections (which carry no column name) are
-	// not mistaken for named projections.
-	if query.aggregate == nil && query.join == nil && query.pattern == nil && query.rowRecog == nil && query.trigger == nil && len(query.selections) > 0 {
+	// Transpose routing applies to a plain record projection or a pattern
+	// select (no aggregate, join, match-recognize or trigger select). The
+	// transpose function must occur alone in the select clause unless the
+	// companion columns coexist inside a Wrapper-type target, which the Go
+	// API models as a pre-registered Map target accepting the payload,
+	// merged by property name. These errors are validated before the
+	// per-selection field loop so transpose selections (which carry no
+	// column name) are not mistaken for named projections.
+	if query.aggregate == nil && query.join == nil && query.rowRecog == nil && query.trigger == nil && len(selections) > 0 {
 		transposeCount := 0
 		transposeIndex := -1
-		for index, selection := range query.selections {
+		for index, selection := range selections {
 			if isTransposeExpression(selection.Expr) {
 				transposeCount++
 				transposeIndex = index
@@ -1691,11 +1691,11 @@ func (e *Environment) validateRoute(query Query) error {
 		case transposeCount >= 2:
 			return fmt.Errorf("a column name must be supplied for all but one stream if multiple streams are selected via the stream.* notation")
 		case transposeCount == 1:
-			transpose := query.selections[transposeIndex]
-			if err := e.validateTransposeExpression(target, transpose.Expr, len(query.selections) > 1); err != nil {
+			transpose := selections[transposeIndex]
+			if err := e.validateTransposeExpression(target, transpose.Expr, len(selections) > 1, query.pattern != nil); err != nil {
 				return err
 			}
-			if len(query.selections) > 1 {
+			if len(selections) > 1 {
 				// Additional properties are routed only into a Map target
 				// whose container properties are untyped, mirroring Esper's
 				// auto-created Wrapper/Pair acceptance of named columns
@@ -1939,7 +1939,7 @@ func transposeUnderlyingTypeName(target Schema) string {
 // A null payload (`transpose(null)`) is rejected like Java's null-type
 // message; a Transpose with no children is a single-parameter error which the
 // Go single-argument signature can only express as Transpose(nil).
-func (e *Environment) validateTransposeExpression(target Schema, expression Expr, withAdditionalProperties bool) error {
+func (e *Environment) validateTransposeExpression(target Schema, expression Expr, withAdditionalProperties bool, pattern bool) error {
 	node := expression.node()
 	if node == nil {
 		return fmt.Errorf("esper: transpose function requires a single parameter expression")
@@ -1951,12 +1951,22 @@ func (e *Environment) validateTransposeExpression(target Schema, expression Expr
 	if child != nil && child.kind == "null" {
 		return fmt.Errorf("cannot transpose a null-type value")
 	}
-	if withAdditionalProperties {
+	var payloadType reflect.Type
+	if child != nil {
+		payloadType = child.typ
+	}
+	if pattern && payloadType == typeOf[Event]() {
+		// A pattern-event transpose carries the tagged Event; the runtime
+		// unwraps its underlying into the target, so any struct or
+		// container target is acceptable at build time. Non-pattern Event
+		// payloads still fall through to the coercion matrix below.
 		return nil
 	}
-	payloadType := node.children[0].typ
 	if payloadType != nil && payloadType.Kind() == reflect.Pointer {
 		payloadType = payloadType.Elem()
+	}
+	if withAdditionalProperties {
+		return nil
 	}
 	targetType := target.goType
 	if targetType != nil && targetType.Kind() == reflect.Pointer {
@@ -4508,6 +4518,32 @@ func (e *Environment) resultSchema(query Query) (Schema, error) {
 		if len(query.patternSelections) == 0 && len(patternDefinitionTagNames(query.pattern)) > 0 {
 			return Schema{}, NewError(ErrorInvalidRule, "pattern requires at least one projection")
 		}
+		// A pattern transpose selection routes the tagged event's
+		// underlying: the result schema is the route target (or the tag's
+		// source schema when there is no route), mirroring the plain
+		// transpose route whose projection is the target event itself.
+		for _, selection := range query.patternSelections {
+			if !isTransposeExpression(selection.Expr) {
+				continue
+			}
+			if query.routeTarget != "" {
+				target, _, ok := e.routeTargetSchema(query.moduleName, query.routeTarget)
+				if !ok {
+					return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("route target %q is not registered", query.routeTarget))
+				}
+				return target, nil
+			}
+			node := selection.Expr.node()
+			if node == nil || len(node.children) != 1 {
+				return Schema{}, NewError(ErrorInvalidRule, "esper: transpose function requires a single parameter expression")
+			}
+			child := node.children[0]
+			sources := patternTagSources(query.pattern)[child.tagName]
+			if len(sources) == 0 {
+				return Schema{}, NewError(ErrorUnknownName, fmt.Sprintf("pattern transpose references unknown tag %q", child.tagName))
+			}
+			return e.sourceSchema(sources[0])
+		}
 		fields := make([]FieldSpec, 0, len(query.patternSelections))
 		seen := make(map[string]struct{}, len(query.patternSelections))
 		for _, selection := range query.patternSelections {
@@ -6582,7 +6618,7 @@ func validateRowRecogTags(expression Expr, variables map[string]struct{}) error 
 	return nil
 }
 
-func (e *Environment) validatePattern(definition *patternDefinition, selections []Selection) error {
+func (e *Environment) validatePattern(definition *patternDefinition, selections []Selection, routeTarget string) error {
 	if err := validatePattern(definition); err != nil {
 		return err
 	}
@@ -6621,7 +6657,30 @@ func (e *Environment) validatePattern(definition *patternDefinition, selections 
 		return NewError(ErrorInvalidRule, "pattern requires at least one projection")
 	}
 	seen := make(map[string]struct{}, len(selections))
+	transposeCount := 0
 	for _, selection := range selections {
+		if isTransposeExpression(selection.Expr) {
+			// A transpose selection in a pattern select routes the tagged
+			// event's underlying into the insert-into target (Java's
+			// `a.*` over `from pattern [...]`); it carries no column name.
+			// The tag must exist so the payload is statically bound.
+			if strings.TrimSpace(selection.Name) != "" {
+				return NewError(ErrorInvalidRule, "pattern transpose projection does not accept a column name")
+			}
+			node := selection.Expr.node()
+			if node == nil || len(node.children) != 1 {
+				return NewError(ErrorInvalidRule, "esper: transpose function requires a single parameter expression")
+			}
+			child := node.children[0]
+			if child == nil || child.kind != "pattern-event" || child.tagName == "" {
+				return NewError(ErrorInvalidRule, "pattern transpose projection requires a pattern-event tag expression")
+			}
+			if len(tagSources[child.tagName]) == 0 {
+				return NewError(ErrorUnknownName, fmt.Sprintf("pattern transpose references unknown tag %q", child.tagName))
+			}
+			transposeCount++
+			continue
+		}
 		if strings.TrimSpace(selection.Name) == "" || selection.Expr == nil {
 			return NewError(ErrorInvalidRule, "pattern projection requires a name and expression")
 		}
@@ -6631,6 +6690,20 @@ func (e *Environment) validatePattern(definition *patternDefinition, selections 
 		seen[selection.Name] = struct{}{}
 		if err := e.validatePatternExpressionFields(definition.input, selection.Expr, tagSources, false); err != nil {
 			return err
+		}
+	}
+	if routeTarget == "" {
+		switch {
+		case transposeCount >= 2:
+			// Without a route target a pattern select produces rows, and a
+			// second transpose has no column to land in; Java's multi-stream
+			// wildcard message applies.
+			return NewError(ErrorInvalidRule, "a column name must be supplied for all but one stream if multiple streams are selected via the stream.* notation")
+		case transposeCount == 1 && len(selections) > 1:
+			// Companion columns beside a transpose only materialize inside a
+			// Wrapper/Pair route target (the Go Map target); without a route
+			// they would be silently dropped.
+			return NewError(ErrorInvalidRule, "pattern transpose projection with additional properties requires an insert-into target")
 		}
 	}
 	return nil
