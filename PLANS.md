@@ -3499,74 +3499,72 @@ ords 0-1 — four executions, insert-into column typing.
  `4fab3e118`. Git owns identity.
 
 ## Current work unit
-Active: Draft 4.466 ('epl-insert-into-wrapper').
+Active: Draft 4.467 ('epl-insert-into-istream-func').
 
-- [x] Contract frozen (scouts `NextJavaContract466` + `NextGoSurface466`;
+- [x] Contract frozen (scouts `NextJavaContract467` + `NextGoSurface467`;
  both hit yield-schema bugs — reports recovered via hub replies; see the
- prefetch section below for the full contract).
-- [x] Runner `internal/app/parity/epl_insert_into_wrapper.go` + run.go
- wiring (`epl-insert-into-wrapper[-diff]`): 3 cases, ops case/send;
- i1/i2/s2/final listener records. Compiles clean.
-- [x] Scenario JSON (3 cases / 10 steps) + oracle + run script —
- parity-asset-worker `AssetWriter466` (disjoint file ownership; stopped
- mid-work, resumed via hub). Oracle verified: 6 records, EPLs
- byte-exact, per-case fresh runtime.
-- [x] **Engine fix (shared core)**: the insert-into route selector is
- decoupled from the select-clause stream keyword — Query.routeSelector
- defaults to istream-only (matching Esper's plain 'insert into'), and
- new `WithIRStreamRoute()`/`WithRStreamRoute()` QueryOptions model
- 'insert irstream into'/'insert rstream into' (removes-as-inserts).
- Existing 'insert irstream/rstream into' call sites updated
- (epl_insert_into_istream_func_parity_test.go ×2,
- epl_insert_into_parity_test.go ×2,
- epl_other_istream_rstream_parity_test.go ×2, route_test.go ×1);
- facade regenerated. First attempt (removes-as-removes machinery:
- routedEvent.remove + processRoutedRemove + WithRemoveStreamRoute) was
- reverted after the parity reviewer showed Java's plain 'insert into'
- routes istream-only regardless of the select-clause keyword — the
- faithful model needs no remove-routing machinery.
-- [x] Differential replay: Java 6 records / Go 6 records, status
+ prefetch section below for the full contract). Scout correction: the
+ epl.insertinto-pattern `remaining` list was stale —
+ EPLInsertIntoTransposePattern was already DV'd in Draft 4.189; the
+ candidate was corrected to IRStreamFunc.
+- [x] Runner `internal/app/parity/epl_insert_into_istream_func.go` +
+ run.go wiring (`epl-insert-into-istream-func[-diff]`): 2 cases
+ (lastevent-irstream, join-irstream), ops case/send; i0/s0 listener
+ records. Compiles clean. NO engine work — the 4.466 routeSelector
+ split covers 'insert irstream into' (WithOldStream +
+ WithIRStreamRoute); the join leg uses plain Query(WithOldStream()).
+- [x] Scenario JSON (2 cases / 8 steps) + oracle + run script —
+ parity-asset-worker `AssetWriter467` (disjoint file ownership; stopped
+ mid-work, report recovered via abort-reason). Oracle verified: 10
+ records, EPLs byte-exact, per-case fresh runtime.
+- [x] Differential replay: Java 10 records / Go 10 records, status
  `passing`, 0 differences.
-- [x] Tests: TestRunEplInsertIntoWrapperDiffWritesPassingEvidence + 7
- trace mutations (extra-column drift, unprovided-column null, nested-bean
- property, irstream old-row lost/drift, split-fork-join row lost/id
- drift) — all green. Regression: TestEPLInsertIntoIRStreamFunc +
- TestEPLInsertIntoParity + TestEPLOtherIStreamRStream + TestRoute green.
-- [x] Manifest: `case.epl-insert-into-wrapper` born-DV with the 3 IDs;
- capability `epl.insertinto-pattern` DV IDs +3, EPLInsertIntoWrapper
- removed from remaining, goRefs extended; summary
- 706/332/1273/3823/3449/687; validator green. Roadmap + CHANGELOG
- entries added.
+- [x] Tests: TestRunEplInsertIntoIStreamFuncDiffWritesPassingEvidence +
+ 6 trace mutations (producer old-row lost, istream-flag drift,
+ consumer flattened-row drift, consumer old-data fabricated, join
+ old-row lost, join istream-flag drift) — all green.
+- [x] Manifest: `case.epl-insert-into-istream-func` upgraded
+ implemented -> DV (evidence, static ID, difference, notes, DV runtime
+ ID); capability `epl.insertinto-pattern` DV IDs +1, remaining cleaned
+ (EPLInsertIntoIRStreamFunc + stale EPLInsertIntoTransposePattern suite
+ removed), goRefs extended; summary 706/333/1274/3823/3449/687;
+ validator green. Roadmap + CHANGELOG entries added.
 - [ ] `make check`; parity review; commit/push.
 
+
 ## Next work unit (prefetch)
-Frozen: Draft 4.466 ('epl-insert-into-wrapper') — EPLInsertIntoWrapper.java
-ALL THREE executions (scouts `NextJavaContract466` + `NextGoSurface466`;
-both hit yield-schema bugs — reports recovered via hub replies):
-- ord 0 EPLInsertIntoWrapperBean `java-runtime-79356b0865c8de3ace17`
- (static `java-70e97824e1f97c1b9eee`): i1 `insert into WrappedBean
- select *, intPrimitive as p0 from SupportBean` -> {E1,1,p0:1}; i2
- `insert into WrappedBean select sb from SupportEventContainsSupportBean
- sb` -> {E2,2,p0:null} ('sb' resolves to the nested-bean PROPERTY, not
- the stream alias; unprovided p0 -> null). Listeners on i1/i2.
-- ord 1 EPLInsertInto3StreamWrapper `java-runtime-32434556dcbd672d7cf7`
- (static `java-b3c8191c6b0c0831cb61`): three chained `insert into
- select irstream *` producers over #length(2) with || concat columns;
- listener on s2; e1,e2,e3 -> s2 new {e3,e3AB} old {e1,e1AB} (rstream
- cascade removes e1's fully-wrapped row in the same invocation).
-- ord 2 EPLInsertIntoOnSplitForkJoin `java-runtime-581a1f109ff2588c6cde`
- (static `java-08f6aa413ec9ca217168`): single module, byte-exact EPL
- (mixed @Name/@name, blank lines, trailing ';\n'); transpose(UDF(event))
- -> MyEvent; on-trigger multi-clause splits by where; `output all` dual
- inserts; S0(1,T,T,F) -> final id=1; S0(1,T,T,T) -> final NOT invoked.
-- Go surface (scout `NextGoSurface466`): NO engine work. Transpose+
- companion-Alias unlocks struct-payload flattening into Map targets
- ('select *, p0' and 'select sb' + NullLiteral companion); irstream =
- WithOldStream() on the route; on-trigger splits = SplitFirst/
- SplitIntoWhen / SplitAll ('output all'); transpose(UDF) =
- Transpose(Func1(...)); pre-registered Map/struct targets for
- auto-created wrapper types (approved difference). New runner
- epl_insert_into_wrapper.go + mode.
+Frozen: Draft 4.467 ('epl-insert-into-istream-func') —
+EPLInsertIntoIRStreamFunc (single execution, ord 0,
+`java-runtime-033d9d0dabb864fd8179`, static `java-e3ea88d6389f41414b12`,
+variant "direct", flags []; scouts `NextJavaContract467` +
+`NextGoSurface467`; both hit yield-schema bugs — reports recovered via
+hub replies). NOTE: the epl.insertinto-pattern `remaining` list was
+stale — EPLInsertIntoTransposePattern was already DV'd in Draft 4.189
+(case.epl-insert-into-transpose-pattern, commit caed0e656); the scouts
+corrected the candidate to IRStreamFunc.
+- Leg 1 (lastevent-irstream): `@name('i0') @public insert irstream into
+ MyStream select irstream theString as c0, istream() as c1 from
+ SupportBean#lastevent` + `@name('s0') select * from MyStream`. Sends
+ E1/E2/E3: i0 sees IR pairs (new{E2,true} old{E1,false}); s0 sees BOTH
+ routed rows flattened as newData ({E2,true},{E1,false}) — 'insert
+ irstream into' = removes-as-inserts (WithOldStream +
+ WithIRStreamRoute). SODA leg `select istream() from SupportBean`
+ asserts property type Boolean — compile-only, no trace record.
+- Leg 2 (join-irstream): `@name('s0') select irstream theString as c0,
+ id as c1, istream() as c2 from SupportBean#lastevent,
+ SupportBean_S0#lastevent`. Send SupportBean E1, SupportBean_S0(10),
+ SupportBean E2 -> s0 new{E1,10,true} then new{E2,10,true}
+ old{E1,10,false}.
+- Go surface (scout `NextGoSurface467`): NO engine work — full surface
+ exists and is unit-proven (epl_insert_into_istream_func_parity_test.go).
+ 'insert irstream into' = WithOldStream + WithIRStreamRoute (the 4.466
+ routeSelector split); istream() = esper.IStream() (true on insert rows,
+ false on routed-remove rows); join leg = Join + LastEvent + SelectFrom/
+ JoinField + IStream(); SODA leg = no trace record (approved difference).
+ Runner epl_insert_into_istream_func.go + mode; manifest upgrades
+ existing case.epl-insert-into-istream-func implemented -> DV and drops
+ EPLInsertIntoIRStreamFunc + EPLInsertIntoTransposePattern suite from
+ the capability remaining list.
 
 ## Delegation checkpoint (recent)
 

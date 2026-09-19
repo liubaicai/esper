@@ -4669,15 +4669,14 @@
     "internal/app/parity/epl_insert_into_from_pattern.go",
     "internal/app/parity/epl_insert_into_wrapper.go",
     "internal/esper/faf.go",
-    "internal/esper/runtime.go"
+    "internal/esper/runtime.go",
+    "internal/app/parity/epl_insert_into_istream_func.go"
    ],
    "phase": 2,
    "status": "implemented",
    "remaining": [
-    "EPLInsertIntoIRStreamFunc",
     "EPLInsertIntoPopulateCreateStream suite",
     "EPLInsertIntoPopulateSingleColByMethodCall",
-    "EPLInsertIntoTransposePattern suite",
     "EPLInsertIntoPopulateUndStreamSelect Invalid execution (java-runtime-9c96c9930655f732930a): implemented-not-DV — Go-unit route-validation pins only ('route projection \"otherprop\" is not a field of target schema', transpose-to-typed-target rejection); verbatim Java diagnostics preserved in test header."
    ],
    "verification": [
@@ -4696,7 +4695,8 @@
     "java-runtime-9092d240993543259d6e",
     "java-runtime-79356b0865c8de3ace17",
     "java-runtime-32434556dcbd672d7cf7",
-    "java-runtime-581a1f109ff2588c6cde"
+    "java-runtime-581a1f109ff2588c6cde",
+    "java-runtime-033d9d0dabb864fd8179"
    ]
   },
   {
@@ -33845,20 +33845,35 @@
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoIRStreamFunc.java"
    ],
    "goTests": [
-    "internal/esper/epl_insert_into_istream_func_parity_test.go"
+    "internal/esper/epl_insert_into_istream_func_parity_test.go",
+    "internal/app/parity/epl_insert_into_istream_func.go",
+    "internal/app/parity/run_test.go"
    ],
    "tags": [
     "epl.insert-into"
    ],
-   "status": "implemented",
+   "status": "differential-verified",
    "evidence": [
-    "java-source",
-    "go-unit"
+    "testdata/parity/epl-insert-into-istream-func.json",
+    "testdata/parity/epl-insert-into-istream-func.trace.json",
+    "testdata/parity/epl-insert-into-istream-func.go.trace.json",
+    "testdata/parity/epl-insert-into-istream-func.evidence.json",
+    "tools/java-oracle/EplInsertIntoIRStreamFuncScenarioOracle.java",
+    "tools/java-oracle/run-epl-insert-into-istream-func.sh"
    ],
    "verification": [
     "inventoried",
-    "implemented"
-   ]
+    "implemented",
+    "differential-verified"
+   ],
+   "javaStaticIds": [
+    "java-e3ea88d6389f41414b12"
+   ],
+   "difference": "Approved differences: Esper auto-creates MyStream while Go pre-registers it as a map schema; the SODA leg 'select istream() from SupportBean' asserts only the compile-time property type (Boolean) so the trace carries no record for it; undeployAll between legs is modelled as separate cases with fresh runtimes.",
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-033d9d0dabb864fd8179"
+   ],
+   "notes": "Java/Go 10 records each, 0 differences. 'insert irstream into' = WithOldStream + WithIRStreamRoute (the 4.466 routeSelector split): i0 sees proper IR pairs while the MyStream consumer sees both routed rows flattened as newData; istream() returns true on insert rows and false on routed-remove rows; the join leg uses a plain Query(WithOldStream()) whose listener sees the IR pair."
   },
   {
    "id": "case.context-key-segmented-aggregate-access-only",
@@ -48528,8 +48543,8 @@
  "summary": {
   "inventoriedCases": 706,
   "implementedCases": 704,
-  "differentialVerifiedCases": 332,
-  "differentialVerifiedRuntimeIds": 1273,
+  "differentialVerifiedCases": 333,
+  "differentialVerifiedRuntimeIds": 1274,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,

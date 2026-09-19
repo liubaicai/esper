@@ -19383,6 +19383,115 @@ func TestRunEplInsertIntoWrapperDiffRejectsTraceMutations(t *testing.T) {
 		})
 	}
 }
+func TestRunEplInsertIntoIStreamFuncDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-istream-func.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-istream-func.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-istream-func.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-insert-into-istream-func-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplInsertIntoIStreamFuncDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "producer-old-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// i0's own listener must see the IR pair, not just the
+				// insert.
+				trace.Records[2].Old = nil
+			},
+		},
+		{
+			name: "istream-flag-drift",
+			mutate: func(trace *compat.Trace) {
+				// istream() must be false on the routed-remove row.
+				trace.Records[2].Old[0].Fields["c1"] = true
+			},
+		},
+		{
+			name: "consumer-flattened-row-drift",
+			mutate: func(trace *compat.Trace) {
+				// 'insert irstream into' routes removes as inserts: the
+				// consumer's second E2 batch carries the remove row.
+				trace.Records[4].New[0].Fields["c0"] = "E9"
+			},
+		},
+		{
+			name: "consumer-old-data-fabricated",
+			mutate: func(trace *compat.Trace) {
+				// The consumer never sees oldData under removes-as-inserts.
+				trace.Records[3].Old = trace.Records[3].New
+			},
+		},
+		{
+			name: "join-old-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// The join listener sees the proper IR pair.
+				trace.Records[9].Old = nil
+			},
+		},
+		{
+			name: "join-istream-flag-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[9].Old[0].Fields["c2"] = true
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-istream-func.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-istream-func.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-istream-func.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-insert-into-istream-func-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
 
 func TestRunResultsetOrderbyRowPerGroupDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,

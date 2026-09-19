@@ -1,0 +1,58 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-insert-into-istream-func",
+ "description": "EPL insert-into istream() parity replaying the single EPLInsertIntoIRStreamFunc execution (ord 0, variant direct) with one fresh runtime per case: lastevent-irstream deploys '@name('i0') @public insert irstream into MyStream select irstream theString as c0, istream() as c1 from SupportBean#lastevent' then '@name('s0') select * from MyStream' — 'insert irstream into' routes the remove stream as inserts, so i0 sees proper IR pairs (new {E2,true} old {E1,false}) while the MyStream consumer s0 sees the routed remove rows flattened as inserts ({E1,false} delivered as newData); join-irstream deploys '@name('s0') select irstream theString as c0, id as c1, istream() as c2 from SupportBean#lastevent, SupportBean_S0#lastevent' — a plain join select whose listener sees new {E1,10,true} once SupportBean_S0(10) arrives, then new {E2,10,true} old {E1,10,false} when the SupportBean side replaces. The Java execution's SODA leg 'select istream() from SupportBean' asserts only the compile-time property type (Boolean) and emits no listener records, so it is omitted from the scenario (approved difference); undeployAll between legs is modelled as separate cases with fresh runtimes.",
+ "javaRuntimes": [
+  "java-runtime-033d9d0dabb864fd8179"
+ ],
+ "cases": [
+  {
+   "case": "lastevent-irstream",
+   "runtimeId": "java-runtime-033d9d0dabb864fd8179"
+  },
+  {
+   "case": "join-irstream",
+   "runtimeId": "java-runtime-033d9d0dabb864fd8179"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "lastevent-irstream"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {"theString": "E1", "intPrimitive": 0}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {"theString": "E2", "intPrimitive": 0}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {"theString": "E3", "intPrimitive": 0}
+  },
+  {
+   "op": "case",
+   "case": "join-irstream"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {"theString": "E1", "intPrimitive": 0}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {"id": 10}
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {"theString": "E2", "intPrimitive": 0}
+  }
+ ]
+}
