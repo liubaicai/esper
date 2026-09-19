@@ -3639,7 +3639,25 @@ Active: Draft 4.472 ('context-key-segmented-allocation-time').
       channel, fire-on-allocation under category/init-term/nested contexts, pattern-trigger
       context-type validation, visitQueryExpressions for trigger patterns, allocBatch.Sequence
       merge) — none affect the pinned contract.
-- [ ] Pending: commit/push.
+- [x] Shipped; Git owns identity. Draft 4.472 committed and pushed as `852e6dad7`.
+
+## Prefetch archive (contract source for the next unit)
+N+1 scouts returned during 4.472's review (read-only, no writes started):
+- Java contract (`NextJavaNested`): ContextNested.java ords 4/5/17/33/34 —
+  segmented parent + filter-init-term child. Runtime IDs: ord 4
+  `java-runtime-8598d1eb6dbd61614f4f` (OBSERVEROPS), ord 5
+  `java-runtime-9539162a80f17616650f`, ord 17 `java-runtime-c91629ba5a771e1725db`,
+  ords 33/34 in the full report at agent://NextJavaNested. Key semantics:
+  broadcast initiation for non-parent-typed events (ord 5), uncorrelated
+  termination scoped to routed parent partitions (ord 33), initiating event
+  enters the new child partition, terminating event never enters the stream.
+- Go surface (`NextGoNested`): ords 4/17/34 expressible today; ord 33 needs a
+  non-distinct keyed-child approximation (NewDistinctInitiatedTerminatedContext
+  diverges on global broadcast termination); ord 5 is an ENGINE GAP — Esper
+  fans out cross-type initiation to every existing parent partition and
+  broadcasts parent-stream events to all child leaves; Go derives a single
+  nested key. Also a surface gap: KeyContextStream has no stream filter for
+  `partition by k from T(filter)`.
 
 
 ## Prefetch archive (contract source for the active unit)
