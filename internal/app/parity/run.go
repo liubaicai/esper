@@ -66,6 +66,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include epl-other-select-expr-stream-selector-remainder and epl-other-select-expr-stream-selector-remainder-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-subselect-prev-prior and context-key-segmented-subselect-prev-prior-diff")
 		fmt.Fprintln(stderr, "runner modes include context-key-segmented-invalid and context-key-segmented-invalid-diff")
+		fmt.Fprintln(stderr, "runner modes include context-key-segmented-allocation-time and context-key-segmented-allocation-time-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -3240,6 +3241,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, contextKeySegmentedInvalidJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, contextKeySegmentedInvalidJavaSources),
 				splitMetadata(*javaExecutions, contextKeySegmentedInvalidJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "context-key-segmented-allocation-time" || *mode == "context-key-segmented-allocation-time-diff" {
+		trace, err := runContextKeySegmentedAllocationTimeScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-key-segmented-allocation-time-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, *javaCommit,
+				splitMetadata(*javaRuntimeIDs, contextKeySegmentedAllocationTimeJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextKeySegmentedAllocationTimeJavaSources),
+				splitMetadata(*javaExecutions, contextKeySegmentedAllocationTimeJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

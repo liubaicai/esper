@@ -3575,6 +3575,72 @@ Active: Draft 4.471 ('context-key-segmented-remainder') — IN REVIEW.
       re-run).
 - [x] Shipped; Git owns identity.
 
+## Current work unit
+Active: Draft 4.472 ('context-key-segmented-allocation-time').
+
+- [x] Contract FROZEN (`.omp/contract-472.md`): three ContextKeySegmented.java
+      executions — ord 25 `ContextKeySegmentedWPatternFireWhenAllocated`
+      (`java-runtime-57199db349abfe7ad70e`), ord 28
+      `ContextKeySegmentedRegExFilter` (`java-runtime-9356c517931472be6cad`),
+      ord 6 `ContextKeySegmentedSubtype` (`java-runtime-820bb6f72b84ad070ce4`,
+      reclaims the dangling ID left by 4.471's ord-20 re-association).
+      Java commit `9e1b9f1cc9117fea4bf33ab043762c045d73839c` verified.
+- [x] ENGINE WORK (shared core, primary agent), all smoke-verified:
+  - `OnPattern(PatternStream)` trigger source: `triggerDefinition.pattern`
+    field, `TriggerStream.pattern`, `validateTrigger`/`validatePattern`
+    acceptance, `resultSchema` unchanged (set-variables columns), plan.go
+    source/context-validation exemptions for pattern triggers.
+  - Fire-on-allocation: `partitionRuntime` returns an allocation batch;
+    `allocationTimeBatch` fires due pattern timers at partition creation
+    (select → `patternTimeBatch`; trigger → new `patternTriggerTimeBatch`
+    executing the action per match and emitting the on-set row shape).
+    `statementAcceptsEvent` + `statementHasInputlessPattern` route
+    context-typed events to input-less pattern statements for allocation.
+    `initializeAt` arms `query.trigger.pattern` timers; `expireBatch` fires
+    trigger timers on AdvanceTime; `patternMatchSink` on statementRuntime
+    lets `processTriggerRuntime` execute the action per NFA match
+    (`patternBatchFor`/`patternCompositeTimeBatchFor` parameterized).
+  - `terminated after` runtime path: `expireContext` retires partitions
+    whose age exceeds `definition.terminatedAfter` (per-statement release).
+  - Subtype keys: `contextKeysForEvent` walks the transitive schema parent
+    chain via a new `patternEnvironment` back-pointer set in
+    `registerContextDefinition`; `contextKeysForNode`/`contextKeysForType`
+    gained env params; `validateSegmentedContextEventType` accepts a
+    statement source whose schema has a listed type as ancestor.
+- [x] Smoke-verified (throwaway tests, removed): ord 25 s0 emits
+      {key1:E1}/{key1:E2} at allocation and lastString[E1]=="E1"; ord 6
+      counts 1,2,1,3; ord 28 filter + terminated-after reallocation.
+      Full `internal/esper` suite green (68.6s).
+- [x] Parity assets integrated (AssetAllocTime): scenario
+      `testdata/parity/context-key-segmented-allocation-time.json` (3 cases / 15 steps),
+      oracle `tools/java-oracle/ContextKeySegmentedAllocationTimeScenarioOracle.java` +
+      `run-context-key-segmented-allocation-time.sh`, runner
+      `internal/app/parity/context_key_segmented_allocation_time.go` + run.go/run_test.go wiring.
+- [x] Java trace generated via the oracle script (10 records; envelope java 17.0.20).
+- [x] Go replay + zero-diff: `-mode context-key-segmented-allocation-time-diff` initially
+      reported 3 `records[N].time` differences — the merged allocBatch kept the zero
+      `batch.Time` from `partition.process` for the timer-only pattern. Fixed by carrying
+      `allocBatch.Time` into the merged batch when `batch.Time.IsZero()` (both trigger and
+      select merge sites). Re-run: status `passing` / 0 differences.
+- [x] Manifest: new `case.context-key-segmented-allocation-time` (3 runtime IDs, DV) mapped
+      to `context.partition`; capability DV IDs + representative scenario + goRefs updated;
+      `remaining` narrowed. Summary recomputed from arrays (the checked-in summary was stale:
+      669 cases vs 713 actual). `TestCapabilityManifestArtifactValidates` green.
+- [x] Parity test family green: DiffWritesPassingEvidence, 8 trace mutations,
+      RuntimeIDMappingMatchesScenario, help listing.
+- [x] Full `make check` GREEN (parity 80s, internal/esper 71s, compat manifest validation pass).
+- [x] Independent parity review (`ParityReview472`): first pass FAIL on evidence-integrity
+      P2s (manifest javaNames casing, truncated javaStaticIds, wrong ordinals in notes) plus a
+      real P2 (contextKeysForType single-level vs runtime BFS) and P3s (allocBatch dropped on
+      subquery-accept path, pattern-trigger tag bindings/nondeterminism/swallowed errors,
+      statementHasInputlessPattern dead for timer-root marker inputs, terminated-after missing
+      lifecycle cleanup). All fixed and re-verified (diff passing/0, family green, build+vet
+      clean). Re-review: PASS; residual P3s are documented edge gaps (expireContext error
+      channel, fire-on-allocation under category/init-term/nested contexts, pattern-trigger
+      context-type validation, visitQueryExpressions for trigger patterns, allocBatch.Sequence
+      merge) — none affect the pinned contract.
+- [ ] Pending: commit/push.
+
 
 ## Prefetch archive (contract source for the active unit)
 Frozen: Draft 4.469 ('epl-other-from-clause-optional') — see

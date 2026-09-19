@@ -1,0 +1,425 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-57199db349abfe7ad70e",
+    "java-runtime-9356c517931472be6cad",
+    "java-runtime-820bb6f72b84ad070ce4"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedWPatternFireWhenAllocated",
+    "ContextKeySegmentedRegExFilter",
+    "ContextKeySegmentedSubtype"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-allocation-time",
+    "steps": [
+      {
+        "op": "case",
+        "case": "pattern-fire-when-allocated"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "read-variable",
+        "statement": "s0",
+        "selector": "segmented",
+        "filterValue": "E1",
+        "name": "lastString"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "read-variable",
+        "statement": "s0",
+        "selector": "segmented",
+        "filterValue": "E2",
+        "name": "lastString"
+      },
+      {
+        "op": "case",
+        "case": "regex-filter"
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventWPartition",
+        "payload": {
+          "number": 1,
+          "description": "hello",
+          "partitionId": "A"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "MyEventWPartition",
+        "payload": {
+          "number": 2,
+          "description": "hello",
+          "partitionId": "A"
+        }
+      },
+      {
+        "op": "case",
+        "case": "subtype"
+      },
+      {
+        "op": "send",
+        "eventType": "ISupportAImpl",
+        "payload": {
+          "a": "A1",
+          "baseAB": "AB1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ISupportAImpl",
+        "payload": {
+          "a": "A2",
+          "baseAB": "AB1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ISupportAImpl",
+        "payload": {
+          "a": "A3",
+          "baseAB": "AB2"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "ISupportAImpl",
+        "payload": {
+          "a": "A4",
+          "baseAB": "AB1"
+        }
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-allocation-time",
+    "records": [
+      {
+        "case": "pattern-fire-when-allocated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-fire-when-allocated",
+        "operation": "variable",
+        "statement": "s0",
+        "sequence": 0,
+        "name": "lastString",
+        "value": "E1"
+      },
+      {
+        "case": "pattern-fire-when-allocated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key1": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-fire-when-allocated",
+        "operation": "variable",
+        "statement": "s0",
+        "sequence": 0,
+        "name": "lastString",
+        "value": "E2"
+      },
+      {
+        "case": "regex-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "description": "hello",
+              "number": 1,
+              "partitionId": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "regex-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "description": "hello",
+              "number": 2,
+              "partitionId": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subtype",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "subtype",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "subtype",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "subtype",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-allocation-time",
+    "records": [
+      {
+        "case": "pattern-fire-when-allocated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key1": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-fire-when-allocated",
+        "operation": "variable",
+        "statement": "s0",
+        "sequence": 0,
+        "name": "lastString",
+        "value": "E1"
+      },
+      {
+        "case": "pattern-fire-when-allocated",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "key1": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "pattern-fire-when-allocated",
+        "operation": "variable",
+        "statement": "s0",
+        "sequence": 0,
+        "name": "lastString",
+        "value": "E2"
+      },
+      {
+        "case": "regex-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "description": "hello",
+              "number": 1,
+              "partitionId": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "regex-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "description": "hello",
+              "number": 2,
+              "partitionId": "A"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subtype",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "subtype",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "subtype",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "subtype",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 3
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

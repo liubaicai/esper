@@ -1553,15 +1553,16 @@
     "internal/app/parity/run_test.go",
     "internal/app/parity/context_key_segmented_subselect_prev_prior.go",
     "internal/app/parity/context_key_segmented_invalid.go",
-    "internal/esper/state.go"
+    "internal/esper/state.go",
+    "internal/app/parity/context_key_segmented_allocation_time.go"
    ],
    "phase": 1,
    "status": "implemented",
    "remaining": [
-    "pattern/temporal lifecycle and termination-time output semantics",
     "initiating/terminating event and nested namespace context properties plus variable lifecycle",
     "partition administration/listeners plus full selector/iterator contract",
-    "cross-statement transactions"
+    "cross-statement transactions",
+    "pattern/temporal lifecycle beyond timer-interval(0) allocation-time firing"
    ],
    "verification": [
     "inventoried",
@@ -1577,13 +1578,17 @@
     "java-runtime-4b19317271be7df8b569",
     "java-runtime-bd4672ec90862ee08790",
     "java-runtime-9aa54450b89fbc94ab73",
-    "java-runtime-2afbd86618b752a6dd5b"
+    "java-runtime-2afbd86618b752a6dd5b",
+    "java-runtime-57199db349abfe7ad70e",
+    "java-runtime-9356c517931472be6cad",
+    "java-runtime-820bb6f72b84ad070ce4"
    ],
    "representativeScenarioIds": [
     "context-hash-segmented",
     "context-output-termination",
     "high-cardinality-context",
-    "context-keyed-subquery"
+    "context-keyed-subquery",
+    "context-key-segmented-allocation-time"
    ],
    "difference": "Ord 19 ContextKeySegmentedInvalid: probes 1 (per-stream partition filter) and 6 (subtype/supertype duplicate) are unrepresentable in the typed Go API — KeyContextStream has no Filter field and Go has no type inheritance; the other seven probes pin Go rejection boundaries with Java message prefixes."
   },
@@ -45736,6 +45741,71 @@
    ],
    "difference": "Compile-only probes: 7 of 9 pin Go rejection boundaries (unknown key property, mismatched key count, cross-stream key-type mismatch — new validation, duplicate type, statement on unlisted type, named window in partition criteria — new validation, named window under segmented context with unlisted schema type — new validation); probes 1 (per-stream partition filter) and 6 (subtype/supertype duplicate) are unrepresentable in the typed Go API.",
    "notes": "Java/Go 9 compile-error records each, 0 differences; all prefixes pinned byte-exact including the doubled \"for context\" quirk in the key-type-mismatch message."
+  },
+  {
+   "id": "case.context-key-segmented-allocation-time",
+   "javaRuntimeIds": [
+    "java-runtime-57199db349abfe7ad70e",
+    "java-runtime-9356c517931472be6cad",
+    "java-runtime-820bb6f72b84ad070ce4"
+   ],
+   "javaNames": [
+    "ContextKeySegmentedWPatternFireWhenAllocated",
+    "ContextKeySegmentedRegExFilter",
+    "ContextKeySegmentedSubtype"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+   ],
+   "goTests": [
+    "TestRunContextKeySegmentedAllocationTimeDiffWritesPassingEvidence",
+    "TestRunContextKeySegmentedAllocationTimeDiffRejectsTraceMutations",
+    "TestRunContextKeySegmentedAllocationTimeRuntimeIDMappingMatchesScenario",
+    "TestRunHelpIncludesContextKeySegmentedAllocationTime"
+   ],
+   "tags": [
+    "correctness",
+    "context",
+    "keyed",
+    "partition",
+    "pattern",
+    "timer-interval",
+    "fire-when-allocated",
+    "regex-filter",
+    "subtype",
+    "allocation-time",
+    "differential",
+    "representative"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified",
+    "representative-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-57199db349abfe7ad70e",
+    "java-runtime-9356c517931472be6cad",
+    "java-runtime-820bb6f72b84ad070ce4"
+   ],
+   "representativeScenarioIds": [
+    "context-key-segmented-allocation-time"
+   ],
+   "javaStaticIds": [
+    "java-268501a6a96134271fc9",
+    "java-17286d97b0a5fbf0b0a3",
+    "java-f9f4b6fe3adcdae63ef4"
+   ],
+   "notes": "Ord 25/28/6 ContextKeySegmented.java. Pattern-fire-when-allocated pins timer:interval(0) firing synchronously at partition allocation for both a select-from-pattern statement and an on-pattern statement; subtype resolves the partition key through the event type's supertype chain (ISupportAImpl -> ISupportA -> ISupportBaseAB). Engine fix: merged allocBatch.Time into the statement batch when partition.process returned a zero-Time batch (timer-only pattern)."
   }
  ],
  "mappings": [
@@ -48930,15 +49000,19 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-key-segmented-invalid"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-key-segmented-allocation-time"
   }
  ],
  "summary": {
-  "inventoriedCases": 713,
-  "implementedCases": 711,
-  "differentialVerifiedCases": 337,
-  "differentialVerifiedRuntimeIds": 1282,
+  "inventoriedCases": 714,
+  "implementedCases": 712,
+  "differentialVerifiedCases": 338,
+  "differentialVerifiedRuntimeIds": 1285,
   "intentionallyDifferentCases": 32,
-  "representativeVerifiedCases": 119,
+  "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
   "inventoriedCapabilities": 122,
   "implementedCapabilities": 121,
@@ -48946,13 +49020,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3836,
-  "referencedJavaRuntimeIds": 3462,
+  "runtimeAssociationCount": 3839,
+  "referencedJavaRuntimeIds": 3465,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 674,
+  "unreferencedJavaRuntimeIds": 671,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 713,
+  "totalCases": 714,
   "totalCapabilities": 122
  }
 }

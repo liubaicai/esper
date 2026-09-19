@@ -66327,3 +66327,178 @@ func TestRunHelpIncludesContextKeySegmentedInvalid(t *testing.T) {
 		}
 	}
 }
+
+func TestRunContextKeySegmentedAllocationTimeDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-allocation-time.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-allocation-time.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-allocation-time.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "context-key-segmented-allocation-time-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output compat.DifferentialEvidence
+	if err := json.Unmarshal(data, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.Status != "passing" || len(output.Differences) != 0 || stdout.Len() != 0 {
+		t.Fatalf("evidence=%s stdout=%q", data, stdout.String())
+	}
+}
+
+func TestRunContextKeySegmentedAllocationTimeDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "allocation-key-drift",
+			mutate: func(trace *compat.Trace) {
+				// s0 must emit the allocating partition's key: E1, not E2.
+				indices := recordIndicesOfCase(trace, "pattern-fire-when-allocated")
+				trace.Records[indices[0]].New[0].Fields["key1"] = "E2"
+			},
+		},
+		{
+			name: "variable-value-drift",
+			mutate: func(trace *compat.Trace) {
+				// The on-pattern trigger writes context.key1 into the
+				// per-partition lastString: E1's partition must read "E1".
+				indices := recordIndicesOfCase(trace, "pattern-fire-when-allocated")
+				trace.Records[indices[1]].Value = "E2"
+			},
+		},
+		{
+			name: "second-allocation-missing",
+			mutate: func(trace *compat.Trace) {
+				// A new key allocates a new partition and fires again: the
+				// E2 listener record must exist with key1 E2.
+				indices := recordIndicesOfCase(trace, "pattern-fire-when-allocated")
+				trace.Records[indices[2]].New[0].Fields["key1"] = "E1"
+			},
+		},
+		{
+			name: "regex-filter-field-drift",
+			mutate: func(trace *compat.Trace) {
+				// The allocating event matched like "%hello%": a filter that
+				// evaluated a different event would carry another
+				// description.
+				indices := recordIndicesOfCase(trace, "regex-filter")
+				trace.Records[indices[0]].New[0].Fields["description"] = "bye"
+			},
+		},
+		{
+			name: "subtype-partition-leak",
+			mutate: func(trace *compat.Trace) {
+				// A3 lands in the AB2 partition: its count is 1, not AB1's
+				// running 3.
+				indices := recordIndicesOfCase(trace, "subtype")
+				trace.Records[indices[2]].New[0].Fields["col1"] = 3
+			},
+		},
+		{
+			name: "subtype-count-drift",
+			mutate: func(trace *compat.Trace) {
+				// A4 is the third event in AB1: col1 must be 3.
+				indices := recordIndicesOfCase(trace, "subtype")
+				trace.Records[indices[3]].New[0].Fields["col1"] = 4
+			},
+		},
+		{
+			name: "record-removed",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:len(trace.Records)-1]
+			},
+		},
+		{
+			name: "case-label",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[0].Case = "subtype"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-allocation-time.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "context-key-segmented-allocation-time.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-allocation-time.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "context-key-segmented-allocation-time-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
+func TestRunContextKeySegmentedAllocationTimeRuntimeIDMappingMatchesScenario(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "testdata", "parity", "context-key-segmented-allocation-time.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &document); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(document.JavaRuntimes, contextKeySegmentedAllocationTimeJavaRuntimeIDs) ||
+		!reflect.DeepEqual(document.JavaNames, contextKeySegmentedAllocationTimeJavaExecutions) {
+		t.Fatalf("scenario metadata runtimes=%v names=%v", document.JavaRuntimes, document.JavaNames)
+	}
+	for _, entry := range document.Cases {
+		if contextKeySegmentedAllocationTimeCaseRuntimeIDs[entry.Case] != entry.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, want %q", entry.Case, entry.RuntimeID, contextKeySegmentedAllocationTimeCaseRuntimeIDs[entry.Case])
+		}
+	}
+}
+
+func TestRunHelpIncludesContextKeySegmentedAllocationTime(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"-h"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("help exit code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, mode := range []string{
+		"context-key-segmented-allocation-time",
+		"context-key-segmented-allocation-time-diff",
+	} {
+		if !strings.Contains(stderr.String(), mode) {
+			t.Fatalf("help output omits %q: %s", mode, stderr.String())
+		}
+	}
+}

@@ -628,7 +628,7 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	if query.env == nil || query.env != e {
 		return Plan{}, NewError(ErrorDependency, "query belongs to a different or nil environment")
 	}
-	if query.input == nil && query.join == nil && !query.sourceLess {
+	if query.input == nil && query.join == nil && !query.sourceLess && !(query.trigger != nil && query.trigger.pattern != nil) {
 		return Plan{}, NewError(ErrorInvalidRule, "query has no source")
 	}
 	var err error
@@ -766,10 +766,11 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 				}
 				return Plan{}, WrapError(ErrorInvalidRule, fmt.Sprintf("context source %d", index), err)
 			}
-		} else if query.sourceLess {
+		} else if query.sourceLess || (query.trigger != nil && query.trigger.pattern != nil) {
 			// A source-less context statement has no stream to validate; the
 			// lifecycle drives partition instantiation and the projections
-			// read only context properties and variables.
+			// read only context properties and variables. A pattern-sourced
+			// trigger likewise has no stream input to key-validate.
 		} else if err := e.validateSegmentedContextEventType(definition, query.input); err != nil {
 			// The event-type requirement precedes key resolution: a type the
 			// segmented context does not list has no keys to resolve, and the
@@ -2049,7 +2050,7 @@ func (e *Environment) validateContext(definition ContextDefinition, node *stream
 			}
 			return nil
 		}
-		keys := definition.contextKeysForNode(node)
+		keys := definition.contextKeysForNode(e, node)
 		if len(keys) == 0 {
 			return fmt.Errorf("context key expression is required")
 		}
@@ -2186,6 +2187,13 @@ func (e *Environment) validateSegmentedContextEventType(definition ContextDefini
 			}
 			listedType := listed.GoType()
 			if listedType == schema.GoType() || listedType.AssignableTo(schema.GoType()) || schema.GoType().AssignableTo(listedType) {
+				matched = true
+				break
+			}
+			// Esper's check is by event-type name, not Go type: a statement
+			// over a subtype of a listed type (ISupportA under ISupportBaseAB)
+			// satisfies the requirement through the transitive parent chain.
+			if e.acceptsEventType(typeName, schema.Name()) {
 				matched = true
 				break
 			}
@@ -2659,7 +2667,7 @@ func (e *Environment) validateNode(node *streamNode) error {
 // node's event type. A multi-stream segmented context validates each
 // declared type's keys against statements that reference that type; the
 // contextKeyValidatesOnAnySource wrapper tolerates other join sources.
-func (d ContextDefinition) contextKeysForNode(node *streamNode) []Expr {
+func (d ContextDefinition) contextKeysForNode(e *Environment, node *streamNode) []Expr {
 	if len(d.streamKeys) == 0 || node == nil {
 		return d.contextKeys()
 	}
@@ -2667,14 +2675,41 @@ func (d ContextDefinition) contextKeysForNode(node *streamNode) []Expr {
 	if err != nil {
 		return nil
 	}
-	return d.contextKeysForType(source.sourceName)
+	return d.contextKeysForType(e, source.sourceName)
 }
 
-func (d ContextDefinition) contextKeysForType(typeName string) []Expr {
+func (d ContextDefinition) contextKeysForType(e *Environment, typeName string) []Expr {
 	if len(d.streamKeys) == 0 {
 		return d.contextKeys()
 	}
-	return d.streamKeys[typeName]
+	if keys, ok := d.streamKeys[typeName]; ok {
+		return keys
+	}
+	// A subtype source resolves the keys declared for its supertype,
+	// matching Esper's `partition by baseAB from ISupportBaseAB` applied to
+	// a statement over ISupportA. The walk is transitive (BFS with a visited
+	// set), consistent with the runtime path contextKeysForEvent.
+	if e != nil {
+		visited := map[string]struct{}{typeName: {}}
+		if schema, ok := e.Schema(typeName); ok {
+			queue := append([]string(nil), schema.ParentNames()...)
+			for len(queue) > 0 {
+				name := queue[0]
+				queue = queue[1:]
+				if _, seen := visited[name]; seen {
+					continue
+				}
+				visited[name] = struct{}{}
+				if keys, ok := d.streamKeys[name]; ok {
+					return keys
+				}
+				if parent, ok := e.Schema(name); ok {
+					queue = append(queue, parent.ParentNames()...)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // contextKeyValidatesOnAnySource reports whether a segmented or hash
@@ -2727,6 +2762,15 @@ func (e *Environment) validateExprFields(input *streamNode, expression Expr) err
 	node.referencedLocalFields(&fields)
 	source, err := sourceNode(input)
 	if err != nil {
+		var parentFieldRefs []containedParentFieldReference
+		node.referencedContainedParentFields(&parentFieldRefs)
+		if len(fields) == 0 && len(parentFieldRefs) == 0 {
+			// A pattern-sourced trigger without event inputs (for example
+			// `on pattern[timer:interval(0)] set ...`) has no stream to
+			// resolve fields against; field-free expressions still
+			// validate.
+			return nil
+		}
 		return err
 	}
 	schema, err := e.sourceSchema(source)

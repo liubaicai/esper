@@ -151,6 +151,7 @@ type ContextDefinition struct {
 	cronEndResolved       *resolvedCronSchedule
 	startPattern          *patternDefinition
 	endPattern            *patternDefinition
+	terminatedAfter       time.Duration
 	patternEnvironment    *Environment
 	parent                *ContextDefinition
 }
@@ -235,6 +236,23 @@ func NewKeyContextByStreams(name string, streams ...KeyContextStream) (ContextDe
 	first := streams[0]
 	definition.key = first.Keys[0]
 	definition.keys = copyContextKeys(first.Keys)
+	return definition, nil
+}
+
+// NewKeyContextByStreamsTerminatedAfter declares a segmented context whose
+// partitions terminate automatically after the given duration, mirroring
+// Esper's `partition by k from T terminated after <duration>` form. Each
+// partition expires when its age exceeds the duration; expiry is evaluated
+// on the engine's time-advance path.
+func NewKeyContextByStreamsTerminatedAfter(name string, terminatedAfter time.Duration, streams ...KeyContextStream) (ContextDefinition, error) {
+	definition, err := NewKeyContextByStreams(name, streams...)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if terminatedAfter <= 0 {
+		return ContextDefinition{}, NewError(ErrorInvalidRule, "terminated-after duration must be positive")
+	}
+	definition.terminatedAfter = terminatedAfter
 	return definition, nil
 }
 
@@ -961,6 +979,28 @@ func (d ContextDefinition) contextKeysForEvent(event Event) []Expr {
 	if keys, ok := d.streamKeys[event.Schema().Name()]; ok {
 		return keys
 	}
+	// A subtype event resolves its partition keys through the supertype
+	// declared in the context, matching Esper's `partition by baseAB from
+	// ISupportBaseAB` allocating on ISupportAImpl events. The walk is
+	// transitive: ISupportAImpl -> ISupportA -> ISupportBaseAB.
+	visited := map[string]struct{}{event.Schema().Name(): {}}
+	queue := append([]string(nil), event.Schema().ParentNames()...)
+	for len(queue) > 0 {
+		name := queue[0]
+		queue = queue[1:]
+		if _, seen := visited[name]; seen {
+			continue
+		}
+		visited[name] = struct{}{}
+		if keys, ok := d.streamKeys[name]; ok {
+			return keys
+		}
+		if d.patternEnvironment != nil {
+			if schema, ok := d.patternEnvironment.Schema(name); ok {
+				queue = append(queue, schema.ParentNames()...)
+			}
+		}
+	}
 	return nil
 }
 
@@ -1539,14 +1579,41 @@ func CreateKeyContextByStreams(env *Environment, name string, streams ...KeyCont
 	if err != nil {
 		return ContextDefinition{}, err
 	}
+	if err := validateKeyContextStreams(env, name, streams); err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// CreateKeyContextByStreamsTerminatedAfter registers a segmented context
+// whose partitions terminate automatically after the given duration.
+func CreateKeyContextByStreamsTerminatedAfter(env *Environment, name string, terminatedAfter time.Duration, streams ...KeyContextStream) (ContextDefinition, error) {
+	if env == nil {
+		return ContextDefinition{}, NewError(ErrorDependency, "nil environment")
+	}
+	definition, err := NewKeyContextByStreamsTerminatedAfter(name, terminatedAfter, streams...)
+	if err != nil {
+		return ContextDefinition{}, err
+	}
+	if err := validateKeyContextStreams(env, name, streams); err != nil {
+		return ContextDefinition{}, err
+	}
+	return env.registerContextDefinition(definition)
+}
+
+// validateKeyContextStreams checks the declared stream types against the
+// environment: named windows are not valid partition criteria, every type
+// must be a registered event schema, and per-type key expressions must
+// agree in type, matching Esper's segmented-context validation.
+func validateKeyContextStreams(env *Environment, name string, streams []KeyContextStream) error {
 	var firstKeys []Expr
 	var firstType string
 	for index, stream := range streams {
 		if _, isWindow := env.NamedWindow(stream.Type); isWindow {
-			return ContextDefinition{}, NewError(ErrorInvalidRule, "partition criteria may not include named windows")
+			return NewError(ErrorInvalidRule, "partition criteria may not include named windows")
 		}
 		if _, ok := env.Schema(stream.Type); !ok {
-			return ContextDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q partition type %q is not a registered event type", name, stream.Type))
+			return NewError(ErrorUnknownName, fmt.Sprintf("context %q partition type %q is not a registered event type", name, stream.Type))
 		}
 		if index == 0 {
 			firstKeys, firstType = stream.Keys, stream.Type
@@ -1558,12 +1625,12 @@ func CreateKeyContextByStreams(env *Environment, name string, streams ...KeyCont
 			}
 			keyType, firstKeyType := key.Type(), firstKeys[keyIndex].Type()
 			if keyType != nil && firstKeyType != nil && keyType != firstKeyType {
-				return ContextDefinition{}, NewError(ErrorInvalidRule,
+				return NewError(ErrorInvalidRule,
 					fmt.Sprintf("for context %q found mismatch of property types, key %d of type %q on %q compared to type %q on %q", name, keyIndex, firstKeyType, firstType, keyType, stream.Type))
 			}
 		}
 	}
-	return env.registerContextDefinition(definition)
+	return nil
 }
 
 func CreateHashContext(env *Environment, name string, key Expr, partitions int) (ContextDefinition, error) {
@@ -1943,6 +2010,9 @@ func (e *Environment) registerContextDefinition(definition ContextDefinition) (C
 	if _, exists := e.contexts[definition.name]; exists {
 		return ContextDefinition{}, duplicateModuleObjectError(DeploymentResourceContext, definition.name)
 	}
+	// The registered copy carries the environment so subtype-aware key
+	// resolution can walk schema parent chains at runtime.
+	definition.patternEnvironment = e
 	e.contexts[definition.name] = definition
 	return definition, nil
 }

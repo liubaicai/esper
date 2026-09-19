@@ -1011,6 +1011,12 @@ func CreateKeyContextByStreams(env *Environment, name string, streams ...KeyCont
 	return internalengine.CreateKeyContextByStreams(env, name, streams...)
 }
 
+// CreateKeyContextByStreamsTerminatedAfter registers a segmented context
+// whose partitions terminate automatically after the given duration.
+func CreateKeyContextByStreamsTerminatedAfter(env *Environment, name string, terminatedAfter time.Duration, streams ...KeyContextStream) (ContextDefinition, error) {
+	return internalengine.CreateKeyContextByStreamsTerminatedAfter(env, name, terminatedAfter, streams...)
+}
+
 func CreateNamedWindow(env *Environment, name string, schema Schema, options ...NamedWindowOption) (NamedWindowDefinition, error) {
 	return internalengine.CreateNamedWindow(env, name, schema, options...)
 }
@@ -4330,6 +4336,15 @@ func NewKeyContextByStreams(name string, streams ...KeyContextStream) (ContextDe
 	return internalengine.NewKeyContextByStreams(name, streams...)
 }
 
+// NewKeyContextByStreamsTerminatedAfter declares a segmented context whose
+// partitions terminate automatically after the given duration, mirroring
+// Esper's `partition by k from T terminated after <duration>` form. Each
+// partition expires when its age exceeds the duration; expiry is evaluated
+// on the engine's time-advance path.
+func NewKeyContextByStreamsTerminatedAfter(name string, terminatedAfter time.Duration, streams ...KeyContextStream) (ContextDefinition, error) {
+	return internalengine.NewKeyContextByStreamsTerminatedAfter(name, terminatedAfter, streams...)
+}
+
 // NewMapSchema constructs a map-backed schema. Unknown fields are missing
 // unless AllowDynamicFields is supplied.
 func NewMapSchema(name string, fields []FieldSpec, opts ...SchemaOption) (Schema, error) {
@@ -4742,6 +4757,15 @@ func OnLess(left, right Expr) JoinCondition {
 
 func OnLessOrEqual(left, right Expr) JoinCondition {
 	return internalengine.OnLessOrEqual(left, right)
+}
+
+// OnPattern starts a state-mutation rule fired by a pattern match, mirroring
+// Esper's `on pattern [...] set ...` form. The trigger carries no event
+// input: the pattern's own sources (or a zero-interval timer) drive firing,
+// and a context-bound pattern trigger allocates its partition when a
+// context-typed event arrives.
+func OnPattern(pattern PatternStream) TriggerStream[any] {
+	return internalengine.OnPattern(pattern)
 }
 
 // OnRecord starts a state-mutation rule from a schema-driven dynamic stream.

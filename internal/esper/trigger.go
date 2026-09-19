@@ -297,6 +297,7 @@ func WhenNotMatchedActions(actions ...TableMergeAction) TableMergeClause {
 
 type triggerDefinition struct {
 	input      *streamNode
+	pattern    *patternDefinition
 	table      string
 	moduleName string
 	target     triggerTargetKind
@@ -360,8 +361,9 @@ func triggerTableScope(definition *triggerDefinition, runtime *statementRuntime,
 }
 
 type TriggerStream[T any] struct {
-	env  *Environment
-	node *streamNode
+	env     *Environment
+	node    *streamNode
+	pattern *patternDefinition
 }
 
 // OnEvent starts a state-mutation rule from a typed event stream.
@@ -372,6 +374,15 @@ func OnEvent[T any](stream Stream[T]) TriggerStream[T] {
 // OnRecord starts a state-mutation rule from a schema-driven dynamic stream.
 func OnRecord(stream RecordStream) TriggerStream[any] {
 	return TriggerStream[any]{env: stream.env, node: stream.node}
+}
+
+// OnPattern starts a state-mutation rule fired by a pattern match, mirroring
+// Esper's `on pattern [...] set ...` form. The trigger carries no event
+// input: the pattern's own sources (or a zero-interval timer) drive firing,
+// and a context-bound pattern trigger allocates its partition when a
+// context-typed event arrives.
+func OnPattern(pattern PatternStream) TriggerStream[any] {
+	return TriggerStream[any]{env: pattern.env, pattern: pattern.def}
 }
 
 type TriggerQuery struct {
@@ -651,6 +662,7 @@ func (s TriggerStream[T]) SetVariables(assignments ...VariableAssignmentExpr) Tr
 		env: s.env,
 		definition: &triggerDefinition{
 			input:               s.node,
+			pattern:             s.pattern,
 			action:              triggerSetVariables,
 			variableAssignments: append([]VariableAssignmentExpr(nil), assignments...),
 		},
@@ -965,8 +977,17 @@ func describeTableAssignments(assignments []TableAssignment) string {
 }
 
 func (e *Environment) validateTrigger(definition *triggerDefinition) error {
-	if definition == nil || definition.input == nil {
+	if definition == nil || (definition.input == nil && definition.pattern == nil) {
 		return NewError(ErrorInvalidRule, "trigger requires a source")
+	}
+	if definition.pattern != nil {
+		if err := validatePattern(definition.pattern); err != nil {
+			return err
+		}
+		if definition.action != triggerSetVariables {
+			return NewError(ErrorInvalidRule, "pattern triggers support variable assignments only")
+		}
+		return e.validateVariableTriggerAssignments(definition)
 	}
 	if err := e.validateNode(definition.input); err != nil {
 		return err
@@ -1625,7 +1646,13 @@ func (e *Environment) validateVariableTriggerAssignments(definition *triggerDefi
 			return NewError(ErrorState, fmt.Sprintf("Variable by name '%s' is declared constant and may not be set", assignment.Name))
 		}
 		if assignment.Apply == nil {
-			if err := e.validateExprFields(definition.input, assignment.Expr); err != nil {
+			validationInput := definition.input
+			if validationInput == nil && definition.pattern != nil {
+				if inputs := patternDefinitionInputs(definition.pattern); len(inputs) > 0 {
+					validationInput = inputs[0]
+				}
+			}
+			if err := e.validateExprFields(validationInput, assignment.Expr); err != nil {
 				return fmt.Errorf("variable assignment %q: %w", assignment.Name, err)
 			}
 		}
@@ -1817,7 +1844,7 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 		return s.processSplitStreamRuntime(ctx, runtime, definition, now, event, variables)
 	}
 	result := ResultBatch{Time: now}
-	processCandidate := func(candidate Event) error {
+	processCandidate := func(candidate Event, tags map[string]Event, tagValues map[string][]Event) error {
 		if definition.action == triggerSelectTable {
 			var batch ResultBatch
 			var selectErr error
@@ -1833,7 +1860,7 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 			result.Old = append(result.Old, batch.Old...)
 			return nil
 		}
-		mutation, err := executeTriggerAction(ctx, s.engine, definition, candidate, now, variables, s, runtime)
+		mutation, err := executeTriggerActionWithTags(ctx, s.engine, definition, candidate, now, variables, s, runtime, tags, tagValues)
 		if err != nil {
 			return err
 		}
@@ -1900,14 +1927,36 @@ func (s *Statement) processTriggerRuntime(ctx context.Context, runtime *statemen
 		return nil
 	}
 	var err error
-	if triggerInputContainsContained(definition.input) && triggerInputSupportsContainedTraversal(definition.input) {
-		err = runtime.forEachTriggerCandidate(definition.input, event, now, processCandidate)
+	if definition.pattern != nil {
+		// A pattern-sourced trigger feeds events into the pattern NFA and
+		// executes the action per completed match instead of inserting into
+		// a stream source.
+		delta, insertErr := runtime.insertPatternInputs(definition.pattern, event, now)
+		if insertErr != nil {
+			return ResultBatch{}, insertErr
+		}
+		var sinkErr error
+		runtime.patternMatchSink = func(match patternMatch) {
+			if sinkErr != nil {
+				return
+			}
+			sinkErr = processCandidate(match.current, match.tags, match.tagValues)
+		}
+		_ = runtime.patternBatchFor(definition.pattern, delta, s.plan, now)
+		runtime.patternMatchSink = nil
+		if sinkErr != nil {
+			return ResultBatch{}, sinkErr
+		}
+	} else if triggerInputContainsContained(definition.input) && triggerInputSupportsContainedTraversal(definition.input) {
+		err = runtime.forEachTriggerCandidate(definition.input, event, now, func(candidate Event) error {
+			return processCandidate(candidate, nil, nil)
+		})
 	} else {
 		var delta eventDelta
 		delta, err = runtime.insert(definition.input, event, now)
 		if err == nil {
 			for _, candidate := range delta.newEvents {
-				if err = processCandidate(candidate); err != nil {
+				if err = processCandidate(candidate, nil, nil); err != nil {
 					break
 				}
 			}
@@ -2775,6 +2824,13 @@ func executeInsertFromNamedWindowAction(ctx context.Context, engine *Engine, def
 }
 
 func executeTriggerAction(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement, runtime *statementRuntime) (mutation tableMutationResult, err error) {
+	return executeTriggerActionWithTags(ctx, engine, definition, event, now, variables, owner, runtime, nil, nil)
+}
+
+// executeTriggerActionWithTags carries a pattern match's tag bindings into
+// the trigger evaluation context so `on pattern[s=T] set v = s.f` resolves
+// tag references the way Esper binds them.
+func executeTriggerActionWithTags(ctx context.Context, engine *Engine, definition *triggerDefinition, event Event, now time.Time, variables map[string]Value, owner *Statement, runtime *statementRuntime, tags map[string]Event, tagValues map[string][]Event) (mutation tableMutationResult, err error) {
 	if engine == nil || definition == nil {
 		return tableMutationResult{}, NewError(ErrorDependency, "nil table trigger")
 	}
@@ -2788,7 +2844,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 			err = ownershipErr
 		}
 	}()
-	evaluation := EvalContext{Engine: engine, Event: event, Now: now, Variables: variables}
+	evaluation := EvalContext{Engine: engine, Event: event, Now: now, Variables: variables, Tags: tags, TagValues: tagValues}
 	if definition.action == triggerSetVariables {
 		return tableMutationResult{}, executeVariableTriggerAction(ctx, engine, definition, evaluation, variables, runtime)
 	}

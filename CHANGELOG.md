@@ -1,3 +1,5 @@
+> 最新补充:Draft 4.472(2026-09-19),`context.partition` 新登记 `case.context-key-segmented-allocation-time`(出生即 DV)——ContextKeySegmented ord 25/28/6(`java-runtime-57199db349abfe7ad70e`/`9356c517931472be6cad`/`820bb6f72b84ad070ce4`,后者回收 4.471 悬空 ID)。Java/Go 各 10 条 records、0 differences。**引擎扩展**:`OnPattern` 触发器源(on pattern[...] set ...);fire-on-allocation(timer:interval(0) 分区创建即触发);`terminated after` 分区退役;subtype 分区键沿 schema parent 链解析。manifest 714 cases / 338 DV / 1285 DV runtime IDs。
+
 > 最新补充:Draft 4.471(2026-09-19),`context.partition` 扩展 ContextKeySegmented 三 execution——ord 8 subselect prev/prior 出生即 DV(`java-runtime-2afbd86618b752a6dd5b`,12 records 0 diff),ord 19 invalid 探针 intentionally-different(7/9 钉住 Go 拒绝边界,新增三项校验),ord 20 修正 runtime ID 关联。manifest 713 cases / 337 DV / 1282 DV runtime IDs。
 
 > 最新补充:Draft 4.470(2026-09-19),`eplother.stream-selector` 扩展至 EPLOtherSelectExprStreamSelector 16/17——ords 1/2 出生即 DV(`java-runtime-784378ea15f390e587b2`/`java-runtime-68b49a5d4a1630d85f75`),ords 0/16/3 登记 intentionally-different。Java/Go 各 15 条 records、0 differences。**引擎扩展**:pattern-source transpose(`a.*` 路由 tagged event underlying;修复 named Transpose 在 pattern select 的静默错路由)。

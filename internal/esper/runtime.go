@@ -953,7 +953,7 @@ func (e *Engine) releaseContextPartitionKindLocked(contextName, partitionKey str
 		}
 	}
 	definition, definitionOK := e.env.Context(contextName)
-	lifecycleManaged := definitionOK && (definition.isTemporal() || definition.kind == ContextInitiatedTerminated)
+	lifecycleManaged := definitionOK && (definition.isTemporal() || definition.kind == ContextInitiatedTerminated || definition.terminatedAfter > 0)
 	if lifecycleManaged {
 		for _, table := range e.tables {
 			if table != nil {
@@ -6518,7 +6518,11 @@ type statementRuntime struct {
 	aggregateState      *aggregateRuntimeState
 	derivedStates       map[*streamNode]*aggregateRuntimeState
 	patternState        *patternRuntimeState
-	patternJoinStates   map[*streamNode]*patternJoinRuntime
+	// patternMatchSink, when non-nil, receives each visible completed match
+	// in addition to the projected row; pattern-sourced triggers use it to
+	// execute their action per match.
+	patternMatchSink  func(patternMatch)
+	patternJoinStates map[*streamNode]*patternJoinRuntime
 	// iterableLastEvent retains the last event that entered an unwindowed
 	// select's stream when the query carries iterableUnbound, mirroring
 	// Java's ZeroDepthStreamIterable: the statement iterator then yields the
@@ -6706,16 +6710,29 @@ func recordPatternDistinct(state *patternRuntimeState, definition *patternDefini
 }
 
 func patternMatchEvents(match patternMatch) []Event {
+	// Iterate tags in sorted order: Go map iteration is nondeterministic,
+	// and callers that pick events[0] (pattern-sourced triggers) need a
+	// stable representative event.
 	if len(match.tagValues) > 0 {
+		names := make([]string, 0, len(match.tagValues))
+		for name := range match.tagValues {
+			names = append(names, name)
+		}
+		sort.Strings(names)
 		events := make([]Event, 0)
-		for _, values := range match.tagValues {
-			events = append(events, values...)
+		for _, name := range names {
+			events = append(events, match.tagValues[name]...)
 		}
 		return events
 	}
+	names := make([]string, 0, len(match.tags))
+	for name := range match.tags {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 	events := make([]Event, 0, len(match.tags))
-	for _, event := range match.tags {
-		events = append(events, event)
+	for _, name := range names {
+		events = append(events, match.tags[name])
 	}
 	return events
 }
@@ -7162,7 +7179,7 @@ func newStatementRuntime(query Query) statementRuntime {
 	if query.aggregate != nil {
 		runtime.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
 	}
-	if query.pattern != nil {
+	if query.pattern != nil || (query.trigger != nil && query.trigger.pattern != nil) {
 		runtime.patternState = &patternRuntimeState{distinct: make(map[string]struct{})}
 	}
 	if query.rowRecog != nil {
@@ -7722,17 +7739,21 @@ func (r *statementRuntime) initializeAt(at time.Time) {
 		// seeding only reads statically valid specs.
 		return
 	}
-	if r.query.pattern == nil || r.patternState == nil || r.query.pattern.root == nil {
+	patternDef := r.query.pattern
+	if patternDef == nil && r.query.trigger != nil {
+		patternDef = r.query.trigger.pattern
+	}
+	if patternDef == nil || r.patternState == nil || patternDef.root == nil {
 		return
 	}
-	if patternContainsTimer(r.query.pattern.root) && !isPatternTimerRoot(r.query.pattern) && patternCanStartWithoutEvent(r.query.pattern.root) {
-		progress := newPatternProgress(r.query.pattern.root)
+	if patternContainsTimer(patternDef.root) && !isPatternTimerRoot(patternDef) && patternCanStartWithoutEvent(patternDef.root) {
+		progress := newPatternProgress(patternDef.root)
 		armPatternProgressTimers(progress, at, r.variables)
 		if patternProgressActive(progress) {
 			r.patternState.active = []patternMatch{{state: progress, startedAt: at, prearmed: true}}
 		}
 	}
-	switch root := r.query.pattern.root; root.kind {
+	switch root := patternDef.root; root.kind {
 	case patternTimerIntervalNode:
 		r.patternState.timerStarted = true
 		deadline, ok := patternDurationDeadline(root, nil, at, r.variables)
@@ -8005,9 +8026,23 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			variables = s.runtime.subqueryRegistry.attachVariables(variables)
 		}
 	} else if s.plan.query.contextName != "" {
-		if err := s.acceptContextSubqueryEventLocked(event, now, variables); err != nil {
-			return ResultBatch{}, false, err
+		subAllocBatch, subErr := s.acceptContextSubqueryEventLocked(event, now, variables)
+		if subErr != nil {
+			return ResultBatch{}, false, subErr
 		}
+		defer func() {
+			// A partition allocated by the subquery-accept path may fire an
+			// allocation-time pattern timer; merge those rows into the
+			// statement result instead of dropping them.
+			if !subAllocBatch.empty() {
+				batch.New = append(subAllocBatch.New, batch.New...)
+				batch.Old = append(subAllocBatch.Old, batch.Old...)
+				if batch.Time.IsZero() {
+					batch.Time = subAllocBatch.Time
+				}
+				changed = true
+			}
+		}()
 	}
 	if deferSelfSubselectAccept {
 		defer func() {
@@ -8026,12 +8061,24 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			return s.processInitiatedTerminated(definition, event, now, variables)
 		}
 		if !statementAcceptsEvent(s.plan.query, event) {
+			// A context-typed event still allocates partitions for
+			// statements whose pattern has no event inputs (timer-only
+			// patterns and on-pattern triggers): Esper allocates the
+			// partition for every statement bound to the context, and a
+			// due timer fires at allocation.
+			if definitionOK && statementHasInputlessPattern(s.plan.query) && len(definition.contextKeysForEvent(event)) > 0 {
+				_, _, allocBatch, allocErr := s.partitionRuntime(event, now, variables)
+				if allocErr != nil {
+					return ResultBatch{}, false, allocErr
+				}
+				return allocBatch, !allocBatch.empty() || allocBatch.forced, nil
+			}
 			return ResultBatch{}, false, nil
 		}
 		if definitionOK && definition.isTemporal() {
 			_, _ = s.syncTemporalContextLocked(now)
 		}
-		partition, fanOut, err := s.partitionRuntime(event, now, variables)
+		partition, fanOut, allocBatch, err := s.partitionRuntime(event, now, variables)
 		if err != nil {
 			return ResultBatch{}, false, err
 		}
@@ -8049,6 +8096,10 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			if err != nil {
 				return ResultBatch{}, false, err
 			}
+			batch.New = append(allocBatch.New, batch.New...)
+			if batch.Time.IsZero() {
+				batch.Time = allocBatch.Time
+			}
 			return batch, !batch.empty() || batch.forced, nil
 		}
 		batch, changed, err := partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables), streamFilterVerdict{})
@@ -8061,7 +8112,12 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 		if changed {
 			batch.Sequence = s.runtime.seq.Add(1)
 		}
-		return batch, changed, err
+		batch.New = append(allocBatch.New, batch.New...)
+		batch.Old = append(allocBatch.Old, batch.Old...)
+		if batch.Time.IsZero() {
+			batch.Time = allocBatch.Time
+		}
+		return batch, changed || !allocBatch.empty() || allocBatch.forced, err
 	}
 	if s.plan.query.updateStream != nil {
 		if updateStreamTargetsNamedWindow(s.plan.query) {
@@ -8117,32 +8173,33 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 // acceptContextSubqueryEventLocked advances every currently active context
 // partition's raw event-stream subqueries. Context subqueries are partition
 // local in Esper, and they observe inner-stream events even when the event is
-// not an outer-stream event for the statement itself.
-func (s *Statement) acceptContextSubqueryEventLocked(event Event, now time.Time, variables map[string]Value) error {
+func (s *Statement) acceptContextSubqueryEventLocked(event Event, now time.Time, variables map[string]Value) (ResultBatch, error) {
 	if s == nil || s.engine == nil || s.runtime.subqueryRegistry == nil || !s.runtime.subqueryRegistry.acceptsEvent(event) {
-		return nil
+		return ResultBatch{}, nil
 	}
 	// An inner-stream event of a keyed context creates its partition when
 	// none exists yet: Esper allocates the partition on any event of a
 	// context-declared stream, so a partition-local subquery over that
 	// stream observes the event even when it is not an outer-stream event.
+	var allocBatch ResultBatch
 	if len(s.runtime.partitions) == 0 {
 		definition, definitionOK := s.engine.env.Context(s.plan.query.contextName)
 		if definitionOK && definition.kind == ContextKeySegmented && len(definition.contextKeysForEvent(event)) > 0 {
-			if _, _, err := s.partitionRuntime(event, now, variables); err != nil {
-				return err
+			var err error
+			if _, _, allocBatch, err = s.partitionRuntime(event, now, variables); err != nil {
+				return ResultBatch{}, err
 			}
 		}
 	}
 	if len(s.runtime.partitions) == 0 {
-		return nil
+		return allocBatch, nil
 	}
 	// Every context partition is created from the same statement plan. If the
 	// event cannot reach any event-stream subquery in that plan, skip the
 	// partition walk entirely; sparse contexts otherwise turn unrelated events
 	// into an O(partitions) dispatch cost.
 	if s.runtime.subqueryRegistry == nil || !s.runtime.subqueryRegistry.acceptsEvent(event) {
-		return nil
+		return allocBatch, nil
 	}
 	for _, partition := range s.runtime.partitions {
 		if partition == nil {
@@ -8154,10 +8211,10 @@ func (s *Statement) acceptContextSubqueryEventLocked(event Event, now time.Time,
 		}
 		partitionVariables := s.contextPartitionVariables(partition, variables)
 		if err := partition.subqueryRegistry.accept(event, now, partitionVariables); err != nil {
-			return err
+			return ResultBatch{}, err
 		}
 	}
-	return nil
+	return allocBatch, nil
 }
 
 func (s *Statement) contextPartitionVariables(partition *statementRuntime, variables map[string]Value) map[string]Value {
@@ -8232,6 +8289,14 @@ func statementAcceptsEvent(query Query, event Event) bool {
 		return false
 	}
 	input := query.input
+	if query.trigger != nil && query.trigger.pattern != nil {
+		for _, source := range patternDefinitionInputs(query.trigger.pattern) {
+			if sourceNodeAcceptsEvent(query.env, source, event) {
+				return true
+			}
+		}
+		return false
+	}
 	if query.pattern != nil {
 		for _, source := range patternDefinitionInputs(query.pattern) {
 			if sourceNodeAcceptsEvent(query.env, source, event) {
@@ -8247,6 +8312,30 @@ func statementAcceptsEvent(query Query, event Event) bool {
 		input = query.rowRecog.input
 	}
 	return sourceNodeAcceptsEvent(query.env, input, event)
+}
+
+// statementHasInputlessPattern reports whether the statement's pattern (or
+// pattern-sourced trigger) has no event inputs — a timer-only pattern whose
+// partition must still be allocated when a context-typed event arrives so a
+// due timer can fire at allocation.
+func statementHasInputlessPattern(query Query) bool {
+	var pattern *patternDefinition
+	switch {
+	case query.pattern != nil:
+		pattern = query.pattern
+	case query.trigger != nil && query.trigger.pattern != nil:
+		pattern = query.trigger.pattern
+	default:
+		return false
+	}
+	// Timer-root patterns carry their source stream only as an environment
+	// marker (TimerInterval sets definition.input without consuming events),
+	// so they count as inputless even though patternDefinitionInputs is
+	// non-empty. Composite patterns with real event inputs are not.
+	if isPatternTimerRoot(pattern) {
+		return true
+	}
+	return len(patternDefinitionInputs(pattern)) == 0
 }
 
 // streamFilterVerdict carries the dispatch loop's already-computed filter
@@ -9746,10 +9835,10 @@ func (s *Statement) syncTemporalContextLocked(now time.Time) (ResultBatch, bool)
 	return batch, true
 }
 
-func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[string]Value) (*statementRuntime, bool, error) {
+func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[string]Value) (*statementRuntime, bool, ResultBatch, error) {
 	definition, ok := s.engine.env.Context(s.plan.query.contextName)
 	if !ok {
-		return nil, false, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", s.plan.query.contextName))
+		return nil, false, ResultBatch{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", s.plan.query.contextName))
 	}
 	if definition.isTemporal() {
 		_, _ = s.syncTemporalContextLocked(now)
@@ -9762,26 +9851,26 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 			start, _, active = definition.temporalWindow(origin, now)
 		}
 		if !active {
-			return nil, false, nil
+			return nil, false, ResultBatch{}, nil
 		}
 		key := temporalPartitionKey(start)
 		if partition := s.runtime.partitions[key]; partition != nil {
-			return partition, false, nil
+			return partition, false, ResultBatch{}, nil
 		}
-		return nil, false, nil
+		return nil, false, ResultBatch{}, nil
 	}
 	if definition.hasCategoryLevel() {
 		// Category contexts fan out: the event is processed in every
 		// partition whose predicate matches (at any nesting level), so the
 		// single-key path below cannot represent it.
-		return nil, true, nil
+		return nil, true, ResultBatch{}, nil
 	}
 	key, active, err := definition.partition(event, now, variables)
 	if err != nil {
-		return nil, false, err
+		return nil, false, ResultBatch{}, err
 	}
 	if !active {
-		return nil, false, nil
+		return nil, false, ResultBatch{}, nil
 	}
 	if (definition.kind == ContextKeySegmented || definition.kind == ContextHashSegmented) && len(definition.contextKeysForEvent(event)) == 0 {
 		// An event of a type not declared in a multi-stream segmented
@@ -9789,7 +9878,7 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 		// such events to every existing partition so joins, subqueries and
 		// patterns over the partner stream observe them per partition,
 		// while partitions created later never see them.
-		return nil, true, nil
+		return nil, true, ResultBatch{}, nil
 	}
 	if (definition.kind == ContextKeySegmented || definition.kind == ContextHashSegmented) && !initiatedContextKeyAvailable(definition, event, now, variables) {
 		// An event whose schema has no value for the partition key (for
@@ -9798,12 +9887,13 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 		// such events to every existing partition so joins, subqueries and
 		// patterns over the partner stream observe them per partition,
 		// while partitions created later never see them.
-		return nil, true, nil
+		return nil, true, ResultBatch{}, nil
 	}
 	if s.runtime.partitions == nil {
 		s.runtime.partitions = make(map[string]*statementRuntime)
 	}
 	partition := s.runtime.partitions[key]
+	var allocBatch ResultBatch
 	if partition == nil {
 		query := s.runtime.query
 		query.contextName = ""
@@ -9819,8 +9909,32 @@ func (s *Statement) partitionRuntime(event Event, now time.Time, variables map[s
 		partition = ptrStatementRuntime(partitionRuntime)
 		s.runtime.partitions[key] = partition
 		s.engine.retainContextPartitionLocked(s.plan.query.contextName, key, partition)
+		// A pattern timer already due at allocation (timer:interval(0))
+		// fires synchronously with partition creation, matching Esper's
+		// fire-when-allocated semantics; the event itself is not consumed.
+		var allocErr error
+		allocBatch, allocErr = partitionRuntime.allocationTimeBatch(s.plan, now)
+		if allocErr != nil {
+			return nil, false, ResultBatch{}, allocErr
+		}
 	}
-	return partition, false, nil
+	return partition, false, allocBatch, nil
+}
+
+// allocationTimeBatch emits the results of pattern timers already due at
+// partition creation. Select-from-pattern statements produce rows;
+// pattern-sourced triggers execute their action per fired match.
+func (r *statementRuntime) allocationTimeBatch(plan Plan, now time.Time) (ResultBatch, error) {
+	if r == nil || r.patternState == nil {
+		return ResultBatch{}, nil
+	}
+	if plan.query.trigger != nil && plan.query.trigger.pattern != nil {
+		return r.patternTriggerTimeBatch(plan, now)
+	}
+	if plan.query.pattern != nil && (isPatternTimerRoot(plan.query.pattern) || patternContainsTimer(plan.query.pattern.root)) {
+		return r.patternTimeBatch(plan, now), nil
+	}
+	return ResultBatch{}, nil
 }
 
 // processContextFanOut dispatches an event whose type has no partition key
@@ -10718,6 +10832,19 @@ func (s *Statement) expireContext(now time.Time, variables map[string]Value) (Re
 		batch.New = append(batch.New, partBatch.New...)
 		batch.Old = append(batch.Old, partBatch.Old...)
 	}
+	// A segmented context declared `terminated after <duration>` retires a
+	// partition once its age exceeds the duration; every statement bound to
+	// the context releases its own reference on the same advance.
+	if definition, ok := s.engine.env.Context(s.plan.query.contextName); ok && definition.terminatedAfter > 0 {
+		for _, key := range keys {
+			partition := s.runtime.partitions[key]
+			if partition == nil || now.Sub(partition.initializedAt) < definition.terminatedAfter {
+				continue
+			}
+			delete(s.runtime.partitions, key)
+			s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, key, true, partition)
+		}
+	}
 	if batch.empty() && !batch.forced {
 		return ResultBatch{}, false
 	}
@@ -10780,6 +10907,14 @@ func (r *statementRuntime) expireBatch(plan Plan, now time.Time, variables map[s
 	} else if plan.query.rowRecog != nil {
 		delta := r.expire(now)
 		batch = r.rowRecogBatch(delta, plan, now)
+	} else if plan.query.trigger != nil && plan.query.trigger.pattern != nil {
+		if isPatternTimerRoot(plan.query.trigger.pattern) || patternContainsTimer(plan.query.trigger.pattern.root) {
+			var triggerErr error
+			batch, triggerErr = r.patternTriggerTimeBatch(plan, now)
+			if triggerErr != nil {
+				return ResultBatch{}, triggerErr
+			}
+		}
 	} else if plan.query.pattern != nil {
 		if isPatternTimerRoot(plan.query.pattern) || patternContainsTimer(plan.query.pattern.root) {
 			batch = r.patternTimeBatch(plan, now)
@@ -20256,10 +20391,16 @@ func streamNodeOutputAcceptsEvent(env *Environment, node *streamNode, event Even
 }
 
 func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Time) ResultBatch {
-	if plan.query.pattern == nil || r.patternState == nil {
+	return r.patternBatchFor(plan.query.pattern, delta, plan, now)
+}
+
+// patternBatchFor advances the pattern NFA for one event delta. The
+// definition is explicit so pattern-sourced triggers (whose query.pattern is
+// nil) can reuse the advance with a match sink instead of row projection.
+func (r *statementRuntime) patternBatchFor(definition *patternDefinition, delta eventDelta, plan Plan, now time.Time) ResultBatch {
+	if definition == nil || r.patternState == nil {
 		return ResultBatch{}
 	}
-	definition := plan.query.pattern
 	if isPatternTimerRoot(definition) {
 		return ResultBatch{}
 	}
@@ -20339,6 +20480,9 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 							r.patternState.iterableRows = []Result{result}
 						}
 						batch.New = append(batch.New, result)
+						if r.patternMatchSink != nil {
+							r.patternMatchSink(candidate)
+						}
 					}
 
 					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
@@ -20392,6 +20536,9 @@ func (r *statementRuntime) patternBatch(delta eventDelta, plan Plan, now time.Ti
 							r.patternState.iterableRows = []Result{result}
 						}
 						batch.New = append(batch.New, result)
+						if r.patternMatchSink != nil {
+							r.patternMatchSink(started)
+						}
 					}
 					if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, started, definition, pool) {
 						nextActive = append(nextActive, started)
@@ -20574,8 +20721,176 @@ func (r *statementRuntime) patternTimeBatch(plan Plan, now time.Time) ResultBatc
 	return batch
 }
 
+// patternTriggerTimeBatch fires a pattern-sourced trigger's due timers and
+// executes the trigger action per match, mirroring Esper's
+// `on pattern[timer:...] set ...` form. The trigger emits the assigned
+// variable values as its output row, matching the on-set result shape.
+func (r *statementRuntime) patternTriggerTimeBatch(plan Plan, now time.Time) (ResultBatch, error) {
+	definition := plan.query.trigger.pattern
+	if definition == nil || r.patternState == nil {
+		return ResultBatch{}, nil
+	}
+	if !isPatternTimerRoot(definition) {
+		if !patternContainsTimer(definition.root) {
+			return ResultBatch{}, nil
+		}
+		// Composite patterns with embedded timers advance through the shared
+		// NFA walker; the sink executes the trigger action per match.
+		var sinkBatch ResultBatch
+		var sinkErr error
+		r.patternMatchSink = func(match patternMatch) {
+			if sinkErr != nil {
+				return
+			}
+			var event Event
+			if events := patternMatchEvents(match); len(events) > 0 {
+				event = events[0]
+			}
+			if _, err := executeTriggerActionWithTags(r.ctx, r.engine, plan.query.trigger, event, now, r.variables, nil, r, match.tags, match.tagValues); err != nil {
+				sinkErr = err
+				return
+			}
+			if plan.query.trigger.action == triggerSetVariables {
+				sinkBatch.New = append(sinkBatch.New, r.triggerAssignmentRow(plan))
+			}
+		}
+		_ = r.patternCompositeTimeBatchFor(definition, plan, now)
+		r.patternMatchSink = nil
+		return sinkBatch, sinkErr
+	}
+	if !r.patternState.timerStarted {
+		r.initializeAt(now)
+	}
+	batch := ResultBatch{Time: now}
+	root := definition.root
+	var fireErr error
+	fire := func(dueAt time.Time) {
+		if fireErr != nil || !patternGuardAllows(definition, Event{}, dueAt, r.variables) {
+			return
+		}
+		match := patternMatch{current: Event{}, startedAt: dueAt}
+		var event Event
+		if events := patternMatchEvents(match); len(events) > 0 {
+			event = events[0]
+		}
+		if _, err := executeTriggerActionWithTags(r.ctx, r.engine, plan.query.trigger, event, dueAt, r.variables, nil, r, match.tags, match.tagValues); err != nil {
+			fireErr = err
+			return
+		}
+		if plan.query.trigger.action == triggerSetVariables {
+			batch.New = append(batch.New, r.triggerAssignmentRow(plan))
+		}
+	}
+
+	switch root.kind {
+	case patternTimerIntervalNode:
+		if !rearmPatternTimerIntervalIfVariablesChanged(r.patternState, root, r.variables) {
+			break
+		}
+		if !r.patternState.timerNext.IsZero() && !r.patternState.timerNext.After(now) {
+			dueAt := r.patternState.timerNext
+			fire(dueAt)
+			if !definition.every {
+				r.patternState.patternStopped = true
+				r.patternState.timerNext = time.Time{}
+				break
+			}
+			next, ok := patternDurationDeadline(root, nil, now, r.variables)
+			if !ok {
+				r.patternState.patternStopped = true
+				r.patternState.timerNext = time.Time{}
+				break
+			}
+			r.patternState.timerNext = next
+			r.patternState.timerIntervalFired = true
+			recordPatternTimerIntervalSchedule(r.patternState, dueAt, r.variables)
+		}
+	case patternTimerAtNode:
+		if !r.patternState.timerEmitted && !now.Before(r.patternState.timerNext) {
+			fire(r.patternState.timerNext)
+			r.patternState.timerEmitted = true
+		}
+	case patternTimerScheduleNode:
+		if r.patternState.schedulePeriod != nil {
+			const maxScheduleCatchUp = 100000
+			for emitted := 0; emitted < maxScheduleCatchUp && r.patternState.schedulePeriod.active && !r.patternState.schedulePeriod.next.After(now); emitted++ {
+				dueAt := r.patternState.schedulePeriod.next
+				fire(dueAt)
+				advancePatternTimerScheduleRuntime(r.patternState.schedulePeriod)
+			}
+		} else {
+			for r.patternState.scheduleIndex < len(root.schedule) && !root.schedule[r.patternState.scheduleIndex].After(now) {
+				fire(root.schedule[r.patternState.scheduleIndex])
+				r.patternState.scheduleIndex++
+			}
+		}
+	case patternTimerCronNode:
+		if r.patternState.cronNext.IsZero() && root.cron != nil {
+			if resolved, err := root.cron.resolve(EvalContext{Now: now, Variables: r.variables}); err == nil {
+				r.patternState.cronSchedule = resolved
+				r.patternState.cronNext, _ = resolved.nextAfter(now)
+			}
+		}
+		const maxCronCatchUp = 100000
+		for emitted := 0; emitted < maxCronCatchUp && !r.patternState.cronNext.IsZero() && !r.patternState.cronNext.After(now); emitted++ {
+			dueAt := r.patternState.cronNext
+			fire(dueAt)
+			if root.cronOneShot {
+				r.patternState.cronNext = time.Time{}
+				r.patternState.timerEmitted = true
+				break
+			}
+			r.patternState.cronNext, _ = r.patternState.cronSchedule.nextAfter(dueAt)
+		}
+	}
+	if fireErr != nil {
+		return ResultBatch{}, fireErr
+	}
+	if !batch.empty() {
+		batch.Sequence = r.seq.Add(1)
+	}
+	return batch, nil
+}
+
 func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) ResultBatch {
-	definition := plan.query.pattern
+	return r.patternCompositeTimeBatchFor(plan.query.pattern, plan, now)
+}
+
+// triggerAssignmentRow builds the on-set output row for a pattern-sourced
+// trigger: one column per non-index/non-apply assignment carrying the written
+// value, matching the on-set result shape.
+func (r *statementRuntime) triggerAssignmentRow(plan Plan) Result {
+	values := make([]Value, 0, len(plan.query.trigger.variableAssignments))
+	seen := make(map[string]struct{}, len(plan.query.trigger.variableAssignments))
+	for _, assignment := range plan.query.trigger.variableAssignments {
+		if assignment.Index != nil || assignment.Apply != nil {
+			continue
+		}
+		column := assignment.Name
+		if assignment.Prop != "" {
+			column = assignment.Name + "." + assignment.Prop
+		}
+		if _, exists := seen[column]; exists {
+			continue
+		}
+		seen[column] = struct{}{}
+		value, exists := r.variables[assignment.Name]
+		if !exists {
+			value = Missing()
+		}
+		if assignment.Prop != "" {
+			if posted, ok := r.variables[column]; ok {
+				value = posted
+			} else {
+				value = Null()
+			}
+		}
+		values = append(values, value)
+	}
+	return resultRow(newRow(plan.resultSchema, values))
+}
+
+func (r *statementRuntime) patternCompositeTimeBatchFor(definition *patternDefinition, plan Plan, now time.Time) ResultBatch {
 	if definition == nil || definition.root == nil || !patternContainsTimer(definition.root) {
 		return ResultBatch{}
 	}
@@ -20630,6 +20945,9 @@ func (r *statementRuntime) patternCompositeTimeBatch(plan Plan, now time.Time) R
 						r.patternState.iterableRows = []Result{result}
 					}
 					batch.New = append(batch.New, result)
+					if r.patternMatchSink != nil {
+						r.patternMatchSink(candidate)
+					}
 				}
 				if !transition.fireOnly && patternCanContinueAfterMatch(transition.state) && r.admitPatternMatch(nextActive, candidate, definition, pool) {
 					nextActive = append(nextActive, candidate)
