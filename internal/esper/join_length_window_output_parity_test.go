@@ -95,7 +95,7 @@ func TestJoinLengthWindowOutputListenerAndIteratorMatchJava(t *testing.T) {
 
 	snapshotRows := func(t *testing.T, statement *Statement) []map[string]any {
 		t.Helper()
-		snapshot, err := statement.SnapshotWithSelector(context.Background(), nil)
+		snapshot, err := statement.Snapshot(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

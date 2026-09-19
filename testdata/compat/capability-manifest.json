@@ -1545,6 +1545,7 @@
     "internal/app/parity/context_lifecycle.go",
     "internal/app/parity/context_nested_initterm.go",
     "internal/app/parity/context_output.go",
+    "internal/app/parity/context_selection_faf.go",
     "internal/app/parity/context_variables.go",
     "internal/app/parity/high_cardinality.go",
     "internal/app/parity/run_test.go",
@@ -1555,7 +1556,10 @@
     "internal/esper/context_output_termination_parity_test.go",
     "internal/esper/context_selector.go",
     "internal/esper/context_test.go",
+    "internal/esper/faf.go",
     "internal/esper/high_cardinality_context_parity_test.go",
+    "internal/esper/plan.go",
+    "internal/esper/runtime.go",
     "internal/esper/split_stream.go",
     "internal/esper/state.go"
    ],
@@ -1563,9 +1567,9 @@
    "status": "implemented",
    "remaining": [
     "initiating/terminating event and nested namespace context properties plus variable lifecycle",
-    "partition administration/listeners plus full selector/iterator contract",
     "cross-statement transactions",
-    "pattern/temporal lifecycle beyond timer-interval(0) allocation-time firing"
+    "pattern/temporal lifecycle beyond timer-interval(0) allocation-time firing",
+    "nested initiated-parent contexts (leaf broadcast, eager category instantiation)"
    ],
    "verification": [
     "inventoried",
@@ -45888,6 +45892,48 @@
    ],
    "difference": "Java's virtual-data-window SPI contract — one provider-instantiated window per context partition plus destroy() on each window and the factory at undeploy — has no Go boundary: VirtualDataWindowProvider is registered but never invoked, and there is no test:vdw()-style plugin-window binding. The pinned unrepresentable record documents the contract without claiming a Go surface.",
    "notes": "Split from case.context-lifecycle (Draft 4.474): the execution is SPI-internal with no event output; unrepresentable in the typed Go API."
+  },
+  {
+   "id": "case.context-selection-faf",
+   "javaRuntimeIds": [
+    "java-runtime-c8c49c4c40e41d383d25",
+    "java-runtime-6dd5b9086935002cc50d",
+    "java-runtime-bf4cefd62580e2abd2c6"
+   ],
+   "javaStaticIds": [],
+   "javaNames": [
+    "ContextSelectionAndFireAndForgetInvalid",
+    "ContextSelectionIterateStatement",
+    "ContextSelectionAndFireAndForgetNamedWindowQuery"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextSelectionAndFireAndForget.java"
+   ],
+   "goTests": [
+    "context-selection-faf",
+    "context-selection-faf-diff"
+   ],
+   "tags": [
+    "context",
+    "fire-and-forget",
+    "partition-selector"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/context-selection-faf.evidence.json"
+   ],
+   "difference": "",
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-c8c49c4c40e41d383d25",
+    "java-runtime-6dd5b9086935002cc50d",
+    "java-runtime-bf4cefd62580e2abd2c6"
+   ],
+   "notes": "Draft 4.475 (2026-09-20). Ords 0-2 of ContextSelectionAndFireAndForget: FAF join rejections over context-bound windows, the iterator-selector matrix (all/by-id/empty/null/nil/non-context), and selector-aware FAF over a context-bound named window. Ord 3 (nested initiated-parent FAF) deferred: needs leaf-event broadcast + eager category instantiation. Window-created partitions under lifecycle-managed contexts (init-term/temporal) register descriptors but are not released on termination (no refcount); deferred — ord 3 work. Registration precedes unique-index validation, matching Java's route-then-insert order (the agent instance exists even when the insert fails)."
   }
  ],
  "mappings": [
@@ -49094,13 +49140,17 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-lifecycle-vdw"
+  },
+  {
+   "capabilityId": "context.partition",
+   "caseId": "case.context-selection-faf"
   }
  ],
  "summary": {
-  "inventoriedCases": 716,
-  "implementedCases": 714,
-  "differentialVerifiedCases": 340,
-  "differentialVerifiedRuntimeIds": 1294,
+  "inventoriedCases": 717,
+  "implementedCases": 715,
+  "differentialVerifiedCases": 341,
+  "differentialVerifiedRuntimeIds": 1297,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49110,13 +49160,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3844,
-  "referencedJavaRuntimeIds": 3470,
+  "runtimeAssociationCount": 3847,
+  "referencedJavaRuntimeIds": 3473,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 666,
+  "unreferencedJavaRuntimeIds": 663,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 716,
+  "totalCases": 717,
   "totalCapabilities": 122
  }
 }

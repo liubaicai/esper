@@ -2675,6 +2675,19 @@ func (d ContextDefinition) contextKeysForNode(e *Environment, node *streamNode) 
 	if err != nil {
 		return nil
 	}
+	// A named-window source carries its declared schema's event type, so
+	// `context X select ... from MyWindow` resolves the keys declared for
+	// the window's underlying type — matching Esper, which accepts the
+	// context clause only when the window is bound to that same context.
+	if source.kind == streamNamedWindow && e != nil {
+		if window, ok := e.NamedWindowInModule(source.moduleName, source.sourceName); ok {
+			if strings.TrimSpace(window.Context()) != d.name {
+				return nil
+			}
+			return d.contextKeysForType(e, window.Schema().Name())
+		}
+		return nil
+	}
 	return d.contextKeysForType(e, source.sourceName)
 }
 

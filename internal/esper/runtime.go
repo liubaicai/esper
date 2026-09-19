@@ -888,6 +888,45 @@ func overlappingContextPartitionKey(baseKey string, event Event, partitions map[
 	}
 }
 
+// ensureContextPartitionRegisteredLocked records the allocation-order ID and
+// descriptor for a partition materialized outside a statement runtime — for
+// example a context-bound named-window insert. Esper allocates the agent
+// instance (and fires the partition-allocated callback) when the partition is
+// first created regardless of which resource created it, so the notification
+// lives here and retain no longer re-fires it for an already-registered key.
+// No reference is taken: partition lifetime stays owned by the context.
+func (e *Engine) ensureContextPartitionRegisteredLocked(contextName, partitionKey string, event *Event, now time.Time, variables map[string]Value, runtime *statementRuntime) {
+	if e == nil || contextName == "" || partitionKey == "" {
+		return
+	}
+	if e.contextPartitionDescriptors[contextName] == nil {
+		e.contextPartitionDescriptors[contextName] = make(map[string]ContextPartitionDescriptor)
+	}
+	if _, exists := e.contextPartitionDescriptors[contextName][partitionKey]; exists {
+		return
+	}
+	descriptor := ContextPartitionDescriptor{ContextName: contextName, Key: partitionKey, BaseKey: contextPartitionBaseKey(partitionKey), ID: e.allocateContextPartitionIDLocked(contextName, partitionKey)}
+	if runtime != nil {
+		descriptor = newContextPartitionDescriptor(contextName, partitionKey, runtime)
+		descriptor.ID = e.allocateContextPartitionIDLocked(contextName, partitionKey)
+	} else if definition, ok := e.env.Context(contextName); ok && event != nil {
+		descriptor.properties = definition.contextPropertyValuesForKey(*event, now, variables, descriptor.ID, partitionKey)
+	}
+	e.contextPartitionDescriptors[contextName][partitionKey] = descriptor
+	e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
+		kind: contextNotificationPartitionAllocated,
+		partition: ContextPartitionStateEvent{
+			ContextName: contextName,
+			PartitionID: descriptor.ID,
+			Key:         partitionKey,
+			BaseKey:     descriptor.BaseKey,
+			Descriptor:  descriptor,
+			Allocated:   true,
+		},
+	})
+	e.auditContextPartitionLocked(contextName, descriptor.ID, true, e.clock.Now())
+}
+
 func (e *Engine) retainContextPartitionLocked(contextName, partitionKey string, runtime ...*statementRuntime) {
 	if e == nil || contextName == "" || partitionKey == "" {
 		return
@@ -898,27 +937,11 @@ func (e *Engine) retainContextPartitionLocked(contextName, partitionKey string, 
 		e.contextPartitionRefs[contextName] = byContext
 	}
 	if byContext[partitionKey] == 0 {
-		if e.contextPartitionDescriptors[contextName] == nil {
-			e.contextPartitionDescriptors[contextName] = make(map[string]ContextPartitionDescriptor)
+		var partitionRuntime *statementRuntime
+		if len(runtime) > 0 {
+			partitionRuntime = runtime[0]
 		}
-		descriptor := ContextPartitionDescriptor{ContextName: contextName, Key: partitionKey, BaseKey: contextPartitionBaseKey(partitionKey), ID: e.allocateContextPartitionIDLocked(contextName, partitionKey)}
-		if len(runtime) > 0 && runtime[0] != nil {
-			descriptor = newContextPartitionDescriptor(contextName, partitionKey, runtime[0])
-			descriptor.ID = e.allocateContextPartitionIDLocked(contextName, partitionKey)
-		}
-		e.contextPartitionDescriptors[contextName][partitionKey] = descriptor
-		e.pendingContextEvents = append(e.pendingContextEvents, contextNotification{
-			kind: contextNotificationPartitionAllocated,
-			partition: ContextPartitionStateEvent{
-				ContextName: contextName,
-				PartitionID: descriptor.ID,
-				Key:         partitionKey,
-				BaseKey:     descriptor.BaseKey,
-				Descriptor:  descriptor,
-				Allocated:   true,
-			},
-		})
-		e.auditContextPartitionLocked(contextName, descriptor.ID, true, e.clock.Now())
+		e.ensureContextPartitionRegisteredLocked(contextName, partitionKey, nil, time.Time{}, nil, partitionRuntime)
 	}
 	byContext[partitionKey]++
 }
@@ -1897,7 +1920,7 @@ func (s *Statement) takeDroppedEvent() bool {
 // their retained recognition branches; ordinary statements use the current
 // source projection snapshot.
 func (s *Statement) Snapshot(ctx context.Context) (QueryResult, error) {
-	return s.SnapshotWithSelector(ctx, nil)
+	return s.snapshot(ctx, nil, false)
 }
 
 // SnapshotWithSelector returns the statement's current iterator view limited
@@ -1906,9 +1929,14 @@ func (s *Statement) Snapshot(ctx context.Context) (QueryResult, error) {
 // selection is validated before state is read, and callbacks are not
 // dispatched or runtime state mutated.
 //
-// A selector is only valid for a statement that has a context. Use nil to
-// snapshot a non-context statement or to select all partitions of a context.
+// Esper rejects a selector call on a non-context statement before checking
+// the selector itself, and rejects a nil selector outright; Snapshot (no
+// selector argument) remains the all-partitions form.
 func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPartitionSelector) (QueryResult, error) {
+	return s.snapshot(ctx, selector, true)
+}
+
+func (s *Statement) snapshot(ctx context.Context, selector ContextPartitionSelector, explicitSelector bool) (QueryResult, error) {
 	if err := contextErr(ctx); err != nil {
 		return QueryResult{}, err
 	}
@@ -1927,9 +1955,12 @@ func (s *Statement) SnapshotWithSelector(ctx context.Context, selector ContextPa
 	if joinDefinitionHasUnidirectional(s.plan.query.join) || (s.plan.query.aggregate != nil && joinDefinitionHasUnidirectional(s.plan.query.aggregate.join)) {
 		return QueryResult{}, fmt.Errorf("esper: iteration over a unidirectional join is not supported")
 	}
-	if selector != nil {
+	if explicitSelector {
 		if s.plan.query.contextName == "" {
-			return QueryResult{}, NewError(ErrorInvalidRule, "context partition selector requires a context statement")
+			return QueryResult{}, NewError(ErrorInvalidRule, "Iterator with context selector is only supported for statements under context")
+		}
+		if selector == nil {
+			return QueryResult{}, NewError(ErrorInvalidRule, "No selector provided")
 		}
 		definition, ok := s.plan.query.env.Context(s.plan.query.contextName)
 		if !ok {

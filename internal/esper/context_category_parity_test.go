@@ -92,6 +92,9 @@ func assertContextCategoryRowsAnyOrder(t *testing.T, rows []Row, fields []string
 
 func contextCategorySnapshot(t *testing.T, statement *Statement, selector ContextPartitionSelector) []Row {
 	t.Helper()
+	if selector == nil {
+		selector = ContextPartitionSelectorAll{}
+	}
 	result, err := statement.SnapshotWithSelector(context.Background(), selector)
 	if err != nil {
 		t.Fatal(err)

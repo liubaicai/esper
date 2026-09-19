@@ -3833,12 +3833,10 @@ func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, un
 	}
 	state := w.state
 	if state.def.contextName != "" && state.contextKey == "" {
-		if partitionKey, fromContext := w.contextPartitionFromVariables(variables); fromContext {
-			var err error
-			state, err = w.partitionState(partitionKey, true)
-			if err != nil {
-				return NamedWindowDelta{}, err
-			}
+		var partitionKey string
+		var partitionEvent *Event
+		if key, fromContext := w.contextPartitionFromVariables(variables); fromContext {
+			partitionKey = key
 		} else {
 			key, active, err := w.contextPartitionKey(event, now, variables)
 			if err != nil {
@@ -3847,10 +3845,20 @@ func (w *NamedWindow) insertWithVariables(ctx context.Context, now time.Time, un
 			if !active {
 				return NamedWindowDelta{Time: now}, nil
 			}
-			state, err = w.partitionState(key, true)
-			if err != nil {
-				return NamedWindowDelta{}, err
-			}
+			partitionKey = key
+			partitionEvent = &event
+		}
+		// A window-created partition is a context partition: register its
+		// allocation-order ID and descriptor so fire-and-forget selectors
+		// (by-id, segmented) resolve it exactly like a statement-created
+		// partition. Callers hold the engine mutex.
+		if w.engine != nil {
+			w.engine.ensureContextPartitionRegisteredLocked(state.def.contextName, partitionKey, partitionEvent, now, variables, nil)
+		}
+		var err error
+		state, err = w.partitionState(partitionKey, true)
+		if err != nil {
+			return NamedWindowDelta{}, err
 		}
 	}
 	if state.def.contextName != "" {

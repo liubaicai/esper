@@ -546,6 +546,10 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 			}
 			var selector esper.ContextPartitionSelector
 			if step.Op == "snapshot-selector" {
+				// A selector step always carries a selector: an empty kind is
+				// the all-partitions form. Esper's iterator(null) is a
+				// programming error, so nil is never passed through.
+				selector = esper.ContextPartitionSelectorAll{}
 				switch step.Selector {
 				case "all":
 					selector = esper.ContextPartitionSelectorAll{}
@@ -583,7 +587,13 @@ func ReplayWithStatementsAndHandlers(ctx context.Context, engine *esper.Engine, 
 					selector = esper.SelectContextPartitionSegments([]any{})
 				}
 			}
-			result, err := current.SnapshotWithSelector(ctx, selector)
+			var result esper.QueryResult
+			var err error
+			if step.Op == "snapshot-selector" {
+				result, err = current.SnapshotWithSelector(ctx, selector)
+			} else {
+				result, err = current.Snapshot(ctx)
+			}
 			if err != nil {
 				if step.ExpectError != "" {
 					record := TraceRecord{Case: caseName, Operation: "selector-error", Statement: current.Name(), Time: formatTraceTime(engine.Now())}

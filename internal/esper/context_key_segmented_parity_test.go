@@ -73,7 +73,7 @@ func TestContextKeySegmentedSelectorParity(t *testing.T) {
 	send(contextKeySegmentedParityBean{TheString: "E2", IntPrimitive: 20})
 	send(contextKeySegmentedParityBean{TheString: "E2", IntPrimitive: 21})
 
-	all, err := statement.SnapshotWithSelector(context.Background(), nil)
+	all, err := statement.SnapshotWithSelector(context.Background(), ContextPartitionSelectorAll{})
 	if err != nil {
 		t.Fatal(err)
 	}

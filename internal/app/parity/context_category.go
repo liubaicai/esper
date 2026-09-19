@@ -669,7 +669,7 @@ func (s *contextCategoryCaseState) snapshot(ctx context.Context, step compat.Ste
 	if !ok {
 		return fmt.Errorf("%s: snapshot statement %q was not deployed", contextCategoryID, step.Statement)
 	}
-	result, err := statement.SnapshotWithSelector(ctx, nil)
+	result, err := statement.SnapshotWithSelector(ctx, esper.ContextPartitionSelectorAll{})
 	if err != nil {
 		return err
 	}

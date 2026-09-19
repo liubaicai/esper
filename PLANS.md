@@ -5195,3 +5195,46 @@ After delivery, verify the pushed ref read-only and select the next work unit fr
 - Baseline: BenchmarkAcceptIndexMultiStatement 23593 ns/op; Stateless rejected 1375 ns/op; accepted 2553 ns/op (Windows Ryzen 7 PRO 6850HS).
 - Progress: implemented deployment/undeploy registration, schema-identity and string/bool equality keys, reusable generation marks, routed-event recomputation, subtype safety fallback, numeric fallback regression.
 - Validation: focused AcceptIndex tests passed before the final test-only additions; benchmark improved from 23593 ns/op to 4067 ns/op on the same Windows host. Final rebuild was blocked by Go compiler memory pressure (compile process exceeded 5 GB); rerun after memory is available.
+
+## Current work unit
+Active: Draft 4.475 ('context-selection-faf').
+
+- [x] Contract frozen (.omp/contract-475.md): ContextSelectionAndFireAndForget ords 0-2
+ (Invalid `java-runtime-c8c49c4c40e41d383d25`, IterateStatement `java-runtime-6dd5b9086935002cc50d`,
+ NamedWindowQuery `java-runtime-bf4cefd62580e2abd2c6`); ord 3 deferred (nested initiated-parent
+ contexts = different engine surface). Scouts: NextJavaContract8-2 + NextGoSurface8-2.
+- [x] Shared core (primary): FAF join rejections (context-clause join + join over context-bound
+ windows), selector application on non-context FAF over context-bound windows, window-partition
+ registration (ensureContextPartitionRegisteredLocked), SnapshotWithSelector ordering
+ (non-context first, then nil), contextKeysForNode named-window resolution. Removed dead
+ executeContextJoinFireAndForget* + helpers; deleted 10 Go-extension tests pinning non-oracle
+ context-join FAF behavior.
+- [x] Assets (SelFafAssets): oracle + script + scenario (59 steps, 3 cases) + runner + run.go.
+- [x] Java trace testdata/parity/context-selection-faf.trace.json (35 records); Go trace
+ context-selection-faf.go.trace.json; -mode context-selection-faf-diff passing / 0 differences;
+ evidence testdata/parity/context-selection-faf.evidence.json.
+- [x] Manifest: case.context-selection-faf (DV, 3 runtime IDs) + mapping to context.partition;
+ summary recomputed (717 cases / 341 DV / 1297 DV IDs / 3847 assoc / unref 663).
+- [x] `make check` exit 0; parity review (ParityReview4475): initial FAIL on one P1
+ (vacuous join-context-clause probe gate — Build failed on missing projection before reaching
+ the FAF rejection); fixed by giving the probe a buildable join so ExecuteFireAndForget hits
+ 'Joins in runtime queries for context partitions are not supported'; confirmation PASS.
+ P3s: window-only partitions under lifecycle contexts don't release (documented, deferred to
+ ord-3 unit); registration-before-validation kept — matches Java's route-then-allocate order.
+- [x] KNOWN FLAKE (pre-existing, reproduced on stash baseline): TestRunContextInitTermPartition
+ SelectionDiffWritesPassingEvidence intermittently exits 1 with empty stderr under full-suite
+ load; deterministic standalone (8/8) and via CLI (6/6). Not attributable to this unit; track
+ for a future hardening unit.
+
+## Next work unit (prefetch, read-only)
+Candidate: Draft 4.476 ('context-selection-faf-nested') — ContextSelectionAndFireAndForget ord 3
+ContextSelectionFAFNestedNamedWindowQuery (`java-runtime-f51a1493ad61c1f0d0d1`, FIREANDFORGET):
+nested context with initiated parent + category child; needs leaf-event broadcast to all active
+parent partitions, eager category instantiation, global leaf-ID allocation, FAF group-by merge
+across leaves, context.ACtx.s0.p00 / context.BCtx.label property access.
+
+Candidate: Draft 4.475 ('context-selection-faf') — ContextSelectionAndFireAndForget.java all 4
+unreferenced executions (ords 0-3: Invalid `java-runtime-c8c49c4c40e41d383d25` FIREANDFORGET+INVALIDITY,
+IterateStatement `java-runtime-6dd5b9086935002cc50d`, NamedWindowQuery `java-runtime-bf4cefd62580e2abd2c6`
+FIREANDFORGET, FAFNestedNamedWindowQuery `java-runtime-f51a1493ad61c1f0d0d1` FIREANDFORGET).
+Scouts launched: NextJavaContract8-2 (Java contract) + NextGoSurface8-2 (Go surface), read-only.

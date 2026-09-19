@@ -117,7 +117,7 @@ func TestFilterWindowAggregateOutputListenerOrderMatchesJava(t *testing.T) {
 	assertBatch(t, (*plainBatches)[3], map[string]any{"symbol": "A", "total": float64(20)})
 	assertBatch(t, (*plainBatches)[4], map[string]any{"symbol": "B", "total": map[string]any{"state": "null"}})
 
-	snapshot, err := plain.SnapshotWithSelector(context.Background(), nil)
+	snapshot, err := plain.Snapshot(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestFilterWindowAggregateOutputListenerOrderMatchesJava(t *testing.T) {
 	every3Batches := collect(t, every3)
 	snapshotRows := func(t *testing.T) []map[string]any {
 		t.Helper()
-		snapshot, err := every3.SnapshotWithSelector(context.Background(), nil)
+		snapshot, err := every3.Snapshot(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
