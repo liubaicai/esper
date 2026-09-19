@@ -142,7 +142,9 @@ Active: Draft 4.474 ('context-lifecycle').
  - P3 documented: ScheduleCountOverall counts temporal contexts unconditionally while deployed;
    comment records the recurring-model approximation vs Java's non-recurring past-end case.
 - [x] Post-review re-validation: context-lifecycle-diff passing / 0 differences; split/schedule
-  targeted tests green; `make check` re-run after fixes.
+  targeted tests green; `make check` exit 0 after fixes.
+- [x] Confirmation review (same agent ParityReview4474): PASS, both P3s verified fixed.
+- [x] Shipped; Git owns identity. Draft 4.474 committed and pushed as `cbec489fb`.
 
 ## Current work unit
 Active: Draft 4.453 ('expr-filter-in-and-between').
