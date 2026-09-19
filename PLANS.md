@@ -3579,6 +3579,8 @@ Active: Draft 4.468 ('epl-insert-into-populate-single-col-by-method-call').
       Transpose+companion Alias) and EPLOtherFromClauseOptional (6
       unreferenced, mostly blocked — source-less FAF where/having and
       context FAF gaps; inlined_class is JVM-only).
+- [x] Shipped; Git owns identity. Draft 4.468 committed and pushed as
+      `31ae91fe0`.
 
 ## Prefetch archive (contract source for the active unit)
 Frozen: Draft 4.468 ('epl-insert-into-populate-single-col-by-method-call')
