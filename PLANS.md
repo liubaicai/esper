@@ -3537,48 +3537,42 @@ Active: Draft 4.467 ('epl-insert-into-istream-func').
 
 
 ## Current work unit
-Active: Draft 4.470 ('epl-other-select-expr-stream-selector-remainder') — IN REVIEW.
+Active: Draft 4.471 ('context-key-segmented-remainder') — IN REVIEW.
 
-- [x] Contract FROZEN (`.omp/contract-470.md`) by read-only scouts
-      `NextJavaContract470` + `NextGoSurface470` during 4.469's review.
-- [x] Engine extension (`internal/esper`, primary agent only): pattern-source
-      transpose — `validatePattern`/`resultSchema` allow unnamed transpose
-      selections bound to a pattern-event tag; `validateRoute` transpose block
-      covers pattern queries; `validateTransposeExpression` accepts Event
-      payloads (runtime unwraps the tagged event's underlying);
-      `evaluatePatternMatch` returns Result and materializes the transpose
-      route (bean underlying into struct target, flatten+merge into Map
-      target for companion columns). Latent named-Transpose-in-pattern
-      misroute closed.
-- [x] Parity assets (AssetWriter470, disjoint files): oracle + run script +
-      scenario `testdata/parity/epl-other-select-expr-stream-selector-remainder.json`
-      (3 cases / 22 steps). Runner
-      `internal/app/parity/epl_other_select_expr_stream_selector_remainder.go`
-      + run.go wiring + strict loader (per-step and per-payload whitelists).
-      Listener ordering pinned: Java delivers producer-before-consumer for
-      chains but reverse-registration for same-level producers; the runner
-      buffers per-send and reverses only for insert-from-pattern.
-- [x] Differential replay: Java 15 records / Go 15 records, 0 differences;
-      `-mode epl-other-select-expr-stream-selector-remainder-diff` passing;
-      evidence at testdata/parity/epl-other-select-expr-stream-selector-remainder.evidence.json.
-- [x] Manifest: `eplother.stream-selector` extended (16/17 executions);
-      `case.epl-other-select-expr-stream-selector-remainder` born-DV (2 IDs)
-      + `case.epl-other-select-expr-stream-selector-invalid`
-      (intentionally-different, ords 0/16/3); summary 711 cases / 709
-      implemented / 336 DV / 1281 DV runtime IDs / 3834 associations;
-      compat validator green.
-- [x] Test family green: 6 trace mutations + 6 raw-scenario mutations all
-      rejected; runtime-ID mapping and help-listing tests pass.
-- [x] Independent parity review (`ParityReview470`): initial FAIL with 4 P2 +
+- [x] Contract FROZEN (`.omp/contract-471.md`) by read-only scouts
+      `NextJavaContract471` + `NextGoSurface471` during 4.470's review.
+- [x] Engine validations (shared core, primary agent):
+      `CreateKeyContextByStreams` now rejects named-window partition types,
+      unregistered types, and cross-stream key-type mismatches;
+      `RegisterNamedWindowInModule` rejects a window bound to a segmented
+      context whose schema type is not listed in the partition criteria.
+- [x] Parity assets (AssetWriter471, disjoint files): two scenarios +
+      oracles + runners + run.go/run_test.go wiring.
+      `context-key-segmented-subselect-prev-prior` (ord 8): 22 steps,
+      12 records, two rounds (prev then prior after undeploy+redeploy);
+      Esper `prior(0,id)` maps to the plain Go field per the documented
+      subquery convention. `context-key-segmented-invalid` (ord 19):
+      15 steps, 9 compile-error records; probes 1/6 unrepresentable
+      (pinned prefix only), 7/9 verify Go rejection boundaries.
+- [x] Oracle fix: `deployment.undeploy()` →
+      `runtime.getDeploymentService().undeploy(id)` (Esper 9 API).
+- [x] Differential replay: both diffs passing / 0 differences (12 and 9
+      records); Go traces generated; test families green.
+- [x] Manifest: `case.context-key-segmented-subselect-prev-prior` born-DV;
+      `case.context-key-segmented-invalid` intentionally-different;
+      ord-20 re-associated to `java-runtime-e64c1b8b8cd2dcd39154` (ord 6
+      Subtype now unreferenced backlog); summary 713 cases / 711
+      implemented / 337 DV / 1282 DV runtime IDs / 3836 associations.
+- [x] Independent parity review (`ParityReview471`): initial FAIL with 1 P2 +
       3 P3 findings, all fixed and re-probed; confirmation review PASS, zero
-      findings. Fixes: Transpose(nil) panic guard (validatePattern +
-      resultSchema), restored null-kind rejection, Event early-accept scoped
-      to pattern queries via new `pattern` param, no-route companion/multi/
-      named transpose rejections, 22-step + case-name pinning in the strict
-      loader, roadmap prose correction. Regression file
-      `internal/esper/pattern_transpose_invalid_test.go` pins all boundaries.
-- [x] Full `make check` green after every fix (parity 80s, internal/esper 71s);
-      diff re-run passing / 0 differences.
+      findings. Fixes: ord-20 runner constant + regenerated evidence (the
+      manifest-only fix left the stale ord-6 ID in the runner and evidence),
+      step.Epl pinning in both new runners (13 pinned values), key-type
+      mismatch message now renders key types, contract file committed.
+- [x] Full `make check` green after every fix (parity 80s, internal/esper 70s);
+      both diffs re-run passing / 0 differences. Note: two `make check` runs
+      flaked on timer-dependent ContextInitTerm tests (unrelated, green on
+      re-run).
 - [x] Shipped; Git owns identity.
 
 

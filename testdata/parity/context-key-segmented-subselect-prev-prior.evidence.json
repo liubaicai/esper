@@ -1,0 +1,596 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-2afbd86618b752a6dd5b"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedSubselectPrevPrior"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-subselect-prev-prior",
+    "steps": [
+      {
+        "op": "case",
+        "case": "subselect-prev-prior"
+      },
+      {
+        "op": "deploy",
+        "case": "subselect-prev-prior",
+        "statement": "ctx",
+        "epl": "@Name('context') @public create context SegmentedByString partition by theString from SupportBean"
+      },
+      {
+        "op": "deploy",
+        "case": "subselect-prev-prior",
+        "statement": "s0",
+        "epl": "@Name('s0') context SegmentedByString select theString, (select prev(0, id) from SupportBean_S0#keepall) as col1 from SupportBean"
+      },
+      {
+        "op": "types",
+        "case": "subselect-prev-prior",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "undeploy",
+        "case": "subselect-prev-prior",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "subselect-prev-prior",
+        "statement": "s0",
+        "epl": "@Name('s0') context SegmentedByString select theString, (select prior(0, id) from SupportBean_S0#keepall) as col1 from SupportBean"
+      },
+      {
+        "op": "types",
+        "case": "subselect-prev-prior",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "E2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "send",
+        "case": "subselect-prev-prior",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 12
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "subselect-prev-prior"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-subselect-prev-prior",
+    "records": [
+      {
+        "case": "subselect-prev-prior",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "col1": "Integer",
+            "theString": "String"
+          }
+        }
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1,
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "col1": "Integer",
+            "theString": "String"
+          }
+        }
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1,
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-subselect-prev-prior",
+    "records": [
+      {
+        "case": "subselect-prev-prior",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "col1": "Integer",
+            "theString": "String"
+          }
+        }
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1,
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "types",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": {
+          "properties": {
+            "col1": "Integer",
+            "theString": "String"
+          }
+        }
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 6,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 7,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 1,
+              "theString": "G1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 8,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 9,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": 2,
+              "theString": "G2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subselect-prev-prior",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 10,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": {
+                "state": "null"
+              },
+              "theString": "G1"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

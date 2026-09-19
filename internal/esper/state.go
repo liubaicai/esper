@@ -1883,8 +1883,18 @@ func (e *Environment) RegisterNamedWindowInModule(moduleName, name string, schem
 		return NamedWindowDefinition{}, NewError(ErrorDependency, "nil environment")
 	}
 	if definition.contextName != "" {
-		if _, ok := e.Context(definition.contextName); !ok {
+		contextDef, ok := e.Context(definition.contextName)
+		if !ok {
 			return NamedWindowDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q is not registered", definition.contextName))
+		}
+		// A named window bound to a segmented context must be associated to
+		// an event type listed in the context's partition criteria, matching
+		// Esper's segmented named-window validation.
+		if contextDef.kind == ContextKeySegmented && len(contextDef.streamKeys) > 0 {
+			if _, listed := contextDef.streamKeys[schema.Name()]; !listed {
+				return NamedWindowDefinition{}, NewError(ErrorInvalidRule,
+					fmt.Sprintf("segmented context %q requires that named windows are associated to an existing event type and that the event type is listed among the partitions defined by the create-context statement", definition.contextName))
+			}
 		}
 	}
 	moduleName = normalizeModuleName(moduleName)

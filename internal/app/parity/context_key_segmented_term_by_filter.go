@@ -21,7 +21,7 @@ var contextKeySegmentedTermByFilterJavaSources = []string{
 }
 
 var contextKeySegmentedTermByFilterJavaRuntimeIDs = []string{
-	"java-runtime-820bb6f72b84ad070ce4", // ContextKeySegmentedTermByFilter
+	"java-runtime-e64c1b8b8cd2dcd39154", // ContextKeySegmentedTermByFilter
 }
 
 var contextKeySegmentedTermByFilterJavaExecutions = []string{

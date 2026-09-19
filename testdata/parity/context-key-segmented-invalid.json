@@ -1,0 +1,130 @@
+{
+  "version": "esper-parity/v1",
+  "id": "context-key-segmented-invalid",
+  "description": "ContextKeySegmentedInvalid (ord 19): nine tryInvalidCompile probes pin the Java message prefixes for segmented-context rejections — a per-stream filter on the partition spec, an unknown partition property, mismatched key counts, a cross-stream key-type mismatch, a duplicate event type, a subtype/supertype duplicate, a statement on an unlisted event type, a named window in the partition criteria, and a named window whose schema type is not listed by its segmented context. Probes 7-9 compile against the runtime path after their fixture deploys; probes 1-6 compile without it.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java",
+  "javaRuntimes": [
+    "java-runtime-5e338406dcc2ca1aaf6a"
+  ],
+  "javaNames": [
+    "ContextKeySegmentedInvalid"
+  ],
+  "javaStaticIds": [
+    "java-11c10ab303bcf5d97107"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "invalid",
+      "ordinal": 19,
+      "runtimeId": "java-runtime-5e338406dcc2ca1aaf6a",
+      "executionName": "ContextKeySegmentedInvalid",
+      "observation": "compile-error; nine probes record the pinned Java message prefixes: the first six compile without the runtime path, the last three compile with the path after deploying SegmentedByAString, MyWindow, SomeSchema and TheSomeSchemaCtx fixtures; the Java execution carries no per-execution static id (analyzer skipped) and pins the suite static java-11c10ab303bcf5d97107",
+      "epl": "create context SegmentedByAString partition by string from SupportBean(dummy = 1)"
+    }
+  ],
+  "steps": [
+    {
+      "op": "case",
+      "case": "invalid"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "partition-filter-property",
+      "epl": "create context SegmentedByAString partition by string from SupportBean(dummy = 1)",
+      "expectError": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "unknown-key-property",
+      "epl": "create context SegmentedByAString partition by dummy from SupportBean",
+      "expectError": "For context 'SegmentedByAString' property name 'dummy' not found on type SupportBean [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "mismatched-key-count",
+      "epl": "create context SegmentedByAString partition by theString from SupportBean, id, p00 from SupportBean_S0",
+      "expectError": "For context 'SegmentedByAString' expected the same number of property names for each event type, found 1 properties for event type 'SupportBean' and 2 properties for event type 'SupportBean_S0' [create context SegmentedByAString partition by theString from SupportBean, id, p00 from SupportBean_S0]",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "mismatched-key-type",
+      "epl": "create context SegmentedByAString partition by theString from SupportBean, id from SupportBean_S0",
+      "expectError": "For context 'SegmentedByAString' for context 'SegmentedByAString' found mismatch of property types, property 'theString' of type 'String' compared to property 'id' of type 'Integer' [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "duplicate-type",
+      "epl": "create context SegmentedByAString partition by theString from SupportBean, theString from SupportBean",
+      "expectError": "For context 'SegmentedByAString' the event type 'SupportBean' is listed twice [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "duplicate-subtype",
+      "epl": "create context SegmentedByAString partition by baseAB from ISupportBaseAB, a from ISupportA",
+      "expectError": "For context 'SegmentedByAString' the event type 'ISupportA' is listed twice: Event type 'ISupportA' is a subtype or supertype of event type 'ISupportBaseAB' [",
+      "compileWithoutPath": true
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "ctx",
+      "epl": "@public create context SegmentedByAString partition by theString from SupportBean"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "unlisted-statement-type",
+      "epl": "context SegmentedByAString select * from SupportBean_S0",
+      "expectError": "Segmented context 'SegmentedByAString' requires that any of the event types that are listed in the segmented context also appear in any of the filter expressions of the statement, type 'SupportBean_S0' is not one of the types listed ["
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "window",
+      "epl": "@public create window MyWindow#keepall as SupportBean"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "named-window-partition-criteria",
+      "epl": "@public create context SegmentedByWhat partition by theString from MyWindow",
+      "expectError": "Partition criteria may not include named windows [@public create context SegmentedByWhat partition by theString from MyWindow]"
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "schema",
+      "epl": "@public create schema SomeSchema(ipAddress string)"
+    },
+    {
+      "op": "deploy",
+      "case": "invalid",
+      "statement": "ctx2",
+      "epl": "@public create context TheSomeSchemaCtx Partition By ipAddress From SomeSchema"
+    },
+    {
+      "op": "build-error",
+      "case": "invalid",
+      "statement": "named-window-unlisted-schema",
+      "epl": "@public context TheSomeSchemaCtx create window MyEvent#time(30 sec) (ipAddress string)",
+      "expectError": "Segmented context 'TheSomeSchemaCtx' requires that named windows are associated to an existing event type and that the event type is listed among the partitions defined by the create-context statement"
+    },
+    {
+      "op": "undeploy-all",
+      "case": "invalid"
+    }
+  ]
+}

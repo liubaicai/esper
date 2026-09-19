@@ -1,0 +1,254 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5e338406dcc2ca1aaf6a"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextKeySegmented.java"
+  ],
+  "javaExecutions": [
+    "ContextKeySegmentedInvalid"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-invalid",
+    "steps": [
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "partition-filter-property",
+        "expectError": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream [",
+        "epl": "create context SegmentedByAString partition by string from SupportBean(dummy = 1)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "unknown-key-property",
+        "expectError": "For context 'SegmentedByAString' property name 'dummy' not found on type SupportBean [",
+        "epl": "create context SegmentedByAString partition by dummy from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "mismatched-key-count",
+        "expectError": "For context 'SegmentedByAString' expected the same number of property names for each event type, found 1 properties for event type 'SupportBean' and 2 properties for event type 'SupportBean_S0' [create context SegmentedByAString partition by theString from SupportBean, id, p00 from SupportBean_S0]",
+        "epl": "create context SegmentedByAString partition by theString from SupportBean, id, p00 from SupportBean_S0"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "mismatched-key-type",
+        "expectError": "For context 'SegmentedByAString' for context 'SegmentedByAString' found mismatch of property types, property 'theString' of type 'String' compared to property 'id' of type 'Integer' [",
+        "epl": "create context SegmentedByAString partition by theString from SupportBean, id from SupportBean_S0"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "duplicate-type",
+        "expectError": "For context 'SegmentedByAString' the event type 'SupportBean' is listed twice [",
+        "epl": "create context SegmentedByAString partition by theString from SupportBean, theString from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "duplicate-subtype",
+        "expectError": "For context 'SegmentedByAString' the event type 'ISupportA' is listed twice: Event type 'ISupportA' is a subtype or supertype of event type 'ISupportBaseAB' [",
+        "epl": "create context SegmentedByAString partition by baseAB from ISupportBaseAB, a from ISupportA"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "ctx",
+        "epl": "@public create context SegmentedByAString partition by theString from SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "unlisted-statement-type",
+        "expectError": "Segmented context 'SegmentedByAString' requires that any of the event types that are listed in the segmented context also appear in any of the filter expressions of the statement, type 'SupportBean_S0' is not one of the types listed [",
+        "epl": "context SegmentedByAString select * from SupportBean_S0"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "window",
+        "epl": "@public create window MyWindow#keepall as SupportBean"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "named-window-partition-criteria",
+        "expectError": "Partition criteria may not include named windows [@public create context SegmentedByWhat partition by theString from MyWindow]",
+        "epl": "@public create context SegmentedByWhat partition by theString from MyWindow"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "schema",
+        "epl": "@public create schema SomeSchema(ipAddress string)"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid",
+        "statement": "ctx2",
+        "epl": "@public create context TheSomeSchemaCtx Partition By ipAddress From SomeSchema"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid",
+        "statement": "named-window-unlisted-schema",
+        "expectError": "Segmented context 'TheSomeSchemaCtx' requires that named windows are associated to an existing event type and that the event type is listed among the partitions defined by the create-context statement",
+        "epl": "@public context TheSomeSchemaCtx create window MyEvent#time(30 sec) (ipAddress string)"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-invalid",
+    "records": [
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "partition-filter-property",
+        "sequence": 0,
+        "value": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "unknown-key-property",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' property name 'dummy' not found on type SupportBean ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "mismatched-key-count",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' expected the same number of property names for each event type, found 1 properties for event type 'SupportBean' and 2 properties for event type 'SupportBean_S0' [create context SegmentedByAString partition by theString from SupportBean, id, p00 from SupportBean_S0]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "mismatched-key-type",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' for context 'SegmentedByAString' found mismatch of property types, property 'theString' of type 'String' compared to property 'id' of type 'Integer' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-type",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' the event type 'SupportBean' is listed twice ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-subtype",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' the event type 'ISupportA' is listed twice: Event type 'ISupportA' is a subtype or supertype of event type 'ISupportBaseAB' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "unlisted-statement-type",
+        "sequence": 0,
+        "value": "Segmented context 'SegmentedByAString' requires that any of the event types that are listed in the segmented context also appear in any of the filter expressions of the statement, type 'SupportBean_S0' is not one of the types listed ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "named-window-partition-criteria",
+        "sequence": 0,
+        "value": "Partition criteria may not include named windows [@public create context SegmentedByWhat partition by theString from MyWindow]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "named-window-unlisted-schema",
+        "sequence": 0,
+        "value": "Segmented context 'TheSomeSchemaCtx' requires that named windows are associated to an existing event type and that the event type is listed among the partitions defined by the create-context statement"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-key-segmented-invalid",
+    "records": [
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "partition-filter-property",
+        "sequence": 0,
+        "value": "Failed to validate filter expression 'dummy=1': Property named 'dummy' is not valid in any stream ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "unknown-key-property",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' property name 'dummy' not found on type SupportBean ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "mismatched-key-count",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' expected the same number of property names for each event type, found 1 properties for event type 'SupportBean' and 2 properties for event type 'SupportBean_S0' [create context SegmentedByAString partition by theString from SupportBean, id, p00 from SupportBean_S0]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "mismatched-key-type",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' for context 'SegmentedByAString' found mismatch of property types, property 'theString' of type 'String' compared to property 'id' of type 'Integer' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-type",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' the event type 'SupportBean' is listed twice ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "duplicate-subtype",
+        "sequence": 0,
+        "value": "For context 'SegmentedByAString' the event type 'ISupportA' is listed twice: Event type 'ISupportA' is a subtype or supertype of event type 'ISupportBaseAB' ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "unlisted-statement-type",
+        "sequence": 0,
+        "value": "Segmented context 'SegmentedByAString' requires that any of the event types that are listed in the segmented context also appear in any of the filter expressions of the statement, type 'SupportBean_S0' is not one of the types listed ["
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "named-window-partition-criteria",
+        "sequence": 0,
+        "value": "Partition criteria may not include named windows [@public create context SegmentedByWhat partition by theString from MyWindow]"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-error",
+        "statement": "named-window-unlisted-schema",
+        "sequence": 0,
+        "value": "Segmented context 'TheSomeSchemaCtx' requires that named windows are associated to an existing event type and that the event type is listed among the partitions defined by the create-context statement"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

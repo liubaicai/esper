@@ -1539,6 +1539,30 @@ func CreateKeyContextByStreams(env *Environment, name string, streams ...KeyCont
 	if err != nil {
 		return ContextDefinition{}, err
 	}
+	var firstKeys []Expr
+	var firstType string
+	for index, stream := range streams {
+		if _, isWindow := env.NamedWindow(stream.Type); isWindow {
+			return ContextDefinition{}, NewError(ErrorInvalidRule, "partition criteria may not include named windows")
+		}
+		if _, ok := env.Schema(stream.Type); !ok {
+			return ContextDefinition{}, NewError(ErrorUnknownName, fmt.Sprintf("context %q partition type %q is not a registered event type", name, stream.Type))
+		}
+		if index == 0 {
+			firstKeys, firstType = stream.Keys, stream.Type
+			continue
+		}
+		for keyIndex, key := range stream.Keys {
+			if keyIndex >= len(firstKeys) || key == nil || firstKeys[keyIndex] == nil {
+				continue
+			}
+			keyType, firstKeyType := key.Type(), firstKeys[keyIndex].Type()
+			if keyType != nil && firstKeyType != nil && keyType != firstKeyType {
+				return ContextDefinition{}, NewError(ErrorInvalidRule,
+					fmt.Sprintf("for context %q found mismatch of property types, key %d of type %q on %q compared to type %q on %q", name, keyIndex, firstKeyType, firstType, keyType, stream.Type))
+			}
+		}
+	}
 	return env.registerContextDefinition(definition)
 }
 
