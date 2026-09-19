@@ -3268,11 +3268,92 @@ Active: Draft 4.461 ('infra-table-join'): InfraTableJoin.java ordinals
 - [x] `make check` green; shipped. Draft 4.461 committed and pushed as
  `939791365`.
 
+## Current work unit
+Active: Draft 4.462 ('infra-table-reset-aggregation-state'):
+InfraTableResetAggregationState.java, all 6 executions.
+
+- [x] Contract frozen (scouts `NextJavaContract462` + `NextGoSurface462`;
+ both hit a yield-schema bug after completing full investigations - findings
+ recovered from transcripts and every fact re-verified by the primary agent
+ against the Java source and Go surface):
+ - ord 0 InfraTableResetRowSum `java-runtime-5478f21270e0cc6e4d85`: unkeyed
+   `MyTable(asum sum(int))`, `on SupportBean_S0 merge MyTable when matched
+   then update set asum.reset()`; sum 10->21->reset(null)->20->41->reset->
+   30, milestones are ordering no-ops.
+ - ord 1 InfraTableResetRowSumWTableAlias `java-runtime-6215263c68fc3379b070`:
+   same flow, whole-row `mt.reset()` alias form.
+ - ord 2 InfraTableResetSelective `java-runtime-38acd85e3cec943643e7`: keyed
+   `MyTable(k string primary key, avgone,avgtwo avg(int), winone,wintwo
+   window(*))` grouped by theString; S0 merge `where p00 = k` resets
+   avgone+winone only, S1 merge `where p10 = k` resets avgtwo+wintwo only
+   (note the double space before `when` in the pinned EPL). Iterator rows:
+   G1{10.5,10.5,[s0,s3],[s0,s3]} G2{6,6,[s1,s2],[s1,s2]} -> after S0(G2):
+   G2{null,6,null,[s1,s2]} -> after S1(G1): G1{10.5,null,[s0,s3],null}.
+ - ord 3 InfraTableResetVariousAggs `java-runtime-78c737da8c98ca9afafe`:
+   unkeyed 12-column table (avedev,count,count distinct,max,median,stddev,
+   firstever,countever,maxbyever(*)@type(SupportBean),myaggsingle plugin,
+   referenceCountedMap plugin,countMinSketch); mt.reset() restores every
+   cell to initial state (nulls/0/empty map/CMS frequency 0); s0 listener
+   reads `MyTable.myWordcms.countMinSketchFrequency(p10)` per S1 send.
+ - ord 4 InfraTableResetInvalid `java-runtime-e0e02833416f4b55ebee`: four
+   tryInvalidCompile probes - reset() in on-merge insert select-clause,
+   mt.reset() in select-clause, asum.reset(1) and mt.reset(1) with params;
+   exact Java diagnostics pinned.
+ - ord 5 InfraTableResetDocSample `java-runtime-21ca203d405fd3a727c8`:
+   compile-only (env.compile, no deploy); two-column-PK IntrusionCountTable
+   with per-column reset() and tableRow.reset() merge forms.
+- [x] Go surface: `ResetTableAggregates` exists but resets the WHOLE
+ aggregate state (all groups) and takes no predicate - ord 2 needs a keyed
+ selective path. New API `ResetTableAggregatesWhere(table, predicate,
+ columns...)` matching UpdateTableWhere/DeleteFromTableWhere precedent;
+ engine needs per-group per-column reset instead of wholesale
+ aggregateState replacement. All exotic aggregates exist in Go
+ (avedev/median/stddev/countever/maxbyever/window/plugin-agg/CMS).
+ INVALIDITY precedent: build-error steps -> compile-rejected records
+ (resultset_output_limit_row_limit_invalid.go). Compile-only precedent:
+ build step (resultset_querytype_row_per_group_having.go).
+- [x] Engine: per-group/per-column aggregate reset + keyed predicate reset
+ (prior session: `columnEpochs`/`columnEverEpochs` slicing +
+ `ResetTableAggregatesWhere`; this session: reset also deletes the plugin/
+ multi-plugin states owned by the affected selection subtrees — without it
+ stddev's incremental Welford accumulator unwound pre-reset events through
+ leave+re-enter and left a 1-ulp residue, 11.547005383792513 vs ...515).
+- [x] Assets (parity-asset-worker): scenario JSON + Java oracle + run script.
+- [x] Runner `internal/app/parity/infra_table_reset.go` + run.go wiring;
+ `build` compile-only op registered in `internal/compat/scenario.go`.
+- [x] Java trace (31 records) + Go replay + zero-diff evidence:
+ `infra-table-reset-aggregation-state.{json,trace.json,go.trace.json,
+ evidence.json}`; `-mode infra-table-reset-diff` passing / 0 differences.
+ manifest/roadmap/CHANGELOG updated: 703 cases / 701 implemented / 329 DV
+ cases / 1257 DV runtime IDs / 3807 associations (referenced 3434,
+ unreferenced 702).
+- [x] Tests: `TestRunInfraTableResetDiffWritesPassingEvidence`,
+ `TestRunInfraTableResetDiffRejectsTraceMutations` (5 mutations incl. the
+ stddev residue regression), `TestInfraTableResetRuntimeIDMappingMatchesScenario`;
+ `internal/esper` and `internal/app/parity` suites green.
+- [x] Parity review (agent `ParityReview462`, read-only): OVERALL FAIL with
+ 1 P1 + 1 P2 + 6 P3 nits, all FIXED and re-verified:
+ - **P1 FIXED:** scenario dropped Java's second `sendEventSetAssert` tail —
+ `assertCountMinSketch(env,"E1",1)` sends a trailing `SupportBean_S1` whose
+ s0 listener must deliver c0=1 after repopulation (sketch re-accumulation
+ post-reset). Added the `send` step after the final various-aggs snapshot,
+ pinned it, regenerated Java/Go traces + evidence (now 32 records/side,
+ listener seq 1/2/3 = c0 1/0/1), shifted the `agg-reset-params` mutation
+ index 28->29.
+ - **P2 FIXED:** `resetAggregateGroupPluginStates` matched multi-plugin keys
+ via `strings.Contains(key, "isolated:%p")` without the closing quote, so a
+ shorter node address prefixing a longer one could delete a sibling
+ column's isolated state. Marker now `isolated:%p\"`.
+ - **P3 FIXED:** pinned `ordinal` in the scenario case check; removed the
+ dead `map[string]int` normalize case; corrected the mutation comment.
+ - **P3 accepted (no change):** milestone assertTableSum no-op (coverage
+ already at seq 3); cloneAggregateGroup shared epoch maps (transient
+ clones); shared-key multi-plugin states unreachable in covered scenarios.
+- [ ] `make check`, commit/push.
+
 ## Next work unit (prefetch)
 Candidate: next unreferenced cluster per the manifest scan; scouts to be
 dispatched after this unit's review starts.
-
-
 
 ## Delegation checkpoint (recent)
 

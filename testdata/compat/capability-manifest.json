@@ -45096,6 +45096,67 @@
     "java-runtime-375040b0fa5a7b77c5aa",
     "java-runtime-7e0cba3e4899478393ef"
    ]
+  },
+  {
+   "id": "case.infra-table-reset-aggregation-state",
+   "javaRuntimeIds": [
+    "java-runtime-5478f21270e0cc6e4d85",
+    "java-runtime-6215263c68fc3379b070",
+    "java-runtime-38acd85e3cec943643e7",
+    "java-runtime-78c737da8c98ca9afafe",
+    "java-runtime-e0e02833416f4b55ebee",
+    "java-runtime-21ca203d405fd3a727c8"
+   ],
+   "javaNames": [
+    "InfraTableResetRowSum",
+    "InfraTableResetRowSumWTableAlias",
+    "InfraTableResetSelective",
+    "InfraTableResetVariousAggs",
+    "InfraTableResetInvalid",
+    "InfraTableResetDocSample"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableResetAggregationState.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraTableResetDiffWritesPassingEvidence"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "reset",
+    "aggregation-state",
+    "on-merge",
+    "into-table",
+    "count-min-sketch",
+    "plugin-aggregation",
+    "compile-rejected",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-reset-aggregation-state.json",
+    "testdata/parity/infra-table-reset-aggregation-state.trace.json",
+    "testdata/parity/infra-table-reset-aggregation-state.go.trace.json",
+    "testdata/parity/infra-table-reset-aggregation-state.evidence.json"
+   ],
+   "notes": [
+    "All six InfraTableResetAggregationState executions replayed through one scenario: unkeyed sum reset by column name and by whole-row mt.reset() alias (10->21->null->20->41->null->30), keyed selective per-column reset where S0 clears avgone+winone and S1 clears avgtwo+wintwo, a twelve-aggregate unkeyed table (avedev/count/count-distinct/max/median/stddev/firstever/countever/maxbyever/myaggsingle/referenceCountedMap/countMinSketch) restored to initial state by mt.reset() with the s0 listener reading countMinSketchFrequency 1 then 0, four compile-rejected reset() probes, and the compile-only doc-sample module.",
+    "Engine alignment proven by the zero-difference replay: reset() reinitializes the aggregation state cell, so the reset path now deletes the plugin and multi-plugin states owned by the affected selection subtrees in addition to the per-column epoch slicing; without that, stddev's incremental Welford accumulator unwound pre-reset events through leave+re-enter and left a 1-ulp residue (11.547005383792513 vs 11.547005383792515). The typed Go API exposes ResetTableAggregates/ResetTableAggregatesWhere for the update-assignment forms; the EPL-only select-clause reset() and reset(...) parameter probes stay compile-rejected markers."
+   ],
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5478f21270e0cc6e4d85",
+    "java-runtime-6215263c68fc3379b070",
+    "java-runtime-38acd85e3cec943643e7",
+    "java-runtime-78c737da8c98ca9afafe",
+    "java-runtime-e0e02833416f4b55ebee",
+    "java-runtime-21ca203d405fd3a727c8"
+   ]
   }
  ],
  "mappings": [
@@ -48246,13 +48307,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-table-join"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-reset-aggregation-state"
   }
  ],
  "summary": {
-  "inventoriedCases": 702,
-  "implementedCases": 700,
-  "differentialVerifiedCases": 328,
-  "differentialVerifiedRuntimeIds": 1251,
+  "inventoriedCases": 703,
+  "implementedCases": 701,
+  "differentialVerifiedCases": 329,
+  "differentialVerifiedRuntimeIds": 1257,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48262,13 +48327,13 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3801,
-  "referencedJavaRuntimeIds": 3428,
+  "runtimeAssociationCount": 3807,
+  "referencedJavaRuntimeIds": 3434,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 708,
+  "unreferencedJavaRuntimeIds": 702,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 702,
+  "totalCases": 703,
   "totalCapabilities": 121
  }
 }

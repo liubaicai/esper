@@ -1,0 +1,1629 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5478f21270e0cc6e4d85",
+    "java-runtime-6215263c68fc3379b070",
+    "java-runtime-38acd85e3cec943643e7",
+    "java-runtime-78c737da8c98ca9afafe",
+    "java-runtime-e0e02833416f4b55ebee",
+    "java-runtime-21ca203d405fd3a727c8"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableResetAggregationState.java"
+  ],
+  "javaExecutions": [
+    "InfraTableResetRowSum",
+    "InfraTableResetRowSumWTableAlias",
+    "InfraTableResetSelective",
+    "InfraTableResetVariousAggs",
+    "InfraTableResetInvalid",
+    "InfraTableResetDocSample"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-reset-aggregation-state",
+    "steps": [
+      {
+        "op": "case",
+        "case": "row-sum"
+      },
+      {
+        "op": "deploy",
+        "statement": "module",
+        "epl": "@name('table') create table MyTable(asum sum(int));\ninto table MyTable select sum(intPrimitive) as asum from SupportBean;\non SupportBean_S0 merge MyTable when matched then update set asum.reset();\n"
+      },
+      {
+        "op": "deployed",
+        "statement": "module"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "row-sum-alias"
+      },
+      {
+        "op": "deploy",
+        "statement": "module",
+        "epl": "@name('table') create table MyTable(asum sum(int));\ninto table MyTable select sum(intPrimitive) as asum from SupportBean;\non SupportBean_S0 merge MyTable as mt when matched then update set mt.reset();\n"
+      },
+      {
+        "op": "deployed",
+        "statement": "module"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 11
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 21
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "selective"
+      },
+      {
+        "op": "deploy",
+        "statement": "module",
+        "epl": "@name('table') create table MyTable(k string primary key,   avgone avg(int), avgtwo avg(int),  winone window(*) @type(SupportBean), wintwo window(*) @type(SupportBean));\ninto table MyTable select theString,   avg(intPrimitive) as avgone, avg(intPrimitive) as avgtwo,  window(*) as winone, window(*) as wintwo from SupportBean#keepall group by theString;\non SupportBean_S0 merge MyTable where p00 = k  when matched then update set avgone.reset(), winone.reset();\non SupportBean_S1 merge MyTable where p10 = k  when matched then update set avgtwo.reset(), wintwo.reset();\n"
+      },
+      {
+        "op": "deployed",
+        "statement": "module"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0,
+          "p10": "G1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "various-aggs"
+      },
+      {
+        "op": "deploy",
+        "statement": "module",
+        "epl": "@name('table') create table MyTable(  myAvedev avedev(int),\n  myCount count(*),\n  myCountDistinct count(distinct int),\n  myMax max(int),\n  myMedian median(int),\n  myStddev stddev(int),\n  myFirstEver firstever(string),\n  myCountEver countever(*),  myMaxByEver maxbyever(intPrimitive) @type(SupportBean),  myPluginAggSingle myaggsingle(*),  myPluginAggAccess referenceCountedMap(string),  myWordcms countMinSketch());\ninto table MyTable select  avedev(intPrimitive) as myAvedev,  count(*) as myCount,  count(distinct intPrimitive) as myCountDistinct,  max(intPrimitive) as myMax,  median(intPrimitive) as myMedian,  stddev(intPrimitive) as myStddev,  firstever(theString) as myFirstEver,  countever(*) as myCountEver,  maxbyever(*) as myMaxByEver,  myaggsingle(*) as myPluginAggSingle,  referenceCountedMap(theString) as myPluginAggAccess,  countMinSketchAdd(theString) as myWordcms   from SupportBean#keepall;\non SupportBean_S0 merge MyTable mt when matched then update set mt.reset();\n@name('s0') select MyTable.myWordcms.countMinSketchFrequency(p10) as c0 from SupportBean_S1;\n"
+      },
+      {
+        "op": "deployed",
+        "statement": "module"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0,
+          "p10": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0,
+          "p10": "E1"
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "table"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0,
+          "p10": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "invalid"
+      },
+      {
+        "op": "build-error",
+        "statement": "select-agg-reset",
+        "expectError": "Failed to validate select-clause expression 'asum.reset()': The table aggregation'reset' method is only available for the on-merge update action",
+        "epl": "@name('table') create table MyTable(asum sum(int));\non SupportBean_S0 merge MyTable when matched then insert into MyStream select asum.reset()"
+      },
+      {
+        "op": "build-error",
+        "statement": "select-row-reset",
+        "expectError": "Failed to validate select-clause expression 'mt.reset()'",
+        "epl": "@name('table') create table MyTable(asum sum(int));\non SupportBean_S0 merge MyTable as mt when matched then insert into MyStream select mt.reset()"
+      },
+      {
+        "op": "build-error",
+        "statement": "agg-reset-params",
+        "expectError": "Failed to validate update assignment expression 'asum.reset(1)': The table aggregation 'reset' method does not allow parameters",
+        "epl": "@name('table') create table MyTable(asum sum(int));\non SupportBean_S0 merge MyTable as mt when matched then update set asum.reset(1)"
+      },
+      {
+        "op": "build-error",
+        "statement": "row-reset-params",
+        "expectError": "Failed to validate update assignment expression 'mt.reset(1)': The table aggregation 'reset' method does not allow parameters",
+        "epl": "@name('table') create table MyTable(asum sum(int));\non SupportBean_S0 merge MyTable as mt when matched then update set mt.reset(1)"
+      },
+      {
+        "op": "undeploy-all"
+      },
+      {
+        "op": "case",
+        "case": "doc-sample"
+      },
+      {
+        "op": "build",
+        "statement": "module",
+        "epl": "create table IntrusionCountTable (\n  fromAddress string primary key,\n  toAddress string primary key,\n  countIntrusion10Sec count(*),\n  countIntrusion60Sec count(*)\n);\ncreate schema IntrusionReset(fromAddress string, toAddress string);\non IntrusionReset as resetEvent merge IntrusionCountTable as tableRow\nwhere resetEvent.fromAddress = tableRow.fromAddress and resetEvent.toAddress = tableRow.toAddress\nwhen matched then update set countIntrusion10Sec.reset(), countIntrusion60Sec.reset();\non IntrusionReset as resetEvent merge IntrusionCountTable as tableRow\nwhere resetEvent.fromAddress = tableRow.fromAddress and resetEvent.toAddress = tableRow.toAddress\nwhen matched then update set tableRow.reset();\n"
+      },
+      {
+        "op": "undeploy-all"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-reset-aggregation-state",
+    "records": [
+      {
+        "case": "row-sum",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 4,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 5,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 41
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 6,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 7,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 4,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 5,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 41
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 6,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 7,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "selective",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "selective",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": 10.5,
+              "avgtwo": 10.5,
+              "k": "G1",
+              "winone": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ],
+              "wintwo": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": 6,
+              "avgtwo": 6,
+              "k": "G2",
+              "winone": [
+                {
+                  "intPrimitive": 10,
+                  "theString": "G2"
+                },
+                {
+                  "intPrimitive": 2,
+                  "theString": "G2"
+                }
+              ],
+              "wintwo": [
+                {
+                  "intPrimitive": 10,
+                  "theString": "G2"
+                },
+                {
+                  "intPrimitive": 2,
+                  "theString": "G2"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "selective",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": 10.5,
+              "avgtwo": 10.5,
+              "k": "G1",
+              "winone": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ],
+              "wintwo": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": null,
+              "avgtwo": 6,
+              "k": "G2",
+              "winone": null,
+              "wintwo": [
+                {
+                  "intPrimitive": 10,
+                  "theString": "G2"
+                },
+                {
+                  "intPrimitive": 2,
+                  "theString": "G2"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "selective",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": 10.5,
+              "avgtwo": null,
+              "k": "G1",
+              "winone": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ],
+              "wintwo": null
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": null,
+              "avgtwo": 6,
+              "k": "G2",
+              "winone": null,
+              "wintwo": [
+                {
+                  "intPrimitive": 10,
+                  "theString": "G2"
+                },
+                {
+                  "intPrimitive": 2,
+                  "theString": "G2"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "various-aggs",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myAvedev": 8.88888888888889,
+              "myCount": 3,
+              "myCountDistinct": 2,
+              "myCountEver": 3,
+              "myFirstEver": "E1",
+              "myMax": 30,
+              "myMaxByEver": {
+                "intPrimitive": 30,
+                "theString": "E3"
+              },
+              "myMedian": 10,
+              "myPluginAggAccess": {
+                "E1": 1,
+                "E2": 1,
+                "E3": 1
+              },
+              "myPluginAggSingle": -3,
+              "myStddev": 11.547005383792515,
+              "myWordcms": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myAvedev": null,
+              "myCount": 0,
+              "myCountDistinct": 0,
+              "myCountEver": 0,
+              "myFirstEver": null,
+              "myMax": null,
+              "myMaxByEver": null,
+              "myMedian": null,
+              "myPluginAggAccess": {},
+              "myPluginAggSingle": 0,
+              "myStddev": null,
+              "myWordcms": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myAvedev": 8.88888888888889,
+              "myCount": 3,
+              "myCountDistinct": 2,
+              "myCountEver": 3,
+              "myFirstEver": "E1",
+              "myMax": 30,
+              "myMaxByEver": {
+                "intPrimitive": 30,
+                "theString": "E3"
+              },
+              "myMedian": 10,
+              "myPluginAggAccess": {
+                "E1": 1,
+                "E2": 1,
+                "E3": 1
+              },
+              "myPluginAggSingle": -3,
+              "myStddev": 11.547005383792515,
+              "myWordcms": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "select-agg-reset",
+        "sequence": 1,
+        "time": "0",
+        "value": "Failed to validate select-clause expression 'asum.reset()': The table aggregation'reset' method is only available for the on-merge update action"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "select-row-reset",
+        "sequence": 1,
+        "time": "0",
+        "value": "Failed to validate select-clause expression 'mt.reset()'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "agg-reset-params",
+        "sequence": 1,
+        "time": "0",
+        "value": "Failed to validate update assignment expression 'asum.reset(1)': The table aggregation 'reset' method does not allow parameters"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "row-reset-params",
+        "sequence": 1,
+        "time": "0",
+        "value": "Failed to validate update assignment expression 'mt.reset(1)': The table aggregation 'reset' method does not allow parameters"
+      },
+      {
+        "case": "doc-sample",
+        "operation": "compiled",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-reset-aggregation-state",
+    "records": [
+      {
+        "case": "row-sum",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 4,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 5,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 41
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 6,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 7,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 21
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 4,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 5,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 41
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 6,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "row-sum-alias",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 7,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "asum": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "selective",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "selective",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": 10.5,
+              "avgtwo": 10.5,
+              "k": "G1",
+              "winone": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ],
+              "wintwo": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": 6,
+              "avgtwo": 6,
+              "k": "G2",
+              "winone": [
+                {
+                  "intPrimitive": 10,
+                  "theString": "G2"
+                },
+                {
+                  "intPrimitive": 2,
+                  "theString": "G2"
+                }
+              ],
+              "wintwo": [
+                {
+                  "intPrimitive": 10,
+                  "theString": "G2"
+                },
+                {
+                  "intPrimitive": 2,
+                  "theString": "G2"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "selective",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": 10.5,
+              "avgtwo": 10.5,
+              "k": "G1",
+              "winone": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ],
+              "wintwo": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ]
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": null,
+              "avgtwo": 6,
+              "k": "G2",
+              "winone": null,
+              "wintwo": [
+                {
+                  "intPrimitive": 10,
+                  "theString": "G2"
+                },
+                {
+                  "intPrimitive": 2,
+                  "theString": "G2"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "selective",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": 10.5,
+              "avgtwo": null,
+              "k": "G1",
+              "winone": [
+                {
+                  "intPrimitive": 1,
+                  "theString": "G1"
+                },
+                {
+                  "intPrimitive": 20,
+                  "theString": "G1"
+                }
+              ],
+              "wintwo": null
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "avgone": null,
+              "avgtwo": 6,
+              "k": "G2",
+              "winone": null,
+              "wintwo": [
+                {
+                  "intPrimitive": 10,
+                  "theString": "G2"
+                },
+                {
+                  "intPrimitive": 2,
+                  "theString": "G2"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      },
+      {
+        "case": "various-aggs",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myAvedev": 8.88888888888889,
+              "myCount": 3,
+              "myCountDistinct": 2,
+              "myCountEver": 3,
+              "myFirstEver": "E1",
+              "myMax": 30,
+              "myMaxByEver": {
+                "intPrimitive": 30,
+                "theString": "E3"
+              },
+              "myMedian": 10,
+              "myPluginAggAccess": {
+                "E1": 1,
+                "E2": 1,
+                "E3": 1
+              },
+              "myPluginAggSingle": -3,
+              "myStddev": 11.547005383792515,
+              "myWordcms": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myAvedev": null,
+              "myCount": 0,
+              "myCountDistinct": 0,
+              "myCountEver": 0,
+              "myFirstEver": null,
+              "myMax": null,
+              "myMaxByEver": null,
+              "myMedian": null,
+              "myPluginAggAccess": {},
+              "myPluginAggSingle": 0,
+              "myStddev": null,
+              "myWordcms": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "snapshot",
+        "statement": "table",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "myAvedev": 8.88888888888889,
+              "myCount": 3,
+              "myCountDistinct": 2,
+              "myCountEver": 3,
+              "myFirstEver": "E1",
+              "myMax": 30,
+              "myMaxByEver": {
+                "intPrimitive": 30,
+                "theString": "E3"
+              },
+              "myMedian": 10,
+              "myPluginAggAccess": {
+                "E1": 1,
+                "E2": 1,
+                "E3": 1
+              },
+              "myPluginAggSingle": -3,
+              "myStddev": 11.547005383792515,
+              "myWordcms": null
+            }
+          }
+        ]
+      },
+      {
+        "case": "various-aggs",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "0",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "select-agg-reset",
+        "sequence": 1,
+        "time": "0",
+        "value": "Failed to validate select-clause expression 'asum.reset()': The table aggregation'reset' method is only available for the on-merge update action"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "select-row-reset",
+        "sequence": 1,
+        "time": "0",
+        "value": "Failed to validate select-clause expression 'mt.reset()'"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "agg-reset-params",
+        "sequence": 1,
+        "time": "0",
+        "value": "Failed to validate update assignment expression 'asum.reset(1)': The table aggregation 'reset' method does not allow parameters"
+      },
+      {
+        "case": "invalid",
+        "operation": "compile-rejected",
+        "statement": "row-reset-params",
+        "sequence": 1,
+        "time": "0",
+        "value": "Failed to validate update assignment expression 'mt.reset(1)': The table aggregation 'reset' method does not allow parameters"
+      },
+      {
+        "case": "doc-sample",
+        "operation": "compiled",
+        "statement": "module",
+        "sequence": 1,
+        "time": "0"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

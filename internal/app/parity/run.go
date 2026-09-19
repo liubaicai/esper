@@ -327,6 +327,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadEfabScenario(file)
 	} else if *mode == "infra-table-join" || *mode == "infra-table-join-diff" {
 		scenario, err = loadInfraTableJoinScenario(file)
+	} else if *mode == "infra-table-reset" || *mode == "infra-table-reset-diff" {
+		scenario, err = loadInfraTableResetScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -3628,6 +3630,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraTableJoinJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraTableJoinJavaSources),
 				splitMetadata(*javaExecutions, infraTableJoinJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-table-reset" || *mode == "infra-table-reset-diff" {
+		trace, err := runInfraTableResetScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-reset-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraTableResetJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableResetJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableResetJavaSources),
+				splitMetadata(*javaExecutions, infraTableResetJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

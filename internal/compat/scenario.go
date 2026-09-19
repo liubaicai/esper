@@ -195,6 +195,12 @@ func (s Scenario) Validate() error {
 			if strings.TrimSpace(step.Epl) == "" {
 				return fmt.Errorf("compat: step %d build-error has no epl", i)
 			}
+		case "build":
+			// Compile-only step: the runner builds the pinned plan without
+			// deploying it and emits the "compiled" marker.
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d build has no statement", i)
+			}
 		case "add-listener", "add-partition-listener", "remove-listener", "remove-listeners":
 			// Context lifecycle listener registration steps; the runner
 			// pins the full step key, so no field-level checks are needed.

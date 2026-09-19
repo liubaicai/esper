@@ -20092,6 +20092,129 @@ func TestInfraTableJoinRuntimeIDMappingMatchesScenario(t *testing.T) {
 	}
 }
 
+func TestRunInfraTableResetDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-reset-aggregation-state.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "infra-table-reset-aggregation-state.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-reset-aggregation-state.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "infra-table-reset-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunInfraTableResetDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "row-sum-reset-kept-value",
+			mutate: func(trace *compat.Trace) {
+				// Java reads null after asum.reset(); keeping the pre-reset
+				// sum would surface 21 instead of null.
+				trace.Records[3].New[0].Fields["asum"] = 21
+			},
+		},
+		{
+			name: "selective-reset-cleared-wrong-column",
+			mutate: func(trace *compat.Trace) {
+				// The S0 merge resets only avgone/winone; clearing avgtwo
+				// too would null it on the G2 row.
+				trace.Records[18].New[1].Fields["avgtwo"] = nil
+			},
+		},
+		{
+			name: "various-aggs-stddev-residue",
+			mutate: func(trace *compat.Trace) {
+				// A reset that unwinds the accumulator through leave+re-enter
+				// leaves a 1-ulp float residue instead of a clean re-sync.
+				trace.Records[25].New[0].Fields["myStddev"] = 11.547005383792513
+			},
+		},
+		{
+			name: "various-aggs-cms-frequency-survives-reset",
+			mutate: func(trace *compat.Trace) {
+				// After mt.reset() the count-min-sketch cell is empty, so the
+				// s0 listener must read frequency 0, not the pre-reset 1.
+				trace.Records[24].New[0].Fields["c0"] = 1
+			},
+		},
+		{
+			name: "invalid-probe-compiled",
+			mutate: func(trace *compat.Trace) {
+				// The asum.reset(1) parameter probe must stay compile-rejected.
+				trace.Records[29].Operation = "compiled"
+				trace.Records[29].Value = nil
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-reset-aggregation-state.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "infra-table-reset-aggregation-state.evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "infra-table-reset-diff",
+				"-scenario", filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-reset-aggregation-state.json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				data, _ := os.ReadFile(evidencePath)
+				t.Fatalf("mutation %q accepted: %s", test.name, string(data))
+			}
+		})
+	}
+}
+
+// TestInfraTableResetRuntimeIDMappingMatchesScenario pins the per-case
+// runtime-ID mapping: every scenario case's declared runtimeId must equal
+// the engine URI the runner derives, so evidence stays cross-referenceable.
+func TestInfraTableResetRuntimeIDMappingMatchesScenario(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "testdata", "parity", "infra-table-reset-aggregation-state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		Cases []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if len(scenario.Cases) == 0 {
+		t.Fatal("scenario declares no cases")
+	}
+	for _, entry := range scenario.Cases {
+		if got := infraTableResetRuntimeID(entry.Case); got != entry.RuntimeID {
+			t.Fatalf("case %q maps to %q, scenario declares %q", entry.Case, got, entry.RuntimeID)
+		}
+	}
+}
+
 func TestRunResultSetQueryTypeHavingDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-query-type-having.evidence.json"),

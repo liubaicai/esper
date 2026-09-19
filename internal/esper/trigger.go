@@ -492,11 +492,10 @@ func (s TriggerStream[T]) DeleteAllFromTable(table string) TriggerQuery {
 }
 
 // ResetTableAggregates resets the live aggregate state materialized into a
-// no-primary-key table. Naming every column is the fluent equivalent of
-// Esper's "update set c0.reset(), c1.reset(), ..." form; omitting columns is
-// the whole-row alias equivalent to "tableAlias.reset()". The current
-// contract intentionally resets one complete aggregate row so all projected
-// columns continue to share one coherent contribution set.
+// table. Naming a column subset is the fluent equivalent of Esper's
+// "update set c0.reset(), c1.reset(), ..." form; omitting columns is the
+// whole-row alias equivalent to "tableAlias.reset()". Without a predicate
+// every materialized row resets, matching an unconditional on-merge update.
 func (s TriggerStream[T]) ResetTableAggregates(table string, columns ...string) TriggerQuery {
 	normalized := make([]string, len(columns))
 	for index, column := range columns {
@@ -508,6 +507,30 @@ func (s TriggerStream[T]) ResetTableAggregates(table string, columns ...string) 
 			input:        s.node,
 			table:        strings.TrimSpace(table),
 			action:       triggerResetTableAggregates,
+			resetColumns: normalized,
+		},
+	}
+}
+
+// ResetTableAggregatesWhere resets the live aggregate state of the table
+// rows whose target-row predicate is true for the current trigger event,
+// the fluent equivalent of Esper's "on E merge T where <predicate> when
+// matched then update set col.reset(), ...". Use TableField in the
+// predicate to read the candidate row and Field to read the trigger event.
+// Naming a column subset resets only those columns; omitting the column
+// list is the whole-row alias equivalent to "tableAlias.reset()".
+func (s TriggerStream[T]) ResetTableAggregatesWhere(table string, predicate Expression[bool], columns ...string) TriggerQuery {
+	normalized := make([]string, len(columns))
+	for index, column := range columns {
+		normalized[index] = strings.TrimSpace(column)
+	}
+	return TriggerQuery{
+		env: s.env,
+		definition: &triggerDefinition{
+			input:        s.node,
+			table:        strings.TrimSpace(table),
+			action:       triggerResetTableAggregates,
+			where:        predicate,
 			resetColumns: normalized,
 		},
 	}
@@ -904,7 +927,11 @@ func (d *triggerDefinition) description() string {
 		if len(d.resetColumns) > 0 {
 			columns = strings.Join(d.resetColumns, ",")
 		}
-		return fmt.Sprintf("on(%s)->table.reset-aggregates(%s;%s)", d.input.describe(), d.table, columns)
+		where := ""
+		if d.where != nil {
+			where = ";where=" + d.where.Description()
+		}
+		return fmt.Sprintf("on(%s)->table.reset-aggregates(%s;%s%s)", d.input.describe(), d.table, columns, where)
 	}
 	where := ""
 	if d.where != nil {
@@ -957,8 +984,16 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 		return NewError(ErrorUnknownName, fmt.Sprintf("trigger references unknown table %q", definition.table))
 	}
 	if definition.action == triggerResetTableAggregates {
-		if len(table.PrimaryKey()) != 0 {
-			return NewError(ErrorInvalidRule, "table aggregate reset currently requires a no-primary-key target")
+		if definition.where != nil {
+			if definition.where.Type() != typeOf[bool]() {
+				return NewError(ErrorTypeMismatch, "table aggregate reset predicate must return bool")
+			}
+			if isAggregateExpression(definition.where) {
+				return NewError(ErrorInvalidRule, "an aggregate function may not appear in a WHERE clause (use the HAVING clause)")
+			}
+			if err := e.validateTriggerTargetExpression(definition.input, table.schema, definition.where, "table-field"); err != nil {
+				return fmt.Errorf("table aggregate reset predicate: %w", err)
+			}
 		}
 		columns := table.Columns()
 		if len(definition.resetColumns) == 0 {
@@ -980,9 +1015,6 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 				return NewError(ErrorInvalidRule, fmt.Sprintf("table aggregate reset duplicates column %q", column))
 			}
 			seen[column] = struct{}{}
-		}
-		if len(seen) != len(columns) {
-			return NewError(ErrorInvalidRule, "table aggregate reset must name every column or omit the column list")
 		}
 		return nil
 	}
@@ -3054,7 +3086,7 @@ func resetIntoTableAggregateStatements(ctx context.Context, engine *Engine, defi
 			continue
 		}
 		if statement.plan.query.contextName == "" {
-			statement.runtime.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
+			resetAggregateRuntimeStateColumns(statement.runtime.aggregateState, statement.plan.query.aggregate, definition.resetColumns, nil)
 			if err := statement.runtime.persistAggregateTable(statement.plan, now); err != nil {
 				statement.mu.Unlock()
 				return err
@@ -3063,7 +3095,7 @@ func resetIntoTableAggregateStatements(ctx context.Context, engine *Engine, defi
 		} else if triggerRuntime != nil && triggerRuntime.partitionContextName == statement.plan.query.contextName && triggerRuntime.partitionKey != "" {
 			partition := statement.runtime.partitions[triggerRuntime.partitionKey]
 			if partition != nil {
-				partition.aggregateState = &aggregateRuntimeState{groups: make(map[string]*aggregateGroup)}
+				resetAggregateRuntimeStateColumns(partition.aggregateState, statement.plan.query.aggregate, definition.resetColumns, nil)
 				if err := partition.persistAggregateTable(statement.plan, now); err != nil {
 					statement.mu.Unlock()
 					return err
@@ -3078,6 +3110,195 @@ func resetIntoTableAggregateStatements(ctx context.Context, engine *Engine, defi
 	}
 	if !reset {
 		return NewError(ErrorState, fmt.Sprintf("table aggregate reset found no active into-table aggregate for %q", definition.table))
+	}
+	return nil
+}
+
+// resetAggregateRuntimeStateColumns applies Esper's per-column
+// "update set col.reset()" semantics to every group in the state (or only
+// the groups whose materialized row key appears in matchedKeys when the
+// set is non-nil): each reset column restarts its accumulation at the
+// current event frontier. An empty columns list resets every column the
+// contributing selections produce, the whole-row "alias.reset()" form.
+func resetAggregateRuntimeStateColumns(state *aggregateRuntimeState, definition *aggregateDefinition, columns []string, matchedKeys map[string]struct{}) {
+	if state == nil {
+		return
+	}
+	for key, group := range state.groups {
+		if group == nil {
+			continue
+		}
+		if matchedKeys != nil {
+			if _, ok := matchedKeys[key]; !ok {
+				continue
+			}
+		}
+		resetAggregateGroupColumns(group, definition, columns)
+	}
+}
+
+// resetAggregateGroupColumns marks the named columns (or every column when
+// the list is empty) as restarting accumulation at the group's current
+// event frontier and discards the live plugin state owned by the affected
+// selections. Esper's reset() reinitializes the aggregation state cell, so
+// incremental accumulators (for example stddev's Welford entries) must not
+// unwind the pre-reset events through leave+re-enter: that path leaves a
+// floating-point residue and retains stale event references. Sync-based
+// plugin states are deleted rather than cleared so the next evaluation
+// recreates them exactly like a fresh group.
+func resetAggregateGroupColumns(group *aggregateGroup, definition *aggregateDefinition, columns []string) {
+	if group == nil {
+		return
+	}
+	if len(columns) == 0 {
+		group.columnEpochs = map[string]int{"*": len(group.events)}
+		group.columnEverEpochs = map[string]int{"*": len(group.everEvents)}
+		group.pluginStates = nil
+		group.multiPluginStates = nil
+		return
+	}
+	if group.columnEpochs == nil {
+		group.columnEpochs = make(map[string]int, len(columns))
+	}
+	if group.columnEverEpochs == nil {
+		group.columnEverEpochs = make(map[string]int, len(columns))
+	}
+	for _, column := range columns {
+		group.columnEpochs[column] = len(group.events)
+		group.columnEverEpochs[column] = len(group.everEvents)
+	}
+	resetAggregateGroupPluginStates(group, definition, columns)
+}
+
+// resetAggregateGroupPluginStates deletes the plugin and multi-plugin
+// states owned by the named columns' selection subtrees. Multi-plugin
+// states keyed by an affected node's isolated identity are removed as well;
+// shared-key states have no node identity and are left untouched.
+func resetAggregateGroupPluginStates(group *aggregateGroup, definition *aggregateDefinition, columns []string) {
+	if definition == nil || (len(group.pluginStates) == 0 && len(group.multiPluginStates) == 0) {
+		return
+	}
+	nodes := make(map[*exprNode]struct{})
+	for _, column := range columns {
+		for _, selection := range definition.selections {
+			if selection.Name != column || selection.Expr == nil || selection.Expr.node() == nil {
+				continue
+			}
+			collectExprNodes(selection.Expr.node(), nodes)
+		}
+	}
+	if len(nodes) == 0 {
+		return
+	}
+	for node := range nodes {
+		delete(group.pluginStates, node)
+	}
+	if len(group.multiPluginStates) == 0 {
+		return
+	}
+	markers := make([]string, 0, len(nodes))
+	for node := range nodes {
+		// The encoded key renders the isolated state key as a quoted
+		// "isolated:0x..." token; the closing quote bounds the match so a
+		// shorter pointer that prefixes a longer one cannot delete a
+		// sibling column's state.
+		markers = append(markers, fmt.Sprintf("isolated:%p\"", node))
+	}
+	for key := range group.multiPluginStates {
+		for _, marker := range markers {
+			if strings.Contains(key, marker) {
+				delete(group.multiPluginStates, key)
+				break
+			}
+		}
+	}
+}
+
+// collectExprNodes walks an expression subtree so every node that can own
+// plugin state (the aggregate itself plus nested aggregate expressions) is
+// covered by the reset.
+func collectExprNodes(node *exprNode, into map[*exprNode]struct{}) {
+	if node == nil {
+		return
+	}
+	into[node] = struct{}{}
+	for _, child := range node.children {
+		collectExprNodes(child, into)
+	}
+}
+
+// resetMatchedTableAggregateGroups resets the named columns (or all columns
+// when the list is empty) of every into-table contributor group whose
+// materialized row key is in matchedKeys, then repersists each affected
+// contributor's table rows.
+func resetMatchedTableAggregateGroups(ctx context.Context, engine *Engine, definition *triggerDefinition, triggerRuntime *statementRuntime, matchedKeys []string, now time.Time) error {
+	if engine == nil || definition == nil {
+		return NewError(ErrorDependency, "table aggregate reset has no engine or definition")
+	}
+	target := catalogKey(definition.moduleName, definition.table)
+	matched := make(map[string]struct{}, len(matchedKeys))
+	for _, key := range matchedKeys {
+		matched[key] = struct{}{}
+	}
+	table, tableOK := engine.ensureTableLockedInModule(definition.moduleName, definition.table)
+	if !tableOK || table == nil {
+		return NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
+	}
+	tableDefinition := table.Definition()
+	reset := false
+	for _, statement := range engine.sortedStatementsLocked() {
+		if statement == nil || statement.plan.query.aggregate == nil || statement.plan.query.tableTarget == "" {
+			continue
+		}
+		moduleName, tableName := splitCatalogKey(statement.plan.query.tableTarget)
+		if catalogKey(moduleName, tableName) != target {
+			continue
+		}
+		statement.mu.Lock()
+		if statement.closed || statement.state != StatementStarted {
+			statement.mu.Unlock()
+			continue
+		}
+		runtimes := []*statementRuntime{&statement.runtime}
+		if statement.plan.query.contextName != "" {
+			runtimes = runtimes[:0]
+			if triggerRuntime != nil && triggerRuntime.partitionContextName == statement.plan.query.contextName && triggerRuntime.partitionKey != "" {
+				if partition := statement.runtime.partitions[triggerRuntime.partitionKey]; partition != nil {
+					runtimes = append(runtimes, partition)
+				}
+			}
+		}
+		for _, candidate := range runtimes {
+			if candidate == nil || candidate.aggregateState == nil {
+				continue
+			}
+			groupKeys := make(map[string]struct{}, len(candidate.aggregateState.groups))
+			for groupKey, group := range candidate.aggregateState.groups {
+				if group == nil {
+					continue
+				}
+				rowKey, _ := aggregateTableContributionRow(statement.plan.query.aggregate, tableDefinition, nil, group, now, candidate.variables)
+				if _, ok := matched[rowKey]; ok {
+					groupKeys[groupKey] = struct{}{}
+				}
+			}
+			if len(groupKeys) == 0 {
+				continue
+			}
+			resetAggregateRuntimeStateColumns(candidate.aggregateState, statement.plan.query.aggregate, definition.resetColumns, groupKeys)
+			if err := candidate.persistAggregateTable(statement.plan, now); err != nil {
+				statement.mu.Unlock()
+				return err
+			}
+			reset = true
+		}
+		statement.mu.Unlock()
+		if err := contextErr(ctx); err != nil {
+			return err
+		}
+	}
+	if !reset {
+		return NewError(ErrorState, fmt.Sprintf("table aggregate reset found no matching into-table aggregate for %q", definition.table))
 	}
 	return nil
 }
@@ -3097,6 +3318,8 @@ func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, 
 		return tableMutationResult{}, err
 	}
 	mutation := tableMutationResult{}
+	var resetMatchedKeys []string
+	var resetMatchedRows []TableRow
 	for _, row := range rows {
 		if err := contextErr(ctx); err != nil {
 			return tableMutationResult{}, err
@@ -3150,9 +3373,40 @@ func executeTableWhereAction(ctx context.Context, engine *Engine, table *Table, 
 			}
 			mutation.oldRows = append(mutation.oldRows, row)
 			mutation.newRows = append(mutation.newRows, updated)
+		case triggerResetTableAggregates:
+			keyValues := tableRowKeys(table.Definition(), row)
+			if len(keyValues) == 0 {
+				keyValues = []any{"<all>"}
+			}
+			resetMatchedKeys = append(resetMatchedKeys, encodeKey(keyValues))
+			resetMatchedRows = append(resetMatchedRows, row)
 		default:
-			return tableMutationResult{}, NewError(ErrorInvalidRule, "table predicate trigger requires update or delete")
+			return tableMutationResult{}, NewError(ErrorInvalidRule, "table predicate trigger requires update, delete or aggregate reset")
 		}
+	}
+	if definition.action == triggerResetTableAggregates {
+		if len(resetMatchedKeys) == 0 {
+			return mutation, nil
+		}
+		if err := resetMatchedTableAggregateGroups(ctx, engine, definition, runtime, resetMatchedKeys, now); err != nil {
+			return tableMutationResult{}, err
+		}
+		mutation.oldRows = append(mutation.oldRows, resetMatchedRows...)
+		for _, row := range resetMatchedRows {
+			keys := tableRowKeys(table.Definition(), row)
+			rowScope := row.scope
+			if rowScope == "" && definition.contextDefinition == nil {
+				rowScope = triggerTableScope(definition, runtime, variables)
+			}
+			updated, found, readErr := table.getInScope(ctx, rowScope, keys...)
+			if readErr != nil {
+				return tableMutationResult{}, readErr
+			}
+			if found {
+				mutation.newRows = append(mutation.newRows, updated)
+			}
+		}
+		return mutation, nil
 	}
 	return mutation, nil
 }

@@ -6613,6 +6613,12 @@ type aggregateGroup struct {
 	previous          []Value
 	emitted           bool
 	tableSuppressed   bool
+	// columnEpochs/columnEverEpochs implement Esper's per-column
+	// "update set col.reset()" semantics: each entry is the index into
+	// events/everEvents at which that column's accumulation restarts.
+	// Columns absent from the maps accumulate from index 0.
+	columnEpochs     map[string]int
+	columnEverEpochs map[string]int
 }
 
 type aggregateResultEntry struct {
@@ -12515,7 +12521,7 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 	entries := make([]aggregateResultEntry, 0, len(order))
 	for _, key := range order {
 		group := groups[key]
-		_, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi)
+		_, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi, nil, nil)
 		if !visible {
 			continue
 		}
@@ -12528,14 +12534,14 @@ func (r *statementRuntime) snapshotJoinAggregateBatch(plan Plan, now time.Time) 
 		// that reads non-key scalars is AGGREGATED_UNGROUPED RowPerEvent, so
 		// its iterator is also one row per join tuple.
 		if !aggregateDefinitionReadsNonKeyEvent(definition) {
-			values, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi)
+			values, visible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, group.current, events, events, now, r.variables, group.plugin, group.multi, nil, nil)
 			if visible {
 				entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), key: key, sourceEvent: group.current})
 			}
 			continue
 		}
 		for _, member := range group.events {
-			values, memberVisible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, member, events, events, now, r.variables, group.plugin, group.multi)
+			values, memberVisible := evaluateAggregateGroup(definition, group.events, group.ever, nil, false, group.set, member, events, events, now, r.variables, group.plugin, group.multi, nil, nil)
 			if !memberVisible {
 				continue
 			}
@@ -12673,6 +12679,8 @@ func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now ti
 		current := event
 		var pluginStates map[*exprNode]aggregatePluginState
 		var multiPluginStates map[string]aggregateMultiPluginState
+		var columnEpochs map[string]int
+		var columnEverEpochs map[string]int
 		var groupEvents []Event
 		var groupEverEvents []Event
 		groupingSetIndex := groupingSet
@@ -12683,6 +12691,8 @@ func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now ti
 			}
 			pluginStates = group.pluginStates
 			multiPluginStates = group.multiPluginStates
+			columnEpochs = group.columnEpochs
+			columnEverEpochs = group.columnEverEpochs
 			hasGroup = true
 			if live {
 				groupEvents = group.events
@@ -12693,7 +12703,7 @@ func (r *statementRuntime) snapshotOutputLimitedAggregateBatch(plan Plan, now ti
 		if live && !hasGroup {
 			continue
 		}
-		values, visible := evaluateAggregateGroup(definition, groupEvents, groupEverEvents, nil, false, groupingSetIndex, current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, pluginStates, multiPluginStates)
+		values, visible := evaluateAggregateGroup(definition, groupEvents, groupEverEvents, nil, false, groupingSetIndex, current, r.aggregateState.allEvents, r.aggregateState.allEverEvents, now, r.variables, pluginStates, multiPluginStates, columnEpochs, columnEverEpochs)
 		if !visible {
 			continue
 		}
@@ -12850,6 +12860,8 @@ func (r *statementRuntime) snapshotAggregateStateBatchInternal(plan Plan, now ti
 					r.variables,
 					group.pluginStates,
 					group.multiPluginStates,
+					group.columnEpochs,
+					group.columnEverEpochs,
 				)
 				if visible {
 					entries = append(entries, aggregateResultEntry{result: resultRow(newRow(plan.resultSchema, values)), group: group, key: key, sourceEvent: current})
@@ -12887,6 +12899,8 @@ func (r *statementRuntime) snapshotAggregateStateBatchInternal(plan Plan, now ti
 				r.variables,
 				group.pluginStates,
 				group.multiPluginStates,
+				group.columnEpochs,
+				group.columnEverEpochs,
 			)
 			if !visible {
 				continue
@@ -20916,7 +20930,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 						preEvents := make([]Event, 0, len(group.events)+1)
 						preEvents = append(preEvents, group.events...)
 						preEvents = append(preEvents, leaving)
-						preValues, preVisible := evaluateAggregateGroup(definition, preEvents, group.everEvents, nil, false, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+						preValues, preVisible := evaluateAggregateGroup(definition, preEvents, group.everEvents, nil, false, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 						if preVisible {
 							oldEntries = append(oldEntries, aggregateResultEntry{
 								result: resultRow(newRow(plan.resultSchema, preValues)),
@@ -20943,7 +20957,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 			// produced for remove-stream selections: Java's default stream
 			// selection is istream-only, so a plain query reports no callback
 			// when a named-window row disappears.
-			postRemoval, postVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+			postRemoval, postVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 			for _, leaving := range delta.oldEvents {
 				oldValues := append([]Value(nil), postRemoval...)
 				for index, selection := range definition.selections {
@@ -20970,7 +20984,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 		// carry no old row.
 		if aggregateDefinitionIsRowForEvent(definition) && len(delta.newEvents) > 0 && len(group.events) > 0 {
 			for _, current := range delta.newEvents {
-				values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+				values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 				if visible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 					newEntries = append(newEntries, aggregateResultEntry{
 						result:      resultRow(newRow(plan.resultSchema, values)),
@@ -20988,7 +21002,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				// evaluated against the post-removal state and plain columns
 				// against the leaving event itself. Insert-only updates carry no
 				// old row.
-				postRemoval, postVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+				postRemoval, postVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 				for _, leaving := range delta.oldEvents {
 					oldValues := append([]Value(nil), postRemoval...)
 					for index, selection := range definition.selections {
@@ -21008,7 +21022,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 					}
 				}
 			}
-			previous, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+			previous, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 			if visible {
 				group.previous = append([]Value(nil), previous...)
 				group.emitted = true
@@ -21034,7 +21048,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				if leavingKey != key {
 					continue
 				}
-				leavingValues, leavingVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+				leavingValues, leavingVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, leaving, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 				if leavingVisible {
 					oldEntries = append(oldEntries, aggregateResultEntry{
 						result:      resultRow(newRow(plan.resultSchema, leavingValues)),
@@ -21046,7 +21060,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				}
 			}
 		}
-		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+		newValues, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 		// Java ResultSetProcessorAggregateGroupedImpl.generateOutputBatched
 		// ViewUnkeyed loops over every new event of the batch and evaluates
 		// the having per event (post-apply state, plain columns bound to that
@@ -21060,7 +21074,7 @@ func (r *statementRuntime) aggregateBatch(delta eventDelta, plan Plan, now time.
 				if currentKey != key {
 					continue
 				}
-				values, eventVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates)
+				values, eventVisible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, current, state.allEvents, state.allEverEvents, now, r.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 				if eventVisible && emitNew && (plan.query.selector == SelectIStream || plan.query.selector == SelectIRStream) {
 					newEntries = append(newEntries, aggregateResultEntry{
 						result:      resultRow(newRow(plan.resultSchema, values)),
@@ -21784,7 +21798,7 @@ func (r *statementRuntime) aggregateTableRows(plan Plan, tableDefinition TableDe
 			if group == nil || group.tableSuppressed || (len(group.events) == 0 && !aggregateDefinitionRetainsEmptyGroups(definition)) {
 				continue
 			}
-			values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, contributor.aggregateState.allEvents, contributor.aggregateState.allEverEvents, now, contributor.variables, group.pluginStates, group.multiPluginStates)
+			values, visible := evaluateAggregateGroup(definition, group.events, group.everEvents, group.leavingEvents, group.leaving, group.groupingSet, group.current, contributor.aggregateState.allEvents, contributor.aggregateState.allEverEvents, now, contributor.variables, group.pluginStates, group.multiPluginStates, group.columnEpochs, group.columnEverEpochs)
 			if !visible {
 				continue
 			}
@@ -22059,15 +22073,15 @@ func aggregateGroupKey(groupBy []Expr, groupingSet []int, event Event, now time.
 	return encodeKey(values)
 }
 
-func evaluateAggregateGroup(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, multiPluginStates map[string]aggregateMultiPluginState) ([]Value, bool) {
-	return evaluateAggregateGroupInternal(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates, multiPluginStates, false)
+func evaluateAggregateGroup(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, multiPluginStates map[string]aggregateMultiPluginState, columnEpochs map[string]int, columnEverEpochs map[string]int) ([]Value, bool) {
+	return evaluateAggregateGroupInternal(definition, events, everEvents, leavingEvents, leaving, groupingSet, current, allEvents, allEverEvents, now, variables, pluginStates, multiPluginStates, columnEpochs, columnEverEpochs, false)
 }
 
 func evaluateEmptyAggregateGroup(definition *aggregateDefinition, now time.Time, variables map[string]Value) ([]Value, bool) {
-	return evaluateAggregateGroupInternal(definition, nil, nil, nil, false, nil, Event{}, nil, nil, now, variables, nil, nil, true)
+	return evaluateAggregateGroupInternal(definition, nil, nil, nil, false, nil, Event{}, nil, nil, now, variables, nil, nil, nil, nil, true)
 }
 
-func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, multiPluginStates map[string]aggregateMultiPluginState, allowEmpty bool) ([]Value, bool) {
+func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, multiPluginStates map[string]aggregateMultiPluginState, columnEpochs map[string]int, columnEverEpochs map[string]int, allowEmpty bool) ([]Value, bool) {
 	if len(events) == 0 && len(everEvents) == 0 && current.Schema().Name() == "" && !allowEmpty {
 		return nil, false
 	}
@@ -22080,7 +22094,29 @@ func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Ev
 		}
 	}
 	for _, selection := range definition.selections {
-		value := evaluateAggregateExpression(selection.Expr, ctx)
+		selectionCtx := ctx
+		if len(columnEpochs) > 0 || len(columnEverEpochs) > 0 {
+			// Esper's "update set col.reset()" restarts that column's
+			// accumulation at the reset frontier: the selection evaluates
+			// over only the events that arrived after its epoch. A "*"
+			// entry is the whole-row alias form covering every column.
+			epoch, reset := aggregateColumnEpoch(columnEpochs, selection.Name)
+			if reset {
+				if epoch > len(events) {
+					epoch = len(events)
+				}
+				selectionCtx.Group = append([]Event(nil), events[epoch:]...)
+				selectionCtx.History = append([]Event(nil), events[epoch:]...)
+			}
+			everEpoch, everReset := aggregateColumnEpoch(columnEverEpochs, selection.Name)
+			if everReset {
+				if everEpoch > len(everEvents) {
+					everEpoch = len(everEvents)
+				}
+				selectionCtx.EverGroup = append([]Event(nil), everEvents[everEpoch:]...)
+			}
+		}
+		value := evaluateAggregateExpression(selection.Expr, selectionCtx)
 		if selection.Expr != nil && selection.Expr.node() != nil &&
 			selection.Expr.node().kind == "field" && !isAggregateExpression(selection.Expr) &&
 			len(groupingSet) < len(definition.groupBy) {
@@ -22101,6 +22137,21 @@ func evaluateAggregateGroupInternal(definition *aggregateDefinition, events []Ev
 		}
 	}
 	return values, true
+}
+
+// aggregateColumnEpoch resolves a selection's reset frontier: an explicit
+// per-column entry wins over the "*" whole-row marker.
+func aggregateColumnEpoch(epochs map[string]int, column string) (int, bool) {
+	if len(epochs) == 0 {
+		return 0, false
+	}
+	if epoch, ok := epochs[column]; ok {
+		return epoch, true
+	}
+	if epoch, ok := epochs["*"]; ok {
+		return epoch, true
+	}
+	return 0, false
 }
 
 func aggregateGroupContext(definition *aggregateDefinition, events []Event, everEvents []Event, leavingEvents []Event, leaving bool, groupingSet []int, current Event, allEvents []Event, allEverEvents []Event, now time.Time, variables map[string]Value, pluginStates map[*exprNode]aggregatePluginState, multiPluginStates map[string]aggregateMultiPluginState) EvalContext {

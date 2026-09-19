@@ -1,0 +1,506 @@
+{
+ "version": "esper-parity/v1",
+ "id": "infra-table-reset-aggregation-state",
+ "description": "InfraTableResetAggregationState ords 0-5: table aggregation reset() via on-merge update \u2014 unkeyed sum reset by column name and by table alias, keyed selective per-column reset (avg/window) with merge where-clause, twelve-aggregate whole-row mt.reset() including plugin and count-min-sketch columns, four invalid reset() compile probes, and the doc-sample compile-only module.",
+ "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+ "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableResetAggregationState.java",
+ "javaRuntimes": [
+  "java-runtime-5478f21270e0cc6e4d85",
+  "java-runtime-6215263c68fc3379b070",
+  "java-runtime-38acd85e3cec943643e7",
+  "java-runtime-78c737da8c98ca9afafe",
+  "java-runtime-e0e02833416f4b55ebee",
+  "java-runtime-21ca203d405fd3a727c8"
+ ],
+ "javaNames": [
+  "InfraTableResetRowSum",
+  "InfraTableResetRowSumWTableAlias",
+  "InfraTableResetSelective",
+  "InfraTableResetVariousAggs",
+  "InfraTableResetInvalid",
+  "InfraTableResetDocSample"
+ ],
+ "javaStaticIds": [
+  "java-e9745496803eaca6334c",
+  "java-0dce757ee7589b9e5955",
+  "java-6e9eb521e3169e56479f",
+  "java-f4f3dace51b56b26af12",
+  "java-f07cf6e8baf91d2768c7",
+  "java-5c6e83bcf7901b7e6e05"
+ ],
+ "javaFlags": [],
+ "cases": [
+  {
+   "case": "row-sum",
+   "ordinal": 0,
+   "runtimeId": "java-runtime-5478f21270e0cc6e4d85",
+   "executionName": "InfraTableResetRowSum",
+   "observation": "snapshot; unkeyed MyTable(asum sum(int)) fed by into-table sum over SupportBean; on SupportBean_S0 merge updates asum.reset(); sum 10->21->null(reset)->20->41->null(reset)->30",
+   "epl": "@name('table') create table MyTable(asum sum(int));\ninto table MyTable select sum(intPrimitive) as asum from SupportBean;\non SupportBean_S0 merge MyTable when matched then update set asum.reset();\n"
+  },
+  {
+   "case": "row-sum-alias",
+   "ordinal": 1,
+   "runtimeId": "java-runtime-6215263c68fc3379b070",
+   "executionName": "InfraTableResetRowSumWTableAlias",
+   "observation": "snapshot; same flow as row-sum but the merge declares table alias mt and updates mt.reset() (whole-row reset form); sum 10->21->null->20->41->null->30",
+   "epl": "@name('table') create table MyTable(asum sum(int));\ninto table MyTable select sum(intPrimitive) as asum from SupportBean;\non SupportBean_S0 merge MyTable as mt when matched then update set mt.reset();\n"
+  },
+  {
+   "case": "selective",
+   "ordinal": 2,
+   "runtimeId": "java-runtime-38acd85e3cec943643e7",
+   "executionName": "InfraTableResetSelective",
+   "observation": "snapshot; keyed MyTable(k string primary key, avgone/avgtwo avg(int), winone/wintwo window(*)) grouped by theString; S0 merge where p00=k resets avgone+winone only, S1 merge where p10=k resets avgtwo+wintwo only (pinned EPL keeps the double space before 'when')",
+   "epl": "@name('table') create table MyTable(k string primary key,   avgone avg(int), avgtwo avg(int),  winone window(*) @type(SupportBean), wintwo window(*) @type(SupportBean));\ninto table MyTable select theString,   avg(intPrimitive) as avgone, avg(intPrimitive) as avgtwo,  window(*) as winone, window(*) as wintwo from SupportBean#keepall group by theString;\non SupportBean_S0 merge MyTable where p00 = k  when matched then update set avgone.reset(), winone.reset();\non SupportBean_S1 merge MyTable where p10 = k  when matched then update set avgtwo.reset(), wintwo.reset();\n"
+  },
+  {
+   "case": "various-aggs",
+   "ordinal": 3,
+   "runtimeId": "java-runtime-78c737da8c98ca9afafe",
+   "executionName": "InfraTableResetVariousAggs",
+   "observation": "snapshot+listener; unkeyed 12-column table (avedev,count,count distinct,max,median,stddev,firstever,countever,maxbyever(*)@type(SupportBean),myaggsingle plugin,referenceCountedMap plugin,countMinSketch); mt.reset() restores every cell to initial state; s0 listener reads MyTable.myWordcms.countMinSketchFrequency(p10) per S1 send (1 before reset, 0 after)",
+   "epl": "@name('table') create table MyTable(  myAvedev avedev(int),\n  myCount count(*),\n  myCountDistinct count(distinct int),\n  myMax max(int),\n  myMedian median(int),\n  myStddev stddev(int),\n  myFirstEver firstever(string),\n  myCountEver countever(*),  myMaxByEver maxbyever(intPrimitive) @type(SupportBean),  myPluginAggSingle myaggsingle(*),  myPluginAggAccess referenceCountedMap(string),  myWordcms countMinSketch());\ninto table MyTable select  avedev(intPrimitive) as myAvedev,  count(*) as myCount,  count(distinct intPrimitive) as myCountDistinct,  max(intPrimitive) as myMax,  median(intPrimitive) as myMedian,  stddev(intPrimitive) as myStddev,  firstever(theString) as myFirstEver,  countever(*) as myCountEver,  maxbyever(*) as myMaxByEver,  myaggsingle(*) as myPluginAggSingle,  referenceCountedMap(theString) as myPluginAggAccess,  countMinSketchAdd(theString) as myWordcms   from SupportBean#keepall;\non SupportBean_S0 merge MyTable mt when matched then update set mt.reset();\n@name('s0') select MyTable.myWordcms.countMinSketchFrequency(p10) as c0 from SupportBean_S1;\n"
+  },
+  {
+   "case": "invalid",
+   "ordinal": 4,
+   "runtimeId": "java-runtime-e0e02833416f4b55ebee",
+   "executionName": "InfraTableResetInvalid",
+   "observation": "compile-rejected; four tryInvalidCompile probes against the shared create-table prefix: reset() in on-merge insert select-clause, mt.reset() in select-clause, asum.reset(1) and mt.reset(1) with parameters; epl field carries the shared prefix",
+   "epl": "@name('table') create table MyTable(asum sum(int));\n"
+  },
+  {
+   "case": "doc-sample",
+   "ordinal": 5,
+   "runtimeId": "java-runtime-21ca203d405fd3a727c8",
+   "executionName": "InfraTableResetDocSample",
+   "observation": "compiled; compile-only env.compile of the doc-sample module: two-column-PK IntrusionCountTable with per-column reset() and tableRow.reset() on-merge update forms over the IntrusionReset schema",
+   "epl": "create table IntrusionCountTable (\n  fromAddress string primary key,\n  toAddress string primary key,\n  countIntrusion10Sec count(*),\n  countIntrusion60Sec count(*)\n);\ncreate schema IntrusionReset(fromAddress string, toAddress string);\non IntrusionReset as resetEvent merge IntrusionCountTable as tableRow\nwhere resetEvent.fromAddress = tableRow.fromAddress and resetEvent.toAddress = tableRow.toAddress\nwhen matched then update set countIntrusion10Sec.reset(), countIntrusion60Sec.reset();\non IntrusionReset as resetEvent merge IntrusionCountTable as tableRow\nwhere resetEvent.fromAddress = tableRow.fromAddress and resetEvent.toAddress = tableRow.toAddress\nwhen matched then update set tableRow.reset();\n"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "row-sum"
+  },
+  {
+   "op": "deploy",
+   "statement": "module",
+   "epl": "@name('table') create table MyTable(asum sum(int));\ninto table MyTable select sum(intPrimitive) as asum from SupportBean;\non SupportBean_S0 merge MyTable when matched then update set asum.reset();\n"
+  },
+  {
+   "op": "deployed",
+   "statement": "module"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 21
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 30
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "row-sum-alias"
+  },
+  {
+   "op": "deploy",
+   "statement": "module",
+   "epl": "@name('table') create table MyTable(asum sum(int));\ninto table MyTable select sum(intPrimitive) as asum from SupportBean;\non SupportBean_S0 merge MyTable as mt when matched then update set mt.reset();\n"
+  },
+  {
+   "op": "deployed",
+   "statement": "module"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 11
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 21
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 30
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "selective"
+  },
+  {
+   "op": "deploy",
+   "statement": "module",
+   "epl": "@name('table') create table MyTable(k string primary key,   avgone avg(int), avgtwo avg(int),  winone window(*) @type(SupportBean), wintwo window(*) @type(SupportBean));\ninto table MyTable select theString,   avg(intPrimitive) as avgone, avg(intPrimitive) as avgtwo,  window(*) as winone, window(*) as wintwo from SupportBean#keepall group by theString;\non SupportBean_S0 merge MyTable where p00 = k  when matched then update set avgone.reset(), winone.reset();\non SupportBean_S1 merge MyTable where p10 = k  when matched then update set avgtwo.reset(), wintwo.reset();\n"
+  },
+  {
+   "op": "deployed",
+   "statement": "module"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G2",
+    "intPrimitive": 2
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "G1",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0,
+    "p00": "G2"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 0,
+    "p10": "G1"
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "various-aggs"
+  },
+  {
+   "op": "deploy",
+   "statement": "module",
+   "epl": "@name('table') create table MyTable(  myAvedev avedev(int),\n  myCount count(*),\n  myCountDistinct count(distinct int),\n  myMax max(int),\n  myMedian median(int),\n  myStddev stddev(int),\n  myFirstEver firstever(string),\n  myCountEver countever(*),  myMaxByEver maxbyever(intPrimitive) @type(SupportBean),  myPluginAggSingle myaggsingle(*),  myPluginAggAccess referenceCountedMap(string),  myWordcms countMinSketch());\ninto table MyTable select  avedev(intPrimitive) as myAvedev,  count(*) as myCount,  count(distinct intPrimitive) as myCountDistinct,  max(intPrimitive) as myMax,  median(intPrimitive) as myMedian,  stddev(intPrimitive) as myStddev,  firstever(theString) as myFirstEver,  countever(*) as myCountEver,  maxbyever(*) as myMaxByEver,  myaggsingle(*) as myPluginAggSingle,  referenceCountedMap(theString) as myPluginAggAccess,  countMinSketchAdd(theString) as myWordcms   from SupportBean#keepall;\non SupportBean_S0 merge MyTable mt when matched then update set mt.reset();\n@name('s0') select MyTable.myWordcms.countMinSketchFrequency(p10) as c0 from SupportBean_S1;\n"
+  },
+  {
+   "op": "deployed",
+   "statement": "module"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 30
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 0,
+    "p10": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 0,
+    "p10": "E1"
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": 30
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 0,
+    "p10": "E1"
+   }
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "invalid"
+  },
+  {
+   "op": "build-error",
+   "statement": "select-agg-reset",
+   "epl": "@name('table') create table MyTable(asum sum(int));\non SupportBean_S0 merge MyTable when matched then insert into MyStream select asum.reset()",
+   "expectError": "Failed to validate select-clause expression 'asum.reset()': The table aggregation'reset' method is only available for the on-merge update action"
+  },
+  {
+   "op": "build-error",
+   "statement": "select-row-reset",
+   "epl": "@name('table') create table MyTable(asum sum(int));\non SupportBean_S0 merge MyTable as mt when matched then insert into MyStream select mt.reset()",
+   "expectError": "Failed to validate select-clause expression 'mt.reset()'"
+  },
+  {
+   "op": "build-error",
+   "statement": "agg-reset-params",
+   "epl": "@name('table') create table MyTable(asum sum(int));\non SupportBean_S0 merge MyTable as mt when matched then update set asum.reset(1)",
+   "expectError": "Failed to validate update assignment expression 'asum.reset(1)': The table aggregation 'reset' method does not allow parameters"
+  },
+  {
+   "op": "build-error",
+   "statement": "row-reset-params",
+   "epl": "@name('table') create table MyTable(asum sum(int));\non SupportBean_S0 merge MyTable as mt when matched then update set mt.reset(1)",
+   "expectError": "Failed to validate update assignment expression 'mt.reset(1)': The table aggregation 'reset' method does not allow parameters"
+  },
+  {
+   "op": "undeploy-all"
+  },
+  {
+   "op": "case",
+   "case": "doc-sample"
+  },
+  {
+   "op": "build",
+   "statement": "module",
+   "epl": "create table IntrusionCountTable (\n  fromAddress string primary key,\n  toAddress string primary key,\n  countIntrusion10Sec count(*),\n  countIntrusion60Sec count(*)\n);\ncreate schema IntrusionReset(fromAddress string, toAddress string);\non IntrusionReset as resetEvent merge IntrusionCountTable as tableRow\nwhere resetEvent.fromAddress = tableRow.fromAddress and resetEvent.toAddress = tableRow.toAddress\nwhen matched then update set countIntrusion10Sec.reset(), countIntrusion60Sec.reset();\non IntrusionReset as resetEvent merge IntrusionCountTable as tableRow\nwhere resetEvent.fromAddress = tableRow.fromAddress and resetEvent.toAddress = tableRow.toAddress\nwhen matched then update set tableRow.reset();\n"
+  },
+  {
+   "op": "undeploy-all"
+  }
+ ]
+}

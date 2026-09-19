@@ -248,11 +248,9 @@ func TestResetTableAggregatesValidatesCoherentTarget(t *testing.T) {
 		columns []string
 		code    error
 	}{
-		{name: "partial", table: "ResetValidationTable", columns: []string{"c0"}, code: ErrorInvalidRule},
 		{name: "duplicate", table: "ResetValidationTable", columns: []string{"c0", "c0"}, code: ErrorInvalidRule},
 		{name: "blank", table: "ResetValidationTable", columns: []string{"c0", " "}, code: ErrorInvalidRule},
 		{name: "unknown", table: "ResetValidationTable", columns: []string{"c0", "missing"}, code: ErrorUnknownName},
-		{name: "keyed", table: "ResetValidationKeyed", code: ErrorInvalidRule},
 	}
 	for _, testCase := range invalid {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -261,6 +259,18 @@ func TestResetTableAggregatesValidatesCoherentTarget(t *testing.T) {
 				t.Fatalf("reset validation error = %v, want %v", err, testCase.code)
 			}
 		})
+	}
+	// Partial-column and keyed-table resets are valid under the Java
+	// on-merge contract: "update set c0.reset()" names a subset and
+	// "mt.reset()" targets keyed rows.
+	for _, query := range []Query{
+		OnEvent(source).ResetTableAggregates("ResetValidationTable", "c0").Query(),
+		OnEvent(source).ResetTableAggregates("ResetValidationKeyed").Query(),
+		OnEvent(source).ResetTableAggregatesWhere("ResetValidationKeyed", Equal[int](TableField[int]("c0"), Literal(0)), "c0").Query(),
+	} {
+		if _, err := env.Build(query); err != nil {
+			t.Fatalf("reset build error = %v", err)
+		}
 	}
 	plan, err := env.Build(OnEvent(source).ResetTableAggregates("ResetValidationTable").Query())
 	if err != nil {
