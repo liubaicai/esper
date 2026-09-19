@@ -1511,7 +1511,12 @@
     "java-runtime-046926326cad5f0172cd",
     "java-runtime-702d919aaadcbb188467",
     "java-runtime-5cc56f78a52d6a452948",
-    "java-runtime-b23b2fbc3cc233237ac9"
+    "java-runtime-b23b2fbc3cc233237ac9",
+    "java-runtime-a58e8a2ac1c172b779f1",
+    "java-runtime-ad31f07cc8535074a471",
+    "java-runtime-c141cb04dac6838dc264",
+    "java-runtime-abf1de4c0349b023da5f",
+    "java-runtime-f03458884f4e7beaa402"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -37237,15 +37242,25 @@
     "java-runtime-185fe3d8699570122804",
     "java-runtime-6ee6e846c37d6ad8b769",
     "java-runtime-e8d546810d8419632df9",
+    "java-runtime-a58e8a2ac1c172b779f1",
+    "java-runtime-ad31f07cc8535074a471",
     "java-runtime-ded301fd8afee9d9cfbd",
-    "java-runtime-fa61d002dc3374573126"
+    "java-runtime-c141cb04dac6838dc264",
+    "java-runtime-fa61d002dc3374573126",
+    "java-runtime-abf1de4c0349b023da5f",
+    "java-runtime-f03458884f4e7beaa402"
    ],
    "javaNames": [
     "InfraInsertIntoAndDelete",
     "InfraInsertIntoSameModuleUnkeyed",
     "InfraInsertIntoTwoModulesUnkeyed",
+    "InfraInsertIntoSelfAccess",
+    "InfraNamedWindowMergeInsertIntoTable",
     "InfraInsertIntoWildcard",
-    "InfraInsertIntoSameModuleKeyed"
+    "InfraInsertIntoFromNamedWindow",
+    "InfraInsertIntoSameModuleKeyed",
+    "InfraSplitStream",
+    "InfraTableInsertIntoLenientPropCount"
    ],
    "goTests": [
     "internal/app/parity/run_test.go:TestRunInfraTableInsertIntoDiffWritesPassingEvidence"
@@ -37264,10 +37279,11 @@
    "evidence": [
     "testdata/parity/infra-table-insert-into.json",
     "testdata/parity/infra-table-insert-into.trace.json",
+    "testdata/parity/infra-table-insert-into.go.trace.json",
     "testdata/parity/infra-table-insert-into.evidence.json"
    ],
    "notes": [
-    "Five InfraTableInsertInto executions replayed through the shared scenario: compound-PK insert/delete cycle via table snapshots, unkeyed single-row tables in one and two modules with the pinned unique-index violation text, wildcard map insert (DEFAULT representation iteration; the other five representation loops are an approved infrastructure difference), and the keyed aggregate/on-insert/on-not-matched-merge module."
+    "All ten InfraTableInsertInto executions replayed through the shared scenario: compound-PK insert/delete cycle via table snapshots, unkeyed single-row tables in one and two modules with the pinned unique-index violation text, self-access dedup via a table-lookup is-null filter, named-window merge not-matched insert into an unkeyed table, wildcard map insert (DEFAULT representation iteration; the other five representation loops are an approved infrastructure difference), on-trigger insert of every retained unique-window row with a FAF delete between rounds, the keyed aggregate/on-insert/on-not-matched-merge module, first-match split-stream into two tables plus a routed OtherStream listener, and lenient partial-column inserts with null primary-key components."
    ],
    "verification": [
     "inventoried",
@@ -37278,8 +37294,13 @@
     "java-runtime-185fe3d8699570122804",
     "java-runtime-6ee6e846c37d6ad8b769",
     "java-runtime-e8d546810d8419632df9",
+    "java-runtime-a58e8a2ac1c172b779f1",
+    "java-runtime-ad31f07cc8535074a471",
     "java-runtime-ded301fd8afee9d9cfbd",
-    "java-runtime-fa61d002dc3374573126"
+    "java-runtime-c141cb04dac6838dc264",
+    "java-runtime-fa61d002dc3374573126",
+    "java-runtime-abf1de4c0349b023da5f",
+    "java-runtime-f03458884f4e7beaa402"
    ]
   },
   {
@@ -48317,7 +48338,7 @@
   "inventoriedCases": 703,
   "implementedCases": 701,
   "differentialVerifiedCases": 329,
-  "differentialVerifiedRuntimeIds": 1257,
+  "differentialVerifiedRuntimeIds": 1262,
   "intentionallyDifferentCases": 29,
   "representativeVerifiedCases": 119,
   "nfrVerifiedCases": 0,
@@ -48327,10 +48348,10 @@
   "intentionallyDifferentCapabilities": 8,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3807,
-  "referencedJavaRuntimeIds": 3434,
+  "runtimeAssociationCount": 3812,
+  "referencedJavaRuntimeIds": 3439,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 702,
+  "unreferencedJavaRuntimeIds": 697,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
   "totalCases": 703,

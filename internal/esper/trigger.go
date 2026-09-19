@@ -2394,7 +2394,7 @@ func executeTableMergeNotMatchedActions(ctx context.Context, engine *Engine, tab
 		if assignmentErr != nil {
 			return tableMutationResult{}, false, assignmentErr
 		}
-		row, insertErr := table.insertInScope(ctx, scope, values)
+		row, insertErr := table.insertInScope(ctx, scope, values, true)
 		if insertErr != nil {
 			return tableMutationResult{}, false, insertErr
 		}
@@ -2809,7 +2809,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if assignmentErr != nil {
 			return tableMutationResult{}, assignmentErr
 		}
-		row, err := table.insertInScope(ctx, scope, values)
+		row, err := table.insertInScope(ctx, scope, values, true)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -2824,7 +2824,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 		if err != nil {
 			return tableMutationResult{}, err
 		}
-		row, err := table.upsertExistingInScope(ctx, scope, values)
+		row, err := table.upsertExistingInScope(ctx, scope, values, true)
 		if err != nil {
 			return tableMutationResult{}, err
 		}
@@ -2991,7 +2991,7 @@ func executeTriggerAction(ctx context.Context, engine *Engine, definition *trigg
 				mutation.oldRows = append(mutation.oldRows, old)
 				mutation.newRows = append(mutation.newRows, row)
 			} else {
-				row, insertErr := table.insertInScope(ctx, scope, values)
+				row, insertErr := table.insertInScope(ctx, scope, values, true)
 				if insertErr != nil {
 					return tableMutationResult{}, insertErr
 				}

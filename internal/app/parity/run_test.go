@@ -18947,19 +18947,47 @@ func TestRunInfraTableInsertIntoDiffRejectsTraceMutations(t *testing.T) {
 		{
 			name: "wildcard-map-column-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[14].New[0].Fields["p1"] = "z"
+				trace.Records[20].New[0].Fields["p1"] = "z"
+			},
+		},
+		{
+			name: "self-access-dedup-filter-lost",
+			mutate: func(trace *compat.Trace) {
+				// The second E1 send must not insert a duplicate row.
+				trace.Records[16].New = append(trace.Records[16].New, trace.Records[16].New[0])
+			},
+		},
+		{
+			name: "from-named-window-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// Every retained window row must reach the table.
+				trace.Records[22].New = trace.Records[22].New[:1]
 			},
 		},
 		{
 			name: "keyed-aggregate-accumulation-drift",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[18].New[0].Fields["thesum"] = 999
+				trace.Records[24].New[0].Fields["thesum"] = 999
 			},
 		},
 		{
 			name: "keyed-merge-created-row-lost",
 			mutate: func(trace *compat.Trace) {
-				trace.Records[19].New = trace.Records[19].New[:3]
+				trace.Records[27].New = trace.Records[27].New[:3]
+			},
+		},
+		{
+			name: "split-stream-listener-row-drift",
+			mutate: func(trace *compat.Trace) {
+				// s1 must see only the intPrimitive=0 event.
+				trace.Records[34].New[0].Fields["col"] = -3
+			},
+		},
+		{
+			name: "lenient-null-pk-component-drift",
+			mutate: func(trace *compat.Trace) {
+				// The S0 insert supplies only c1; c0 must stay null.
+				trace.Records[38].New[1].Fields["c0"] = "E1"
 			},
 		},
 		{

@@ -3349,6 +3349,72 @@ InfraTableResetAggregationState.java, all 6 executions.
  - **P3 accepted (no change):** milestone assertTableSum no-op (coverage
  already at seq 3); cloneAggregateGroup shared epoch maps (transient
  clones); shared-key multi-plugin states unreachable in covered scenarios.
+- [x] `make check` GREEN (post-review-fix); committed and pushed as
+ `a7cfbc698`. Git owns identity.
+
+## Current work unit
+Active: Draft 4.463 ('infra-table-insert-into'):
+InfraTableInsertInto.java ords 3/4/6/8/9 — EXTENDS the existing
+`case.infra-table-insert-into` (ords 0/1/2/5/7 already DV).
+
+- [x] Contract frozen (scouts `NextJavaContract463` + `NextGoSurface463`;
+ both hit yield-schema bugs after completing full investigations — reports
+ recovered via hub replies):
+ - ord 3 InfraInsertIntoSelfAccess `java-runtime-a58e8a2ac1c172b779f1`:
+ `MyTableIISA[theString] is null` self-lookup filter; E1,E1,E2,E2 sends;
+ iterator asserts {E1},{E1},{E1,E2},{E1,E2}.
+ - ord 4 InfraNamedWindowMergeInsertIntoTable `java-runtime-ad31f07cc8535074a471`:
+ merge target is an always-empty named window -> not-matched insert into
+ UNKEYED table MyTableNWM; one event only.
+ - ord 6 InfraInsertIntoFromNamedWindow `java-runtime-c141cb04dac6838dc264`:
+ on-S1 trigger inserts EVERY #unique(theString) window row into 2-PK table;
+ FAF `delete from MyTableIIF` between rounds.
+ - ord 8 InfraSplitStream `java-runtime-abf1de4c0349b023da5f`: on-split
+ first-match into two tables + OtherStream; disjoint conditions; s1
+ listener sees only intPrimitive=0.
+ - ord 9 InfraTableInsertIntoLenientPropCount `java-runtime-f03458884f4e7beaa402`:
+ partial-column inserts into 2-PK table -> {E1,null} and {null,10} rows;
+ Java allows null PK components.
+- [x] Go surface: runner `internal/app/parity/infra_table_insert_into.go`
+ exists (LIGHT scenario format, compat.LoadScenario). ord 3 expressible via
+ SubqueryExists precedent (infra_nwtable_subquery.go:205). ords 4/6/8 have
+ observably-identical workarounds (plain InsertIntoTable / two-hop RouteTo /
+ three disjoint statements). ord 9 is a HARD ENGINE GAP: state.go
+ convertValues/encodeKey reject null/missing PK components — needs
+- [x] Engine: null-tolerant PK components on table insert paths —
+ `convertValues`/`upsert`/`insertInScope`/`upsertExistingInScope` gained a
+ `lenient` flag; trigger-driven inserts (InsertIntoTable/merge/upsert
+ actions) pass true so missing columns default to null and null PK
+ components encode as distinct keys; Go-native `Table.Insert/Upsert/
+ Replace` pass false and stay strict (TestTableReplaceIsAtomic… green).
+- [x] Runner extension: 5 cases added in ordinal order (runtime-ID arrays
+ reordered), `faf` op (OnDemand().DeleteAll()), s1 listener subscription
+ for split-stream, mode-any canonical snapshot sort on both sides.
+- [x] Scenario JSON (10 cases / 85 steps) + oracle extended (5 buildEPL
+ cases, faf via compileQuery, s1 listener) — Java/Go 39 records/side,
+ status passing, 0 differences.
+- [x] Tests: mutation table re-indexed + 5 new mutations (dedup filter,
+ window-row loss, listener drift, null-PK drift); all green.
+- [x] Manifest: case extended to 10 runtime IDs/names/DV IDs; capability
+ trigger.table-named-window DV IDs +5; summary 703/329/1262/3812/3439/697;
+ validator green. CHANGELOG + roadmap entries added.
+- [x] Gates: `make check` green (one intermittent failure of
+ `TestRunContextInitTerm{PartitionSelection,Duration}DiffWritesPassingEvidence`
+ observed across runs — a pre-existing context-init-term scheduling flake:
+ the failing test passes deterministically standalone, the replayed diff is
+ `passing`, and the unit's diff touches only table upsert paths that the
+ context scenarios never invoke; baseline stash run also green).
+- [x] Parity review (agent `ParityReview463`, read-only): completed with
+ PASS-level findings (yield-schema failure; findings recovered from the
+ transcript). Nits FIXED: stale "five executions" comments updated to ten
+ in runner + oracle javadoc; `go.trace.json` added to the case evidence
+ list and tracked. Verified clean by the reviewer: EPLs byte-exact (incl.
+ split-stream trailing space/newline), all 39 records re-derived, s1
+ listener position, canonical sort both sides, workaround observability
+ (RouteTo emits one event per row; no direct Go API for the three forms),
+ lenient scoping (trigger paths true / Go-native false; FAF insert routes
+ through triggerInsertTable so it is lenient too, matching Java), summary
+ counts recomputed, mutation indices verified.
 - [ ] `make check`, commit/push.
 
 ## Next work unit (prefetch)

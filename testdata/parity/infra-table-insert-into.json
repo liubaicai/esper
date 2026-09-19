@@ -6,8 +6,13 @@
   "java-runtime-185fe3d8699570122804",
   "java-runtime-6ee6e846c37d6ad8b769",
   "java-runtime-e8d546810d8419632df9",
+  "java-runtime-a58e8a2ac1c172b779f1",
+  "java-runtime-ad31f07cc8535074a471",
   "java-runtime-ded301fd8afee9d9cfbd",
-  "java-runtime-fa61d002dc3374573126"
+  "java-runtime-c141cb04dac6838dc264",
+  "java-runtime-fa61d002dc3374573126",
+  "java-runtime-abf1de4c0349b023da5f",
+  "java-runtime-f03458884f4e7beaa402"
  ],
  "cases": [
   {
@@ -23,12 +28,32 @@
    "runtimeId": "java-runtime-e8d546810d8419632df9"
   },
   {
+   "case": "self-access",
+   "runtimeId": "java-runtime-a58e8a2ac1c172b779f1"
+  },
+  {
+   "case": "nw-merge-table",
+   "runtimeId": "java-runtime-ad31f07cc8535074a471"
+  },
+  {
    "case": "wildcard-map",
    "runtimeId": "java-runtime-ded301fd8afee9d9cfbd"
   },
   {
+   "case": "from-named-window",
+   "runtimeId": "java-runtime-c141cb04dac6838dc264"
+  },
+  {
    "case": "same-module-keyed",
    "runtimeId": "java-runtime-fa61d002dc3374573126"
+  },
+  {
+   "case": "split-stream",
+   "runtimeId": "java-runtime-abf1de4c0349b023da5f"
+  },
+  {
+   "case": "lenient-prop-count",
+   "runtimeId": "java-runtime-f03458884f4e7beaa402"
   }
  ],
  "steps": [
@@ -38,7 +63,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "table"
+   "statement": "table",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -51,7 +77,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "table"
+   "statement": "table",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -63,7 +90,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "table"
+   "statement": "table",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -76,7 +104,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "table"
+   "statement": "table",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -89,7 +118,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "table"
+   "statement": "table",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -109,7 +139,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "table"
+   "statement": "table",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -131,7 +162,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "table"
+   "statement": "table",
+   "mode": "any"
   },
   {
    "op": "case",
@@ -139,7 +171,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -151,11 +184,13 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "case",
@@ -163,7 +198,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -175,11 +211,13 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "send-error",
@@ -188,6 +226,84 @@
     "theString": "E2",
     "intPrimitive": 0
    }
+  },
+  {
+   "op": "case",
+   "case": "self-access"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create",
+   "mode": "any"
+  },
+  {
+   "op": "snapshot",
+   "statement": "create",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create",
+   "mode": "any"
+  },
+  {
+   "op": "snapshot",
+   "statement": "create",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "case",
+   "case": "nw-merge-table"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "case",
@@ -203,7 +319,64 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
+  },
+  {
+   "op": "case",
+   "case": "from-named-window"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create",
+   "mode": "any"
+  },
+  {
+   "op": "faf",
+   "statement": "MyTableIIF"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 10
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": 20
+   }
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 2
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "case",
@@ -219,7 +392,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -231,7 +405,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -243,7 +418,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -263,7 +439,8 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
   },
   {
    "op": "send",
@@ -299,7 +476,113 @@
   },
   {
    "op": "snapshot",
-   "statement": "create"
+   "statement": "create",
+   "mode": "any"
+  },
+  {
+   "op": "case",
+   "case": "split-stream"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "createOne",
+   "mode": "any"
+  },
+  {
+   "op": "snapshot",
+   "statement": "createTwo",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E2",
+    "intPrimitive": -2
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "createOne",
+   "mode": "any"
+  },
+  {
+   "op": "snapshot",
+   "statement": "createTwo",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E3",
+    "intPrimitive": -3
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "createOne",
+   "mode": "any"
+  },
+  {
+   "op": "snapshot",
+   "statement": "createTwo",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E4",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "createOne",
+   "mode": "any"
+  },
+  {
+   "op": "snapshot",
+   "statement": "createTwo",
+   "mode": "any"
+  },
+  {
+   "op": "case",
+   "case": "lenient-prop-count"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table",
+   "mode": "ordered"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 10
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "table",
+   "mode": "any"
   }
  ]
 }

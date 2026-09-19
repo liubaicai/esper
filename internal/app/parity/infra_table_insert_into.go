@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	esper "github.com/liubaicai/esper"
@@ -44,27 +45,49 @@ var infraTableInsertIntoJavaRuntimeIDs = []string{
 	"java-runtime-185fe3d8699570122804",
 	"java-runtime-6ee6e846c37d6ad8b769",
 	"java-runtime-e8d546810d8419632df9",
+	"java-runtime-a58e8a2ac1c172b779f1",
+	"java-runtime-ad31f07cc8535074a471",
 	"java-runtime-ded301fd8afee9d9cfbd",
+	"java-runtime-c141cb04dac6838dc264",
 	"java-runtime-fa61d002dc3374573126",
+	"java-runtime-abf1de4c0349b023da5f",
+	"java-runtime-f03458884f4e7beaa402",
 }
 
 var infraTableInsertIntoJavaExecutions = []string{
 	"InfraInsertIntoAndDelete",
 	"InfraInsertIntoSameModuleUnkeyed",
 	"InfraInsertIntoTwoModulesUnkeyed",
+	"InfraInsertIntoSelfAccess",
+	"InfraNamedWindowMergeInsertIntoTable",
 	"InfraInsertIntoWildcard",
+	"InfraInsertIntoFromNamedWindow",
 	"InfraInsertIntoSameModuleKeyed",
+	"InfraSplitStream",
+	"InfraTableInsertIntoLenientPropCount",
 }
 
 var infraTableInsertIntoCases = []string{
 	"insert-delete",
 	"same-module-unkeyed",
 	"two-modules-unkeyed",
+	"self-access",
+	"nw-merge-table",
 	"wildcard-map",
+	"from-named-window",
 	"same-module-keyed",
+	"split-stream",
+	"lenient-prop-count",
 }
 
-// runInfraTableInsertIntoScenario replays five insert-into-table executions.
+// infraTableInsertIntoListenerStatements names the per-case statements whose
+// deliveries are observable: only split-stream attaches a listener (s1 over
+// OtherStream); every other case asserts table iterators only.
+var infraTableInsertIntoListenerStatements = map[string][]string{
+	"split-stream": {"s1"},
+}
+
+// runInfraTableInsertIntoScenario replays ten insert-into-table executions.
 // The pinned oracle deploys each case's modules before its step stream, so
 // the runner deploys at case setup and the steps carry send/snapshot/
 // send-error observations only. The wildcard-map case replays the pinned
@@ -108,13 +131,47 @@ func runInfraTableInsertIntoCase(ctx context.Context, scenario compat.Scenario, 
 		esper.WithRuntimeURI(infraTableInsertIntoRuntimeID(caseName)),
 	)
 	defer func() { _ = engine.Close(context.Background()) }()
+	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
+	sequences := make(map[string]uint64)
 	for _, plan := range plans {
-		if _, err := engine.Deploy(ctx, plan); err != nil {
-			return compat.Trace{}, err
+		deployment, err := engine.Deploy(ctx, plan)
+		if err != nil {
+			return trace, err
+		}
+		for _, statement := range deployment.Statements() {
+			subscribed := false
+			for _, name := range infraTableInsertIntoListenerStatements[caseName] {
+				if statement.Name() == name {
+					subscribed = true
+				}
+			}
+			if !subscribed {
+				continue
+			}
+			stmt := statement
+			if _, err := stmt.Subscribe(func(_ context.Context, batch esper.ResultBatch) error {
+				if len(batch.New) == 0 && len(batch.Old) == 0 {
+					return nil
+				}
+				key := stmt.Name() + ":listener"
+				sequences[key]++
+				record := compat.TraceRecord{
+					Case:      caseName,
+					Operation: "listener",
+					Statement: stmt.Name(),
+					Sequence:  sequences[key],
+					Time:      engine.Now().UTC().Format(time.RFC3339Nano),
+					New:       compat.NormalizeResults(batch.New),
+					Old:       compat.NormalizeResults(batch.Old),
+				}
+				trace.Records = append(trace.Records, record)
+				return nil
+			}); err != nil {
+				return trace, err
+			}
 		}
 	}
 
-	trace := compat.Trace{Version: scenario.Version, ID: scenario.ID}
 	for _, step := range scenario.Steps {
 		if err := ctx.Err(); err != nil {
 			return trace, err
@@ -166,13 +223,35 @@ func runInfraTableInsertIntoCase(ctx context.Context, scenario compat.Scenario, 
 			if err != nil {
 				return trace, err
 			}
+			projected := compat.NormalizeResults(result.Results())
+			if step.Mode == "any" {
+				// Any-order asserted snapshots emit the canonical
+				// marshaled-fields row order so the trace is stable
+				// against engine iteration order on both sides.
+				sort.SliceStable(projected, func(i, j int) bool {
+					leftJSON, _ := json.Marshal(projected[i].Fields)
+					rightJSON, _ := json.Marshal(projected[j].Fields)
+					return string(leftJSON) < string(rightJSON)
+				})
+			}
 			trace.Records = append(trace.Records, compat.TraceRecord{
 				Case:      caseName,
 				Operation: "snapshot",
 				Statement: step.Statement,
 				Time:      engine.Now().UTC().Format(time.RFC3339Nano),
-				New:       compat.NormalizeResults(result.Results()),
+				New:       projected,
 			})
+		case "faf":
+			// Fire-and-forget table mutation with no observable result
+			// (Java compileExecuteFAFNoResult "delete from <table>"); the
+			// statement field carries the table name directly.
+			fafPlan, err := env.Build(esper.FromTable(env, step.Statement).OnDemand().DeleteAll())
+			if err != nil {
+				return trace, err
+			}
+			if _, err := engine.ExecuteFireAndForget(ctx, fafPlan); err != nil {
+				return trace, err
+			}
 		default:
 			return trace, fmt.Errorf("unsupported infra table insert-into step op %q", step.Op)
 		}
@@ -294,6 +373,204 @@ func buildInfraTableInsertIntoCase(env *esper.Environment, caseName string) ([]e
 			return nil, nil, err
 		}
 		return []esper.Plan{insertPlan, aggregatePlan, onInsertPlan, onMergePlan}, map[string]string{"create": "MyTableIIK"}, nil
+	case "self-access":
+		if _, err := esper.RegisterStruct[infraTableInsertIntoBean](env, "SupportBean"); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.CreateTable(env, "MyTableIISA", []esper.TableColumn{
+			esper.PrimaryKeyColumn[string]("pkey"),
+		}); err != nil {
+			return nil, nil, err
+		}
+		// insert into MyTableIISA select theString as pkey from SupportBean
+		// where MyTableIISA[theString] is null — the self-lookup filter
+		// admits only keys absent from the table.
+		insertSource := esper.From[infraTableInsertIntoBean](env, "SupportBean").Filter(
+			esper.Not(esper.SubqueryExists(esper.FromTable(env, "MyTableIISA"),
+				esper.Equal[string](esper.Field[any, string]("pkey"), esper.OuterField[string]("theString")),
+			)),
+		)
+		insertPlan, err := env.Build(esper.OnEvent(insertSource).
+			InsertIntoTable("MyTableIISA",
+				esper.SetColumn("pkey", esper.Field[infraTableInsertIntoBean, string]("theString")),
+			).Query(esper.StatementName("tbl-insert")))
+		if err != nil {
+			return nil, nil, err
+		}
+		return []esper.Plan{insertPlan}, map[string]string{"create": "MyTableIISA"}, nil
+	case "nw-merge-table":
+		if _, err := esper.RegisterStruct[infraTableInsertIntoBean](env, "SupportBean"); err != nil {
+			return nil, nil, err
+		}
+		beanSchema, ok := env.Schema("SupportBean")
+		if !ok {
+			return nil, nil, fmt.Errorf("SupportBean schema is missing")
+		}
+		if _, err := esper.CreateTable(env, "MyTableNWM", []esper.TableColumn{
+			esper.TableColumnOf[string]("pkey"),
+		}); err != nil {
+			return nil, nil, err
+		}
+		// The merge target MyWindow stays empty, so the not-matched insert
+		// into the unkeyed table fires for every event; the typed API has
+		// no merge-into-window-then-table form, so the observably identical
+		// plain insert-into-table trigger replays it.
+		if _, err := esper.CreateNamedWindow(env, "MyWindow", beanSchema,
+			esper.NamedWindowRetention(esper.KeepAll())); err != nil {
+			return nil, nil, err
+		}
+		insertPlan, err := env.Build(esper.OnEvent(esper.From[infraTableInsertIntoBean](env, "SupportBean")).
+			InsertIntoTable("MyTableNWM",
+				esper.SetColumn("pkey", esper.Field[infraTableInsertIntoBean, string]("theString")),
+			).Query(esper.StatementName("tbl-insert")))
+		if err != nil {
+			return nil, nil, err
+		}
+		return []esper.Plan{insertPlan}, map[string]string{"create": "MyTableNWM"}, nil
+	case "from-named-window":
+		if _, err := esper.RegisterStruct[infraTableInsertIntoBean](env, "SupportBean"); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.RegisterStruct[infraTableInsertIntoS1](env, "SupportBean_S1"); err != nil {
+			return nil, nil, err
+		}
+		beanSchema, ok := env.Schema("SupportBean")
+		if !ok {
+			return nil, nil, fmt.Errorf("SupportBean schema is missing")
+		}
+		if _, err := esper.CreateNamedWindow(env, "MyWindow", beanSchema,
+			esper.NamedWindowRetention(esper.Unique(esper.Field[infraTableInsertIntoBean, string]("theString")))); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.RegisterMap(env, "IIFRow", []esper.FieldSpec{
+			esper.FieldDef("pkey0", reflect.TypeOf("")),
+			esper.FieldDef("pkey1", reflect.TypeOf(0)),
+		}); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.CreateTable(env, "MyTableIIF", []esper.TableColumn{
+			esper.PrimaryKeyColumn[string]("pkey0"),
+			esper.PrimaryKeyColumn[int]("pkey1"),
+		}); err != nil {
+			return nil, nil, err
+		}
+		windowFeedPlan, err := env.Build(esper.From[infraTableInsertIntoBean](env, "SupportBean").
+			InsertInto("MyWindow"))
+		if err != nil {
+			return nil, nil, err
+		}
+		// on SupportBean_S1 insert into MyTableIIF select theString as
+		// pkey0, intPrimitive as pkey1 from MyWindow — the typed API has no
+		// insert-into-table-from-window form, so the trigger routes the
+		// window rows through IIFRow into the table (observably identical:
+		// every retained window row lands in the table per trigger event).
+		selectPlan, err := env.Build(esper.OnEvent(esper.From[infraTableInsertIntoS1](env, "SupportBean_S1")).
+			SelectFromNamedWindow("MyWindow", nil,
+				esper.Alias("pkey0", esper.NamedWindowField[string]("theString")),
+				esper.Alias("pkey1", esper.NamedWindowField[int]("intPrimitive")),
+			).Query(esper.RouteTo("IIFRow"), esper.StatementName("window-select")))
+		if err != nil {
+			return nil, nil, err
+		}
+		insertPlan, err := env.Build(esper.OnRecord(esper.FromAny(env, "IIFRow")).
+			InsertIntoTable("MyTableIIF",
+				esper.SetColumn("pkey0", esper.Field[any, string]("pkey0")),
+				esper.SetColumn("pkey1", esper.Field[any, int]("pkey1")),
+			).Query(esper.StatementName("tbl-insert")))
+		if err != nil {
+			return nil, nil, err
+		}
+		return []esper.Plan{windowFeedPlan, selectPlan, insertPlan}, map[string]string{"create": "MyTableIIF"}, nil
+	case "split-stream":
+		if _, err := esper.RegisterStruct[infraTableInsertIntoBean](env, "SupportBean"); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.RegisterMap(env, "OtherStream", []esper.FieldSpec{
+			esper.FieldDef("pkey", reflect.TypeOf("")),
+			esper.FieldDef("col", reflect.TypeOf(0)),
+		}); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.CreateTable(env, "MyTableOne", []esper.TableColumn{
+			esper.PrimaryKeyColumn[string]("pkey"),
+			esper.OptionalTableColumnOf[int]("col"),
+		}); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.CreateTable(env, "MyTableTwo", []esper.TableColumn{
+			esper.PrimaryKeyColumn[string]("pkey"),
+			esper.OptionalTableColumnOf[int]("col"),
+		}); err != nil {
+			return nil, nil, err
+		}
+		// The split-stream branches are mutually exclusive (intPrimitive
+		// >0/<0/=0) and table writes are immediate, so three filtered
+		// statements replay the first-match split observably identically.
+		onePlan, err := env.Build(esper.OnEvent(esper.From[infraTableInsertIntoBean](env, "SupportBean").
+			Filter(esper.Greater[int](esper.Field[infraTableInsertIntoBean, int]("intPrimitive"), esper.Literal(0)))).
+			InsertIntoTable("MyTableOne",
+				esper.SetColumn("pkey", esper.Field[infraTableInsertIntoBean, string]("theString")),
+				esper.SetColumn("col", esper.Field[infraTableInsertIntoBean, int]("intPrimitive")),
+			).Query(esper.StatementName("split-one")))
+		if err != nil {
+			return nil, nil, err
+		}
+		twoPlan, err := env.Build(esper.OnEvent(esper.From[infraTableInsertIntoBean](env, "SupportBean").
+			Filter(esper.Less[int](esper.Field[infraTableInsertIntoBean, int]("intPrimitive"), esper.Literal(0)))).
+			InsertIntoTable("MyTableTwo",
+				esper.SetColumn("pkey", esper.Field[infraTableInsertIntoBean, string]("theString")),
+				esper.SetColumn("col", esper.Field[infraTableInsertIntoBean, int]("intPrimitive")),
+			).Query(esper.StatementName("split-two")))
+		if err != nil {
+			return nil, nil, err
+		}
+		otherPlan, err := env.Build(esper.Select(
+			esper.From[infraTableInsertIntoBean](env, "SupportBean").
+				Filter(esper.Equal[int](esper.Field[infraTableInsertIntoBean, int]("intPrimitive"), esper.Literal(0))),
+			esper.Alias("pkey", esper.Field[infraTableInsertIntoBean, string]("theString")),
+			esper.Alias("col", esper.Field[infraTableInsertIntoBean, int]("intPrimitive")),
+		).Query(esper.RouteTo("OtherStream"), esper.StatementName("split-other")))
+		if err != nil {
+			return nil, nil, err
+		}
+		s1Plan, err := env.Build(esper.FromAny(env, "OtherStream").Query(esper.StatementName("s1")))
+		if err != nil {
+			return nil, nil, err
+		}
+		return []esper.Plan{onePlan, twoPlan, otherPlan, s1Plan}, map[string]string{
+			"createOne": "MyTableOne",
+			"createTwo": "MyTableTwo",
+		}, nil
+	case "lenient-prop-count":
+		if _, err := esper.RegisterStruct[infraTableInsertIntoBean](env, "SupportBean"); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.RegisterStruct[infraTableInsertIntoS0](env, "SupportBean_S0"); err != nil {
+			return nil, nil, err
+		}
+		if _, err := esper.CreateTable(env, "MyTable", []esper.TableColumn{
+			esper.PrimaryKeyColumn[string]("c0"),
+			esper.PrimaryKeyColumn[int]("c1"),
+		}); err != nil {
+			return nil, nil, err
+		}
+		// Partial-column inserts: the absent PK component defaults to null
+		// and ("E1", null) / (null, 10) are distinct rows.
+		c0Plan, err := env.Build(esper.OnEvent(esper.From[infraTableInsertIntoBean](env, "SupportBean")).
+			InsertIntoTable("MyTable",
+				esper.SetColumn("c0", esper.Field[infraTableInsertIntoBean, string]("theString")),
+			).Query(esper.StatementName("tbl-insert-c0")))
+		if err != nil {
+			return nil, nil, err
+		}
+		c1Plan, err := env.Build(esper.OnEvent(esper.From[infraTableInsertIntoS0](env, "SupportBean_S0")).
+			InsertIntoTable("MyTable",
+				esper.SetColumn("c1", esper.Field[infraTableInsertIntoS0, int]("id")),
+			).Query(esper.StatementName("tbl-insert-c1")))
+		if err != nil {
+			return nil, nil, err
+		}
+		return []esper.Plan{c0Plan, c1Plan}, map[string]string{"table": "MyTable"}, nil
 	default:
 		return nil, nil, fmt.Errorf("unsupported infra table insert-into case %q", caseName)
 	}

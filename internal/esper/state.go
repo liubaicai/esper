@@ -840,7 +840,7 @@ func (t *Table) releaseContextPartition(contextName, partitionKey string) {
 	t.scopesMu.Unlock()
 }
 
-func (t *Table) upsertInScope(ctx context.Context, scope string, values map[string]any, insertOnly bool) (TableRow, error) {
+func (t *Table) upsertInScope(ctx context.Context, scope string, values map[string]any, insertOnly bool, lenient bool) (TableRow, error) {
 	if err := contextErr(ctx); err != nil {
 		return TableRow{}, err
 	}
@@ -850,19 +850,19 @@ func (t *Table) upsertInScope(ctx context.Context, scope string, values map[stri
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
-	return state.upsert(values, insertOnly, t.identity.allocate)
+	return state.upsert(values, insertOnly, lenient, t.identity.allocate)
 }
 
-func (t *Table) insertInScope(ctx context.Context, scope string, values map[string]any) (TableRow, error) {
-	return t.upsertInScope(ctx, scope, values, true)
+func (t *Table) insertInScope(ctx context.Context, scope string, values map[string]any, lenient bool) (TableRow, error) {
+	return t.upsertInScope(ctx, scope, values, true, lenient)
 }
 
-func (t *Table) upsertExistingInScope(ctx context.Context, scope string, values map[string]any) (TableRow, error) {
-	return t.upsertInScope(ctx, scope, values, false)
+func (t *Table) upsertExistingInScope(ctx context.Context, scope string, values map[string]any, lenient bool) (TableRow, error) {
+	return t.upsertInScope(ctx, scope, values, false, lenient)
 }
 
 func (t *Table) Upsert(ctx context.Context, values map[string]any) (TableRow, error) {
-	return t.upsertExistingInScope(ctx, "", values)
+	return t.upsertExistingInScope(ctx, "", values, false)
 }
 
 // Replace atomically replaces the complete table snapshot. It is used by
@@ -894,7 +894,7 @@ func (t *Table) replaceInScope(ctx context.Context, scope string, rows []map[str
 		if err := contextErr(ctx); err != nil {
 			return err
 		}
-		if _, err := replacement.upsert(values, false, t.identity.allocate); err != nil {
+		if _, err := replacement.upsert(values, false, false, t.identity.allocate); err != nil {
 			return WrapError(ErrorState, fmt.Sprintf("table replacement row %d", index), err)
 		}
 	}
@@ -914,7 +914,7 @@ func (t *Table) replaceInScope(ctx context.Context, scope string, rows []map[str
 }
 
 func (t *Table) Insert(ctx context.Context, values map[string]any) (TableRow, error) {
-	return t.insertInScope(ctx, "", values)
+	return t.insertInScope(ctx, "", values, false)
 }
 
 func (t *Table) Update(ctx context.Context, key []any, values map[string]any) (TableRow, error) {
@@ -949,7 +949,7 @@ func (t *Table) updateInScope(ctx context.Context, scope string, key []any, valu
 	for name, value := range values {
 		merged[name] = value
 	}
-	converted, newRowKey, err := state.convertValues(merged)
+	converted, newRowKey, err := state.convertValues(merged, false)
 	if err != nil {
 		return TableRow{}, err
 	}
@@ -1394,8 +1394,8 @@ func (t *Table) lookupRangeManyAllScopes(ctx context.Context, indexName string, 
 	return rows, nil
 }
 
-func (s *tableState) upsert(values map[string]any, insertOnly bool, allocateIdentity func() uint64) (TableRow, error) {
-	converted, rowKey, err := s.convertValues(values)
+func (s *tableState) upsert(values map[string]any, insertOnly bool, lenient bool, allocateIdentity func() uint64) (TableRow, error) {
+	converted, rowKey, err := s.convertValues(values, lenient)
 	if err != nil {
 		return TableRow{}, err
 	}
@@ -1437,7 +1437,7 @@ func (s *tableState) upsert(values map[string]any, insertOnly bool, allocateIden
 	return cloneTableRow(row), nil
 }
 
-func (s *tableState) convertValues(values map[string]any) (map[string]Value, string, error) {
+func (s *tableState) convertValues(values map[string]any, lenient bool) (map[string]Value, string, error) {
 	if values == nil {
 		values = map[string]any{}
 	}
@@ -1447,9 +1447,12 @@ func (s *tableState) convertValues(values map[string]any) (map[string]Value, str
 		known[column.Name] = struct{}{}
 		value, exists := values[column.Name]
 		if !exists {
-			if column.PrimaryKey || !column.Optional {
+			if !lenient && (column.PrimaryKey || !column.Optional) {
 				return nil, "", NewError(ErrorTypeMismatch, fmt.Sprintf("table column %q is required", column.Name))
 			}
+			// Esper insert-into is lenient: a column absent from the
+			// assignment defaults to null regardless of optionality or
+			// primary-key membership (InfraTableInsertIntoLenientPropCount).
 			converted[column.Name] = Null()
 			continue
 		}
@@ -1467,9 +1470,8 @@ func (s *tableState) convertValues(values map[string]any) (map[string]Value, str
 	keyValues := make([]any, 0, len(s.def.primaryKey))
 	for _, name := range s.def.primaryKey {
 		value := converted[name]
-		if !value.IsPresent() {
-			return nil, "", NewError(ErrorTypeMismatch, fmt.Sprintf("primary-key column %q cannot be null", name))
-		}
+		// Null primary-key components are legal: Esper keys rows by the
+		// encoded tuple and ("E1", null) is a distinct key from (null, 10).
 		keyValues = append(keyValues, value.Any())
 	}
 	return converted, encodeKey(keyValues), nil
@@ -1487,7 +1489,8 @@ func (s *tableState) keyFromValues(key []any) (string, error) {
 			return "", WrapError(ErrorTypeMismatch, "table.key."+column.Name, err)
 		}
 		if !converted.IsPresent() {
-			return "", NewError(ErrorTypeMismatch, "table key cannot be null")
+			convertedKey = append(convertedKey, nil)
+			continue
 		}
 		convertedKey = append(convertedKey, converted.Any())
 	}

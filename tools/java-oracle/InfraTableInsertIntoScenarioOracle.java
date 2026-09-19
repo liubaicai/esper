@@ -36,7 +36,7 @@ import java.util.TreeSet;
  * Java oracle for the InfraTableInsertInto insert-into-table parity
  * scenario.
  *
- * Covers five executions of InfraTableInsertInto across five scenario
+ * Covers all ten executions of InfraTableInsertInto across ten scenario
  * cases. Insert-delete (insert-delete) replays InfraInsertIntoAndDelete:
  * the compound-PK table MyTable(pkey0 string, pkey1 int, c0 long) filled
  * by an insert-into from SupportBean and drained by an
@@ -57,7 +57,19 @@ import java.util.TreeSet;
  * key, thesum sum(int)) receives primary-key routing from SupportBean,
  * into-table sum(id) aggregation grouped by p00 from SupportBean_S0,
  * on-insert creation from SupportBean_S1.p10 and on-merge not-matched
- * creation from SupportBean_S2.p20.
+ * creation from SupportBean_S2.p20. SelfAccess (self-access) replays
+ * InfraInsertIntoSelfAccess: a MyTableIISA[theString] is null self-lookup
+ * filter dedups repeated keys. NamedWindowMergeInsertIntoTable
+ * (nw-merge-table) merges an always-empty window so the not-matched
+ * action inserts into the unkeyed table MyTableNWM.
+ * InsertIntoFromNamedWindow (from-named-window) inserts every retained
+ * #unique(theString) window row into the two-PK table MyTableIIF per
+ * SupportBean_S1 trigger, with a fire-and-forget delete between rounds.
+ * SplitStream (split-stream) first-match splits SupportBean into
+ * MyTableOne/MyTableTwo/OtherStream; the s1 listener over OtherStream is
+ * the only subscribed statement. LenientPropCount (lenient-prop-count)
+ * inserts partial columns into a two-PK table so the absent component
+ * stays null and ("E1", null) / (null, 10) are distinct rows.
  *
  * Events are SupportBean payloads carrying theString/intPrimitive/
  * longPrimitive, SupportBean_S0 payloads carrying id/p00,
@@ -65,15 +77,15 @@ import java.util.TreeSet;
  * carrying id/p20 and MySchema payloads carrying p0/p1 sent as a map
  * underlying (fields absent from a payload keep their defaults).
  *
- * Observations follow the standard protocol: the pinned suite attaches NO
- * listeners to these statements (every assertion reads the table iterator),
- * so observations are snapshot records over the create-table statement
- * iterator placed at the pinned assertPropsPerRowIterator[AnyOrder]
- * positions (rows keep engine iteration order with sorted field names)
- * plus send-error records carrying the deepest non-null cause message so
- * both runtimes compare identical failure text. Attaching listeners anyway
- * would record insert-into-table output rows carrying engine-internal
- * generated names that are not part of the observable contract.
+ * Observations follow the standard protocol: the pinned suite attaches
+ * listeners only to split-stream's s1 (every other assertion reads the
+ * table iterator), so observations are snapshot records over the
+ * create-table statement iterators placed at the pinned
+ * assertPropsPerRowIterator[AnyOrder] positions (mode-any snapshots emit
+ * the canonical marshaled-fields row order; ordered snapshots keep
+ * engine iteration order) plus send-error records carrying the deepest
+ * non-null cause message so both runtimes compare identical failure
+ * text, and the s1 listener record for the intPrimitive=0 event.
  */
 public class InfraTableInsertIntoScenarioOracle {
 
@@ -121,6 +133,7 @@ public class InfraTableInsertIntoScenarioOracle {
         runtime.getEventService().advanceTime(0);
         try {
             List<EPStatement> statements = new ArrayList<>();
+            Map<String, Integer> listenerSeq = new HashMap<>();
             for (String epl : buildEPL(caseName)) {
                 // Sequential deploys mirror env.compileDeploy(epl, path);
                 // each statement sees the @public tables and schemas of the
@@ -136,6 +149,26 @@ public class InfraTableInsertIntoScenarioOracle {
                 // are not part of the observable contract.
                 for (EPStatement added : deployment.getStatements()) {
                     statements.add(added);
+                    // The split-stream case attaches the s1 listener over
+                    // OtherStream; every other case asserts table iterators
+                    // only, so no other statement is subscribed.
+                    if ("s1".equals(added.getName())) {
+                        EPStatement stmt = added;
+                        stmt.addListener((newData, oldData, statement, rt) -> {
+                            if ((newData == null || newData.length == 0) && (oldData == null || oldData.length == 0)) {
+                                return;
+                            }
+                            JsonObject record = new JsonObject();
+                            record.add("case", caseName);
+                            record.add("operation", "listener");
+                            record.add("statement", stmt.getName());
+                            record.add("sequence", listenerSeq.merge(stmt.getName(), 1, Integer::sum));
+                            record.add("time", java.time.Instant.ofEpochMilli(runtime.getEventService().getCurrentTime()).toString());
+                            record.add("new", renderRows(newData));
+                            record.add("old", renderRows(oldData));
+                            records.add(record);
+                        });
+                    }
                 }
             }
 
@@ -155,7 +188,17 @@ public class InfraTableInsertIntoScenarioOracle {
                 } else if ("send-error".equals(op)) {
                     sendError(runtime, caseName, step, records);
                 } else if ("snapshot".equals(op)) {
-                    snapshot(statements, caseName, step, records, runtime);
+                    snapshot(statements, caseName, step, records, runtime,
+                        "any".equals(step.getString("mode", "")));
+                } else if ("faf".equals(op)) {
+                    // compileExecuteFAFNoResult("delete from <table>"): the
+                    // statement field carries the table name directly and
+                    // the query result is discarded.
+                    CompilerArguments fafArgs = new CompilerArguments(config);
+                    fafArgs.getPath().add(runtime.getRuntimePath());
+                    EPCompiled fafCompiled = EPCompilerProvider.getCompiler().compileQuery(
+                        "delete from " + step.getString("statement", ""), fafArgs);
+                    runtime.getFireAndForgetService().executeQuery(fafCompiled);
                 } else {
                     throw new IllegalStateException("unsupported op " + op);
                 }
@@ -251,11 +294,12 @@ public class InfraTableInsertIntoScenarioOracle {
 
     /**
      * Snapshot of the create-table statement iterator state, placed at the
-     * pinned assertPropsPerRowIterator[AnyOrder] positions; rows keep engine
-     * iteration order and field names are sorted.
+     * pinned assertPropsPerRowIterator[AnyOrder] positions; mode-any
+     * snapshots emit the canonical marshaled-fields row order so the trace
+     * is stable against engine iteration order on both sides.
      */
     private static void snapshot(List<EPStatement> statements, String caseName, JsonObject step,
-                                 List<JsonObject> records, EPRuntime runtime) {
+                                 List<JsonObject> records, EPRuntime runtime, boolean canonical) {
         String wanted = step.getString("statement", "");
         EPStatement target = null;
         for (EPStatement candidate : statements) {
@@ -267,6 +311,13 @@ public class InfraTableInsertIntoScenarioOracle {
         if (target == null) {
             throw new IllegalStateException("no statement named " + wanted + " in case " + caseName);
         }
+        List<JsonObject> projected = new ArrayList<>();
+        for (java.util.Iterator<EventBean> it = target.iterator(); it.hasNext(); ) {
+            projected.add(renderRow(it.next()));
+        }
+        if (canonical) {
+            projected.sort(java.util.Comparator.comparing(row -> row.get("fields").asObject().toString()));
+        }
         JsonObject record = new JsonObject();
         record.add("case", caseName);
         record.add("operation", "snapshot");
@@ -274,9 +325,8 @@ public class InfraTableInsertIntoScenarioOracle {
         record.add("sequence", 0);
         record.add("time", java.time.Instant.ofEpochMilli(runtime.getEventService().getCurrentTime()).toString());
         JsonArray rows = new JsonArray();
-        java.util.Iterator<EventBean> it = target.iterator();
-        while (it.hasNext()) {
-            rows.add(renderRow(it.next()));
+        for (JsonObject row : projected) {
+            rows.add(row);
         }
         record.add("new", rows);
         records.add(record);
@@ -332,6 +382,35 @@ public class InfraTableInsertIntoScenarioOracle {
                     "into table MyTableIIK select sum(id) as thesum from SupportBean_S0 group by p00;\n" +
                     "on SupportBean_S1 insert into MyTableIIK select p10 as pkey;\n" +
                     "on SupportBean_S2 merge MyTableIIK where p20 = pkey when not matched then insert into MyTableIIK select p20 as pkey;"
+            };
+            case "self-access" -> new String[]{
+                "@name('create') @public create table MyTableIISA(pkey string primary key)",
+                "insert into MyTableIISA select theString as pkey from SupportBean where MyTableIISA[theString] is null"
+            };
+            case "nw-merge-table" -> new String[]{
+                "@name('create') @public create table MyTableNWM(pkey string)",
+                "@public create window MyWindow#keepall as SupportBean",
+                "on SupportBean as sb merge MyWindow when not matched then insert into MyTableNWM select sb.theString as pkey"
+            };
+            case "from-named-window" -> new String[]{
+                "@public create window MyWindow#unique(theString) as SupportBean",
+                "insert into MyWindow select * from SupportBean",
+                "@name('create') @public create table MyTableIIF(pkey0 string primary key, pkey1 int primary key)",
+                "on SupportBean_S1 insert into MyTableIIF select theString as pkey0, intPrimitive as pkey1 from MyWindow"
+            };
+            case "split-stream" -> new String[]{
+                "@name('createOne') @public create table MyTableOne(pkey string primary key, col int)",
+                "@name('createTwo') @public create table MyTableTwo(pkey string primary key, col int)",
+                "@name('split') @public on SupportBean \n" +
+                    "  insert into MyTableOne select theString as pkey, intPrimitive as col where intPrimitive > 0\n" +
+                    "  insert into MyTableTwo select theString as pkey, intPrimitive as col where intPrimitive < 0\n" +
+                    "  insert into OtherStream select theString as pkey, intPrimitive as col where intPrimitive = 0\n",
+                "@name('s1') select * from OtherStream"
+            };
+            case "lenient-prop-count" -> new String[]{
+                "@public @name('table') create table MyTable(c0 string primary key, c1 int primary key);\n" +
+                    "insert into MyTable select theString as c0 from SupportBean;\n" +
+                    "insert into MyTable select id as c1 from SupportBean_S0;\n"
             };
             default -> throw new IllegalStateException("unknown case: " + caseName);
         };
