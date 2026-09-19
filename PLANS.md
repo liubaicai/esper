@@ -3415,11 +3415,116 @@ InfraTableInsertInto.java ords 3/4/6/8/9 — EXTENDS the existing
  lenient scoping (trigger paths true / Go-native false; FAF insert routes
  through triggerInsertTable so it is lenient too, matching Java), summary
  counts recomputed, mutation indices verified.
-- [ ] `make check`, commit/push.
+- [x] `make check` GREEN (post-review-fix); committed and pushed as
+ `d97f58240`. Git owns identity.
+
+## Current work unit
+Active: Draft 4.464 ('epl-insert-into-typed-columns'):
+EPLInsertIntoEmptyPropType.java ords 0-1 + EPLInsertIntoEventTypedColumnFromProp.java
+ords 0-1 — four executions, insert-into column typing.
+
+- [x] Contract frozen (scouts `NextJavaContract464` + `NextGoSurface464`;
+ both hit yield-schema bugs after completing full investigations — reports
+ recovered via hub replies; frozen contract at `.omp/contract-464.md`):
+ - ord 0 EPLInsertIntoNamedWindowModelAfter `java-runtime-0870abe075dc95308a27`:
+  zero-column `create schema EmptyPropSchema()` + `create window
+  EmptyPropWin#keepall as EmptyPropSchema`; `insert into EmptyPropWin()
+  select null` inserts one empty row; FAF insert/delete and on-merge/
+  on-insert triggers all land empty rows; iterator asserts 1/2/0/1/2.
+ - ord 1 EPLInsertIntoCreateSchemaInsertInto `java-runtime-d585492dbeef1deee74f`:
+  three sub-rounds (map / objectarray / bean `create schema X()`), each
+  `insert into X() select null` + `select *` listener; map sub-round runs
+  twice under soda=true/false (compile-path-only, replayed once); OA
+  sub-round also has a subscriber; bean sub-round uses
+  SupportBeanWithoutProps (zero-prop class type).
+ - ord 0 EPLInsertIntoEventTypedColumnOnMerge `java-runtime-2fb237744f8a8b010414`:
+  `create table StatusTable(carId string primary key, lastevent CarEvent)`;
+  on-merge sets lastevent via the trigger event and routes
+  {status:'online',outputevent:event} into CarOutputStream; a
+  `every e=CarEvent(tracked=true) -> (timer:interval(1m) and not
+  CarEvent(carId=e.carId, tracked=true))` timeout pattern routes into
+  CarTimeoutStream whose on-merge deletes the row and routes
+  {status:'offline',outputevent:lastevent}.
+ - ord 1 EPLInsertIntoPOJOTypedColumnOnMerge `java-runtime-700d690d1c5c019ec414`:
+  same shape keyed on theString with a SupportBean-typed lastevent column.
+- [x] Go surface: all gaps have observably-identical workarounds — NO
+ engine changes. `select e.*` projected per-property (no wildcard-tag
+ helper); ThenInsertInto ordered before ThenDelete (Go's ThenDelete
+ terminates the table-target matched chain; lastevent reads the pre-delete
+ row); pojo case registers a minimal {theString} SupportBean schema
+ (asserted-field projection); empty-schema cases use zero-selection
+ InsertInto / CopyMatchingFields.
+- [x] Runner `internal/app/parity/epl_insert_into_typed_columns.go` +
+ run.go wiring (`epl-insert-into-typed-columns[-diff]`): 6 case labels
+ (the three create-schema sub-rounds share ord-1's runtime ID), ops
+ send/advance-time/snapshot/faf-insert/faf-delete/value; s0 listener
+ emits a `value` record pinning getEventType().getName() on first
+ delivery; OA case also attaches a subscriber emitting `subscriber`
+- [x] Scenario JSON (6 cases / 24 steps) + oracle + run script —
+ parity-asset-worker `AssetWriter464` (disjoint file ownership). Oracle
+ verified: 17 records, EPLs byte-exact, per-case fresh runtime, callback
+ records buffered per step and flushed listener→subscriber→value.
+- [x] Runner fixes during integration: `.Filter()`-wrapped pattern legs
+ rejected by sourceSchema (empty sourceName) — all pattern legs share one
+ typed source node with predicates inside PatternFrom; ThenDelete needs
+ Literal(true); pojo case decodes SupportBean into the minimal bean;
+ callback records buffered per step and flushed in contract order;
+ listener-side value records gated to create-schema-* cases.
+- [x] `internal/compat/scenario.go` Validate extended for `value`,
+ `faf-insert`, `faf-delete` (statement required).
+- [x] Differential replay: Java 17 records / Go 17 records, status
+ `passing`, 0 differences. Java trace md5 + Go trace checked in.
+- [x] Tests: TestRunEplInsertIntoTypedColumnsDiffWritesPassingEvidence +
+ 8 trace mutations (type-name drift, faf row loss, merge loss, schema
+ type-name, subscriber loss, online status, nested outputevent, pojo
+ asserted field) — all green.
+- [x] Manifest: `case.epl-insert-into-typed-columns` born-DV with the 4
+ IDs; capability `epl.insertinto-pattern` DV IDs +4, both suite entries
+ removed from remaining, goRefs extended; summary 704/330/1266/3816/
+ 3443/693; validator green. Roadmap + CHANGELOG entries added.
+- [x] `make check` GREEN (pre-review).
+- [x] Parity review (agent `ParityReview464`, read-only): OVERALL PASS,
+ no P0/P1/P2. Verified: all EPLs byte-exact programmatically (incl.
+ module-string whitespace), all 17 records re-derived, IDs re-derived,
+ approved differences observably identical, subscriber-before-listener
+ dispatch confirmed against StatementResultServiceImpl, manifest
+ arithmetic recomputed, all 8 mutation indices correct. P3 FIXED: value
+ op now errors on empty snapshot (mirroring the oracle's
+ IllegalStateException). P3 accepted (no change): unused
+ eplInsertIntoTypedColumnsJavaCommit constant mirrors the established
+ per-runner convention; contract-464 pseudocode doc nit.
+- [x] Post-review re-validation: diff still `passing` / 0 differences,
+ typed-columns tests green, `make check` re-run.
+- [ ] Commit/push.
 
 ## Next work unit (prefetch)
-Candidate: next unreferenced cluster per the manifest scan; scouts to be
-dispatched after this unit's review starts.
+Frozen: Draft 4.465 ('epl-insert-into-from-pattern') — EPLInsertIntoFromPattern
+ALL FOUR executions (ords 0-3; EPLInsertIntoFromPatternNamedWindow is an
+inner class at ord 3, not a separate file). Scout corrections: the
+assignment's `java-runtime-98eba92039ca0e871a06` was a typo for
+`...1ad6` (ord 1 EPLInsertIntoProps); `java-runtime-79356b0865c8de3ace17`
+is EPLInsertIntoWrapperBean (different suite — stays out).
+- ord 0 EPLInsertIntoPropsWildcard `java-runtime-4dc2b394114fdaf84056`:
+ `insert into MyThirdStream(es0id, es1id) select es0.id, es1.id from
+ pattern[every (es0=SupportBean_S0 or es1=SupportBean_S1)]`; S1{id:10} ->
+ {es0id:null,es1id:10}; milestone; S0{id:20} -> {es0id:20,es1id:null}.
+- ord 1 EPLInsertIntoProps `java-runtime-98eba92039ca0e871ad6`: bean-typed
+ s0/s1 columns; consumer `select s0.id as es0id, s1.id as es1id`.
+- ord 2 EPLInsertIntoNoProps `java-runtime-1dd189e49dda82f29078`: default
+ tag-named columns; consumer over MyStream#length(10).
+- ord 3 EPLInsertIntoFromPatternNamedWindow `java-runtime-9092d240993543259d6e`:
+ `create window PositionW.win:time(1 hour).std:unique(intPrimitive)` +
+ feed + `insert into Foo select * from pattern[every a=PositionW ->
+ every b=PositionW]`; listener on s1; E1,E2 (intPrimitive=1) -> exactly
+ one row {a:E1,b:E2} (pin count=1, stronger than Java's invoked flag).
+- Go surface (scout `NextGoSurface465`): NO engine work. select * over
+ tagged pattern expands to per-tag Alias(tag, PatternEvent(tag))
+ (zero-selection Build-rejected); column-list insert-into uses alias
+ names; Foo pre-registered as map schema with Event columns + nested
+ schemas; named-window pattern source via PatternFromRecord(
+ FromNamedWindow); composite retention IntersectWindows(TimeWindow,
+ Unique); consumer nested reads via NestedField; #length(10) via
+ LengthWindow. New runner epl_insert_into_from_pattern.go + mode.
 
 ## Delegation checkpoint (recent)
 

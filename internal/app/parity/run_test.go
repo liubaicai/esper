@@ -19029,6 +19029,130 @@ func TestRunInfraTableInsertIntoDiffRejectsTraceMutations(t *testing.T) {
 	}
 }
 
+func TestRunEplInsertIntoTypedColumnsDiffWritesPassingEvidence(t *testing.T) {
+	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+		filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-typed-columns.evidence.json"),
+		func(*compat.Trace) {})
+	evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-typed-columns.evidence.json")
+	scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-typed-columns.json")
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{
+		"-mode", "epl-insert-into-typed-columns-diff",
+		"-scenario", scenarioPath,
+		"-java-trace", javaTracePath,
+		"-evidence", evidencePath,
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+}
+
+func TestRunEplInsertIntoTypedColumnsDiffRejectsTraceMutations(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			name: "window-type-name-drift",
+			mutate: func(trace *compat.Trace) {
+				// The iterated row's event type must be the window's own
+				// name, not the model-after schema name.
+				trace.Records[1].Value = "EmptyPropSchema"
+			},
+		},
+		{
+			name: "faf-insert-row-lost",
+			mutate: func(trace *compat.Trace) {
+				// The fire-and-forget "insert into EmptyPropWin select null"
+				// must add a second empty row.
+				trace.Records[2].New = trace.Records[2].New[:1]
+			},
+		},
+		{
+			name: "on-merge-insert-lost",
+			mutate: func(trace *compat.Trace) {
+				// The on-SupportBean_S0 not-matched merge must land one row.
+				trace.Records[4].New = nil
+			},
+		},
+		{
+			name: "schema-type-name-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[7].Value = "EmptyOASchema"
+			},
+		},
+		{
+			name: "subscriber-delivery-lost",
+			mutate: func(trace *compat.Trace) {
+				// The objectarray sub-round's s0 subscriber must see the
+				// empty row too.
+				trace.Records[9].New = nil
+			},
+		},
+		{
+			name: "online-status-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[13].New[0].Fields["status"] = "offline"
+			},
+		},
+		{
+			name: "outputevent-nested-drift",
+			mutate: func(trace *compat.Trace) {
+				// The stored CarEvent must round-trip through the
+				// event-typed lastevent column.
+				trace.Records[14].New[0].Fields["outputevent"].(map[string]any)["fields"].(map[string]any)["carId"] = "C9"
+			},
+		},
+		{
+			name: "pojo-asserted-field-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[16].New[0].Fields["outputevent"].(map[string]any)["fields"].(map[string]any)["theString"] = "E9"
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-typed-columns.evidence.json"),
+				test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), "epl-insert-into-typed-columns.evidence.json")
+			scenarioPath := filepath.Join("..", "..", "..", "testdata", "parity", "epl-insert-into-typed-columns.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", "epl-insert-into-typed-columns-diff",
+				"-scenario", scenarioPath,
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation unexpectedly passed; stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			data, err := os.ReadFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output, err := compat.LoadDifferentialEvidence(bytes.NewReader(data))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.Status != "different" || len(output.Differences) == 0 {
+				t.Fatalf("mutation evidence = %#v", output)
+			}
+		})
+	}
+}
+
 func TestRunResultsetOrderbyRowPerGroupDiffWritesPassingEvidence(t *testing.T) {
 	javaTracePath := writeJavaTraceFixtureFromEvidence(t,
 		filepath.Join("..", "..", "..", "testdata", "parity", "resultset-orderby-row-per-group.evidence.json"),

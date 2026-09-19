@@ -1,0 +1,158 @@
+{
+ "version": "esper-parity/v1",
+ "id": "epl-insert-into-typed-columns",
+ "description": "EPL insert-into empty-property-type and event-typed-column parity replaying four executions across six cases: named-window-model-after replays EPLInsertIntoNamedWindowModelAfter, an empty-schema keepall window populated by a zero-column insert-into, a fire-and-forget insert/delete pair, an on-SupportBean_S0 not-matched merge insert and an on-SupportBean_S1 insert, observed through window snapshots and a value record pinning the row event-type name; create-schema-map, create-schema-objectarray and create-schema-bean are the map, objectarray and bean sub-rounds of EPLInsertIntoCreateSchemaInsertInto (the map sub-round's soda=true/false double run is compile-path-only and replayed once), each sending one SupportBean into an empty schema and observing the s0 listener row, the objectarray case's subscriber delivery, and a value record pinning the delivered row's event-type name; event-typed-column-on-merge and pojo-typed-column-on-merge replay EPLInsertIntoEventTypedColumnOnMerge and EPLInsertIntoPOJOTypedColumnOnMerge, where an on-merge writes the triggering event into a table's event-typed lastevent column and into CarOutputStream's outputevent column, and a one-minute timeout pattern deletes the table row and emits the stored event offline, observed through s0 listener records",
+ "javaRuntimes": [
+  "java-runtime-0870abe075dc95308a27",
+  "java-runtime-d585492dbeef1deee74f",
+  "java-runtime-2fb237744f8a8b010414",
+  "java-runtime-700d690d1c5c019ec414"
+ ],
+ "cases": [
+  {
+   "case": "named-window-model-after",
+   "runtimeId": "java-runtime-0870abe075dc95308a27"
+  },
+  {
+   "case": "create-schema-map",
+   "runtimeId": "java-runtime-d585492dbeef1deee74f"
+  },
+  {
+   "case": "create-schema-objectarray",
+   "runtimeId": "java-runtime-d585492dbeef1deee74f"
+  },
+  {
+   "case": "create-schema-bean",
+   "runtimeId": "java-runtime-d585492dbeef1deee74f"
+  },
+  {
+   "case": "event-typed-column-on-merge",
+   "runtimeId": "java-runtime-2fb237744f8a8b010414"
+  },
+  {
+   "case": "pojo-typed-column-on-merge",
+   "runtimeId": "java-runtime-700d690d1c5c019ec414"
+  }
+ ],
+ "steps": [
+  {
+   "op": "case",
+   "case": "named-window-model-after"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "snapshot",
+   "statement": "window",
+   "mode": "any"
+  },
+  {
+   "op": "value",
+   "statement": "window"
+  },
+  {
+   "op": "faf-insert",
+   "statement": "EmptyPropWin"
+  },
+  {
+   "op": "snapshot",
+   "statement": "window",
+   "mode": "any"
+  },
+  {
+   "op": "faf-delete",
+   "statement": "EmptyPropWin"
+  },
+  {
+   "op": "snapshot",
+   "statement": "window",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S0",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "window",
+   "mode": "any"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean_S1",
+   "payload": {
+    "id": 0
+   }
+  },
+  {
+   "op": "snapshot",
+   "statement": "window",
+   "mode": "any"
+  },
+  {
+   "op": "case",
+   "case": "create-schema-map"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "create-schema-objectarray"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "create-schema-bean"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {}
+  },
+  {
+   "op": "case",
+   "case": "event-typed-column-on-merge"
+  },
+  {
+   "op": "send",
+   "eventType": "CarEvent",
+   "payload": {
+    "carId": "C1",
+    "tracked": true
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:01:00Z"
+  },
+  {
+   "op": "case",
+   "case": "pojo-typed-column-on-merge"
+  },
+  {
+   "op": "send",
+   "eventType": "SupportBean",
+   "payload": {
+    "theString": "E1",
+    "intPrimitive": 1
+   }
+  },
+  {
+   "op": "advance-time",
+   "at": "1970-01-01T00:01:00Z"
+  }
+ ]
+}

@@ -1,0 +1,625 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-0870abe075dc95308a27",
+    "java-runtime-d585492dbeef1deee74f",
+    "java-runtime-2fb237744f8a8b010414",
+    "java-runtime-700d690d1c5c019ec414"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoEmptyPropType.java",
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/epl/insertinto/EPLInsertIntoEventTypedColumnFromProp.java"
+  ],
+  "javaExecutions": [
+    "EPLInsertIntoNamedWindowModelAfter",
+    "EPLInsertIntoCreateSchemaInsertInto",
+    "EPLInsertIntoEventTypedColumnOnMerge",
+    "EPLInsertIntoPOJOTypedColumnOnMerge"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-typed-columns",
+    "steps": [
+      {
+        "op": "case",
+        "case": "named-window-model-after"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "snapshot",
+        "statement": "window",
+        "mode": "any"
+      },
+      {
+        "op": "value",
+        "statement": "window"
+      },
+      {
+        "op": "faf-insert",
+        "statement": "EmptyPropWin"
+      },
+      {
+        "op": "snapshot",
+        "statement": "window",
+        "mode": "any"
+      },
+      {
+        "op": "faf-delete",
+        "statement": "EmptyPropWin"
+      },
+      {
+        "op": "snapshot",
+        "statement": "window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "statement": "window",
+        "mode": "any"
+      },
+      {
+        "op": "case",
+        "case": "create-schema-map"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "case",
+        "case": "create-schema-objectarray"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "case",
+        "case": "create-schema-bean"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {}
+      },
+      {
+        "op": "case",
+        "case": "event-typed-column-on-merge"
+      },
+      {
+        "op": "send",
+        "eventType": "CarEvent",
+        "payload": {
+          "carId": "C1",
+          "tracked": true
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:01:00Z"
+      },
+      {
+        "op": "case",
+        "case": "pojo-typed-column-on-merge"
+      },
+      {
+        "op": "send",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "advance-time",
+        "at": "1970-01-01T00:01:00Z"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-typed-columns",
+    "records": [
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "value",
+        "statement": "window",
+        "sequence": 0,
+        "value": "EmptyPropWin"
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          },
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          },
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "EmptyMapSchema"
+      },
+      {
+        "case": "create-schema-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-objectarray",
+        "operation": "subscriber",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-objectarray",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "EmptyOASchema"
+      },
+      {
+        "case": "create-schema-bean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-bean",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "MyBeanWithoutProps"
+      },
+      {
+        "case": "event-typed-column-on-merge",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "outputevent": {
+                "fields": {
+                  "carId": "C1",
+                  "tracked": true
+                },
+                "kind": "row"
+              },
+              "status": "online"
+            }
+          }
+        ]
+      },
+      {
+        "case": "event-typed-column-on-merge",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "outputevent": {
+                "fields": {
+                  "carId": "C1",
+                  "tracked": true
+                },
+                "kind": "row"
+              },
+              "status": "offline"
+            }
+          }
+        ]
+      },
+      {
+        "case": "pojo-typed-column-on-merge",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "outputevent": {
+                "fields": {
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "status": "online"
+            }
+          }
+        ]
+      },
+      {
+        "case": "pojo-typed-column-on-merge",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "outputevent": {
+                "fields": {
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "status": "offline"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "epl-insert-into-typed-columns",
+    "records": [
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "value",
+        "statement": "window",
+        "sequence": 0,
+        "value": "EmptyPropWin"
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          },
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "named-window-model-after",
+        "operation": "snapshot",
+        "statement": "window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          },
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-map",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "EmptyMapSchema"
+      },
+      {
+        "case": "create-schema-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-objectarray",
+        "operation": "subscriber",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-objectarray",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "EmptyOASchema"
+      },
+      {
+        "case": "create-schema-bean",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {}
+          }
+        ]
+      },
+      {
+        "case": "create-schema-bean",
+        "operation": "value",
+        "statement": "s0",
+        "sequence": 0,
+        "value": "MyBeanWithoutProps"
+      },
+      {
+        "case": "event-typed-column-on-merge",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "outputevent": {
+                "fields": {
+                  "carId": "C1",
+                  "tracked": true
+                },
+                "kind": "row"
+              },
+              "status": "online"
+            }
+          }
+        ]
+      },
+      {
+        "case": "event-typed-column-on-merge",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "outputevent": {
+                "fields": {
+                  "carId": "C1",
+                  "tracked": true
+                },
+                "kind": "row"
+              },
+              "status": "offline"
+            }
+          }
+        ]
+      },
+      {
+        "case": "pojo-typed-column-on-merge",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "outputevent": {
+                "fields": {
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "status": "online"
+            }
+          }
+        ]
+      },
+      {
+        "case": "pojo-typed-column-on-merge",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:01:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "outputevent": {
+                "fields": {
+                  "theString": "E1"
+                },
+                "kind": "row"
+              },
+              "status": "offline"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

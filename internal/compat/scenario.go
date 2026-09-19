@@ -204,6 +204,13 @@ func (s Scenario) Validate() error {
 		case "add-listener", "add-partition-listener", "remove-listener", "remove-listeners":
 			// Context lifecycle listener registration steps; the runner
 			// pins the full step key, so no field-level checks are needed.
+		case "value", "faf-insert", "faf-delete":
+			// Typed-column insert-into ops: value pins an event-type-name
+			// assertion, faf-insert/faf-delete run fire-and-forget
+			// insert/delete against the named statement target.
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
+			}
 		default:
 			return fmt.Errorf("compat: step %d has unsupported op %q", i, step.Op)
 		}
