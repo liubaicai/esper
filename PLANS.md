@@ -55,30 +55,35 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.489 ('infra-table-faf-execute-query').
+Active: Draft 4.490 ('infra-table-subquery').
 
-- [x] Contract frozen (.omp/contract-489.md) by NextJavaContract489 +
-  NextGoSurface489: InfraTableFAFExecuteQuery.java ALL 4 executions —
-  InfraFAFInsert (ord 0, unkeyed table + empty FAF result + ordered
-  iterator), InfraFAFDelete (ord 1, delete-all + iteratorCount 10->0),
-  InfraFAFUpdate (ord 2, update-all + @Name != table name), InfraFAFSelect
-  (ord 3, select-star FAF result array). Runtime IDs
-  java-runtime-a79e19dc5f135bb8e628 / -a68109b2bb91de4ce1cd /
-  -196ff792f0f739c8d97c / -b995c40f3c052bcc277e. Fully asset-only.
-- [x] Assets (TableFAFAssets489): oracle + run script + scenario
-  (4 cases / 44 steps / 12 records) + runner + run.go wiring. Java trace
-  regenerated; `-mode infra-table-faf-execute-query-diff` passing / 0
-  differences; evidence + both traces checked in.
-- [x] Manifest updated: new born-DV case.infra-table-faf-execute-query
-  (728 cases / 352 DV / 1366 DV runtime IDs); capability
+- [x] Contract frozen (.omp/contract-490.md) by NextJavaContract490 +
+  NextGoSurface490: InfraTableSubquery.java ALL 4 executions —
+  SubqueryAgainstKeyed (ord 0, correlated PK lookup), AgainstUnkeyed
+  (ord 1, full-scan on unkeyed, subquery deploys before feed),
+  SecondaryIndex (ord 2, index maintained across merge update of indexed
+  column), InFilter (ord 3, subquery inside stream filter +
+  orderBy().firstOf()). Runtime IDs java-runtime-7b449dd45dd6961c5d61 /
+  -9cde668ef5b4781b068a / -8ece65643b6ec15616f2 / -a839574d871f88c2fdbf.
+  Fully asset-only.
+- [x] Assets (TableSubqueryAssets490): oracle + run script + scenario
+  (4 cases / 54 steps / 23 records) + runner + run.go wiring. Contract
+  ord-3 was re-frozen mid-flight to the real InfraTableSubqueryInFilter
+  (single 3-statement module, uncorrelated orderBy().firstOf() subquery
+  inside the stream filter). Java trace regenerated; `-mode
+  infra-table-subquery-diff` passing / 0 differences.
+- [x] Manifest updated: new born-DV case.infra-table-subquery
+  (729 cases / 353 DV / 1370 DV runtime IDs); capability
   trigger.table-named-window DV list + goRefs + mapping extended.
 - [x] run_test.go: six pinned tests all green.
-- [x] Independent parity review (ParityReview489): PASS, one P3 fixed
-  (undeployAll now clears s.snapshots to mirror the oracle's
-  statements.clear()).
+- [x] Independent parity review (ParityReview490): PASS; P3s are
+  precedent-consistent conventions (per-step case field not pinned in
+  step keys — same as the 489 runner).
 - [x] Full local gates GREEN: make check exit 0.
 
 ## Previous work units (shipped)
+- Draft 4.489 ('infra-table-faf-execute-query') committed and pushed as
+  da1ab468f; Git owns identity. Parity review PASS (one P3 fixed).
 - Draft 4.488 ('infra-table-update-and-index') committed and pushed as
   195a2a472; Git owns identity. Parity review PASS after one P2 fix
   (deploy-time merge unique-key re-check against live table indexes).

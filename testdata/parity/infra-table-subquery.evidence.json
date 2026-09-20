@@ -1,0 +1,1262 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-7b449dd45dd6961c5d61",
+    "java-runtime-9cde668ef5b4781b068a",
+    "java-runtime-8ece65643b6ec15616f2",
+    "java-runtime-a839574d871f88c2fdbf"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableSubquery.java"
+  ],
+  "javaExecutions": [
+    "InfraTableSubqueryAgainstKeyed",
+    "InfraTableSubqueryAgainstUnkeyed",
+    "InfraTableSubquerySecondaryIndex",
+    "InfraTableSubqueryInFilter"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-subquery",
+    "steps": [
+      {
+        "op": "case",
+        "case": "subquery-keyed"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-keyed",
+        "statement": "create",
+        "epl": "@public create table varagg as (key string primary key, total sum(int))"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-keyed",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-keyed",
+        "statement": "into",
+        "epl": "into table varagg select sum(intPrimitive) as total from SupportBean group by theString"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-keyed",
+        "statement": "into"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-keyed",
+        "statement": "s0",
+        "epl": "@name('s0') select (select total from varagg where key = s0.p00) as value from SupportBean_S0 as s0"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-keyed",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "subquery-keyed",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-keyed",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-keyed",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-keyed",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-keyed",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-keyed",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "G2"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "subquery-keyed"
+      },
+      {
+        "op": "case",
+        "case": "subquery-unkeyed"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-unkeyed",
+        "statement": "create",
+        "epl": "@public create table InfraOne (string string, intPrimitive int)"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-unkeyed",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-unkeyed",
+        "statement": "s0",
+        "epl": "@name('s0') select (select intPrimitive from InfraOne where string = s0.p00) as c0 from SupportBean_S0 as s0"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-unkeyed",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-unkeyed",
+        "statement": "insert",
+        "epl": "insert into InfraOne select theString as string, intPrimitive from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-unkeyed",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "subquery-unkeyed",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-unkeyed",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1"
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "subquery-unkeyed"
+      },
+      {
+        "op": "case",
+        "case": "subquery-secondary-index"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-secondary-index",
+        "statement": "create",
+        "epl": "@public create table MyTable(k0 string primary key, k1 string primary key, p2 string, value int)"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-secondary-index",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-secondary-index",
+        "statement": "index",
+        "epl": "create index MyIndex on MyTable(p2)"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-secondary-index",
+        "statement": "index"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-secondary-index",
+        "statement": "merge",
+        "epl": "on SupportBean_S0 merge MyTable where p00 = k0 and p01 = k1 when not matched then insert select p00 as k0, p01 as k1, p02 as p2, id as value when matched then update set p2 = p02, value = id "
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-secondary-index",
+        "statement": "merge"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-secondary-index",
+        "statement": "s0",
+        "epl": "@Name('s0') select (select value from MyTable as tbl where sb.theString = tbl.p2) as c0 from SupportBean as sb"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-secondary-index",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "subquery-secondary-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 10,
+          "p00": "G1",
+          "p01": "SG1",
+          "p02": "P2_1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-secondary-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "P2_1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-secondary-index",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 11,
+          "p00": "G1",
+          "p01": "SG1",
+          "p02": "P2_2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-secondary-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "P2_1",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-secondary-index",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "P2_2",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "subquery-secondary-index"
+      },
+      {
+        "op": "case",
+        "case": "subquery-in-filter"
+      },
+      {
+        "op": "deploy",
+        "case": "subquery-in-filter",
+        "statement": "module",
+        "epl": "create table MyTable(tablecol string primary key);\ninsert into MyTable select p00 as tablecol from SupportBean_S0;\n@name('s0') select * from SupportBean(theString=(select tablecol from MyTable).orderBy().firstOf())"
+      },
+      {
+        "op": "deployed",
+        "case": "subquery-in-filter",
+        "statement": "module"
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "C"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "A"
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "subquery-in-filter",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "C",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "subquery-in-filter"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-subquery",
+    "records": [
+      {
+        "case": "subquery-keyed",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-unkeyed",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-unkeyed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-unkeyed",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-unkeyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-subquery",
+    "records": [
+      {
+        "case": "subquery-keyed",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 100
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-keyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "value": 200
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-unkeyed",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-unkeyed",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-unkeyed",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-unkeyed",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "deployed",
+        "statement": "index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": {
+                "state": "null"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-secondary-index",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "deployed",
+        "statement": "module",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "C"
+            }
+          }
+        ]
+      },
+      {
+        "case": "subquery-in-filter",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 0,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "A"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

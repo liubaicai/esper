@@ -64602,6 +64602,289 @@ func assertInfraTableFAFTrace(t *testing.T, trace compat.Trace) {
 	}
 }
 
+func TestRunInfraTableSubqueryDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableSubqueryID,
+		"-scenario", filepath.Join(root, infraTableSubqueryID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraTableSubqueryTrace(t, trace)
+}
+
+func TestRunInfraTableSubqueryDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraTableSubqueryID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableSubqueryID + "-diff",
+		"-scenario", filepath.Join(root, infraTableSubqueryID+".json"),
+		"-java-trace", filepath.Join(root, infraTableSubqueryID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraTableSubqueryJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraTableSubqueryJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, infraTableSubqueryJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraTableSubqueryJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraTableSubqueryTrace(t, evidence.JavaTrace)
+	assertInfraTableSubqueryTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraTableSubqueryDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// subquery-keyed's second listener row pins value=200 for G2.
+			name: "subquery-keyed-listener-drift",
+			mutate: func(trace *compat.Trace) {
+				seen := 0
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "subquery-keyed" && rec.Operation == "listener" {
+						seen++
+						if seen == 2 && len(rec.New) > 0 {
+							rec.New[0].Fields["value"] = 999
+							return
+						}
+					}
+				}
+				panic("no subquery-keyed second listener record")
+			},
+		},
+		{
+			// subquery-secondary-index's second listener row pins c0=null
+			// after the merge moved the indexed column.
+			name: "subquery-secondary-index-null-drift",
+			mutate: func(trace *compat.Trace) {
+				seen := 0
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "subquery-secondary-index" && rec.Operation == "listener" {
+						seen++
+						if seen == 2 && len(rec.New) > 0 {
+							rec.New[0].Fields["c0"] = 10
+							return
+						}
+					}
+				}
+				panic("no subquery-secondary-index second listener record")
+			},
+		},
+		{
+			// subquery-in-filter's listener rows pin select * over
+			// SupportBean; theString of the first event is E.
+			name: "subquery-in-filter-listener-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "subquery-in-filter" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["theString"] = "Z"
+						return
+					}
+				}
+				panic("no subquery-in-filter listener record")
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:22]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraTableSubqueryID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraTableSubqueryID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraTableSubqueryID + "-diff",
+				"-scenario", filepath.Join(root, infraTableSubqueryID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraTableSubqueryCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraTableSubqueryID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraTableSubqueryID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraTableSubqueryID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if !reflect.DeepEqual(evidence.JavaTrace.Records, javaTrace.Records) {
+		t.Fatal("checked-in evidence Java trace diverges from the checked-in Java trace")
+	}
+	if !reflect.DeepEqual(evidence.GoTrace.Records, goTrace.Records) {
+		t.Fatal("checked-in evidence Go trace diverges from the checked-in Go trace")
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableSubqueryID,
+		"-scenario", filepath.Join(root, infraTableSubqueryID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(replayed.Records, goTrace.Records) {
+		t.Fatal("replayed Go trace diverges from the checked-in Go trace")
+	}
+	assertInfraTableSubqueryTrace(t, javaTrace)
+	assertInfraTableSubqueryTrace(t, goTrace)
+}
+
+func TestRunInfraTableSubqueryRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableSubqueryID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "subquery-keyed"`), []byte(`"case": "subquery-keyed", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-7b449dd45dd6961c5d61"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select total from varagg where key = s0.p00`), []byte(`select total from varagg where key = s0.p01`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraTableSubqueryID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraTableSubqueryRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableSubqueryID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, infraTableSubqueryJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, infraTableSubqueryJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != infraTableSubqueryJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, infraTableSubqueryJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertInfraTableSubqueryTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraTableSubqueryID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 23 {
+		t.Fatalf("trace records = %d, want 23", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"subquery-keyed":           {"deployed": 3, "listener": 4},
+		"subquery-unkeyed":         {"deployed": 3, "listener": 1},
+		"subquery-secondary-index": {"deployed": 4, "listener": 3},
+		"subquery-in-filter":       {"deployed": 1, "listener": 4},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
 func assertInfraTableSelectEnumMultikeyTrace(t *testing.T, trace compat.Trace) {
 	t.Helper()
 	if trace.Version != compat.ScenarioVersion || trace.ID != infraTableSelectEnumMultikeyID {

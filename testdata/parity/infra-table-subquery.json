@@ -1,0 +1,123 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-table-subquery",
+  "description": "InfraTableSubquery ordinals 0-3: InfraTableSubqueryAgainstKeyed deploys keyed varagg fed by a grouped into-table sum and pins the correlated scalar subquery value null/200 then 100/200 across milestone(0); InfraTableSubqueryAgainstUnkeyed deploys the unkeyed InfraOne with the subquery statement before the insert-into feed and pins c0=10; InfraTableSubquerySecondaryIndex deploys composite-key MyTable with a secondary index on p2 and an on-merge that moves the indexed column from P2_1 to P2_2, pinning c0=10 then null/11; InfraTableSubqueryInFilter deploys one module whose select * filters SupportBean on theString=(select tablecol from MyTable).orderBy().firstOf(), emitting listener records only for matching sends (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableSubquery.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableSubquery.java",
+  "javaRuntimes": [
+    "java-runtime-7b449dd45dd6961c5d61",
+    "java-runtime-9cde668ef5b4781b068a",
+    "java-runtime-8ece65643b6ec15616f2",
+    "java-runtime-a839574d871f88c2fdbf"
+  ],
+  "javaNames": [
+    "InfraTableSubqueryAgainstKeyed",
+    "InfraTableSubqueryAgainstUnkeyed",
+    "InfraTableSubquerySecondaryIndex",
+    "InfraTableSubqueryInFilter"
+  ],
+  "javaStaticIds": [
+    "java-84c3e4b24f1621c4e20f",
+    "java-8a837e4f238a838a719c",
+    "java-22c9a3e16812af54b583",
+    "java-05c24f1601cc75b1683e"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "subquery-keyed",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-7b449dd45dd6961c5d61",
+      "executionName": "InfraTableSubqueryAgainstKeyed",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@public create table varagg as (key string primary key, total sum(int))\ninto table varagg select sum(intPrimitive) as total from SupportBean group by theString\n@name('s0') select (select total from varagg where key = s0.p00) as value from SupportBean_S0 as s0"
+    },
+    {
+      "case": "subquery-unkeyed",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-9cde668ef5b4781b068a",
+      "executionName": "InfraTableSubqueryAgainstUnkeyed",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@public create table InfraOne (string string, intPrimitive int)\n@name('s0') select (select intPrimitive from InfraOne where string = s0.p00) as c0 from SupportBean_S0 as s0\ninsert into InfraOne select theString as string, intPrimitive from SupportBean"
+    },
+    {
+      "case": "subquery-secondary-index",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-8ece65643b6ec15616f2",
+      "executionName": "InfraTableSubquerySecondaryIndex",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "@public create table MyTable(k0 string primary key, k1 string primary key, p2 string, value int)\ncreate index MyIndex on MyTable(p2)\non SupportBean_S0 merge MyTable where p00 = k0 and p01 = k1 when not matched then insert select p00 as k0, p01 as k1, p02 as p2, id as value when matched then update set p2 = p02, value = id \n@Name('s0') select (select value from MyTable as tbl where sb.theString = tbl.p2) as c0 from SupportBean as sb"
+    },
+    {
+      "case": "subquery-in-filter",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-a839574d871f88c2fdbf",
+      "executionName": "InfraTableSubqueryInFilter",
+      "observation": "listener",
+      "iteratorSnapshots": 0,
+      "epl": "create table MyTable(tablecol string primary key);\ninsert into MyTable select p00 as tablecol from SupportBean_S0;\n@name('s0') select * from SupportBean(theString=(select tablecol from MyTable).orderBy().firstOf())"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "subquery-keyed"},
+    {"op": "deploy", "case": "subquery-keyed", "statement": "create", "epl": "@public create table varagg as (key string primary key, total sum(int))"},
+    {"op": "deployed", "case": "subquery-keyed", "statement": "create"},
+    {"op": "deploy", "case": "subquery-keyed", "statement": "into", "epl": "into table varagg select sum(intPrimitive) as total from SupportBean group by theString"},
+    {"op": "deployed", "case": "subquery-keyed", "statement": "into"},
+    {"op": "deploy", "case": "subquery-keyed", "statement": "s0", "epl": "@name('s0') select (select total from varagg where key = s0.p00) as value from SupportBean_S0 as s0"},
+    {"op": "deployed", "case": "subquery-keyed", "statement": "s0"},
+    {"op": "send", "case": "subquery-keyed", "eventType": "SupportBean", "payload": {"theString": "G2", "intPrimitive": 200}},
+    {"op": "send", "case": "subquery-keyed", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "G1"}},
+    {"op": "send", "case": "subquery-keyed", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "G2"}},
+    {"op": "send", "case": "subquery-keyed", "eventType": "SupportBean", "payload": {"theString": "G1", "intPrimitive": 100}},
+    {"op": "send", "case": "subquery-keyed", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "G1"}},
+    {"op": "send", "case": "subquery-keyed", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "G2"}},
+    {"op": "undeploy-all", "case": "subquery-keyed"},
+
+    {"op": "case", "case": "subquery-unkeyed"},
+    {"op": "deploy", "case": "subquery-unkeyed", "statement": "create", "epl": "@public create table InfraOne (string string, intPrimitive int)"},
+    {"op": "deployed", "case": "subquery-unkeyed", "statement": "create"},
+    {"op": "deploy", "case": "subquery-unkeyed", "statement": "s0", "epl": "@name('s0') select (select intPrimitive from InfraOne where string = s0.p00) as c0 from SupportBean_S0 as s0"},
+    {"op": "deployed", "case": "subquery-unkeyed", "statement": "s0"},
+    {"op": "deploy", "case": "subquery-unkeyed", "statement": "insert", "epl": "insert into InfraOne select theString as string, intPrimitive from SupportBean"},
+    {"op": "deployed", "case": "subquery-unkeyed", "statement": "insert"},
+    {"op": "send", "case": "subquery-unkeyed", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 10}},
+    {"op": "send", "case": "subquery-unkeyed", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "E1"}},
+    {"op": "undeploy-all", "case": "subquery-unkeyed"},
+
+    {"op": "case", "case": "subquery-secondary-index"},
+    {"op": "deploy", "case": "subquery-secondary-index", "statement": "create", "epl": "@public create table MyTable(k0 string primary key, k1 string primary key, p2 string, value int)"},
+    {"op": "deployed", "case": "subquery-secondary-index", "statement": "create"},
+    {"op": "deploy", "case": "subquery-secondary-index", "statement": "index", "epl": "create index MyIndex on MyTable(p2)"},
+    {"op": "deployed", "case": "subquery-secondary-index", "statement": "index"},
+    {"op": "deploy", "case": "subquery-secondary-index", "statement": "merge", "epl": "on SupportBean_S0 merge MyTable where p00 = k0 and p01 = k1 when not matched then insert select p00 as k0, p01 as k1, p02 as p2, id as value when matched then update set p2 = p02, value = id "},
+    {"op": "deployed", "case": "subquery-secondary-index", "statement": "merge"},
+    {"op": "deploy", "case": "subquery-secondary-index", "statement": "s0", "epl": "@Name('s0') select (select value from MyTable as tbl where sb.theString = tbl.p2) as c0 from SupportBean as sb"},
+    {"op": "deployed", "case": "subquery-secondary-index", "statement": "s0"},
+    {"op": "send", "case": "subquery-secondary-index", "eventType": "SupportBean_S0", "payload": {"id": 10, "p00": "G1", "p01": "SG1", "p02": "P2_1"}},
+    {"op": "send", "case": "subquery-secondary-index", "eventType": "SupportBean", "payload": {"theString": "P2_1", "intPrimitive": -1}},
+    {"op": "send", "case": "subquery-secondary-index", "eventType": "SupportBean_S0", "payload": {"id": 11, "p00": "G1", "p01": "SG1", "p02": "P2_2"}},
+    {"op": "send", "case": "subquery-secondary-index", "eventType": "SupportBean", "payload": {"theString": "P2_1", "intPrimitive": -1}},
+    {"op": "send", "case": "subquery-secondary-index", "eventType": "SupportBean", "payload": {"theString": "P2_2", "intPrimitive": -1}},
+    {"op": "undeploy-all", "case": "subquery-secondary-index"},
+
+    {"op": "case", "case": "subquery-in-filter"},
+    {"op": "deploy", "case": "subquery-in-filter", "statement": "module", "epl": "create table MyTable(tablecol string primary key);\ninsert into MyTable select p00 as tablecol from SupportBean_S0;\n@name('s0') select * from SupportBean(theString=(select tablecol from MyTable).orderBy().firstOf())"},
+    {"op": "deployed", "case": "subquery-in-filter", "statement": "module"},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean", "payload": {"theString": "E", "intPrimitive": 0}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "E"}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean", "payload": {"theString": "E", "intPrimitive": 0}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "C"}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean", "payload": {"theString": "E", "intPrimitive": 0}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean", "payload": {"theString": "C", "intPrimitive": 0}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 0}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean", "payload": {"theString": "C", "intPrimitive": 0}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "A"}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean", "payload": {"theString": "A", "intPrimitive": 0}},
+    {"op": "send", "case": "subquery-in-filter", "eventType": "SupportBean", "payload": {"theString": "C", "intPrimitive": 0}},
+    {"op": "undeploy-all", "case": "subquery-in-filter"}
+  ]
+}
