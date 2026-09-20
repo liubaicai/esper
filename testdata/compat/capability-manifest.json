@@ -1516,7 +1516,11 @@
     "java-runtime-ad31f07cc8535074a471",
     "java-runtime-c141cb04dac6838dc264",
     "java-runtime-abf1de4c0349b023da5f",
-    "java-runtime-f03458884f4e7beaa402"
+    "java-runtime-f03458884f4e7beaa402",
+    "java-runtime-dbf13fb6d1ca3a37275a",
+    "java-runtime-df3d7a21bdd769f1acce",
+    "java-runtime-240cb61eabb22eb2a215",
+    "java-runtime-aaa45c95e95a919bd0c0"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -45948,6 +45952,77 @@
     "java-runtime-f51a1493ad61c1f0d0d1"
    ],
    "notes": "Draft 4.475 (2026-09-20). Ords 0-2 of ContextSelectionAndFireAndForget: FAF join rejections over context-bound windows, the iterator-selector matrix (all/by-id/empty/null/nil/non-context), and selector-aware FAF over a context-bound named window. Draft 4.476 adds ord 3 ContextSelectionFAFNestedNamedWindowQuery: a nested context with an overlapping initiated ACtx parent (S0 starts, S1(id=s0.id) ends) over a three-category BCtx child. Go now inherits the target window's context on insert-into, drives parent lifecycle before the leaf-type gate, eagerly instantiates category leaves per activation with global leaf IDs, broadcasts leaf-typed events to all live parents, cascades parent termination to leaves, and runs context-clause FAF descriptor-driven. Nested selectors accept All/ById/Nested only. Registration precedes unique-index validation, matching Java's route-then-insert order."
+  },
+  {
+   "id": "case.infra-nwtable-on-merge-basic",
+   "javaRuntimeIds": [
+    "java-runtime-dbf13fb6d1ca3a37275a",
+    "java-runtime-df3d7a21bdd769f1acce",
+    "java-runtime-240cb61eabb22eb2a215",
+    "java-runtime-aaa45c95e95a919bd0c0"
+   ],
+   "javaStaticIds": [
+    "java-0fdb4e6490ae6d9e9103",
+    "java-0fdb4e6490ae6d9e9103",
+    "java-5f5d122bcbf66d59da6c",
+    "java-5f5d122bcbf66d59da6c"
+   ],
+   "javaNames": [
+    "InfraOnMergeSimpleInsert{namedWindow=true}",
+    "InfraOnMergeSimpleInsert{namedWindow=false}",
+    "InfraOnMergeMatchNoMatch{namedWindow=true}",
+    "InfraOnMergeMatchNoMatch{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "table",
+    "named-window",
+    "merge",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-on-merge.json",
+    "testdata/parity/infra-nwtable-on-merge.trace.json",
+    "testdata/parity/infra-nwtable-on-merge.go.trace.json",
+    "testdata/parity/infra-nwtable-on-merge.evidence.json",
+    "tools/java-oracle/InfraNWTableOnMergeScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-on-merge.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-dbf13fb6d1ca3a37275a",
+    "java-runtime-df3d7a21bdd769f1acce",
+    "java-runtime-240cb61eabb22eb2a215",
+    "java-runtime-aaa45c95e95a919bd0c0"
+   ],
+   "notes": [
+    "InfraNWTableOnMerge ords 0-3 born-differential: insert-only merge into keepall named window and primary-key table, plus match-no-match (matched-delete / not-matched-insert / matched-update) over both targets. Merge listener IR pairs, named-window consumer sees mutations before the merge listener (applyDelta order), silent not-matched send, iterator snapshots. Zero shared-core changes; MergeIntoNamedWindowWhen/MergeIntoTableWhen + WhenMatchedDelete/WhenNotMatched(Any)/WhenMatched + CopyMatchingFields cover the surface."
+   ]
   }
  ],
  "mappings": [
@@ -49158,13 +49233,17 @@
   {
    "capabilityId": "context.partition",
    "caseId": "case.context-selection-faf"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-nwtable-on-merge-basic"
   }
  ],
  "summary": {
-  "inventoriedCases": 717,
-  "implementedCases": 715,
-  "differentialVerifiedCases": 341,
-  "differentialVerifiedRuntimeIds": 1299,
+  "inventoriedCases": 718,
+  "implementedCases": 716,
+  "differentialVerifiedCases": 342,
+  "differentialVerifiedRuntimeIds": 1303,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49174,13 +49253,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3849,
+  "runtimeAssociationCount": 3853,
   "referencedJavaRuntimeIds": 3475,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 661,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 717,
+  "totalCases": 718,
   "totalCapabilities": 122
  }
 }

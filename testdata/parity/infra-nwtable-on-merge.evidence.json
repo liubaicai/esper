@@ -1,0 +1,2699 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-dbf13fb6d1ca3a37275a",
+    "java-runtime-df3d7a21bdd769f1acce",
+    "java-runtime-240cb61eabb22eb2a215",
+    "java-runtime-aaa45c95e95a919bd0c0"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+  ],
+  "javaExecutions": [
+    "InfraOnMergeSimpleInsert{namedWindow=true}",
+    "InfraOnMergeSimpleInsert{namedWindow=false}",
+    "InfraOnMergeMatchNoMatch{namedWindow=true}",
+    "InfraOnMergeMatchNoMatch{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge",
+    "steps": [
+      {
+        "op": "case",
+        "case": "simple-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "simple-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfra#keepall() as (p0 string, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "simple-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "simple-nw",
+        "statement": "merge",
+        "epl": "@name('merge') on SupportBean sb merge MyInfra insert select theString as p0, intPrimitive as p1"
+      },
+      {
+        "op": "deployed",
+        "case": "simple-nw",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "simple-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "simple-nw",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "simple-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "simple-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "simple-nw"
+      },
+      {
+        "op": "case",
+        "case": "simple-table"
+      },
+      {
+        "op": "deploy",
+        "case": "simple-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfra(p0 string primary key, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "simple-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "simple-table",
+        "statement": "merge",
+        "epl": "@name('merge') on SupportBean sb merge MyInfra insert select theString as p0, intPrimitive as p1"
+      },
+      {
+        "op": "deployed",
+        "case": "simple-table",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "simple-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "simple-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "simple-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "simple-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "simple-table"
+      },
+      {
+        "op": "case",
+        "case": "matchnomatch-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "matchnomatch-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfra.win:keepall() as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "matchnomatch-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "matchnomatch-nw",
+        "statement": "merge",
+        "epl": "@name('merge') on SupportBean sb merge MyInfra mw where sb.theString = mw.theString when matched and sb.intPrimitive \u003c 0 then delete when not matched and intPrimitive \u003e 0 then insert select *when matched and sb.intPrimitive \u003e 0 then update set intPrimitive = sb.intPrimitive + mw.intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "matchnomatch-nw",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "matchnomatch-nw",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "matchnomatch-nw",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "matchnomatch-nw",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "matchnomatch-nw",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "matchnomatch-nw"
+      },
+      {
+        "op": "case",
+        "case": "matchnomatch-table"
+      },
+      {
+        "op": "deploy",
+        "case": "matchnomatch-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfra(theString string primary key, intPrimitive int)"
+      },
+      {
+        "op": "deployed",
+        "case": "matchnomatch-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "matchnomatch-table",
+        "statement": "merge",
+        "epl": "@name('merge') on SupportBean sb merge MyInfra mw where sb.theString = mw.theString when matched and sb.intPrimitive \u003c 0 then delete when not matched and intPrimitive \u003e 0 then insert select theString, intPrimitive when matched and sb.intPrimitive \u003e 0 then update set intPrimitive = sb.intPrimitive + mw.intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "matchnomatch-table",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "matchnomatch-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "matchnomatch-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "matchnomatch-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "matchnomatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "matchnomatch-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "matchnomatch-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge",
+    "records": [
+      {
+        "case": "simple-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 12,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 12,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 12,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 12,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 12,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 7,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 7,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 12,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 12,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 12,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge",
+    "records": [
+      {
+        "case": "simple-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "simple-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "simple-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 12,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 12,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 2,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 12,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 12,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 12,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "create",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 7,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 7,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "bigDecimal": {
+                "state": "null"
+              },
+              "bigInteger": {
+                "state": "null"
+              },
+              "boolBoxed": {
+                "state": "null"
+              },
+              "boolPrimitive": false,
+              "byteBoxed": {
+                "state": "null"
+              },
+              "bytePrimitive": 0,
+              "charBoxed": {
+                "state": "null"
+              },
+              "charPrimitive": "\u0000",
+              "doubleBoxed": {
+                "state": "null"
+              },
+              "doublePrimitive": 0,
+              "enumValue": {
+                "state": "null"
+              },
+              "floatBoxed": {
+                "state": "null"
+              },
+              "floatPrimitive": 0,
+              "intBoxed": {
+                "state": "null"
+              },
+              "intPrimitive": 3,
+              "longBoxed": {
+                "state": "null"
+              },
+              "longPrimitive": 0,
+              "shortBoxed": {
+                "state": "null"
+              },
+              "shortPrimitive": 0,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 12,
+              "theString": "E2"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 2,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 12,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 12,
+              "theString": "E2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 5,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E3"
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 3,
+              "theString": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "matchnomatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "intPrimitive": 7,
+              "theString": "E3"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

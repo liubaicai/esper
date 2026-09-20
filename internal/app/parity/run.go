@@ -132,6 +132,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableOnDeleteScenario(file)
 	} else if *mode == "infra-nwtable-on-update" || *mode == "infra-nwtable-on-update-diff" {
 		scenario, err = loadInfraNWTableOnUpdateScenario(file)
+	} else if *mode == "infra-nwtable-on-merge" || *mode == "infra-nwtable-on-merge-diff" {
+		scenario, err = loadInfraNWTableOnMergeScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-silent" || *mode == "infra-namedwindow-on-delete-silent-diff" {
 		scenario, err = loadInfraNWOnDeleteSilentScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-indexes" || *mode == "infra-namedwindow-on-delete-indexes-diff" {
@@ -464,6 +466,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableOnUpdateJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableOnUpdateJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableOnUpdateJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-on-merge" || *mode == "infra-nwtable-on-merge-diff" {
+		trace, err := runInfraNWTableOnMergeScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-on-merge-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableOnMergeJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergeJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableOnMergeJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableOnMergeJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

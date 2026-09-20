@@ -111,7 +111,28 @@ Active: Draft 4.477 ('context-admin-listen-partition-addremove').
   status passing / 0 differences.
 - [x] Manifest/roadmap/CHANGELOG updated: case.context-admin-listen extended to ord 5
   (717 cases / 341 DV / 1299 DV runtime IDs / 3849 associations).
-- [ ] make check + independent parity review + commit/push.
+- [x] make check GREEN (parity 80s, internal/esper 70s); independent parity review
+  (ParityReview477): PASS all nine areas, no P0-P3. Committed and pushed as b3a0a64da.
+
+## Current work unit
+Active: Draft 4.479 ('infra-nwtable-on-merge-basic').
+
+- [x] Contract frozen (.omp/contract-479.md) by NextJavaContract479 + NextGoSurface479:
+  InfraNWTableOnMerge ords 0-3 (simple insert + match-no-match over keepall named window
+  and primary-key table; runtime IDs java-runtime-dbf13fb6d1ca3a37275a / -df3d7a21bdd769f1acce /
+  -240cb61eabb22eb2a215 / -aaa45c95e95a919bd0c0). Asset-only: Go merge API already exists.
+- [x] Assets (OnMergeAssets agent): oracle + scenario (4 cases / 52 steps) + runner
+  + run.go wiring. Zero shared-core changes confirmed.
+- [x] Java trace regenerated (39 records); `-mode infra-nwtable-on-merge-diff` reports
+  status passing / 0 differences; Go trace checked in.
+- [x] Manifest/roadmap/CHANGELOG updated: new born-DV case.infra-nwtable-on-merge-basic
+  (718 cases / 342 DV / 1303 DV runtime IDs / 3853 associations); capability
+  trigger.table-named-window DV list extended.
+- [x] run_test.go: six pinned tests (direct replay, diff evidence, 7 trace mutations,
+  checked-in evidence, 8 raw-scenario mutations, runtime-ID mapping) all green.
+- [x] make check GREEN (parity 80s, internal/esper 70s); independent parity review
+  (ParityReview479): PASS all nine areas; two P3 non-defects (unreachable null-theString
+  payload path; mode=any table snapshots match on-update convention).
 
 
 ## Current work unit

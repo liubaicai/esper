@@ -1,0 +1,117 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-nwtable-on-merge",
+  "description": "InfraNWTableOnMerge on-trigger merge semantics over a keepall named window and over a primary-key table: insert-only merge delivering each trigger row as new data, and ordered matched-delete/not-matched-insert/matched-update branches with insert-remove IR-pair delivery to the merge listener and the named-window create consumer (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java",
+  "javaRuntimes": [
+    "java-runtime-dbf13fb6d1ca3a37275a",
+    "java-runtime-df3d7a21bdd769f1acce",
+    "java-runtime-240cb61eabb22eb2a215",
+    "java-runtime-aaa45c95e95a919bd0c0"
+  ],
+  "javaNames": [
+    "InfraOnMergeSimpleInsert{namedWindow=true}",
+    "InfraOnMergeSimpleInsert{namedWindow=false}",
+    "InfraOnMergeMatchNoMatch{namedWindow=true}",
+    "InfraOnMergeMatchNoMatch{namedWindow=false}"
+  ],
+  "javaStaticIds": [
+    "java-0fdb4e6490ae6d9e9103",
+    "java-0fdb4e6490ae6d9e9103",
+    "java-5f5d122bcbf66d59da6c",
+    "java-5f5d122bcbf66d59da6c"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "simple-nw",
+      "ordinal": 0,
+      "runtimeId": "java-runtime-dbf13fb6d1ca3a37275a",
+      "executionName": "InfraOnMergeSimpleInsert{namedWindow=true}",
+      "observation": "listener+iterator; insert-only merge delivering each trigger row as new data over the keepall named window",
+      "epl": "@name('create') @public create window MyInfra#keepall() as (p0 string, p1 int)"
+    },
+    {
+      "case": "simple-table",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-df3d7a21bdd769f1acce",
+      "executionName": "InfraOnMergeSimpleInsert{namedWindow=false}",
+      "observation": "listener+iterator; same insert-only merge over the primary-key table",
+      "epl": "@name('create') @public create table MyInfra(p0 string primary key, p1 int)"
+    },
+    {
+      "case": "matchnomatch-nw",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-240cb61eabb22eb2a215",
+      "executionName": "InfraOnMergeMatchNoMatch{namedWindow=true}",
+      "observation": "listener+iterator; ordered matched-delete/not-matched-insert/matched-update branches over the keepall named window with create-statement IR pairs",
+      "epl": "@name('create') @public create window MyInfra.win:keepall() as SupportBean"
+    },
+    {
+      "case": "matchnomatch-table",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-aaa45c95e95a919bd0c0",
+      "executionName": "InfraOnMergeMatchNoMatch{namedWindow=false}",
+      "observation": "listener+iterator; same ordered merge branches over the primary-key table with no create-statement deliveries",
+      "epl": "@name('create') @public create table MyInfra(theString string primary key, intPrimitive int)"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "simple-nw"},
+    {"op": "deploy", "case": "simple-nw", "statement": "create", "epl": "@name('create') @public create window MyInfra#keepall() as (p0 string, p1 int)"},
+    {"op": "deployed", "case": "simple-nw", "statement": "create"},
+    {"op": "deploy", "case": "simple-nw", "statement": "merge", "epl": "@name('merge') on SupportBean sb merge MyInfra insert select theString as p0, intPrimitive as p1"},
+    {"op": "deployed", "case": "simple-nw", "statement": "merge"},
+    {"op": "send", "case": "simple-nw", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "snapshot", "case": "simple-nw", "statement": "create", "mode": "ordered", "fields": ["p0", "p1"]},
+    {"op": "send", "case": "simple-nw", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "snapshot", "case": "simple-nw", "statement": "create", "mode": "any", "fields": ["p0", "p1"]},
+    {"op": "undeploy-all", "case": "simple-nw"},
+
+    {"op": "case", "case": "simple-table"},
+    {"op": "deploy", "case": "simple-table", "statement": "create", "epl": "@name('create') @public create table MyInfra(p0 string primary key, p1 int)"},
+    {"op": "deployed", "case": "simple-table", "statement": "create"},
+    {"op": "deploy", "case": "simple-table", "statement": "merge", "epl": "@name('merge') on SupportBean sb merge MyInfra insert select theString as p0, intPrimitive as p1"},
+    {"op": "deployed", "case": "simple-table", "statement": "merge"},
+    {"op": "send", "case": "simple-table", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "snapshot", "case": "simple-table", "statement": "create", "mode": "any", "fields": ["p0", "p1"]},
+    {"op": "send", "case": "simple-table", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "snapshot", "case": "simple-table", "statement": "create", "mode": "any", "fields": ["p0", "p1"]},
+    {"op": "undeploy-all", "case": "simple-table"},
+
+    {"op": "case", "case": "matchnomatch-nw"},
+    {"op": "deploy", "case": "matchnomatch-nw", "statement": "create", "epl": "@name('create') @public create window MyInfra.win:keepall() as SupportBean"},
+    {"op": "deployed", "case": "matchnomatch-nw", "statement": "create"},
+    {"op": "deploy", "case": "matchnomatch-nw", "statement": "merge", "epl": "@name('merge') on SupportBean sb merge MyInfra mw where sb.theString = mw.theString when matched and sb.intPrimitive < 0 then delete when not matched and intPrimitive > 0 then insert select *when matched and sb.intPrimitive > 0 then update set intPrimitive = sb.intPrimitive + mw.intPrimitive"},
+    {"op": "deployed", "case": "matchnomatch-nw", "statement": "merge"},
+    {"op": "send", "case": "matchnomatch-nw", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+    {"op": "send", "case": "matchnomatch-nw", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "snapshot", "case": "matchnomatch-nw", "statement": "create", "mode": "ordered", "fields": ["theString", "intPrimitive"]},
+    {"op": "send", "case": "matchnomatch-nw", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10}},
+    {"op": "snapshot", "case": "matchnomatch-nw", "statement": "create", "mode": "ordered", "fields": ["theString", "intPrimitive"]},
+    {"op": "send", "case": "matchnomatch-nw", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": -1}},
+    {"op": "snapshot", "case": "matchnomatch-nw", "statement": "create", "mode": "ordered", "fields": ["theString", "intPrimitive"]},
+    {"op": "send", "case": "matchnomatch-nw", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+    {"op": "send", "case": "matchnomatch-nw", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 4}},
+    {"op": "snapshot", "case": "matchnomatch-nw", "statement": "create", "mode": "ordered", "fields": ["theString", "intPrimitive"]},
+    {"op": "undeploy-all", "case": "matchnomatch-nw"},
+
+    {"op": "case", "case": "matchnomatch-table"},
+    {"op": "deploy", "case": "matchnomatch-table", "statement": "create", "epl": "@name('create') @public create table MyInfra(theString string primary key, intPrimitive int)"},
+    {"op": "deployed", "case": "matchnomatch-table", "statement": "create"},
+    {"op": "deploy", "case": "matchnomatch-table", "statement": "merge", "epl": "@name('merge') on SupportBean sb merge MyInfra mw where sb.theString = mw.theString when matched and sb.intPrimitive < 0 then delete when not matched and intPrimitive > 0 then insert select theString, intPrimitive when matched and sb.intPrimitive > 0 then update set intPrimitive = sb.intPrimitive + mw.intPrimitive"},
+    {"op": "deployed", "case": "matchnomatch-table", "statement": "merge"},
+    {"op": "send", "case": "matchnomatch-table", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 0}},
+    {"op": "send", "case": "matchnomatch-table", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 2}},
+    {"op": "snapshot", "case": "matchnomatch-table", "statement": "create", "mode": "any", "fields": ["theString", "intPrimitive"]},
+    {"op": "send", "case": "matchnomatch-table", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": 10}},
+    {"op": "snapshot", "case": "matchnomatch-table", "statement": "create", "mode": "any", "fields": ["theString", "intPrimitive"]},
+    {"op": "send", "case": "matchnomatch-table", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": -1}},
+    {"op": "snapshot", "case": "matchnomatch-table", "statement": "create", "mode": "any", "fields": ["theString", "intPrimitive"]},
+    {"op": "send", "case": "matchnomatch-table", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 3}},
+    {"op": "send", "case": "matchnomatch-table", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 4}},
+    {"op": "snapshot", "case": "matchnomatch-table", "statement": "create", "mode": "any", "fields": ["theString", "intPrimitive"]},
+    {"op": "undeploy-all", "case": "matchnomatch-table"}
+  ]
+}

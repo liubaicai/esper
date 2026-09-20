@@ -61448,6 +61448,338 @@ func TestRunInfraNWTableOnUpdateRejectsMalformedRawScenario(t *testing.T) {
 	}
 }
 
+func TestRunInfraNWTableOnMergeDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableOnMergeID,
+		"-scenario", filepath.Join(root, infraNWTableOnMergeID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraNWTableOnMergeTrace(t, trace)
+}
+
+func TestRunInfraNWTableOnMergeDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraNWTableOnMergeID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraNWTableOnMergeID + "-diff",
+		"-scenario", filepath.Join(root, infraNWTableOnMergeID+".json"),
+		"-java-trace", filepath.Join(root, infraNWTableOnMergeID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraNWTableOnMergeJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWTableOnMergeJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNWTableOnMergeSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWTableOnMergeJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraNWTableOnMergeTrace(t, evidence.JavaTrace)
+	assertInfraNWTableOnMergeTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraNWTableOnMergeDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// Record 2 is simple-nw's first merge delivery: p0 must be E1.
+			name: "simple-nw-insert-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[2].New[0].Fields["p0"] = "Z9"
+			},
+		},
+		{
+			// Record 8 is simple-table's first merge delivery: the table
+			// merge listener fires identically to the named-window one.
+			name: "simple-table-insert-value-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[8].New[0].Fields["p1"] = json.Number("9")
+			},
+		},
+		{
+			// Record 15 is matchnomatch-nw's merge insert: the named-window
+			// create consumer (record 14) must see the row first.
+			name: "matchnomatch-nw-order-swap",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[14].Statement = "merge"
+			},
+		},
+		{
+			// Record 18 is matchnomatch-nw's update IR pair: new=12/old=2.
+			name: "matchnomatch-nw-update-old-lost",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[18].Old = nil
+			},
+		},
+		{
+			// Record 32 is matchnomatch-table's update IR pair: new=12/old=2.
+			name: "matchnomatch-table-update-new-drift",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[32].New[0].Fields["intPrimitive"] = json.Number("13")
+			},
+		},
+		{
+			// Record 34 is matchnomatch-table's delete: old-only delivery.
+			name: "matchnomatch-table-delete-gains-new",
+			mutate: func(trace *compat.Trace) {
+				trace.Records[34].New = trace.Records[34].Old
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:37]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraNWTableOnMergeID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraNWTableOnMergeID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraNWTableOnMergeID + "-diff",
+				"-scenario", filepath.Join(root, infraNWTableOnMergeID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableOnMergeCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraNWTableOnMergeID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraNWTableOnMergeID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraNWTableOnMergeID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if differences := compat.DiffTraces(javaTrace, evidence.JavaTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Java trace differs from checked-in trace: %#v", differences)
+	}
+	if differences := compat.DiffTraces(goTrace, evidence.GoTrace); len(differences) != 0 {
+		t.Fatalf("checked-in evidence Go trace differs from evidence Go trace: %#v", differences)
+	}
+	if evidence.JavaCommit != infraNWTableOnMergeJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraNWTableOnMergeJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, []string{infraNWTableOnMergeSource}) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraNWTableOnMergeJavaExecutions) {
+		t.Fatalf("checked-in Java metadata = %#v", evidence)
+	}
+	assertInfraNWTableOnMergeTrace(t, javaTrace)
+	assertInfraNWTableOnMergeTrace(t, goTrace)
+
+	scenarioPath := filepath.Join(root, infraNWTableOnMergeID+".json")
+	scenarioData, err := os.ReadFile(scenarioPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rawScenario struct {
+		Version string        `json:"version"`
+		ID      string        `json:"id"`
+		Steps   []compat.Step `json:"steps"`
+	}
+	if err := json.Unmarshal(scenarioData, &rawScenario); err != nil {
+		t.Fatal(err)
+	}
+	scenario := compat.Scenario{Version: rawScenario.Version, ID: rawScenario.ID, Steps: rawScenario.Steps}
+	scenarioJSON, err := json.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidenceScenarioJSON, err := json.Marshal(evidence.Scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenarioValue, evidenceScenarioValue any
+	if err := json.Unmarshal(scenarioJSON, &scenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(evidenceScenarioJSON, &evidenceScenarioValue); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenarioValue, evidenceScenarioValue) {
+		t.Fatalf("checked-in scenario differs from evidence scenario")
+	}
+}
+
+func TestRunInfraNWTableOnMergeRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWTableOnMergeID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "simple-nw"`), []byte(`"case": "simple-nw", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-dbf13fb6d1ca3a37275a"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "merge-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`merge MyInfra insert select theString as p0`), []byte(`merge MyInfra insert select theString as p9`), 1)
+		}},
+		{name: "match-epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`sb.intPrimitive < 0 then delete`), []byte(`sb.intPrimitive < 1 then delete`), 1)
+		}},
+		{name: "payload-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E1", "intPrimitive": 1`), []byte(`"theString": "E1", "intPrimitive": 1, "extra": 0`), 1)
+		}},
+		{name: "payload-value-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"theString": "E2", "intPrimitive": 10`), []byte(`"theString": "E2", "intPrimitive": 11`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraNWTableOnMergeID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraNWTableOnMergeRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraNWTableOnMergeID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, infraNWTableOnMergeJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, infraNWTableOnMergeJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for index, definition := range scenario.Cases {
+		if definition.RuntimeID != infraNWTableOnMergeJavaRuntimeIDs[index] {
+			t.Fatalf("case %q runtimeId = %q, want %q", definition.Case, definition.RuntimeID, infraNWTableOnMergeJavaRuntimeIDs[index])
+		}
+	}
+}
+
+func assertInfraNWTableOnMergeTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraNWTableOnMergeID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 39 {
+		t.Fatalf("trace records = %d, want 39", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"simple-nw":          {"deployed": 2, "listener": 2, "snapshot": 2},
+		"simple-table":       {"deployed": 2, "listener": 2, "snapshot": 2},
+		"matchnomatch-nw":    {"deployed": 2, "listener": 10, "snapshot": 4},
+		"matchnomatch-table": {"deployed": 2, "listener": 5, "snapshot": 4},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+	// The silent not-matched send (E1, intPrimitive 0) must produce no
+	// records: matchnomatch-nw's first listener record is the E2 insert.
+	for _, record := range trace.Records {
+		if record.Case != "matchnomatch-nw" || record.Operation != "listener" {
+			continue
+		}
+		if record.Sequence == 1 && len(record.New) == 0 {
+			t.Fatalf("matchnomatch-nw listener record 1 has no new data: %#v", record)
+		}
+	}
+	// Named-window merge mutations reach the create consumer before the
+	// merge listener (Esper applyDelta order): every matchnomatch-nw
+	// listener pair is create-then-merge at the same sequence.
+	seen := map[uint64]string{}
+	for _, record := range trace.Records {
+		if record.Case != "matchnomatch-nw" || record.Operation != "listener" {
+			continue
+		}
+		if prev, ok := seen[record.Sequence]; ok && prev != "create" {
+			t.Fatalf("matchnomatch-nw seq %d: %q followed by %q", record.Sequence, prev, record.Statement)
+		}
+		seen[record.Sequence] = record.Statement
+	}
+}
+
 func TestRunInfraNWConsumerDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer

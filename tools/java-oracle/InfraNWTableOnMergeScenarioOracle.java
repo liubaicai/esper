@@ -1,0 +1,742 @@
+import com.espertech.esper.common.client.EPCompiled;
+import com.espertech.esper.common.client.EventBean;
+import com.espertech.esper.common.client.configuration.Configuration;
+import com.espertech.esper.common.client.hook.exception.ExceptionHandler;
+import com.espertech.esper.common.client.hook.exception.ExceptionHandlerFactory;
+import com.espertech.esper.common.client.hook.exception.ExceptionHandlerFactoryContext;
+import com.espertech.esper.common.client.json.minimaljson.Json;
+import com.espertech.esper.common.client.json.minimaljson.JsonArray;
+import com.espertech.esper.common.client.json.minimaljson.JsonNumber;
+import com.espertech.esper.common.client.json.minimaljson.JsonObject;
+import com.espertech.esper.common.client.json.minimaljson.JsonString;
+import com.espertech.esper.common.client.json.minimaljson.JsonValue;
+import com.espertech.esper.common.client.json.minimaljson.Member;
+import com.espertech.esper.common.client.util.StatementProperty;
+import com.espertech.esper.common.client.util.StatementType;
+import com.espertech.esper.common.client.util.UndeployRethrowPolicy;
+import com.espertech.esper.common.internal.support.SupportBean;
+import com.espertech.esper.compiler.client.CompilerArguments;
+import com.espertech.esper.compiler.client.EPCompilerProvider;
+import com.espertech.esper.runtime.client.DeploymentOptions;
+import com.espertech.esper.runtime.client.EPDeployment;
+import com.espertech.esper.runtime.client.EPRuntime;
+import com.espertech.esper.runtime.client.EPRuntimeProvider;
+import com.espertech.esper.runtime.client.EPStatement;
+import com.espertech.esper.runtime.client.UpdateListener;
+
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Java oracle for InfraNWTableOnMerge ordinals 0-3: on-trigger merge
+ * semantics over a keepall named window and over a primary-key table.
+ * Covers the insert-only merge form delivering each trigger row as new
+ * data, and the ordered matched-delete / not-matched-insert /
+ * matched-update branch chain whose merge listener receives the inserted
+ * row as new data, the updated row as an insert-remove pair and the
+ * deleted row as old data only.
+ *
+ * Replays the four executions on one runtime with undeployAll between
+ * cases, mirroring the regression-suite harness: SupportBean from
+ * esper-common, internal timer disabled, and the rethrowing exception
+ * handler so statement failures surface to the sender thread.  Listeners
+ * attach where the Java executions attach them: 'merge' in every case and
+ * 'create' in the MatchNoMatch cases (the table 'create' listener never
+ * fires because tables do not stream to listeners).  The named-window
+ * 'create' consumer observes each merge mutation before the merge
+ * statement's own listener, matching Esper's applyDelta order
+ * (rootView.update precedes the child update).  Deployed markers and
+ * iterator snapshots are emitted at their step positions; milestone calls
+ * are HA checkpoint no-ops and emit nothing, and the
+ * assertStatement(ON_MERGE) check of InfraOnMergeSimpleInsert is
+ * oracle-internal and unrecorded.
+ */
+public final class InfraNWTableOnMergeScenarioOracle {
+    private static final String VERSION = "esper-parity/v1";
+    private static final String ID = "infra-nwtable-on-merge";
+    private static final String DESCRIPTION =
+            "InfraNWTableOnMerge on-trigger merge semantics over a keepall named window and over a "
+                    + "primary-key table: insert-only merge delivering each trigger row as new data, "
+                    + "and ordered matched-delete/not-matched-insert/matched-update branches with "
+                    + "insert-remove IR-pair delivery to the merge listener and the named-window "
+                    + "create consumer (Java source regression-lib/src/main/java/com/espertech/esper/"
+                    + "regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java).";
+    private static final String JAVA_COMMIT = "9e1b9f1cc9117fea4bf33ab043762c045d73839c";
+    private static final String JAVA_SOURCE =
+            "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/"
+                    + "InfraNWTableOnMerge.java";
+
+    private static final String[] RUNTIME_IDS = {
+            "java-runtime-dbf13fb6d1ca3a37275a",
+            "java-runtime-df3d7a21bdd769f1acce",
+            "java-runtime-240cb61eabb22eb2a215",
+            "java-runtime-aaa45c95e95a919bd0c0"
+    };
+    private static final String[] EXECUTION_NAMES = {
+            "InfraOnMergeSimpleInsert{namedWindow=true}",
+            "InfraOnMergeSimpleInsert{namedWindow=false}",
+            "InfraOnMergeMatchNoMatch{namedWindow=true}",
+            "InfraOnMergeMatchNoMatch{namedWindow=false}"
+    };
+    private static final String[] STATIC_IDS = {
+            "java-0fdb4e6490ae6d9e9103",
+            "java-0fdb4e6490ae6d9e9103",
+            "java-5f5d122bcbf66d59da6c",
+            "java-5f5d122bcbf66d59da6c"
+    };
+    private static final String[] CASES = {
+            "simple-nw", "simple-table", "matchnomatch-nw", "matchnomatch-table"
+    };
+    private static final int[] ORDINALS = {0, 1, 2, 3};
+    private static final String[] CASE_OBSERVATIONS = {
+            "listener+iterator; insert-only merge delivering each trigger row as new data over the "
+                    + "keepall named window",
+            "listener+iterator; same insert-only merge over the primary-key table",
+            "listener+iterator; ordered matched-delete/not-matched-insert/matched-update branches "
+                    + "over the keepall named window with create-statement IR pairs",
+            "listener+iterator; same ordered merge branches over the primary-key table with no "
+                    + "create-statement deliveries"
+    };
+
+    // Verbatim transcriptions of InfraNWTableOnMerge lines 364-366, 370,
+    // 410-411 and 415-423, including the missing space in "select *when"
+    // of the named-window match/no-match merge and the trailing space in
+    // the table variant's explicit-column insert.
+    private static final String EPL_CREATE_SIMPLE_NW =
+            "@name('create') @public create window MyInfra#keepall() as (p0 string, p1 int)";
+    private static final String EPL_CREATE_SIMPLE_TABLE =
+            "@name('create') @public create table MyInfra(p0 string primary key, p1 int)";
+    private static final String EPL_MERGE_SIMPLE =
+            "@name('merge') on SupportBean sb merge MyInfra insert select theString as p0, "
+                    + "intPrimitive as p1";
+    private static final String EPL_CREATE_MATCH_NW =
+            "@name('create') @public create window MyInfra.win:keepall() as SupportBean";
+    private static final String EPL_CREATE_MATCH_TABLE =
+            "@name('create') @public create table MyInfra(theString string primary key, "
+                    + "intPrimitive int)";
+    private static final String EPL_MERGE_MATCH_NW =
+            "@name('merge') on SupportBean sb merge MyInfra mw where sb.theString = mw.theString "
+                    + "when matched and sb.intPrimitive < 0 then delete "
+                    + "when not matched and intPrimitive > 0 then insert select *"
+                    + "when matched and sb.intPrimitive > 0 then update set intPrimitive = "
+                    + "sb.intPrimitive + mw.intPrimitive";
+    private static final String EPL_MERGE_MATCH_TABLE =
+            "@name('merge') on SupportBean sb merge MyInfra mw where sb.theString = mw.theString "
+                    + "when matched and sb.intPrimitive < 0 then delete "
+                    + "when not matched and intPrimitive > 0 then insert select theString, "
+                    + "intPrimitive "
+                    + "when matched and sb.intPrimitive > 0 then update set intPrimitive = "
+                    + "sb.intPrimitive + mw.intPrimitive";
+
+    private static final String[] CASE_EPLS = {
+            EPL_CREATE_SIMPLE_NW, EPL_CREATE_SIMPLE_TABLE,
+            EPL_CREATE_MATCH_NW, EPL_CREATE_MATCH_TABLE
+    };
+    private static final String[] SIMPLE_FIELDS = {"p0", "p1"};
+    private static final String[] INFRA_FIELDS = {"theString", "intPrimitive"};
+
+    // Statement names each case attaches a listener to, matching the Java
+    // executions: every case listens on 'merge'; the MatchNoMatch cases
+    // also listen on 'create' (the table listener never fires).
+    private static final Map<String, Set<String>> LISTENED_STATEMENTS = new HashMap<>();
+    static {
+        LISTENED_STATEMENTS.put("simple-nw", new HashSet<>(Arrays.asList("merge")));
+        LISTENED_STATEMENTS.put("simple-table", new HashSet<>(Arrays.asList("merge")));
+        LISTENED_STATEMENTS.put("matchnomatch-nw",
+                new HashSet<>(Arrays.asList("create", "merge")));
+        LISTENED_STATEMENTS.put("matchnomatch-table",
+                new HashSet<>(Arrays.asList("create", "merge")));
+    }
+    private static final int EXPECTED_STEPS = 52;
+    private static final int EXPECTED_RECORDS = 39;
+
+    private InfraNWTableOnMergeScenarioOracle() {
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length != 1) {
+            throw new IllegalArgumentException(
+                    "usage: InfraNWTableOnMergeScenarioOracle <scenario.json>");
+        }
+        JsonValue parsed = Json.parse(Files.readString(Path.of(args[0]), StandardCharsets.UTF_8));
+        if (!parsed.isObject()) {
+            throw new IllegalArgumentException("scenario must be a JSON object");
+        }
+        rejectDuplicateKeys(parsed);
+        JsonObject scenario = parsed.asObject();
+        validateScenario(scenario);
+        JsonArray allSteps = array(scenario.get("steps"), "steps");
+
+        Configuration configuration = new Configuration();
+        configuration.getCommon().addEventType(SupportBean.class);
+        configuration.getRuntime().getThreading().setInternalTimerEnabled(false);
+        configuration.getRuntime().getExceptionHandling().addClass(
+                HarnessRethrowExceptionHandlerFactory.class);
+        configuration.getRuntime().getExceptionHandling().setUndeployRethrowPolicy(
+                UndeployRethrowPolicy.RETHROW_FIRST);
+        EPRuntime runtime = EPRuntimeProvider.getRuntime(ID + "-oracle", configuration);
+        runtime.getEventService().advanceTime(0);
+
+        JsonArray records = new JsonArray();
+        try {
+            for (String caseName : CASES) {
+                runCase(caseName, configuration, runtime, allSteps, records);
+            }
+        } finally {
+            try {
+                runtime.getDeploymentService().undeployAll();
+            } finally {
+                runtime.destroy();
+            }
+        }
+        if (records.size() != EXPECTED_RECORDS) {
+            throw new IllegalStateException("expected " + EXPECTED_RECORDS + " records, got "
+                    + records.size());
+        }
+
+        JsonObject root = new JsonObject();
+        root.add("version", VERSION);
+        root.add("id", ID);
+        root.add("javaCommit", JAVA_COMMIT);
+        root.add("java", System.getProperty("java.version"));
+        root.add("records", records);
+        System.out.println(root.toString());
+    }
+
+    /**
+     * Replays one case's steps on the shared runtime; sequences restart per
+     * case.  Deploys register their statement under the step label so
+     * deployed markers and snapshots can resolve it.  Listeners attach to
+     * the named statements the Java execution listens on for that case.
+     * The SimpleInsert cases additionally assert the merge statement type
+     * is ON_MERGE, mirroring env.assertStatement in the Java execution.
+     */
+    private static void runCase(String caseName, Configuration configuration, EPRuntime runtime,
+                                JsonArray allSteps, JsonArray records) throws Exception {
+        Map<String, Integer> sequences = new HashMap<>();
+        Map<String, EPStatement> statements = new HashMap<>();
+        Set<String> listened = LISTENED_STATEMENTS.get(caseName);
+        boolean inCase = false;
+        for (JsonValue stepValue : allSteps) {
+            JsonObject step = stepValue.asObject();
+            String operation = string(step, "op");
+            if ("case".equals(operation)) {
+                inCase = caseName.equals(string(step, "case"));
+                continue;
+            }
+            if (!inCase) {
+                continue;
+            }
+            switch (operation) {
+                case "deploy": {
+                    String label = string(step, "statement");
+                    String epl = string(step, "epl");
+                    CompilerArguments compilerArgs = new CompilerArguments(runtime.getRuntimePath());
+                    EPCompiled compiled = EPCompilerProvider.getCompiler()
+                            .compile(epl, compilerArgs);
+                    EPDeployment deployment = runtime.getDeploymentService()
+                            .deploy(compiled, new DeploymentOptions());
+                    EPStatement[] deployed = deployment.getStatements();
+                    if (deployed.length != 1) {
+                        throw new IllegalStateException("deployment of " + label + " has "
+                                + deployed.length + " statements, want 1");
+                    }
+                    EPStatement statement = deployed[0];
+                    if ("merge".equals(statement.getName())
+                            && (caseName.equals("simple-nw") || caseName.equals("simple-table"))) {
+                        // InfraOnMergeSimpleInsert line 372: assertStatement
+                        // pins STATEMENTTYPE == ON_MERGE; oracle-internal,
+                        // unrecorded.
+                        Object statementType = statement.getProperty(StatementProperty.STATEMENTTYPE);
+                        if (statementType != StatementType.ON_MERGE) {
+                            throw new IllegalStateException("merge statement type is "
+                                    + statementType + ", want ON_MERGE");
+                        }
+                    }
+                    if (listened.contains(statement.getName())) {
+                        statement.addListener(listener(caseName, sequences, records, runtime));
+                    }
+                    statements.put(label, statement);
+                    break;
+                }
+                case "deployed": {
+                    String label = string(step, "statement");
+                    if (!statements.containsKey(label)) {
+                        throw new IllegalStateException(
+                                "deployed marker for unknown statement " + label);
+                    }
+                    int sequence = sequences.merge(label + ":deployed", 1, Integer::sum);
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "deployed");
+                    record.add("statement", label);
+                    record.add("sequence", sequence);
+                    record.add("time", Instant.ofEpochMilli(
+                            runtime.getEventService().getCurrentTime()).toString());
+                    records.add(record);
+                    break;
+                }
+                case "send":
+                    sendEvent(runtime, string(step, "eventType"),
+                            object(step.get("payload"), "payload"));
+                    break;
+                case "snapshot": {
+                    String label = string(step, "statement");
+                    EPStatement statement = statements.get(label);
+                    if (statement == null) {
+                        throw new IllegalStateException("snapshot statement " + label
+                                + " was not deployed in case " + caseName);
+                    }
+                    String[] fields = stringArray(step.get("fields"), "fields");
+                    JsonArray rows = new JsonArray();
+                    for (Iterator<EventBean> iterator = statement.iterator(); iterator.hasNext(); ) {
+                        rows.add(projectedRow(iterator.next(), fields));
+                    }
+                    if ("any".equals(string(step, "mode"))) {
+                        sortRowsCanonical(rows);
+                    }
+                    JsonObject record = new JsonObject();
+                    record.add("case", caseName);
+                    record.add("operation", "snapshot");
+                    record.add("statement", statement.getName());
+                    record.add("sequence", 0);
+                    record.add("time", Instant.ofEpochMilli(
+                            runtime.getEventService().getCurrentTime()).toString());
+                    if (rows.size() > 0) {
+                        record.add("new", rows);
+                    }
+                    records.add(record);
+                    break;
+                }
+                case "undeploy-all":
+                    runtime.getDeploymentService().undeployAll();
+                    statements.clear();
+                    break;
+                default:
+                    throw new IllegalStateException("unsupported step op " + operation);
+            }
+        }
+        runtime.getDeploymentService().undeployAll();
+        statements.clear();
+    }
+
+    /**
+     * Listener emitting one record per invocation with a per-statement
+     * sequence counter; new and old arrays render only when non-empty.
+     * This mirrors assertPropsNew/assertPropsIRPair/assertPropsOld: the
+     * merge statement receives the inserted row as new data, the updated
+     * row as an IR pair and the deleted row as old data, and the named
+     * window's own 'create' statement receives the same IR pairs plus
+     * new-rows on inserts (named window only).
+     */
+    private static UpdateListener listener(String caseName, Map<String, Integer> sequences,
+                                           JsonArray records, EPRuntime runtime) {
+        return (newEvents, oldEvents, statement, ignoredRuntime) -> {
+            int sequence = sequences.merge(statement.getName(), 1, Integer::sum);
+            JsonObject record = new JsonObject();
+            record.add("case", caseName);
+            record.add("operation", "listener");
+            record.add("statement", statement.getName());
+            record.add("sequence", sequence);
+            record.add("time",
+                    Instant.ofEpochMilli(runtime.getEventService().getCurrentTime()).toString());
+            JsonArray newRows = rows(newEvents);
+            JsonArray oldRows = rows(oldEvents);
+            if (newRows.size() > 0) {
+                record.add("new", newRows);
+            }
+            if (oldRows.size() > 0) {
+                record.add("old", oldRows);
+            }
+            records.add(record);
+        };
+    }
+
+    /** Canonical row rendering with sorted property names for a stable field order. */
+    private static JsonArray rows(EventBean[] events) {
+        JsonArray array = new JsonArray();
+        if (events == null) {
+            return array;
+        }
+        for (EventBean event : events) {
+            JsonObject item = new JsonObject();
+            item.add("kind", "row");
+            String[] names = event.getEventType().getPropertyNames().clone();
+            Arrays.sort(names);
+            JsonObject fields = new JsonObject();
+            for (String name : names) {
+                fields.add(name, normalize(event.get(name)));
+            }
+            item.add("fields", fields);
+            array.add(item);
+        }
+        return array;
+    }
+
+    /** Row projected to exactly the fields the step's assertions read,
+     * with property names sorted alphabetically so the canonical "any"-mode
+     * ordering matches the Go runner's fields-JSON sort. */
+    private static JsonObject projectedRow(EventBean event, String[] fields) {
+        JsonObject item = new JsonObject();
+        item.add("kind", "row");
+        String[] names = fields.clone();
+        Arrays.sort(names);
+        JsonObject values = new JsonObject();
+        for (String field : names) {
+            values.add(field, normalize(event.get(field)));
+        }
+        item.add("fields", values);
+        return item;
+    }
+
+    /**
+     * Canonical row ordering for "any"-mode snapshots, mirroring the Go
+     * runner's sortRowsCanonical freeze of Java's assertEqualsAnyOrder: rows
+     * sort by their fields JSON (keys already sorted alphabetically).
+     */
+    private static void sortRowsCanonical(JsonArray rows) {
+        List<JsonValue> items = new ArrayList<>();
+        for (JsonValue row : rows) {
+            items.add(row);
+        }
+        items.sort(Comparator.comparing(row -> row.asObject().get("fields").toString()));
+        while (rows.size() > 0) {
+            rows.remove(0);
+        }
+        for (JsonValue item : items) {
+            rows.add(item);
+        }
+    }
+
+    /**
+     * Scalar normalization: strings passthrough, integral numbers as JSON
+     * numbers, other numbers as doubles, boolean, and null as the tagged
+     * {"state":"null"} object.
+     */
+    private static JsonValue normalize(Object value) {
+        if (value == null) {
+            JsonObject nullObj = new JsonObject();
+            nullObj.add("state", "null");
+            return nullObj;
+        }
+        if (value instanceof Integer || value instanceof Long || value instanceof Short
+                || value instanceof Byte) {
+            return Json.value(((Number) value).longValue());
+        }
+        if (value instanceof Number) {
+            return Json.value(((Number) value).doubleValue());
+        }
+        if (value instanceof Boolean) {
+            return Json.value((Boolean) value);
+        }
+        return Json.value(String.valueOf(value));
+    }
+
+    private static void sendEvent(EPRuntime runtime, String type, JsonObject payload) {
+        if ("SupportBean".equals(type)) {
+            SupportBean bean = new SupportBean();
+            JsonValue theString = payload.get("theString");
+            bean.setTheString(theString == null || theString.isNull()
+                    ? null : theString.asString());
+            bean.setIntPrimitive((int) longInteger(payload.get("intPrimitive"), "intPrimitive"));
+            runtime.getEventService().sendEventBean(bean, type);
+            return;
+        }
+        throw new IllegalArgumentException("unknown event type: " + type);
+    }
+
+    private static void validateScenario(JsonObject scenario) {
+        requireFields(scenario, "version", "id", "description", "javaCommit", "javaSource",
+                "javaRuntimes", "javaNames", "javaStaticIds", "javaFlags", "cases", "steps");
+        if (!VERSION.equals(string(scenario, "version"))
+                || !ID.equals(string(scenario, "id"))
+                || !DESCRIPTION.equals(string(scenario, "description"))
+                || !JAVA_COMMIT.equals(string(scenario, "javaCommit"))
+                || !JAVA_SOURCE.equals(string(scenario, "javaSource"))) {
+            throw new IllegalArgumentException("scenario metadata is not pinned");
+        }
+        validateStringArray(scenario.get("javaRuntimes"), RUNTIME_IDS, "javaRuntimes");
+        validateStringArray(scenario.get("javaNames"), EXECUTION_NAMES, "javaNames");
+        validateStringArray(scenario.get("javaStaticIds"), STATIC_IDS, "javaStaticIds");
+        validateStringArray(scenario.get("javaFlags"), new String[0], "javaFlags");
+
+        JsonArray cases = array(scenario.get("cases"), "cases");
+        if (cases.size() != CASES.length) {
+            throw new IllegalArgumentException("scenario must contain exactly "
+                    + CASES.length + " cases");
+        }
+        for (int index = 0; index < cases.size(); index++) {
+            JsonObject definition = object(cases.get(index), "case definition");
+            requireFields(definition, "case", "ordinal", "runtimeId", "executionName",
+                    "observation", "epl");
+            if (!CASES[index].equals(string(definition, "case"))
+                    || integer(definition, "ordinal") != ORDINALS[index]
+                    || !RUNTIME_IDS[index].equals(string(definition, "runtimeId"))
+                    || !EXECUTION_NAMES[index].equals(string(definition, "executionName"))
+                    || !CASE_OBSERVATIONS[index].equals(string(definition, "observation"))
+                    || !CASE_EPLS[index].equals(string(definition, "epl"))) {
+                throw new IllegalArgumentException("case metadata is not pinned at index " + index);
+            }
+        }
+
+        JsonArray steps = array(scenario.get("steps"), "steps");
+        if (steps.size() != EXPECTED_STEPS) {
+            throw new IllegalArgumentException("scenario must contain exactly " + EXPECTED_STEPS
+                    + " steps, got " + steps.size());
+        }
+        int offset = 0;
+        offset = validateSimpleCase(steps, offset, "simple-nw", EPL_CREATE_SIMPLE_NW, true);
+        offset = validateSimpleCase(steps, offset, "simple-table", EPL_CREATE_SIMPLE_TABLE, false);
+        offset = validateMatchNoMatchCase(steps, offset, "matchnomatch-nw", EPL_CREATE_MATCH_NW,
+                EPL_MERGE_MATCH_NW, true);
+        offset = validateMatchNoMatchCase(steps, offset, "matchnomatch-table",
+                EPL_CREATE_MATCH_TABLE, EPL_MERGE_MATCH_TABLE, false);
+        if (offset != steps.size()) {
+            throw new IllegalArgumentException("scenario steps contain an unexpected suffix");
+        }
+    }
+
+    /**
+     * Exact step sequence of InfraOnMergeSimpleInsert (lines 359-388):
+     * create and merge deploy before the two SupportBean sends, the first
+     * iterator read in order and the second any-order; milestone(0) and
+     * milestone(1) are HA checkpoint no-ops that emit no steps.
+     */
+    private static int validateSimpleCase(JsonArray steps, int offset, String caseName,
+                                          String createEpl, boolean namedWindow) {
+        validateCaseMarker(steps.get(offset++), caseName);
+        offset = validateDeployPair(steps, offset, caseName, "create", createEpl);
+        offset = validateDeployPair(steps, offset, caseName, "merge", EPL_MERGE_SIMPLE);
+        validateBeanSend(steps.get(offset++), caseName, "E1", 1);
+        validateSnapshot(steps.get(offset++), caseName, "create",
+                namedWindow ? "ordered" : "any", SIMPLE_FIELDS);
+        validateBeanSend(steps.get(offset++), caseName, "E2", 2);
+        validateSnapshot(steps.get(offset++), caseName, "create", "any", SIMPLE_FIELDS);
+        validateUndeployAll(steps.get(offset++), caseName);
+        return offset;
+    }
+
+    /**
+     * Exact step sequence of InfraOnMergeMatchNoMatch (lines 404-455):
+     * create and merge deploy, the silent E1(0) send, the E2 insert /
+     * update / delete sends each followed by an iterator read, and the
+     * E3 insert-then-update pair before undeployAll; milestone(0..4) are
+     * HA checkpoint no-ops that emit no steps.
+     */
+    private static int validateMatchNoMatchCase(JsonArray steps, int offset, String caseName,
+                                                String createEpl, String mergeEpl,
+                                                boolean namedWindow) {
+        String mode = namedWindow ? "ordered" : "any";
+        validateCaseMarker(steps.get(offset++), caseName);
+        offset = validateDeployPair(steps, offset, caseName, "create", createEpl);
+        offset = validateDeployPair(steps, offset, caseName, "merge", mergeEpl);
+        validateBeanSend(steps.get(offset++), caseName, "E1", 0);
+        validateBeanSend(steps.get(offset++), caseName, "E2", 2);
+        validateSnapshot(steps.get(offset++), caseName, "create", mode, INFRA_FIELDS);
+        validateBeanSend(steps.get(offset++), caseName, "E2", 10);
+        validateSnapshot(steps.get(offset++), caseName, "create", mode, INFRA_FIELDS);
+        validateBeanSend(steps.get(offset++), caseName, "E2", -1);
+        validateSnapshot(steps.get(offset++), caseName, "create", mode, INFRA_FIELDS);
+        validateBeanSend(steps.get(offset++), caseName, "E3", 3);
+        validateBeanSend(steps.get(offset++), caseName, "E3", 4);
+        validateSnapshot(steps.get(offset++), caseName, "create", mode, INFRA_FIELDS);
+        validateUndeployAll(steps.get(offset++), caseName);
+        return offset;
+    }
+
+    private static int validateDeployPair(JsonArray steps, int offset, String caseName,
+                                          String statement, String epl) {
+        validateDeploy(steps.get(offset++), caseName, statement, epl);
+        validateDeployed(steps.get(offset++), caseName, statement);
+        return offset;
+    }
+
+    private static void validateCaseMarker(JsonValue value, String expectedCase) {
+        JsonObject marker = object(value, "case marker");
+        requireFields(marker, "op", "case");
+        if (!"case".equals(string(marker, "op")) || !expectedCase.equals(string(marker, "case"))) {
+            throw new IllegalArgumentException("case marker is not pinned for " + expectedCase);
+        }
+    }
+
+    private static void validateDeploy(JsonValue value, String caseName, String expectedStatement,
+                                       String expectedEpl) {
+        JsonObject step = object(value, "deploy step");
+        requireFields(step, "op", "case", "statement", "epl");
+        if (!"deploy".equals(string(step, "op"))
+                || !caseName.equals(string(step, "case"))
+                || !expectedStatement.equals(string(step, "statement"))
+                || !expectedEpl.equals(string(step, "epl"))) {
+            throw new IllegalArgumentException("deploy step is not pinned for " + caseName + "/"
+                    + expectedStatement);
+        }
+    }
+
+    private static void validateDeployed(JsonValue value, String caseName,
+                                         String expectedStatement) {
+        JsonObject step = object(value, "deployed step");
+        requireFields(step, "op", "case", "statement");
+        if (!"deployed".equals(string(step, "op"))
+                || !caseName.equals(string(step, "case"))
+                || !expectedStatement.equals(string(step, "statement"))) {
+            throw new IllegalArgumentException("deployed step is not pinned for " + caseName + "/"
+                    + expectedStatement);
+        }
+    }
+
+    private static void validateSnapshot(JsonValue value, String caseName, String expectedStatement,
+                                         String expectedMode, String[] expectedFields) {
+        JsonObject step = object(value, "snapshot step");
+        requireFields(step, "op", "case", "statement", "mode", "fields");
+        if (!"snapshot".equals(string(step, "op"))
+                || !caseName.equals(string(step, "case"))
+                || !expectedStatement.equals(string(step, "statement"))
+                || !expectedMode.equals(string(step, "mode"))) {
+            throw new IllegalArgumentException("snapshot step is not pinned for " + caseName + "/"
+                    + expectedStatement);
+        }
+        validateStringArray(step.get("fields"), expectedFields,
+                "snapshot fields for " + caseName);
+    }
+
+    private static void validateBeanSend(JsonValue value, String caseName, String expectedString,
+                                         long expectedIntPrimitive) {
+        JsonObject step = object(value, "SupportBean step");
+        requireFields(step, "op", "case", "eventType", "payload");
+        if (!"send".equals(string(step, "op"))
+                || !caseName.equals(string(step, "case"))
+                || !"SupportBean".equals(string(step, "eventType"))) {
+            throw new IllegalArgumentException("SupportBean step is not pinned for " + caseName);
+        }
+        JsonObject payload = object(step.get("payload"), "SupportBean payload");
+        requireFields(payload, "theString", "intPrimitive");
+        if (!expectedString.equals(string(payload, "theString"))
+                || longInteger(payload.get("intPrimitive"), "intPrimitive") != expectedIntPrimitive) {
+            throw new IllegalArgumentException("SupportBean payload is not pinned for " + caseName);
+        }
+    }
+
+    private static void validateUndeployAll(JsonValue value, String caseName) {
+        JsonObject step = object(value, "undeploy-all step");
+        requireFields(step, "op", "case");
+        if (!"undeploy-all".equals(string(step, "op"))
+                || !caseName.equals(string(step, "case"))) {
+            throw new IllegalArgumentException("undeploy-all step is not pinned for " + caseName);
+        }
+    }
+
+    private static void rejectDuplicateKeys(JsonValue value) {
+        if (value.isObject()) {
+            Set<String> names = new HashSet<>();
+            for (Member member : value.asObject()) {
+                if (!names.add(member.getName())) {
+                    throw new IllegalArgumentException("duplicate JSON object key: " + member.getName());
+                }
+                rejectDuplicateKeys(member.getValue());
+            }
+        } else if (value.isArray()) {
+            for (JsonValue item : value.asArray()) {
+                rejectDuplicateKeys(item);
+            }
+        }
+    }
+
+    private static void requireFields(JsonObject object, String... expectedNames) {
+        if (object == null || object.size() != expectedNames.length
+                || !new HashSet<>(object.names()).equals(new HashSet<>(Arrays.asList(expectedNames)))) {
+            throw new IllegalArgumentException("JSON object has unexpected fields");
+        }
+    }
+
+    private static JsonObject object(JsonValue value, String label) {
+        if (value == null || !value.isObject()) {
+            throw new IllegalArgumentException(label + " must be a JSON object");
+        }
+        return value.asObject();
+    }
+
+    private static JsonArray array(JsonValue value, String label) {
+        if (value == null || !value.isArray()) {
+            throw new IllegalArgumentException(label + " must be a JSON array");
+        }
+        return value.asArray();
+    }
+
+    private static String string(JsonObject object, String name) {
+        JsonValue value = object.get(name);
+        if (!(value instanceof JsonString)) {
+            throw new IllegalArgumentException(name + " must be a JSON string");
+        }
+        return value.asString();
+    }
+
+    private static int integer(JsonObject object, String name) {
+        long value = longInteger(object.get(name), name);
+        if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(name + " is outside the Java int range");
+        }
+        return (int) value;
+    }
+
+    private static long longInteger(JsonValue value, String label) {
+        if (!(value instanceof JsonNumber)) {
+            throw new IllegalArgumentException(label + " must be a JSON integer");
+        }
+        String text = value.toString();
+        try {
+            return Long.parseLong(text, 10);
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(label + " is outside the Java long range", ex);
+        }
+    }
+
+    private static String[] stringArray(JsonValue value, String label) {
+        JsonArray items = array(value, label);
+        String[] names = new String[items.size()];
+        for (int index = 0; index < items.size(); index++) {
+            JsonValue item = items.get(index);
+            if (!(item instanceof JsonString)) {
+                throw new IllegalArgumentException(label + " must be a string array");
+            }
+            names[index] = item.asString();
+        }
+        return names;
+    }
+
+    private static void validateStringArray(JsonValue value, String[] expected, String label) {
+        JsonArray actual = array(value, label);
+        if (actual.size() != expected.length) {
+            throw new IllegalArgumentException(label + " length is not pinned");
+        }
+        for (int index = 0; index < expected.length; index++) {
+            JsonValue item = actual.get(index);
+            if (!(item instanceof JsonString) || !expected[index].equals(item.asString())) {
+                throw new IllegalArgumentException(label + " mismatch at index " + index);
+            }
+        }
+    }
+
+    /** Mirrors SupportExceptionHandlerFactoryRethrow from the regression harness. */
+    public static class HarnessRethrowExceptionHandlerFactory implements ExceptionHandlerFactory {
+        @Override
+        public ExceptionHandler getHandler(ExceptionHandlerFactoryContext context) {
+            return handlerContext -> {
+                throw new RuntimeException("Unexpected exception in statement '"
+                        + handlerContext.getStatementName() + "': "
+                        + handlerContext.getThrowable().getMessage(),
+                        handlerContext.getThrowable());
+            };
+        }
+    }
+}
