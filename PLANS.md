@@ -156,7 +156,29 @@ Active: Draft 4.481 ('infra-nwtable-on-merge-insert-other-stream').
   (ParityReview481): PASS all nine areas; one P3 latent note (composite-PK lookup vs
   name-only predicate — forced by MergeIntoTableWhen's one-key-per-PK-column API,
   observably identical for the pinned single-send scenario).
-  Committed and pushed as a2f749243.
+  Committed and pushed as a2f749243. Draft 4.482 committed and pushed as 5cc990edc.
+
+## Current work unit
+Active: Draft 4.483 ('infra-nwtable-on-merge-pattern-nowhere').
+
+- [x] Contract frozen (.omp/contract-483.md) by NextJavaContract483 + NextGoSurface483:
+  InfraNWTableOnMerge ords 26-31 (InfraPatternMultimatch every-A-then-B pattern merge
+  via the route-stream workaround; InfraNoWhereClause no-where merge over keepall nw /
+  unkeyed table; InfraMultipleInsert four ordered not-matched insert clauses). Runtime
+  IDs java-runtime-d28146beedb9cfdf9dbb / -ac7258306c8be9b66f8f / -0dc6b8eb05a1d3989b23 /
+  -c6f6bda40f34d29acb8c / -2c4851ea026cc835d39b / -f075aa28d64b1ae78d2e. Asset-only.
+- [x] Assets (OnMergePatternNoWhereAssets agent): oracle + scenario (6 cases / 102
+  steps) + runner + run.go wiring. Zero shared-core changes confirmed.
+- [x] Java trace regenerated (50 records); `-mode infra-nwtable-on-merge-pattern-nowhere-diff`
+  reports status passing / 0 differences; Go trace checked in.
+- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
+  case.infra-nwtable-on-merge-pattern-nowhere (722 cases / 346 DV / 1331 DV runtime
+  IDs / 3881 associations); capability trigger.table-named-window DV list extended.
+- [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace mutations,
+  checked-in evidence, 6 raw-scenario mutations, runtime-ID mapping) all green.
+- [x] make check GREEN (parity 80s, internal/esper 71s); independent parity review
+  (ParityReview483): PASS all nine areas; two P3 non-defects (doc-only EPL constant
+  matches sibling convention; latent trigger.go note).
 
 ## Current work unit
 Active: Draft 4.482 ('infra-nwtable-on-merge-multiaction').

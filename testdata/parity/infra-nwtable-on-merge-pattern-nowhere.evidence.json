@@ -1,0 +1,1969 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-d28146beedb9cfdf9dbb",
+    "java-runtime-ac7258306c8be9b66f8f",
+    "java-runtime-0dc6b8eb05a1d3989b23",
+    "java-runtime-c6f6bda40f34d29acb8c",
+    "java-runtime-2c4851ea026cc835d39b",
+    "java-runtime-f075aa28d64b1ae78d2e"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+  ],
+  "javaExecutions": [
+    "InfraPatternMultimatch{namedWindow=true}",
+    "InfraPatternMultimatch{namedWindow=false}",
+    "InfraNoWhereClause{namedWindow=true}",
+    "InfraNoWhereClause{namedWindow=false}",
+    "InfraMultipleInsert{namedWindow=true}",
+    "InfraMultipleInsert{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-pattern-nowhere",
+    "steps": [
+      {
+        "op": "case",
+        "case": "patternmultimatch-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "patternmultimatch-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfraPM#keepall as (c1 string, c2 string)"
+      },
+      {
+        "op": "deployed",
+        "case": "patternmultimatch-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "patternmultimatch-nw",
+        "statement": "merge",
+        "epl": "@name('Merge') on pattern[every a=SupportBean(theString like 'A%') -\u003e b=SupportBean(theString like 'B%', intPrimitive = a.intPrimitive)] me merge MyInfraPM mw where me.a.theString = mw.c1 and me.b.theString = mw.c2 when not matched then insert select me.a.theString as c1, me.b.theString as c2 "
+      },
+      {
+        "op": "deployed",
+        "case": "patternmultimatch-nw",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "patternmultimatch-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A4",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "patternmultimatch-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "patternmultimatch-nw"
+      },
+      {
+        "op": "case",
+        "case": "patternmultimatch-table"
+      },
+      {
+        "op": "deploy",
+        "case": "patternmultimatch-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfraPM as (c1 string primary key, c2 string primary key)"
+      },
+      {
+        "op": "deployed",
+        "case": "patternmultimatch-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "patternmultimatch-table",
+        "statement": "merge",
+        "epl": "@name('Merge') on pattern[every a=SupportBean(theString like 'A%') -\u003e b=SupportBean(theString like 'B%', intPrimitive = a.intPrimitive)] me merge MyInfraPM mw where me.a.theString = mw.c1 and me.b.theString = mw.c2 when not matched then insert select me.a.theString as c1, me.b.theString as c2 "
+      },
+      {
+        "op": "deployed",
+        "case": "patternmultimatch-table",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A2",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "patternmultimatch-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A3",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "A4",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "patternmultimatch-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "B2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "patternmultimatch-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "patternmultimatch-table"
+      },
+      {
+        "op": "case",
+        "case": "nowhere-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "nowhere-nw",
+        "statement": "module",
+        "epl": "@public @buseventtype create schema MyEvent as (in1 string, in2 int);\ncreate schema MySchema as (col1 string, col2 int);\n@name('create') @public create window MyInfraNWC#keepall as MySchema;\non SupportBean_A delete from MyInfraNWC;\non MyEvent me merge MyInfraNWC mw when not matched and me.in1 like \"A%\" then insert(col1, col2) select me.in1, me.in2 when not matched and me.in1 like \"B%\" then insert select me.in1 as col1, me.in2 as col2 when matched and me.in1 like \"C%\" then update set col1='Z', col2=-1 when not matched then insert select \"x\" || me.in1 || \"x\" as col1, me.in2 * -1 as col2;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-nw",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-nw",
+        "statement": "schema-myschema"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-nw",
+        "statement": "delete"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-nw",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "E1",
+          "in2": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "A1",
+          "in2": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "Ax1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "A1",
+          "in2": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "B1",
+          "in2": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-nw",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "Ax1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "B1",
+          "in2": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "C",
+          "in2": 6
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-nw",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nowhere-nw"
+      },
+      {
+        "op": "case",
+        "case": "nowhere-table"
+      },
+      {
+        "op": "deploy",
+        "case": "nowhere-table",
+        "statement": "module",
+        "epl": "@public @buseventtype create schema MyEvent as (in1 string, in2 int);\ncreate schema MySchema as (col1 string, col2 int);\n@name('create') @public create table MyInfraNWC (col1 string, col2 int);\non SupportBean_A delete from MyInfraNWC;\non MyEvent me merge MyInfraNWC mw when not matched and me.in1 like \"A%\" then insert(col1, col2) select me.in1, me.in2 when not matched and me.in1 like \"B%\" then insert select me.in1 as col1, me.in2 as col2 when matched and me.in1 like \"C%\" then update set col1='Z', col2=-1 when not matched then insert select \"x\" || me.in1 || \"x\" as col1, me.in2 * -1 as col2;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-table",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-table",
+        "statement": "schema-myschema"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-table",
+        "statement": "create"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-table",
+        "statement": "delete"
+      },
+      {
+        "op": "deployed",
+        "case": "nowhere-table",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "E1",
+          "in2": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "A1",
+          "in2": 3
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "Ax1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "A1",
+          "in2": 4
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "B1",
+          "in2": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-table",
+        "eventType": "SupportBean_A",
+        "payload": {
+          "id": "Ax1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "B1",
+          "in2": 5
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "nowhere-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "C",
+          "in2": 6
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "nowhere-table",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nowhere-table"
+      },
+      {
+        "op": "case",
+        "case": "multipleinsert-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "multipleinsert-nw",
+        "statement": "module",
+        "epl": "@public @buseventtype create schema MyEvent as (in1 string, in2 int);\ncreate schema MySchema as (col1 string, col2 int);\n@public create window MyInfraMI#keepall as MySchema;\n@name('Merge') on MyEvent merge MyInfraMI where col1=in1 when not matched and in1 like \"A%\" then insert(col1, col2) select in1, in2 when not matched and in1 like \"B%\" then insert select in1 as col1, in2 as col2 when not matched and in1 like \"C%\" then insert select \"Z\" as col1, -1 as col2 when not matched and in1 like \"D%\" then insert select \"x\"||in1||\"x\" as col1, in2*-1 as col2;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "multipleinsert-nw",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "multipleinsert-nw",
+        "statement": "schema-myschema"
+      },
+      {
+        "op": "deployed",
+        "case": "multipleinsert-nw",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "multipleinsert-nw",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "E1",
+          "in2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "A1",
+          "in2": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "B1",
+          "in2": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "C1",
+          "in2": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "D1",
+          "in2": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-nw",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "B1",
+          "in2": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multipleinsert-nw"
+      },
+      {
+        "op": "case",
+        "case": "multipleinsert-table"
+      },
+      {
+        "op": "deploy",
+        "case": "multipleinsert-table",
+        "statement": "module",
+        "epl": "@public @buseventtype create schema MyEvent as (in1 string, in2 int);\ncreate schema MySchema as (col1 string, col2 int);\n@public create table MyInfraMI (col1 string primary key, col2 int);\n@name('Merge') on MyEvent merge MyInfraMI where col1=in1 when not matched and in1 like \"A%\" then insert(col1, col2) select in1, in2 when not matched and in1 like \"B%\" then insert select in1 as col1, in2 as col2 when not matched and in1 like \"C%\" then insert select \"Z\" as col1, -1 as col2 when not matched and in1 like \"D%\" then insert select \"x\"||in1||\"x\" as col1, in2*-1 as col2;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "multipleinsert-table",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "multipleinsert-table",
+        "statement": "schema-myschema"
+      },
+      {
+        "op": "deployed",
+        "case": "multipleinsert-table",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "multipleinsert-table",
+        "statement": "merge"
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "E1",
+          "in2": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "A1",
+          "in2": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "B1",
+          "in2": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "C1",
+          "in2": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "D1",
+          "in2": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "multipleinsert-table",
+        "eventType": "MyEvent",
+        "payload": {
+          "in1": "B1",
+          "in2": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "multipleinsert-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-pattern-nowhere",
+    "records": [
+      {
+        "case": "patternmultimatch-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "patternmultimatch-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "patternmultimatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A1",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A2",
+              "c2": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "patternmultimatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A1",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A2",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A3",
+              "c2": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A4",
+              "c2": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "patternmultimatch-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "patternmultimatch-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "patternmultimatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A1",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A2",
+              "c2": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "patternmultimatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A1",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A2",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A3",
+              "c2": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A4",
+              "c2": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "schema-myschema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xE1x",
+              "col2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xE1x",
+              "col2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "B1",
+              "col2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "Z",
+              "col2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "schema-myschema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xE1x",
+              "col2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xE1x",
+              "col2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "B1",
+              "col2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "Z",
+              "col2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "deployed",
+        "statement": "schema-myschema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "B1",
+              "col2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "Z",
+              "col2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xD1x",
+              "col2": -4
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "deployed",
+        "statement": "schema-myschema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "B1",
+              "col2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "Z",
+              "col2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xD1x",
+              "col2": -4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-pattern-nowhere",
+    "records": [
+      {
+        "case": "patternmultimatch-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "patternmultimatch-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "patternmultimatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A1",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A2",
+              "c2": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "patternmultimatch-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A1",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A2",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A3",
+              "c2": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A4",
+              "c2": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "patternmultimatch-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "patternmultimatch-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "patternmultimatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A1",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A2",
+              "c2": "B1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "patternmultimatch-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A1",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A2",
+              "c2": "B1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A3",
+              "c2": "B2"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "A4",
+              "c2": "B2"
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "schema-myschema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xE1x",
+              "col2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xE1x",
+              "col2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "B1",
+              "col2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "Z",
+              "col2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "schema-myschema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "delete",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xE1x",
+              "col2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xE1x",
+              "col2": -2
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 4
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "B1",
+              "col2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "nowhere-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "Z",
+              "col2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "deployed",
+        "statement": "schema-myschema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "B1",
+              "col2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "Z",
+              "col2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-nw",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xD1x",
+              "col2": -4
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "deployed",
+        "statement": "schema-myschema",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "A1",
+              "col2": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "B1",
+              "col2": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "Z",
+              "col2": -1
+            }
+          }
+        ]
+      },
+      {
+        "case": "multipleinsert-table",
+        "operation": "listener",
+        "statement": "Merge",
+        "sequence": 4,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "col1": "xD1x",
+              "col2": -4
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

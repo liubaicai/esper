@@ -140,6 +140,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableOnMergeInsertStreamScenario(file)
 	} else if *mode == "infra-nwtable-on-merge-multiaction" || *mode == "infra-nwtable-on-merge-multiaction-diff" {
 		scenario, err = loadInfraNWTableOnMergeMultiactionScenario(file)
+	} else if *mode == "infra-nwtable-on-merge-pattern-nowhere" || *mode == "infra-nwtable-on-merge-pattern-nowhere-diff" {
+		scenario, err = loadInfraNWTableOnMergePatternNoWhereScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-silent" || *mode == "infra-namedwindow-on-delete-silent-diff" {
 		scenario, err = loadInfraNWOnDeleteSilentScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-indexes" || *mode == "infra-namedwindow-on-delete-indexes-diff" {
@@ -536,6 +538,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergeMultiactionJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableOnMergeMultiactionJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableOnMergeMultiactionJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-on-merge-pattern-nowhere" || *mode == "infra-nwtable-on-merge-pattern-nowhere-diff" {
+		trace, err := runInfraNWTableOnMergePatternNoWhereScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-on-merge-pattern-nowhere-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableOnMergePatternNoWhereJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergePatternNoWhereJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableOnMergePatternNoWhereJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableOnMergePatternNoWhereJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

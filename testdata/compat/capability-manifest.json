@@ -1542,7 +1542,13 @@
     "java-runtime-3034e5da517c1235da22",
     "java-runtime-cb5eefe84a486b090e53",
     "java-runtime-905164d98662721e5509",
-    "java-runtime-d3e1f3aa50c4375f657f"
+    "java-runtime-d3e1f3aa50c4375f657f",
+    "java-runtime-d28146beedb9cfdf9dbb",
+    "java-runtime-ac7258306c8be9b66f8f",
+    "java-runtime-0dc6b8eb05a1d3989b23",
+    "java-runtime-c6f6bda40f34d29acb8c",
+    "java-runtime-2c4851ea026cc835d39b",
+    "java-runtime-f075aa28d64b1ae78d2e"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46304,6 +46310,86 @@
    "notes": [
     "InfraNWTableOnMerge ords 20-25 born-differential: InfraMultiactionDeleteUpdate (six ordered matched actions where later where-clauses see earlier action results; delete-then-update ordering), InfraUpdateOrderOfFields (left-to-right UPDATE SET with initial.* pre-update reads), InfraSubqueryNotMatched (correlated subquery in not-matched insert). Zero shared-core changes."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-on-merge-pattern-nowhere",
+   "javaRuntimeIds": [
+    "java-runtime-d28146beedb9cfdf9dbb",
+    "java-runtime-ac7258306c8be9b66f8f",
+    "java-runtime-0dc6b8eb05a1d3989b23",
+    "java-runtime-c6f6bda40f34d29acb8c",
+    "java-runtime-2c4851ea026cc835d39b",
+    "java-runtime-f075aa28d64b1ae78d2e"
+   ],
+   "javaStaticIds": [
+    "java-74cbcb4f6ad520a0f3fd",
+    "java-74cbcb4f6ad520a0f3fd",
+    "java-2b5b9c17389359bc78f7",
+    "java-2b5b9c17389359bc78f7",
+    "java-227e4a044ce4b9c1de81",
+    "java-227e4a044ce4b9c1de81"
+   ],
+   "javaNames": [
+    "InfraPatternMultimatch{namedWindow=true}",
+    "InfraPatternMultimatch{namedWindow=false}",
+    "InfraNoWhereClause{namedWindow=true}",
+    "InfraNoWhereClause{namedWindow=false}",
+    "InfraMultipleInsert{namedWindow=true}",
+    "InfraMultipleInsert{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergePatternNoWhereDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergePatternNoWhereDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergePatternNoWhereDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergePatternNoWhereCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergePatternNoWhereRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergePatternNoWhereRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "table",
+    "named-window",
+    "merge",
+    "pattern",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-on-merge-pattern-nowhere.json",
+    "testdata/parity/infra-nwtable-on-merge-pattern-nowhere.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-pattern-nowhere.go.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-pattern-nowhere.evidence.json",
+    "tools/java-oracle/InfraNWTableOnMergePatternNoWhereScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-on-merge-pattern-nowhere.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-d28146beedb9cfdf9dbb",
+    "java-runtime-ac7258306c8be9b66f8f",
+    "java-runtime-0dc6b8eb05a1d3989b23",
+    "java-runtime-c6f6bda40f34d29acb8c",
+    "java-runtime-2c4851ea026cc835d39b",
+    "java-runtime-f075aa28d64b1ae78d2e"
+   ],
+   "notes": [
+    "InfraNWTableOnMerge ords 26-31 born-differential: InfraPatternMultimatch (every-A-then-B pattern merge via the route-stream workaround, composite-key where, one merge trigger per pending branch), InfraNoWhereClause (no-where merge over keepall nw / unkeyed table; not-matched fires only when target is empty; matched C% updates all rows), InfraMultipleInsert (four ordered not-matched insert clauses, first matching wins, merge listener insert-stream records). Zero shared-core changes."
+   ]
   }
  ],
  "mappings": [
@@ -49530,13 +49616,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-nwtable-on-merge-multiaction"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-nwtable-on-merge-pattern-nowhere"
   }
  ],
  "summary": {
-  "inventoriedCases": 721,
-  "implementedCases": 719,
-  "differentialVerifiedCases": 345,
-  "differentialVerifiedRuntimeIds": 1325,
+  "inventoriedCases": 722,
+  "implementedCases": 720,
+  "differentialVerifiedCases": 346,
+  "differentialVerifiedRuntimeIds": 1331,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49546,13 +49636,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3875,
+  "runtimeAssociationCount": 3881,
   "referencedJavaRuntimeIds": 3475,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 661,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 721,
+  "totalCases": 722,
   "totalCapabilities": 122
  }
 }
