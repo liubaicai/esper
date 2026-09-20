@@ -237,3 +237,129 @@ func (e *Engine) releaseTriggerImplicitIndexLocked(statement *Statement) {
 		window.unregisterImplicitIndex(statement.id, spec)
 	}
 }
+
+// mergeUpdatedColumns returns the target columns a table merge statement
+// assigns in its when-matched update actions. Esper forbids a later
+// create-unique-index over any of them while the merge stays deployed.
+func mergeUpdatedColumns(definition *triggerDefinition) []string {
+	if definition == nil || definition.action != triggerMergeTable {
+		return nil
+	}
+	var columns []string
+	for _, clause := range definition.merge {
+		if !clause.Matched {
+			continue
+		}
+		for _, action := range tableMergeClauseActions(clause) {
+			if action.Delete || action.InsertTarget != "" || action.InsertIntoTarget {
+				continue
+			}
+			for _, assignment := range action.Assignments {
+				if assignment.Wildcard || assignment.Column == "" {
+					continue
+				}
+				columns = append(columns, assignment.Column)
+			}
+		}
+	}
+	return columns
+}
+
+// registerMergeUpdatedColumnsLocked records the merge statement's
+// when-matched update columns on its target table at deploy. The caller
+// must hold e.mu.
+func (e *Engine) registerMergeUpdatedColumnsLocked(statement *Statement) {
+	if e == nil || statement == nil {
+		return
+	}
+	trigger := statement.plan.query.trigger
+	columns := mergeUpdatedColumns(trigger)
+	if len(columns) == 0 {
+		return
+	}
+	table, ok := e.ensureTableLockedInModule(trigger.moduleName, trigger.table)
+	if !ok || table == nil {
+		return
+	}
+	table.mergeUpdatedMu.Lock()
+	if table.mergeUpdatedColumns == nil {
+		table.mergeUpdatedColumns = make(map[string]int)
+	}
+	for _, column := range columns {
+		table.mergeUpdatedColumns[column]++
+	}
+	table.mergeUpdatedMu.Unlock()
+	statement.runtime.mergeUpdatedColumnsRegistered = true
+}
+
+// releaseMergeUpdatedColumnsLocked drops the merge statement's column
+// references at undeploy. The caller must hold e.mu. It is a no-op unless
+// registration actually ran, so a prepare failure before registration
+// cannot decrement a count it never added.
+func (e *Engine) releaseMergeUpdatedColumnsLocked(statement *Statement) {
+	if e == nil || statement == nil || !statement.runtime.mergeUpdatedColumnsRegistered {
+		return
+	}
+	statement.runtime.mergeUpdatedColumnsRegistered = false
+	trigger := statement.plan.query.trigger
+	columns := mergeUpdatedColumns(trigger)
+	if len(columns) == 0 {
+		return
+	}
+	table, ok := e.ensureTableLockedInModule(trigger.moduleName, trigger.table)
+	if !ok || table == nil {
+		return
+	}
+	table.mergeUpdatedMu.Lock()
+	for _, column := range columns {
+		if table.mergeUpdatedColumns[column] <= 1 {
+			delete(table.mergeUpdatedColumns, column)
+		} else {
+			table.mergeUpdatedColumns[column]--
+		}
+	}
+	table.mergeUpdatedMu.Unlock()
+}
+
+// validateMergeUniqueColumnsLocked re-checks a merge statement's
+// when-matched update columns against the live table's unique keys at
+// deploy. env.Build sees only the declared TableDefinition; a unique index
+// created later through Table.CreateIndex lands on the engine-side state,
+// so Java's compile-time check (which reads shared TableMetaData including
+// deployed create-index statements) maps to this deploy-time gate in Go.
+// The caller must hold e.mu.
+func (e *Engine) validateMergeUniqueColumnsLocked(statement *Statement) error {
+	if e == nil || statement == nil {
+		return nil
+	}
+	trigger := statement.plan.query.trigger
+	columns := mergeUpdatedColumns(trigger)
+	if len(columns) == 0 {
+		return nil
+	}
+	table, ok := e.ensureTableLockedInModule(trigger.moduleName, trigger.table)
+	if !ok || table == nil {
+		return nil
+	}
+	root := table.state
+	root.mu.Lock()
+	unique := make(map[string]struct{}, len(root.def.primaryKey))
+	for _, column := range root.def.primaryKey {
+		unique[column] = struct{}{}
+	}
+	for _, index := range root.def.indexes {
+		if !index.Unique {
+			continue
+		}
+		for _, column := range index.Columns {
+			unique[column] = struct{}{}
+		}
+	}
+	root.mu.Unlock()
+	for _, column := range columns {
+		if _, hit := unique[column]; hit {
+			return NewError(ErrorInvalidRule, "On-merge statements may not update unique keys of tables")
+		}
+	}
+	return nil
+}

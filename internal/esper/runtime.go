@@ -3462,6 +3462,15 @@ func (e *Engine) prepareStatementLocked(ctx context.Context, deployment *Deploym
 	// where clause when the statement deploys and drops it when the last
 	// owning statement undeploys.
 	statement.runtime.triggerImplicitIndex = e.registerTriggerImplicitIndexLocked(statement)
+	// A table merge statement must not update unique-key columns; env.Build
+	// sees only declared indexes, so runtime-created unique indexes are
+	// re-checked here against the live table before the merge registers its
+	// updated columns.
+	if err := e.validateMergeUniqueColumnsLocked(statement); err != nil {
+		e.cleanupPreparedStatementLocked(statement)
+		return nil, err
+	}
+	e.registerMergeUpdatedColumnsLocked(statement)
 	return statement, nil
 }
 
@@ -3473,6 +3482,7 @@ func (e *Engine) cleanupPreparedStatementLocked(statement *Statement) {
 	// failed to prepare must drop that reference here; undeploy never runs
 	// for a deployment that was never committed.
 	e.releaseTriggerImplicitIndexLocked(statement)
+	e.releaseMergeUpdatedColumnsLocked(statement)
 	e.releaseRowRecogRuntimeLocked(&statement.runtime)
 	e.matchRecognizeStatePool.removeOwner(statement.id)
 	statement.closed = true
@@ -3771,6 +3781,7 @@ func (e *Engine) undeploy(ctx context.Context, deploymentID string, force bool) 
 	removedStatements := append([]*Statement(nil), deployment.statements...)
 	for _, statement := range deployment.statements {
 		e.releaseTriggerImplicitIndexLocked(statement)
+		e.releaseMergeUpdatedColumnsLocked(statement)
 		e.removeStatementMetricsLocked(statement)
 		e.sharedFilterIndex.remove(statement)
 		delete(e.statements, statement.id)
@@ -6626,6 +6637,10 @@ type statementRuntime struct {
 	// statement registered at deploy (nil for non-indexable triggers), so
 	// undeploy releases exactly that index.
 	triggerImplicitIndex *namedWindowImplicitIndex
+	// mergeUpdatedColumnsRegistered marks that prepareStatementLocked added
+	// this merge statement's when-matched update columns to the target
+	// table's registry, so cleanup/undeploy release exactly that reference.
+	mergeUpdatedColumnsRegistered bool
 	// priorArrival retains the logical input arrival order used by Esper's
 	// prior() expression. Unlike Prev, Prior is not limited to the current
 	// view's retained entries: a length(2) view can still evaluate prior(2,

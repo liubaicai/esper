@@ -370,6 +370,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableResetScenario(file)
 	} else if *mode == "infra-table-select-enum-multikey" || *mode == "infra-table-select-enum-multikey-diff" {
 		scenario, err = loadInfraTableSelectEnumMultikeyScenario(file)
+	} else if *mode == "infra-table-update-and-index" || *mode == "infra-table-update-and-index-diff" {
+		scenario, err = loadInfraTableUpdateIndexScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -4023,6 +4025,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraTableSelectEnumMultikeyJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraTableSelectEnumMultikeyJavaSources),
 				splitMetadata(*javaExecutions, infraTableSelectEnumMultikeyJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-table-update-and-index" || *mode == "infra-table-update-and-index-diff" {
+		trace, err := runInfraTableUpdateIndexScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-update-and-index-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraTableUpdateIndexJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableUpdateIndexJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableUpdateIndexJavaSources),
+				splitMetadata(*javaExecutions, infraTableUpdateIndexJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

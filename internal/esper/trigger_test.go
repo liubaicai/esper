@@ -575,7 +575,7 @@ func TestNamedWindowOnTriggerInsertUpdateSelectDelete(t *testing.T) {
 
 func TestTableTriggerValidation(t *testing.T) {
 	env, _ := newRuntimeTest(t)
-	if _, err := env.RegisterTable("positions", []TableColumn{PrimaryKeyColumn[string]("symbol")}); err != nil {
+	if _, err := env.RegisterTable("positions", []TableColumn{PrimaryKeyColumn[string]("symbol"), TableColumnOf[float64]("price")}); err != nil {
 		t.Fatal(err)
 	}
 	source := From[runtimeTestTrade](env, "Trade")
@@ -604,9 +604,14 @@ func TestTableTriggerValidation(t *testing.T) {
 		t.Fatal("table merge without primary-key expressions was accepted")
 	}
 	if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("positions", []Expr{Field[runtimeTestTrade, string]("symbol")},
-		WhenMatched(Literal(true), SetColumn("symbol", Field[runtimeTestTrade, string]("symbol"))),
+		WhenMatched(Literal(true), SetColumn("price", Literal(1.0))),
 	).Query()); err != nil {
 		t.Fatal("table merge with a matched clause was rejected")
+	}
+	if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("positions", []Expr{Field[runtimeTestTrade, string]("symbol")},
+		WhenMatched(Literal(true), SetColumn("symbol", Field[runtimeTestTrade, string]("symbol"))),
+	).Query()); err == nil {
+		t.Fatal("table merge updating a primary-key column was accepted")
 	}
 	if _, err := env.Build(OnEvent(source).MergeIntoTableWhen("positions", []Expr{Field[runtimeTestTrade, string]("symbol")},
 		WhenNotMatched(Literal(true), SetColumn("symbol", Field[runtimeTestTrade, string]("symbol"))),

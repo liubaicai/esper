@@ -1,0 +1,1493 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-878326b2aef272d9ef78",
+    "java-runtime-59f3f0884fc9ae9d749f",
+    "java-runtime-1118b36d6f38fa1c78a8",
+    "java-runtime-16e0f7011601678fa5df",
+    "java-runtime-0b3580bcd42327b7d2bb"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableUpdateAndIndex.java"
+  ],
+  "javaExecutions": [
+    "InfraEarlyUniqueIndexViolation",
+    "InfraLateUniqueIndexViolation",
+    "InfraFAFUpdate",
+    "InfraTableKeyUpdateSingleKey",
+    "InfraTableKeyUpdateMultiKey"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-update-and-index",
+    "steps": [
+      {
+        "op": "case",
+        "case": "early-unique-violation"
+      },
+      {
+        "op": "deploy",
+        "case": "early-unique-violation",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyTableEUIV as (pkey0 string primary key, pkey1 int primary key, thecnt count(*))"
+      },
+      {
+        "op": "deployed",
+        "case": "early-unique-violation",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "early-unique-violation",
+        "statement": "into",
+        "epl": "into table MyTableEUIV select count(*) as thecnt from SupportBean group by theString, intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "early-unique-violation",
+        "statement": "into"
+      },
+      {
+        "op": "send",
+        "case": "early-unique-violation",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "early-unique-violation",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "deploy-error",
+        "case": "early-unique-violation",
+        "statement": "sec-index-pkey0",
+        "expectError": "Failed to deploy: Unique index violation, index 'SecIndex' is a unique index and key 'E1' already exists",
+        "epl": "create unique index SecIndex on MyTableEUIV(pkey0)"
+      },
+      {
+        "op": "faf-error",
+        "case": "early-unique-violation",
+        "statement": "faf-update-pkey1",
+        "expectError": "Unique index violation, index 'MyTableEUIV' is a unique index and key 'MultiKey[E1,0]' already exists",
+        "epl": "update MyTableEUIV set pkey1 = 0"
+      },
+      {
+        "op": "snapshot",
+        "case": "early-unique-violation",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "deploy",
+        "case": "early-unique-violation",
+        "statement": "on-update",
+        "epl": "@name('on-update') on SupportBean_S1 update MyTableEUIV set pkey1 = 0"
+      },
+      {
+        "op": "deployed",
+        "case": "early-unique-violation",
+        "statement": "on-update"
+      },
+      {
+        "op": "send-error",
+        "case": "early-unique-violation",
+        "statement": "on-update-send",
+        "expectError": "Unexpected exception in statement 'on-update': Unique index violation, index 'MyTableEUIV' is a unique index and key 'MultiKey[E1,0]' already exists",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "early-unique-violation",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "build-error",
+        "case": "early-unique-violation",
+        "statement": "on-merge-pkey1",
+        "expectError": "Validation failed in when-matched (clause 1): On-merge statements may not update unique keys of tables",
+        "epl": "@name('on-merge') on SupportBean_S1 merge MyTableEUIV when matched then update set pkey1 = 0"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "early-unique-violation"
+      },
+      {
+        "op": "case",
+        "case": "late-unique-violation"
+      },
+      {
+        "op": "deploy",
+        "case": "late-unique-violation",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyTableLUIV as (pkey0 string primary key, pkey1 int primary key, col0 int, thecnt count(*))"
+      },
+      {
+        "op": "deployed",
+        "case": "late-unique-violation",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "late-unique-violation",
+        "statement": "into",
+        "epl": "into table MyTableLUIV select count(*) as thecnt from SupportBean group by theString, intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "late-unique-violation",
+        "statement": "into"
+      },
+      {
+        "op": "send",
+        "case": "late-unique-violation",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "late-unique-violation",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "late-unique-violation",
+        "statement": "on-merge",
+        "epl": "@name('on-merge') on SupportBean_S1 merge MyTableLUIV when matched then update set col0 = 0"
+      },
+      {
+        "op": "deployed",
+        "case": "late-unique-violation",
+        "statement": "on-merge"
+      },
+      {
+        "op": "deploy-error",
+        "case": "late-unique-violation",
+        "statement": "sec-index-col0",
+        "expectError": "Failed to deploy: Create-index adds a unique key on columns that are updated by one or more on-merge statements",
+        "epl": "create unique index MyUniqueSecondary on MyTableLUIV (col0)"
+      },
+      {
+        "op": "undeploy",
+        "case": "late-unique-violation",
+        "statement": "on-merge"
+      },
+      {
+        "op": "deploy",
+        "case": "late-unique-violation",
+        "statement": "on-update",
+        "epl": "@name('on-update') on SupportBean_S1 update MyTableLUIV set pkey1 = 0"
+      },
+      {
+        "op": "deployed",
+        "case": "late-unique-violation",
+        "statement": "on-update"
+      },
+      {
+        "op": "deploy",
+        "case": "late-unique-violation",
+        "statement": "sec-index-pkey1",
+        "epl": "create unique index MyUniqueSecondary on MyTableLUIV (pkey1)"
+      },
+      {
+        "op": "deployed",
+        "case": "late-unique-violation",
+        "statement": "sec-index-pkey1"
+      },
+      {
+        "op": "send-error",
+        "case": "late-unique-violation",
+        "statement": "on-update-send",
+        "expectError": "Unexpected exception in statement 'on-update': Unique index violation, index 'MyUniqueSecondary' is a unique index and key '0' already exists",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 0
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "late-unique-violation",
+        "statement": "create",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy",
+        "case": "late-unique-violation",
+        "statement": "on-update"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "late-unique-violation"
+      },
+      {
+        "op": "case",
+        "case": "faf-update"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "create",
+        "epl": "@public create table MyTableFAFU as (pkey0 string primary key, col0 int, col1 int, thecnt count(*))"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-update",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "create-index",
+        "epl": "create index MyIndex on MyTableFAFU(col0)"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-update",
+        "statement": "create-index"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "into",
+        "epl": "into table MyTableFAFU select count(*) as thecnt from SupportBean group by theString"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-update",
+        "statement": "into"
+      },
+      {
+        "op": "send",
+        "case": "faf-update",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-update",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "FafUpdateCol0E1",
+        "epl": "update MyTableFAFU set col0 = 1 where pkey0='E1'"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "FafUpdateCol0E2",
+        "epl": "update MyTableFAFU set col0 = 2 where pkey0='E2'"
+      },
+      {
+        "op": "snapshot",
+        "case": "faf-update",
+        "statement": "FafSelectCol0",
+        "epl": "select pkey0 from MyTableFAFU where col0=1",
+        "mode": "ordered"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "FafUpdateCol1E1",
+        "epl": "update MyTableFAFU set col1 = 100 where pkey0='E1'"
+      },
+      {
+        "op": "snapshot",
+        "case": "faf-update",
+        "statement": "FafSelectCol1",
+        "epl": "select pkey0 from MyTableFAFU where col1=100",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "faf-update"
+      },
+      {
+        "op": "case",
+        "case": "key-update-single"
+      },
+      {
+        "op": "deploy",
+        "case": "key-update-single",
+        "statement": "s0",
+        "epl": "@name('s0') @public create table MyTableSingleKey(pkey0 string primary key, c0 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "key-update-single",
+        "statement": "s0"
+      },
+      {
+        "op": "deploy",
+        "case": "key-update-single",
+        "statement": "insert",
+        "epl": "insert into MyTableSingleKey select theString as pkey0, intPrimitive as c0 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "key-update-single",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "key-update-single",
+        "statement": "on-update",
+        "epl": "on SupportBean_S0 update MyTableSingleKey set pkey0 = p01 where pkey0 = p00"
+      },
+      {
+        "op": "deployed",
+        "case": "key-update-single",
+        "statement": "on-update"
+      },
+      {
+        "op": "send",
+        "case": "key-update-single",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10
+        }
+      },
+      {
+        "op": "send",
+        "case": "key-update-single",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20
+        }
+      },
+      {
+        "op": "send",
+        "case": "key-update-single",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30
+        }
+      },
+      {
+        "op": "send",
+        "case": "key-update-single",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2",
+          "p01": "E20"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "key-update-single",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "key-update-single",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1",
+          "p01": "E10"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "key-update-single",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "key-update-single",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3",
+          "p01": "E30"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "key-update-single",
+        "statement": "s0",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "key-update-single"
+      },
+      {
+        "op": "case",
+        "case": "key-update-multi"
+      },
+      {
+        "op": "deploy",
+        "case": "key-update-multi",
+        "statement": "s1",
+        "epl": "@name('s1') @public create table MyTableMultiKey(pkey0 string primary key, pkey1 int primary key, c0 long)"
+      },
+      {
+        "op": "deployed",
+        "case": "key-update-multi",
+        "statement": "s1"
+      },
+      {
+        "op": "deploy",
+        "case": "key-update-multi",
+        "statement": "insert",
+        "epl": "insert into MyTableMultiKey select theString as pkey0, intPrimitive as pkey1, longPrimitive as c0 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "key-update-multi",
+        "statement": "insert"
+      },
+      {
+        "op": "deploy",
+        "case": "key-update-multi",
+        "statement": "on-update",
+        "epl": "on SupportBean_S0 update MyTableMultiKey set pkey0 = p01 where pkey0 = p00"
+      },
+      {
+        "op": "deployed",
+        "case": "key-update-multi",
+        "statement": "on-update"
+      },
+      {
+        "op": "send",
+        "case": "key-update-multi",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 10,
+          "longPrimitive": 100
+        }
+      },
+      {
+        "op": "send",
+        "case": "key-update-multi",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 20,
+          "longPrimitive": 200
+        }
+      },
+      {
+        "op": "send",
+        "case": "key-update-multi",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 30,
+          "longPrimitive": 300
+        }
+      },
+      {
+        "op": "send",
+        "case": "key-update-multi",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E2",
+          "p01": "E20"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "key-update-multi",
+        "statement": "s1",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "key-update-multi",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E1",
+          "p01": "E10"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "key-update-multi",
+        "statement": "s1",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "key-update-multi",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 0,
+          "p00": "E3",
+          "p01": "E30"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "key-update-multi",
+        "statement": "s1",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "key-update-multi"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-update-and-index",
+    "records": [
+      {
+        "case": "early-unique-violation",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "deploy-error",
+        "statement": "sec-index-pkey0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to deploy: Unique index violation, index 'SecIndex' is a unique index and key 'E1' already exists"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "faf-error",
+        "statement": "faf-update-pkey1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unique index violation, index 'MyTableEUIV' is a unique index and key 'MultiKey[E1,0]' already exists"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "deployed",
+        "statement": "on-update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "send-error",
+        "statement": "on-update-send",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected exception in statement 'on-update': Unique index violation, index 'MyTableEUIV' is a unique index and key 'MultiKey[E1,0]' already exists"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "build-error",
+        "statement": "on-merge-pkey1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Validation failed in when-matched (clause 1): On-merge statements may not update unique keys of tables"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "on-merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deploy-error",
+        "statement": "sec-index-col0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to deploy: Create-index adds a unique key on columns that are updated by one or more on-merge statements"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "on-update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "sec-index-pkey1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "send-error",
+        "statement": "on-update-send",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected exception in statement 'on-update': Unique index violation, index 'MyUniqueSecondary' is a unique index and key '0' already exists"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "create-index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "snapshot",
+        "statement": "FafSelectCol0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update",
+        "operation": "snapshot",
+        "statement": "FafSelectCol1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-single",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-single",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-single",
+        "operation": "deployed",
+        "statement": "on-update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-single",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "pkey0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "pkey0": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 30,
+              "pkey0": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-single",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "pkey0": "E10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "pkey0": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 30,
+              "pkey0": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-single",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "pkey0": "E10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "pkey0": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 30,
+              "pkey0": "E30"
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "deployed",
+        "statement": "on-update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E20",
+              "pkey1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 300,
+              "pkey0": "E3",
+              "pkey1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E10",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E20",
+              "pkey1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 300,
+              "pkey0": "E3",
+              "pkey1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E10",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E20",
+              "pkey1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 300,
+              "pkey0": "E30",
+              "pkey1": 30
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-update-and-index",
+    "records": [
+      {
+        "case": "early-unique-violation",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "deploy-error",
+        "statement": "sec-index-pkey0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to deploy: Unique index violation, index 'SecIndex' is a unique index and key 'E1' already exists"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "faf-error",
+        "statement": "faf-update-pkey1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unique index violation, index 'MyTableEUIV' is a unique index and key 'MultiKey[E1,0]' already exists"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "deployed",
+        "statement": "on-update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "send-error",
+        "statement": "on-update-send",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected exception in statement 'on-update': Unique index violation, index 'MyTableEUIV' is a unique index and key 'MultiKey[E1,0]' already exists"
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "early-unique-violation",
+        "operation": "build-error",
+        "statement": "on-merge-pkey1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Validation failed in when-matched (clause 1): On-merge statements may not update unique keys of tables"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "on-merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deploy-error",
+        "statement": "sec-index-col0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Failed to deploy: Create-index adds a unique key on columns that are updated by one or more on-merge statements"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "on-update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "deployed",
+        "statement": "sec-index-pkey1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "send-error",
+        "statement": "on-update-send",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Unexpected exception in statement 'on-update': Unique index violation, index 'MyUniqueSecondary' is a unique index and key '0' already exists"
+      },
+      {
+        "case": "late-unique-violation",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E2",
+              "pkey1": 20
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "create-index",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "snapshot",
+        "statement": "FafSelectCol0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-update",
+        "operation": "snapshot",
+        "statement": "FafSelectCol1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "pkey0": "E1"
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-single",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-single",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-single",
+        "operation": "deployed",
+        "statement": "on-update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-single",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "pkey0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "pkey0": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 30,
+              "pkey0": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-single",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "pkey0": "E10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "pkey0": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 30,
+              "pkey0": "E3"
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-single",
+        "operation": "snapshot",
+        "statement": "s0",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 10,
+              "pkey0": "E10"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 20,
+              "pkey0": "E20"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 30,
+              "pkey0": "E30"
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "deployed",
+        "statement": "s1",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "deployed",
+        "statement": "on-update",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E1",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E20",
+              "pkey1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 300,
+              "pkey0": "E3",
+              "pkey1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E10",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E20",
+              "pkey1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 300,
+              "pkey0": "E3",
+              "pkey1": 30
+            }
+          }
+        ]
+      },
+      {
+        "case": "key-update-multi",
+        "operation": "snapshot",
+        "statement": "s1",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 100,
+              "pkey0": "E10",
+              "pkey1": 10
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 200,
+              "pkey0": "E20",
+              "pkey1": 20
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c0": 300,
+              "pkey0": "E30",
+              "pkey1": 30
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

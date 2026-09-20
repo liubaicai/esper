@@ -1145,6 +1145,22 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 		if len(definition.merge) == 0 {
 			return NewError(ErrorInvalidRule, "table merge requires at least one clause")
 		}
+		// Esper forbids a when-matched update of any unique key: primary-key
+		// columns and columns covered by a declared unique index. A later
+		// create-unique-index over a merge-updated column is rejected at deploy
+		// by Table.CreateIndex instead.
+		mergeUniqueColumns := make(map[string]struct{}, len(table.primaryKey))
+		for _, column := range table.primaryKey {
+			mergeUniqueColumns[column] = struct{}{}
+		}
+		for _, index := range table.indexes {
+			if !index.Unique {
+				continue
+			}
+			for _, column := range index.Columns {
+				mergeUniqueColumns[column] = struct{}{}
+			}
+		}
 		for index, clause := range definition.merge {
 			if clause.Actions != nil && (clause.Condition != nil || len(clause.Assignments) != 0 || clause.Delete) {
 				return fmt.Errorf("table merge clause %d action chain cannot be combined with legacy clause fields", index)
@@ -1264,6 +1280,13 @@ func (e *Environment) validateTrigger(definition *triggerDefinition) error {
 				}
 				if err := validateTriggerAssignmentsWithTarget(e, definition.input, table, action.Assignments, assignmentTargetKind); err != nil {
 					return fmt.Errorf("table merge clause %d action %d: %w", index, actionIndex, err)
+				}
+				if clause.Matched {
+					for _, assignment := range action.Assignments {
+						if _, unique := mergeUniqueColumns[assignment.Column]; unique {
+							return NewError(ErrorInvalidRule, fmt.Sprintf("Validation failed in when-matched (clause %d): On-merge statements may not update unique keys of tables", index+1))
+						}
+					}
 				}
 				var conditionErr error
 				if clause.Matched {
@@ -2963,6 +2986,23 @@ func executeTriggerActionWithTags(ctx context.Context, engine *Engine, definitio
 	table, tableOK := engine.ensureTableLockedInModule(definition.moduleName, definition.table)
 	if !tableOK || table == nil {
 		return tableMutationResult{}, NewError(ErrorUnknownName, fmt.Sprintf("trigger table %q is not available", definition.table))
+	}
+	// Send-driven mutations must be atomic: a mid-batch failure (for example
+	// a unique-index violation on the second matched row) leaves the table
+	// unchanged. On-demand mutations already roll back through the
+	// fire-and-forget snapshot, so they skip this second snapshot.
+	var tableSnapshot tableMutationSnapshot
+	var ownershipSnapshot map[string]map[string]map[uint64]tableContextRowOwnership
+	if !definition.onDemand {
+		tableSnapshot = table.snapshotMutationState()
+		ownershipSnapshot = cloneTableContextOwnership(engine.contextTableOwnership)
+		defer func() {
+			if err == nil {
+				return
+			}
+			table.restoreMutationState(tableSnapshot)
+			engine.contextTableOwnership = cloneTableContextOwnership(ownershipSnapshot)
+		}()
 	}
 	scope := triggerTableScope(definition, runtime, variables)
 	if definition.where != nil {

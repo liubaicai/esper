@@ -210,6 +210,16 @@ func (s Scenario) Validate() error {
 			if strings.TrimSpace(step.Epl) == "" {
 				return fmt.Errorf("compat: step %d build-error has no epl", i)
 			}
+		case "deploy-error", "faf-error":
+			// Pins a deploy-time or fire-and-forget failure (for example a
+			// unique-index violation); expectError carries the pinned Java
+			// message text and epl pins the rejected statement.
+			if strings.TrimSpace(step.Statement) == "" {
+				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
+			}
+			if strings.TrimSpace(step.ExpectError) == "" {
+				return fmt.Errorf("compat: step %d %s has no expectError", i, step.Op)
+			}
 		case "build":
 			// Compile-only step: the runner builds the pinned plan without
 			// deploying it and emits the "compiled" marker.

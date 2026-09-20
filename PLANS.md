@@ -55,37 +55,49 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.487 ('infra-table-select-enum-multikey').
+Active: Draft 4.488 ('infra-table-update-and-index').
 
-- [x] Contract frozen (.omp/contract-487.md) by NextJavaContract487 +
-  NextGoSurface487: InfraTableSelect.java ords 1-4 — InfraTableSelectEnum
-  (firstOf() iterator row), MultikeyWArraySingleArray/TwoArray (int[primitive]
-  array PK content equality incl. empty-array component), MultikeyWArrayComposite
-  (three-string PK + btree index + lexicographic v > p12). Runtime IDs
-  java-runtime-27e7ce929b90e4009b48 / -d52d06b4618e30451543 /
-  -83451626aeee59b34ac2 / -b8b3e8c1f04c0c918ea2. Ord 0 deferred (select-shape
-  matrix, different cluster).
-- [x] Assets (TableSelectAssets487 agent): oracle + run script + scenario
-  (4 cases / 42 steps) + runner + run.go wiring. Zero shared-core changes.
-  Primary-agent fix to the delivered run script: regression-lib added to the
-  Maven build module list and javac classpath (support beans live there).
-- [x] Java trace regenerated via run-infra-table-select-enum-multikey.sh
-  (18 records, javaCommit 9e1b9f1cc9117fea4bf33ab043762c045d73839c);
-  `-mode infra-table-select-enum-multikey-diff` reports status passing /
-  0 differences; Go trace + evidence checked in.
-- [x] Manifest updated: new born-DV case.infra-table-select-enum-multikey
-  (726 cases / 350 DV / 1357 DV runtime IDs); capability
-  trigger.table-named-window DV list extended to 83.
+- [x] Contract frozen (.omp/contract-488.md) by NextJavaContract488 +
+  NextGoSurface488: InfraTableUpdateAndIndex.java ALL 5 executions —
+  InfraEarlyUniqueIndexViolation (ord 0, deploy/FAF/on-update/compile
+  unique-violation phases), InfraLateUniqueIndexViolation (ord 1,
+  create-index-vs-on-merge conflict + mid-test undeploy), InfraFAFUpdate
+  (ord 2, FAF update + secondary-index select), InfraTableKeyUpdateSingleKey
+  (ord 3) / MultiKey (ord 4) — on-update primary-key rename. Runtime IDs
+  java-runtime-878326b2aef272d9ef78 / -59f3f0884fc9ae9d749f /
+  -1118b36d6f38fa1c78a8 / -16e0f7011601678fa5df / -0b3580bcd42327b7d2bb.
+- [x] Shared-core work (primary agent, internal/esper only):
+  (a) Table.CreateIndex validates existing rows for unique violations and
+  rejects a unique index over merge-updated columns;
+  (b) send-driven trigger updates are atomic — snapshot/restore on
+  mid-batch failure (FAF already rolled back);
+  (c) env.Build rejects merge when-matched updates of unique-key columns
+  ("On-merge statements may not update unique keys of tables");
+  (d) merge-updated-column registry on Table, refcounted at
+  deploy/undeploy. Existing test TestTableTriggerValidation fixed per
+  oracle (merge updating PK is invalid). Full internal/esper suite green.
+- [x] Assets (TableUpdateIndexAssets488): oracle + run script + scenario
+  (5 cases / 84 steps / 34 records) + runner + run.go wiring. Java trace
+  regenerated; `-mode infra-table-update-and-index-diff` passing / 0
+  differences; evidence + both traces checked in.
+- [x] Manifest updated: new born-DV case.infra-table-update-and-index
+  (727 cases / 351 DV / 1362 DV runtime IDs); capability
+  trigger.table-named-window DV list + goRefs + mapping extended;
+  internal/compat registers deploy-error and faf-error ops.
 - [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace
-  mutations incl. firstOf Object[] and lexicographic-gate pins, checked-in
-  evidence, 5 raw-scenario mutations, runtime-ID mapping) all green.
-- [ ] Independent parity review pending; N+2 scout selection pending.
+  mutations, checked-in evidence, 5 raw-scenario mutations, runtime-ID
+  mapping) all green.
+- [x] Independent parity review (ParityReview488): initial FAIL on one P2 —
+  merge unique-key check read only the env catalog, missing runtime-created
+  CreateIndex unique indexes. Fixed via deploy-time
+  validateMergeUniqueColumnsLocked against the live table index set +
+  mergeUpdatedColumnsRegistered guard on release. Re-review PASS.
+- [x] Full local gates GREEN after the fix: make check exit 0.
 
 ## Previous work unit (shipped)
-Draft 4.486 ('infra-nwtable-on-merge-insertonly-deletethenupdate') committed
-and pushed as 244069315; Git owns identity. Parity review PASS (three P3s
-addressed). Includes the context-init-term flake root-cause fix
-(sortedPartitionKeys replacing pointer-string sorts at four sites).
+Draft 4.487 ('infra-table-select-enum-multikey') committed and pushed as
+a60220d7b; Git owns identity. Parity review PASS (two P3s fixed: runtime-ID
+helper wired into the mapping test, manifest \uXXXX escaping restored).
 
 
 ## Deferred work items

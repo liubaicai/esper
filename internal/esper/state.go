@@ -391,6 +391,13 @@ type Table struct {
 	identity    *tableIdentitySource
 	scopesMu    sync.RWMutex
 	scopedState map[string]*tableState
+	// mergeUpdatedMu guards mergeUpdatedColumns: the refcounted set of
+	// columns that live on-merge statements assign in when-matched update
+	// clauses. Esper rejects a create-unique-index over any of them while
+	// the merge stays deployed ("Create-index adds a unique key on columns
+	// that are updated by one or more on-merge statements").
+	mergeUpdatedMu      sync.RWMutex
+	mergeUpdatedColumns map[string]int
 }
 
 type tableMutationSnapshot struct {
@@ -593,6 +600,29 @@ func rebuildTableIndexesLocked(state *tableState) {
 	state.indexEntries = indexEntries
 }
 
+// validateUniqueIndexRowsLocked verifies every existing row against a new
+// unique index definition before the index registers. Esper deploys a late
+// create-unique-index only when the current contents satisfy uniqueness;
+// the caller must hold the state's lock.
+func validateUniqueIndexRowsLocked(state *tableState, definition TableIndexDefinition) error {
+	if state == nil || !definition.Unique {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(state.rows))
+	for _, rowKey := range state.order {
+		row, ok := state.rows[rowKey]
+		if !ok {
+			continue
+		}
+		key := state.indexKey(row, definition.Columns)
+		if _, exists := seen[key]; exists {
+			return NewError(ErrorState, fmt.Sprintf("unique table index %q rejected duplicate key", definition.Name))
+		}
+		seen[key] = struct{}{}
+	}
+	return nil
+}
+
 func newTable(definition TableDefinition) *Table {
 	identity := &tableIdentitySource{}
 	return &Table{state: newTableState(definition, "", identity), identity: identity, scopedState: make(map[string]*tableState)}
@@ -631,6 +661,48 @@ func (t *Table) CreateIndex(name string, columns []string, kind IndexKind, uniqu
 		if _, ok := root.def.schema.Field(column); !ok {
 			root.mu.Unlock()
 			return NewError(ErrorUnknownName, fmt.Sprintf("table index %q references unknown column %q", name, column))
+		}
+	}
+	if unique {
+		// Esper rejects a unique index over a column a live on-merge
+		// statement updates; the merge would silently break uniqueness.
+		// On-update triggers are exempt: they fail at send time instead.
+		t.mergeUpdatedMu.RLock()
+		conflict := false
+		for _, column := range definition.Columns {
+			if t.mergeUpdatedColumns[column] > 0 {
+				conflict = true
+				break
+			}
+		}
+		t.mergeUpdatedMu.RUnlock()
+		if conflict {
+			root.mu.Unlock()
+			return NewError(ErrorInvalidRule, "Create-index adds a unique key on columns that are updated by one or more on-merge statements")
+		}
+		// A late unique index must also hold for rows already in the
+		// table; Esper validates them at deploy and rejects the index.
+		if err := validateUniqueIndexRowsLocked(root, definition); err != nil {
+			root.mu.Unlock()
+			return err
+		}
+		t.scopesMu.RLock()
+		scoped := make([]*tableState, 0, len(t.scopedState))
+		for _, state := range t.scopedState {
+			scoped = append(scoped, state)
+		}
+		t.scopesMu.RUnlock()
+		for _, state := range scoped {
+			if state == nil {
+				continue
+			}
+			state.mu.Lock()
+			err := validateUniqueIndexRowsLocked(state, definition)
+			state.mu.Unlock()
+			if err != nil {
+				root.mu.Unlock()
+				return err
+			}
 		}
 	}
 	root.def.indexes = append(root.def.indexes, definition)

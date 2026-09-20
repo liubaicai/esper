@@ -1472,7 +1472,10 @@
     "internal/app/parity/infra_nwtable_on_delete.go",
     "internal/esper/runtime.go",
     "internal/app/parity/infra_nwtable_on_update.go",
-    "internal/esper/faf.go"
+    "internal/esper/faf.go",
+    "internal/app/parity/infra_table_update_and_index.go",
+    "internal/esper/trigger_index.go",
+    "internal/compat/scenario.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1574,7 +1577,12 @@
     "java-runtime-27e7ce929b90e4009b48",
     "java-runtime-d52d06b4618e30451543",
     "java-runtime-83451626aeee59b34ac2",
-    "java-runtime-b8b3e8c1f04c0c918ea2"
+    "java-runtime-b8b3e8c1f04c0c918ea2",
+    "java-runtime-878326b2aef272d9ef78",
+    "java-runtime-59f3f0884fc9ae9d749f",
+    "java-runtime-1118b36d6f38fa1c78a8",
+    "java-runtime-16e0f7011601678fa5df",
+    "java-runtime-0b3580bcd42327b7d2bb"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46713,6 +46721,71 @@
    "notes": [
     "Born-DV: InfraTableSelect ords 1-4 \u2014 InfraTableSelectEnum (firstOf() yields the first table row's Object[] underlying via iterator), InfraTableSelectMultikeyWArraySingleArray (int[primitive] array PK content equality), InfraTableSelectMultikeyWArrayTwoArray (two-array composite PK incl. empty-array component), InfraTableSelectMultikeyWArrayComposite (three-string PK + btree secondary index + lexicographic v > p12 gate). Java/Go 18 records, 0 differences. Ord 0 InfraTableSelectStarPublicTypeVisibility deferred (14-sub-assertion select-shape matrix, different semantics cluster)."
    ]
+  },
+  {
+   "id": "case.infra-table-update-and-index",
+   "javaRuntimeIds": [
+    "java-runtime-878326b2aef272d9ef78",
+    "java-runtime-59f3f0884fc9ae9d749f",
+    "java-runtime-1118b36d6f38fa1c78a8",
+    "java-runtime-16e0f7011601678fa5df",
+    "java-runtime-0b3580bcd42327b7d2bb"
+   ],
+   "javaStaticIds": [
+    "java-c8309a6f377c34ffcdb4",
+    "java-8db9b9cd27d04bb86d69",
+    "java-4a2462a159e9d648257a",
+    "java-ad9c04a3fc0d98d4e4dd",
+    "java-97fc9971820f1e5b947d"
+   ],
+   "javaNames": [
+    "InfraEarlyUniqueIndexViolation",
+    "InfraLateUniqueIndexViolation",
+    "InfraFAFUpdate",
+    "InfraTableKeyUpdateSingleKey",
+    "InfraTableKeyUpdateMultiKey"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableUpdateAndIndex.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_table_update_and_index.go"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "update",
+    "index",
+    "unique",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-update-and-index.json",
+    "testdata/parity/infra-table-update-and-index.trace.json",
+    "testdata/parity/infra-table-update-and-index.go.trace.json",
+    "testdata/parity/infra-table-update-and-index.evidence.json",
+    "tools/java-oracle/InfraTableUpdateAndIndexScenarioOracle.java",
+    "tools/java-oracle/run-infra-table-update-and-index.sh",
+    "javaCommit=9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+    "java=17"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-878326b2aef272d9ef78",
+    "java-runtime-59f3f0884fc9ae9d749f",
+    "java-runtime-1118b36d6f38fa1c78a8",
+    "java-runtime-16e0f7011601678fa5df",
+    "java-runtime-0b3580bcd42327b7d2bb"
+   ],
+   "notes": [
+    "Born-DV: InfraTableUpdateAndIndex ords 0-4 \u2014 InfraEarlyUniqueIndexViolation (deploy/FAF/on-update/compile unique-violation phases), InfraLateUniqueIndexViolation (create-index-vs-on-merge conflict + mid-test undeploy), InfraFAFUpdate (FAF update + secondary-index select), InfraTableKeyUpdateSingleKey/MultiKey (on-update primary-key rename). Java/Go 34 records, 0 differences. Shared-core additions: Table.CreateIndex validates existing rows + merge-updated-column conflict; send-driven trigger updates are atomic; env.Build rejects merge when-matched updates of unique-key columns."
+   ]
   }
  ],
  "mappings": [
@@ -49959,13 +50032,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-table-select-enum-multikey"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-update-and-index"
   }
  ],
  "summary": {
-  "inventoriedCases": 726,
-  "implementedCases": 724,
-  "differentialVerifiedCases": 350,
-  "differentialVerifiedRuntimeIds": 1357,
+  "inventoriedCases": 727,
+  "implementedCases": 725,
+  "differentialVerifiedCases": 351,
+  "differentialVerifiedRuntimeIds": 1362,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49975,13 +50052,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3907,
-  "referencedJavaRuntimeIds": 3479,
+  "runtimeAssociationCount": 3912,
+  "referencedJavaRuntimeIds": 3484,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 657,
+  "unreferencedJavaRuntimeIds": 652,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 726,
+  "totalCases": 727,
   "totalCapabilities": 122
  }
 }
