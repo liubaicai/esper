@@ -1556,7 +1556,13 @@
     "java-runtime-484a8e636d3734b87673",
     "java-runtime-76d16e1334c83e6d4002",
     "java-runtime-462d190f20742a0c266d",
-    "java-runtime-8495f57749c2105b15a8"
+    "java-runtime-8495f57749c2105b15a8",
+    "java-runtime-99b2d413519187b56232",
+    "java-runtime-33b1e837bc8b373bb198",
+    "java-runtime-651148621e89ec5465b0",
+    "java-runtime-e51caa89fbde4ab34197",
+    "java-runtime-8900ac7e3d063d8b8842",
+    "java-runtime-b581753558f219b16a2a"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46488,6 +46494,75 @@
    "notes": [
     "InfraNWTableOnMerge ords 32-39 born-differential: InfraFlow{nw,table} (filtered SupportBean insert-into feeder, SupportBean_A delete-all trigger, 4-branch merge, two runAssertionFlow passes across undeploy/redeploy, wildcard merge tail, ambiguous-columns module) and InfraInnerTypeAndVariable{nw,table}x{OBJECTARRAY,MAP,DEFAULT} (tri-state myvar selecting among three not-matched branches, nested-fragment c2 column, matched-delete). Zero shared-core changes; the ambiguous-columns unkeyed-table where-merge is unobservable (Java never sends TypeOne events) and deploys the nil-keys equivalent."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-on-merge-invalid-insertonly",
+   "javaRuntimeIds": [
+    "java-runtime-99b2d413519187b56232",
+    "java-runtime-33b1e837bc8b373bb198",
+    "java-runtime-651148621e89ec5465b0",
+    "java-runtime-e51caa89fbde4ab34197",
+    "java-runtime-8900ac7e3d063d8b8842",
+    "java-runtime-b581753558f219b16a2a"
+   ],
+   "javaStaticIds": [
+    "java-42d23ac20541998f0a55",
+    "java-42d23ac20541998f0a55",
+    "java-0b6e7bd4eb235001d140",
+    "java-0b6e7bd4eb235001d140",
+    "java-0b6e7bd4eb235001d140",
+    "java-0b6e7bd4eb235001d140"
+   ],
+   "javaNames": [
+    "InfraInvalid{namedWindow=true}",
+    "InfraInvalid{namedWindow=false}",
+    "InfraInsertOnly{namedWindow=true, useEquivalent=true, soda=false, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=true, useEquivalent=false, soda=false, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=true, useEquivalent=false, soda=false, useColumnNames=true}",
+    "InfraInsertOnly{namedWindow=true, useEquivalent=false, soda=true, useColumnNames=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_nwtable_on_merge_invalid_insertonly.go"
+   ],
+   "tags": [
+    "infra",
+    "nwtable",
+    "on-merge",
+    "invalid",
+    "insert-only",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-on-merge-invalid-insertonly.json",
+    "testdata/parity/infra-nwtable-on-merge-invalid-insertonly.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-invalid-insertonly.go.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-invalid-insertonly.evidence.json",
+    "tools/java-oracle/InfraNWTableOnMergeInvalidInsertOnlyScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-on-merge-invalid-insertonly.sh",
+    "javaCommit=9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+    "java=17"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-99b2d413519187b56232",
+    "java-runtime-33b1e837bc8b373bb198",
+    "java-runtime-651148621e89ec5465b0",
+    "java-runtime-e51caa89fbde4ab34197",
+    "java-runtime-8900ac7e3d063d8b8842",
+    "java-runtime-b581753558f219b16a2a"
+   ],
+   "notes": [
+    "Born-DV: InfraInvalid compile-error probes (13 nw / 12 table, divergent probe 2 + NW-only probe 4) replayed via the build-error op; InfraInsertOnly four namedWindow=true variants (useEquivalent where 1=2 / plain / insert(p0,p1) column names / soda) replayed via MergeIntoNamedWindowWhen + WhenNotMatchedAny. Java/Go 49 records, 0 differences."
+   ]
   }
  ],
  "mappings": [
@@ -49722,13 +49797,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-nwtable-on-merge-flow-itv"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-nwtable-on-merge-invalid-insertonly"
   }
  ],
  "summary": {
-  "inventoriedCases": 723,
-  "implementedCases": 721,
-  "differentialVerifiedCases": 347,
-  "differentialVerifiedRuntimeIds": 1339,
+  "inventoriedCases": 724,
+  "implementedCases": 722,
+  "differentialVerifiedCases": 348,
+  "differentialVerifiedRuntimeIds": 1345,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49738,13 +49817,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3889,
+  "runtimeAssociationCount": 3895,
   "referencedJavaRuntimeIds": 3475,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 661,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 723,
+  "totalCases": 724,
   "totalCapabilities": 122
  }
 }

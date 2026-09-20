@@ -144,6 +144,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableOnMergePatternNoWhereScenario(file)
 	} else if *mode == "infra-nwtable-on-merge-flow-itv" || *mode == "infra-nwtable-on-merge-flow-itv-diff" {
 		scenario, err = loadInfraNWTableOnMergeFlowITVScenario(file)
+	} else if *mode == "infra-nwtable-on-merge-invalid-insertonly" || *mode == "infra-nwtable-on-merge-invalid-insertonly-diff" {
+		scenario, err = loadInfraNWTableOnMergeInvalidInsertOnlyScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-silent" || *mode == "infra-namedwindow-on-delete-silent-diff" {
 		scenario, err = loadInfraNWOnDeleteSilentScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-indexes" || *mode == "infra-namedwindow-on-delete-indexes-diff" {
@@ -572,6 +574,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergeFlowITVJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableOnMergeFlowITVJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableOnMergeFlowITVJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-on-merge-invalid-insertonly" || *mode == "infra-nwtable-on-merge-invalid-insertonly-diff" {
+		trace, err := runInfraNWTableOnMergeInvalidInsertOnlyScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-on-merge-invalid-insertonly-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableOnMergeInvalidInsertOnlyJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergeInvalidInsertOnlyJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableOnMergeInvalidInsertOnlyJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableOnMergeInvalidInsertOnlyJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

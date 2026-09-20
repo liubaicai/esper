@@ -1,0 +1,1572 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-99b2d413519187b56232",
+    "java-runtime-33b1e837bc8b373bb198",
+    "java-runtime-651148621e89ec5465b0",
+    "java-runtime-e51caa89fbde4ab34197",
+    "java-runtime-8900ac7e3d063d8b8842",
+    "java-runtime-b581753558f219b16a2a"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+  ],
+  "javaExecutions": [
+    "InfraInvalid{namedWindow=true}",
+    "InfraInvalid{namedWindow=false}",
+    "InfraInsertOnly{namedWindow=true, useEquivalent=true, soda=false, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=true, useEquivalent=false, soda=false, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=true, useEquivalent=false, soda=false, useColumnNames=true}",
+    "InfraInsertOnly{namedWindow=true, useEquivalent=false, soda=true, useColumnNames=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-invalid-insertonly",
+    "steps": [
+      {
+        "op": "case",
+        "case": "invalid-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-nw",
+        "statement": "fixture",
+        "epl": "@public create window MergeInfra#unique(theString) as SupportBean;\ncreate schema ABCSchema as (val int);\n@public create window ABCInfra#keepall as ABCSchema;\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "notmatched-filter-windowevent",
+        "expectError": "On-Merge not-matched filter expression may not use properties that are provided by the named window event [on SupportBean_A merge MergeInfra as windowevent where id = theString when not matched and exists(select * from MergeInfra mw where mw.theString = windowevent.theString) is not null then insert into ABC select '1']",
+        "epl": "on SupportBean_A merge MergeInfra as windowevent where id = theString when not matched and exists(select * from MergeInfra mw where mw.theString = windowevent.theString) is not null then insert into ABC select '1'"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "insert-unknown-column",
+        "expectError": "Validation failed in when-not-matched (clause 1): Event type named 'ABCInfra' has already been declared with differing column name or type information: Type by name 'ABCInfra' in property 'col' property name not found in target",
+        "epl": "on SupportBean_A as up merge ABCInfra as mv when not matched then insert (col) select 1"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "notmatched-update-action",
+        "expectError": "Incorrect syntax near 'update' (a reserved keyword) expecting 'insert' but found 'update' at line 1 column 9",
+        "epl": "on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then update set intPrimitive = 1"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "matched-insert-wrong-type",
+        "expectError": "Validation failed in when-not-matched (clause 1): Expression-returned event type 'SupportBean_A' with underlying type 'com.espertech.esper.regressionlib.support.bean.SupportBean_A' cannot be converted to target event type 'MergeInfra' with underlying type 'com.espertech.esper.common.internal.support.SupportBean' [on SupportBean_A as up merge MergeInfra as mv where mv.theString=id when matched then insert select *]",
+        "epl": "on SupportBean_A as up merge MergeInfra as mv where mv.theString=id when matched then insert select *"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "missing-clauses",
+        "expectError": "Unexpected end-of-input at line 1 column 4",
+        "epl": "on SupportBean as up merge MergeInfra as mv"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "missing-then",
+        "expectError": "Incorrect syntax near end-of-input ('matched' is a reserved keyword) expecting 'then' but found end-of-input at line 1 column 66 [",
+        "epl": "on SupportBean as up merge MergeInfra as mv where a=b when matched"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "and-then-delete",
+        "expectError": "Incorrect syntax near 'then' (a reserved keyword) at line 1 column 71 [on SupportBean as up merge MergeInfra as mv where a=b when matched and then delete]",
+        "epl": "on SupportBean as up merge MergeInfra as mv where a=b when matched and then delete"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "ambiguous-where-prop",
+        "expectError": "Failed to validate where-clause expression 'boolPrimitive=true': Property named 'boolPrimitive' is ambiguous as is valid for more then one stream [on SupportBean as up merge MergeInfra as mv where boolPrimitive=true when not matched then insert select *]",
+        "epl": "on SupportBean as up merge MergeInfra as mv where boolPrimitive=true when not matched then insert select *"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "invalid-select-prop",
+        "expectError": "Failed to validate select-clause expression 'intPrimitive': Property named 'intPrimitive' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select intPrimitive]",
+        "epl": "on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select intPrimitive"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "invalid-match-where-prop",
+        "expectError": "Failed to validate match where-clause expression 'theString=\"A\"': Property named 'theString' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select * where theString = 'A']",
+        "epl": "on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select * where theString = 'A'"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "variable-lhs",
+        "expectError": "Left-hand-side does not allow variables for variable 'myvariable'",
+        "epl": "@public create variable int myvariable;\non SupportBean_A merge MergeInfra when matched then update set myvariable = 1;\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "indexed-lhs",
+        "expectError": "Unrecognized left-hand-side assignment 'theString[1][2]'",
+        "epl": "on SupportBean_A merge MergeInfra when matched then update set theString[1][2] = 1;\n"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-nw",
+        "statement": "composite-schema",
+        "epl": "@public create map schema Composite as (c0 int)"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-nw",
+        "statement": "ainfra-window",
+        "epl": "@public create window AInfra#keepall as (c Composite)"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-nw",
+        "statement": "someother-schema",
+        "epl": "@public create map schema SomeOther as (c1 int)"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-nw",
+        "statement": "myevent-schema",
+        "epl": "@public create map schema MyEvent as (so SomeOther)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-nw",
+        "statement": "nested-event-assign",
+        "expectError": "Failed to validate assignment expression 'c=me.so': Invalid assignment to property 'c' event type 'Composite' from event type 'SomeOther' [on MyEvent as me update AInfra set c = me.so]",
+        "epl": "on MyEvent as me update AInfra set c = me.so"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid-nw"
+      },
+      {
+        "op": "case",
+        "case": "invalid-table"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-table",
+        "statement": "fixture",
+        "epl": "@public create table MergeInfra as (theString string, intPrimitive int, boolPrimitive bool);\ncreate schema ABCSchema as (val int);\n@public create table ABCInfra (val int);\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "notmatched-filter-windowevent",
+        "expectError": "On-Merge not-matched filter expression may not use properties that are provided by the named window event [on SupportBean_A merge MergeInfra as windowevent where id = theString when not matched and exists(select * from MergeInfra mw where mw.theString = windowevent.theString) is not null then insert into ABC select '1']",
+        "epl": "on SupportBean_A merge MergeInfra as windowevent where id = theString when not matched and exists(select * from MergeInfra mw where mw.theString = windowevent.theString) is not null then insert into ABC select '1'"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "insert-unknown-column",
+        "expectError": "Validation failed in when-not-matched (clause 1): Column 'col' could not be assigned to any of the properties of the underlying type (missing column names, event property, setter method or constructor?) [",
+        "epl": "on SupportBean_A as up merge ABCInfra as mv when not matched then insert (col) select 1"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "notmatched-update-action",
+        "expectError": "Incorrect syntax near 'update' (a reserved keyword) expecting 'insert' but found 'update' at line 1 column 9",
+        "epl": "on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then update set intPrimitive = 1"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "missing-clauses",
+        "expectError": "Unexpected end-of-input at line 1 column 4",
+        "epl": "on SupportBean as up merge MergeInfra as mv"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "missing-then",
+        "expectError": "Incorrect syntax near end-of-input ('matched' is a reserved keyword) expecting 'then' but found end-of-input at line 1 column 66 [",
+        "epl": "on SupportBean as up merge MergeInfra as mv where a=b when matched"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "and-then-delete",
+        "expectError": "Incorrect syntax near 'then' (a reserved keyword) at line 1 column 71 [on SupportBean as up merge MergeInfra as mv where a=b when matched and then delete]",
+        "epl": "on SupportBean as up merge MergeInfra as mv where a=b when matched and then delete"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "ambiguous-where-prop",
+        "expectError": "Failed to validate where-clause expression 'boolPrimitive=true': Property named 'boolPrimitive' is ambiguous as is valid for more then one stream [on SupportBean as up merge MergeInfra as mv where boolPrimitive=true when not matched then insert select *]",
+        "epl": "on SupportBean as up merge MergeInfra as mv where boolPrimitive=true when not matched then insert select *"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "invalid-select-prop",
+        "expectError": "Failed to validate select-clause expression 'intPrimitive': Property named 'intPrimitive' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select intPrimitive]",
+        "epl": "on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select intPrimitive"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "invalid-match-where-prop",
+        "expectError": "Failed to validate match where-clause expression 'theString=\"A\"': Property named 'theString' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select * where theString = 'A']",
+        "epl": "on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select * where theString = 'A'"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "variable-lhs",
+        "expectError": "Left-hand-side does not allow variables for variable 'myvariable'",
+        "epl": "@public create variable int myvariable;\non SupportBean_A merge MergeInfra when matched then update set myvariable = 1;\n"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "indexed-lhs",
+        "expectError": "Unrecognized left-hand-side assignment 'theString[1][2]'",
+        "epl": "on SupportBean_A merge MergeInfra when matched then update set theString[1][2] = 1;\n"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid-table"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-table",
+        "statement": "composite-schema",
+        "epl": "@public create map schema Composite as (c0 int)"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-table",
+        "statement": "ainfra-window",
+        "epl": "@public create window AInfra#keepall as (c Composite)"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-table",
+        "statement": "someother-schema",
+        "epl": "@public create map schema SomeOther as (c1 int)"
+      },
+      {
+        "op": "deploy",
+        "case": "invalid-table",
+        "statement": "myevent-schema",
+        "epl": "@public create map schema MyEvent as (so SomeOther)"
+      },
+      {
+        "op": "build-error",
+        "case": "invalid-table",
+        "statement": "nested-event-assign",
+        "expectError": "Failed to validate assignment expression 'c=me.so': Invalid assignment to property 'c' event type 'Composite' from event type 'SomeOther' [on MyEvent as me update AInfra set c = me.so]",
+        "epl": "on MyEvent as me update AInfra set c = me.so"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "invalid-table"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-nw-equivalent"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw-equivalent",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create window InsertOnlyInfra#unique(p0) as (p0 string, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw-equivalent",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw-equivalent",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean merge InsertOnlyInfra where 1=2 when not matched then insert select theString as p0, intPrimitive as p1"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw-equivalent",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw-equivalent",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw-equivalent",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw-equivalent",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw-equivalent",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-nw-equivalent"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create window InsertOnlyInfra#unique(p0) as (p0 string, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean merge InsertOnlyInfra insert select theString as p0, intPrimitive as p1"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-nw"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-nw-colnames"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw-colnames",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create window InsertOnlyInfra#unique(p0) as (p0 string, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw-colnames",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw-colnames",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean as provider merge InsertOnlyInfra insert(p0, p1) select provider.theString, intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw-colnames",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw-colnames",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw-colnames",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw-colnames",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw-colnames",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-nw-colnames"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-nw-soda"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw-soda",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create window InsertOnlyInfra#unique(p0) as (p0 string, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw-soda",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw-soda",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean merge InsertOnlyInfra insert select theString as p0, intPrimitive as p1"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw-soda",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw-soda",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw-soda",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw-soda",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw-soda",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-nw-soda"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-invalid-insertonly",
+    "records": [
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "notmatched-filter-windowevent",
+        "sequence": 0,
+        "value": "On-Merge not-matched filter expression may not use properties that are provided by the named window event [on SupportBean_A merge MergeInfra as windowevent where id = theString when not matched and exists(select * from MergeInfra mw where mw.theString = windowevent.theString) is not null then insert into ABC select '1']"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "insert-unknown-column",
+        "sequence": 0,
+        "value": "Validation failed in when-not-matched (clause 1): Event type named 'ABCInfra' has already been declared with differing column name or type information: Type by name 'ABCInfra' in property 'col' property name not found in target"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "notmatched-update-action",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'update' (a reserved keyword) expecting 'insert' but found 'update' at line 1 column 9"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "matched-insert-wrong-type",
+        "sequence": 0,
+        "value": "Validation failed in when-not-matched (clause 1): Expression-returned event type 'SupportBean_A' with underlying type 'com.espertech.esper.regressionlib.support.bean.SupportBean_A' cannot be converted to target event type 'MergeInfra' with underlying type 'com.espertech.esper.common.internal.support.SupportBean' [on SupportBean_A as up merge MergeInfra as mv where mv.theString=id when matched then insert select *]"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "missing-clauses",
+        "sequence": 0,
+        "value": "Unexpected end-of-input at line 1 column 4"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "missing-then",
+        "sequence": 0,
+        "value": "Incorrect syntax near end-of-input ('matched' is a reserved keyword) expecting 'then' but found end-of-input at line 1 column 66 ["
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "and-then-delete",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'then' (a reserved keyword) at line 1 column 71 [on SupportBean as up merge MergeInfra as mv where a=b when matched and then delete]"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "ambiguous-where-prop",
+        "sequence": 0,
+        "value": "Failed to validate where-clause expression 'boolPrimitive=true': Property named 'boolPrimitive' is ambiguous as is valid for more then one stream [on SupportBean as up merge MergeInfra as mv where boolPrimitive=true when not matched then insert select *]"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "invalid-select-prop",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'intPrimitive': Property named 'intPrimitive' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select intPrimitive]"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "invalid-match-where-prop",
+        "sequence": 0,
+        "value": "Failed to validate match where-clause expression 'theString=\"A\"': Property named 'theString' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select * where theString = 'A']"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "variable-lhs",
+        "sequence": 0,
+        "value": "Left-hand-side does not allow variables for variable 'myvariable'"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "indexed-lhs",
+        "sequence": 0,
+        "value": "Unrecognized left-hand-side assignment 'theString[1][2]'"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "nested-event-assign",
+        "sequence": 0,
+        "value": "Failed to validate assignment expression 'c=me.so': Invalid assignment to property 'c' event type 'Composite' from event type 'SomeOther' [on MyEvent as me update AInfra set c = me.so]"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "notmatched-filter-windowevent",
+        "sequence": 0,
+        "value": "On-Merge not-matched filter expression may not use properties that are provided by the named window event [on SupportBean_A merge MergeInfra as windowevent where id = theString when not matched and exists(select * from MergeInfra mw where mw.theString = windowevent.theString) is not null then insert into ABC select '1']"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "insert-unknown-column",
+        "sequence": 0,
+        "value": "Validation failed in when-not-matched (clause 1): Column 'col' could not be assigned to any of the properties of the underlying type (missing column names, event property, setter method or constructor?) ["
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "notmatched-update-action",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'update' (a reserved keyword) expecting 'insert' but found 'update' at line 1 column 9"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "missing-clauses",
+        "sequence": 0,
+        "value": "Unexpected end-of-input at line 1 column 4"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "missing-then",
+        "sequence": 0,
+        "value": "Incorrect syntax near end-of-input ('matched' is a reserved keyword) expecting 'then' but found end-of-input at line 1 column 66 ["
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "and-then-delete",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'then' (a reserved keyword) at line 1 column 71 [on SupportBean as up merge MergeInfra as mv where a=b when matched and then delete]"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "ambiguous-where-prop",
+        "sequence": 0,
+        "value": "Failed to validate where-clause expression 'boolPrimitive=true': Property named 'boolPrimitive' is ambiguous as is valid for more then one stream [on SupportBean as up merge MergeInfra as mv where boolPrimitive=true when not matched then insert select *]"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "invalid-select-prop",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'intPrimitive': Property named 'intPrimitive' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select intPrimitive]"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "invalid-match-where-prop",
+        "sequence": 0,
+        "value": "Failed to validate match where-clause expression 'theString=\"A\"': Property named 'theString' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select * where theString = 'A']"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "variable-lhs",
+        "sequence": 0,
+        "value": "Left-hand-side does not allow variables for variable 'myvariable'"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "indexed-lhs",
+        "sequence": 0,
+        "value": "Unrecognized left-hand-side assignment 'theString[1][2]'"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "nested-event-assign",
+        "sequence": 0,
+        "value": "Failed to validate assignment expression 'c=me.so': Invalid assignment to property 'c' event type 'Composite' from event type 'SomeOther' [on MyEvent as me update AInfra set c = me.so]"
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-invalid-insertonly",
+    "records": [
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "notmatched-filter-windowevent",
+        "sequence": 0,
+        "value": "On-Merge not-matched filter expression may not use properties that are provided by the named window event [on SupportBean_A merge MergeInfra as windowevent where id = theString when not matched and exists(select * from MergeInfra mw where mw.theString = windowevent.theString) is not null then insert into ABC select '1']"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "insert-unknown-column",
+        "sequence": 0,
+        "value": "Validation failed in when-not-matched (clause 1): Event type named 'ABCInfra' has already been declared with differing column name or type information: Type by name 'ABCInfra' in property 'col' property name not found in target"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "notmatched-update-action",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'update' (a reserved keyword) expecting 'insert' but found 'update' at line 1 column 9"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "matched-insert-wrong-type",
+        "sequence": 0,
+        "value": "Validation failed in when-not-matched (clause 1): Expression-returned event type 'SupportBean_A' with underlying type 'com.espertech.esper.regressionlib.support.bean.SupportBean_A' cannot be converted to target event type 'MergeInfra' with underlying type 'com.espertech.esper.common.internal.support.SupportBean' [on SupportBean_A as up merge MergeInfra as mv where mv.theString=id when matched then insert select *]"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "missing-clauses",
+        "sequence": 0,
+        "value": "Unexpected end-of-input at line 1 column 4"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "missing-then",
+        "sequence": 0,
+        "value": "Incorrect syntax near end-of-input ('matched' is a reserved keyword) expecting 'then' but found end-of-input at line 1 column 66 ["
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "and-then-delete",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'then' (a reserved keyword) at line 1 column 71 [on SupportBean as up merge MergeInfra as mv where a=b when matched and then delete]"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "ambiguous-where-prop",
+        "sequence": 0,
+        "value": "Failed to validate where-clause expression 'boolPrimitive=true': Property named 'boolPrimitive' is ambiguous as is valid for more then one stream [on SupportBean as up merge MergeInfra as mv where boolPrimitive=true when not matched then insert select *]"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "invalid-select-prop",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'intPrimitive': Property named 'intPrimitive' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select intPrimitive]"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "invalid-match-where-prop",
+        "sequence": 0,
+        "value": "Failed to validate match where-clause expression 'theString=\"A\"': Property named 'theString' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select * where theString = 'A']"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "variable-lhs",
+        "sequence": 0,
+        "value": "Left-hand-side does not allow variables for variable 'myvariable'"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "indexed-lhs",
+        "sequence": 0,
+        "value": "Unrecognized left-hand-side assignment 'theString[1][2]'"
+      },
+      {
+        "case": "invalid-nw",
+        "operation": "compile-error",
+        "statement": "nested-event-assign",
+        "sequence": 0,
+        "value": "Failed to validate assignment expression 'c=me.so': Invalid assignment to property 'c' event type 'Composite' from event type 'SomeOther' [on MyEvent as me update AInfra set c = me.so]"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "notmatched-filter-windowevent",
+        "sequence": 0,
+        "value": "On-Merge not-matched filter expression may not use properties that are provided by the named window event [on SupportBean_A merge MergeInfra as windowevent where id = theString when not matched and exists(select * from MergeInfra mw where mw.theString = windowevent.theString) is not null then insert into ABC select '1']"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "insert-unknown-column",
+        "sequence": 0,
+        "value": "Validation failed in when-not-matched (clause 1): Column 'col' could not be assigned to any of the properties of the underlying type (missing column names, event property, setter method or constructor?) ["
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "notmatched-update-action",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'update' (a reserved keyword) expecting 'insert' but found 'update' at line 1 column 9"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "missing-clauses",
+        "sequence": 0,
+        "value": "Unexpected end-of-input at line 1 column 4"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "missing-then",
+        "sequence": 0,
+        "value": "Incorrect syntax near end-of-input ('matched' is a reserved keyword) expecting 'then' but found end-of-input at line 1 column 66 ["
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "and-then-delete",
+        "sequence": 0,
+        "value": "Incorrect syntax near 'then' (a reserved keyword) at line 1 column 71 [on SupportBean as up merge MergeInfra as mv where a=b when matched and then delete]"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "ambiguous-where-prop",
+        "sequence": 0,
+        "value": "Failed to validate where-clause expression 'boolPrimitive=true': Property named 'boolPrimitive' is ambiguous as is valid for more then one stream [on SupportBean as up merge MergeInfra as mv where boolPrimitive=true when not matched then insert select *]"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "invalid-select-prop",
+        "sequence": 0,
+        "value": "Failed to validate select-clause expression 'intPrimitive': Property named 'intPrimitive' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select intPrimitive]"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "invalid-match-where-prop",
+        "sequence": 0,
+        "value": "Failed to validate match where-clause expression 'theString=\"A\"': Property named 'theString' is not valid in any stream [on SupportBean_A as up merge MergeInfra as mv where mv.boolPrimitive=true when not matched then insert select * where theString = 'A']"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "variable-lhs",
+        "sequence": 0,
+        "value": "Left-hand-side does not allow variables for variable 'myvariable'"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "indexed-lhs",
+        "sequence": 0,
+        "value": "Unrecognized left-hand-side assignment 'theString[1][2]'"
+      },
+      {
+        "case": "invalid-table",
+        "operation": "compile-error",
+        "statement": "nested-event-assign",
+        "sequence": 0,
+        "value": "Failed to validate assignment expression 'c=me.so': Invalid assignment to property 'c' event type 'Composite' from event type 'SomeOther' [on MyEvent as me update AInfra set c = me.so]"
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-equivalent",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

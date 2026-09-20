@@ -50,8 +50,30 @@ activity or a single coverage percentage.
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 - Shipped: Draft 4.483 ('infra-nwtable-on-merge-pattern-nowhere') committed and pushed as 36378f03f; Git owns identity.
 
+- Shipped: Draft 4.484 ('infra-nwtable-on-merge-flow-itv') committed and pushed as ef141897e; Git owns identity. Parity review initial FAIL on one P2 (#unique windows created with keep-all retention), fixed and re-reviewed PASS.
+
 ## Current work unit
-Active: Draft 4.484 ('infra-nwtable-on-merge-flow-itv').
+Active: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly').
+
+- [x] Contract frozen (.omp/contract-485.md) by NextJavaContract485 + NextGoSurface485:
+  InfraNWTableOnMerge ords 40-45 — InfraInvalid{nw,table} (13 tryInvalidCompile
+  probes each, compile-error op precedent) + InfraInsertOnly{namedWindow=true}
+  x 4 variants (useEquivalent / plain / useColumnNames / soda). Runtime IDs
+  java-runtime-99b2d413519187b56232 / -33b1e837bc8b373bb198 /
+  -651148621e89ec5465b0 / -e51caa89fbde4ab34197 / -8900ac7e3d063d8b8842 /
+  -b581753558f219b16a2a. Asset-only; every clause family already in trigger.go.
+- [x] Assets (OnMergeInvalidInsertOnlyAssets agent): oracle + scenario
+  (6 cases / 81 steps) + runner + run.go wiring. Zero shared-core changes confirmed.
+- [x] Java trace regenerated (49 records); `-mode infra-nwtable-on-merge-invalid-insertonly-diff`
+  reports status passing / 0 differences; Go trace checked in.
+- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
+  case.infra-nwtable-on-merge-invalid-insertonly (724 cases / 348 DV / 1345 DV
+  runtime IDs / 3895 associations); capability trigger.table-named-window DV list extended.
+- [x] run_test.go: six pinned tests (direct replay, diff evidence, 3 trace mutations,
+  checked-in evidence, 5 raw-scenario mutations, runtime-ID mapping) all green.
+- [x] make check GREEN (parity 82s, internal/esper 70s); independent parity review
+  (ParityReview485): PASS, two P3s fixed (evidence list extended to full artifact
+  set, javaNames separator corrected to ', ').
 
 - [x] Contract frozen (.omp/contract-484.md) by NextJavaContract484 + NextGoSurface484:
   InfraNWTableOnMerge ords 32-39 (InfraFlow{nw,table} 4-branch merge with filtered
