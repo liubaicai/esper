@@ -61,10 +61,20 @@ Active: Draft 4.484 ('infra-nwtable-on-merge-flow-itv').
   -ae05c015767242106de7 / -3303d0922bd2d722fa3c / -f20972a347aabfcc0260 /
   -484a8e636d3734b87673 / -76d16e1334c83e6d4002 / -462d190f20742a0c266d /
   -8495f57749c2105b15a8. Asset-only; new sibling runner.
-- [ ] Assets (OnMergeFlowITVAssets agent): oracle + scenario + runner + run.go wiring.
-- [ ] Java trace + Go diff + evidence.
-- [ ] Manifest/roadmap/CHANGELOG + run_test.go pins.
-- [ ] make check + parity review + commit/push.
+- [x] Assets (OnMergeFlowITVAssets agent, two passes — first delivery hit a budget
+  stop after 3/5 files; steered back to finish the runner + run.go): oracle + scenario
+  (8 cases / 282 steps) + runner + run.go wiring. Zero shared-core changes confirmed.
+- [x] Java trace regenerated (195 records); `-mode infra-nwtable-on-merge-flow-itv-diff`
+  reports status passing / 0 differences; Go trace checked in.
+- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
+  case.infra-nwtable-on-merge-flow-itv (723 cases / 347 DV / 1339 DV runtime
+  IDs / 3889 associations); capability trigger.table-named-window DV list extended.
+- [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace mutations,
+  checked-in evidence, 6 raw-scenario mutations, runtime-ID mapping) all green.
+- [x] make check GREEN (parity 82s, internal/esper 71s); independent parity review
+  (ParityReview484): initial FAIL on one P2 (runner created #unique windows with
+  keep-all retention); fixed to esper.Unique matching the pinned EPL, re-diff still
+  passing / 0 differences; re-review PASS, no remaining findings.
 
 ## Deferred work items
 

@@ -1548,7 +1548,15 @@
     "java-runtime-0dc6b8eb05a1d3989b23",
     "java-runtime-c6f6bda40f34d29acb8c",
     "java-runtime-2c4851ea026cc835d39b",
-    "java-runtime-f075aa28d64b1ae78d2e"
+    "java-runtime-f075aa28d64b1ae78d2e",
+    "java-runtime-403bba8c6b29e32b1a8f",
+    "java-runtime-ae05c015767242106de7",
+    "java-runtime-3303d0922bd2d722fa3c",
+    "java-runtime-f20972a347aabfcc0260",
+    "java-runtime-484a8e636d3734b87673",
+    "java-runtime-76d16e1334c83e6d4002",
+    "java-runtime-462d190f20742a0c266d",
+    "java-runtime-8495f57749c2105b15a8"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46390,6 +46398,96 @@
    "notes": [
     "InfraNWTableOnMerge ords 26-31 born-differential: InfraPatternMultimatch (every-A-then-B pattern merge via the route-stream workaround, composite-key where, one merge trigger per pending branch), InfraNoWhereClause (no-where merge over keepall nw / unkeyed table; not-matched fires only when target is empty; matched C% updates all rows), InfraMultipleInsert (four ordered not-matched insert clauses, first matching wins, merge listener insert-stream records). Zero shared-core changes."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-on-merge-flow-itv",
+   "javaRuntimeIds": [
+    "java-runtime-403bba8c6b29e32b1a8f",
+    "java-runtime-ae05c015767242106de7",
+    "java-runtime-3303d0922bd2d722fa3c",
+    "java-runtime-f20972a347aabfcc0260",
+    "java-runtime-484a8e636d3734b87673",
+    "java-runtime-76d16e1334c83e6d4002",
+    "java-runtime-462d190f20742a0c266d",
+    "java-runtime-8495f57749c2105b15a8"
+   ],
+   "javaStaticIds": [
+    "java-097f9b8edb46959e0763",
+    "java-097f9b8edb46959e0763",
+    "java-097f9b8edb46959e0763",
+    "java-097f9b8edb46959e0763",
+    "java-097f9b8edb46959e0763",
+    "java-097f9b8edb46959e0763",
+    "java-097f9b8edb46959e0763",
+    "java-097f9b8edb46959e0763"
+   ],
+   "javaNames": [
+    "InfraFlow{namedWindow=true}",
+    "InfraFlow{namedWindow=false}",
+    "InfraInnerTypeAndVariable{namedWindow=true, eventRepresentationEnum=OBJECTARRAY}",
+    "InfraInnerTypeAndVariable{namedWindow=false, eventRepresentationEnum=OBJECTARRAY}",
+    "InfraInnerTypeAndVariable{namedWindow=true, eventRepresentationEnum=MAP}",
+    "InfraInnerTypeAndVariable{namedWindow=false, eventRepresentationEnum=MAP}",
+    "InfraInnerTypeAndVariable{namedWindow=true, eventRepresentationEnum=DEFAULT}",
+    "InfraInnerTypeAndVariable{namedWindow=false, eventRepresentationEnum=DEFAULT}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeFlowITVDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeFlowITVDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeFlowITVDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeFlowITVCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeFlowITVRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeFlowITVRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "table",
+    "named-window",
+    "merge",
+    "flow",
+    "variable",
+    "nested",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-on-merge-flow-itv.json",
+    "testdata/parity/infra-nwtable-on-merge-flow-itv.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-flow-itv.go.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-flow-itv.evidence.json",
+    "tools/java-oracle/InfraNWTableOnMergeFlowITVScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-on-merge-flow-itv.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-403bba8c6b29e32b1a8f",
+    "java-runtime-ae05c015767242106de7",
+    "java-runtime-3303d0922bd2d722fa3c",
+    "java-runtime-f20972a347aabfcc0260",
+    "java-runtime-484a8e636d3734b87673",
+    "java-runtime-76d16e1334c83e6d4002",
+    "java-runtime-462d190f20742a0c266d",
+    "java-runtime-8495f57749c2105b15a8"
+   ],
+   "notes": [
+    "InfraNWTableOnMerge ords 32-39 born-differential: InfraFlow{nw,table} (filtered SupportBean insert-into feeder, SupportBean_A delete-all trigger, 4-branch merge, two runAssertionFlow passes across undeploy/redeploy, wildcard merge tail, ambiguous-columns module) and InfraInnerTypeAndVariable{nw,table}x{OBJECTARRAY,MAP,DEFAULT} (tri-state myvar selecting among three not-matched branches, nested-fragment c2 column, matched-delete). Zero shared-core changes; the ambiguous-columns unkeyed-table where-merge is unobservable (Java never sends TypeOne events) and deploys the nil-keys equivalent."
+   ]
   }
  ],
  "mappings": [
@@ -49620,13 +49718,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-nwtable-on-merge-pattern-nowhere"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-nwtable-on-merge-flow-itv"
   }
  ],
  "summary": {
-  "inventoriedCases": 722,
-  "implementedCases": 720,
-  "differentialVerifiedCases": 346,
-  "differentialVerifiedRuntimeIds": 1331,
+  "inventoriedCases": 723,
+  "implementedCases": 721,
+  "differentialVerifiedCases": 347,
+  "differentialVerifiedRuntimeIds": 1339,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49636,13 +49738,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3881,
+  "runtimeAssociationCount": 3889,
   "referencedJavaRuntimeIds": 3475,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 661,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 722,
+  "totalCases": 723,
   "totalCapabilities": 122
  }
 }
