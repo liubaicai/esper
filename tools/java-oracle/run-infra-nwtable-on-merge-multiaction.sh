@@ -1,0 +1,253 @@
+#!/usr/bin/env sh
+set -eu
+
+usage() {
+    cat >&2 <<'EOF'
+usage: run-infra-nwtable-on-merge-multiaction.sh --esper-root PATH --scenario PATH --output PATH [--skip-build]
+
+The Esper checkout must be exactly the pinned Java 9.0.0 oracle commit. Java 17
+and Maven are selected from PATH unless JAVA_HOME/MAVEN_HOME are provided.
+EOF
+    exit 2
+}
+
+esper_root=
+scenario=
+output=
+skip_build=0
+expected_commit=9e1b9f1cc9117fea4bf33ab043762c045d73839c
+script_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --esper-root)
+            [ "$#" -ge 2 ] || usage
+            esper_root=$2
+            shift 2
+            ;;
+        --scenario)
+            [ "$#" -ge 2 ] || usage
+            scenario=$2
+            shift 2
+            ;;
+        --output)
+            [ "$#" -ge 2 ] || usage
+            output=$2
+            shift 2
+            ;;
+        --skip-build)
+            skip_build=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            echo "unknown argument: $1" >&2
+            usage
+            ;;
+    esac
+done
+
+[ -n "$esper_root" ] || { echo "--esper-root is required" >&2; exit 2; }
+[ -n "$scenario" ] || { echo "--scenario is required" >&2; exit 2; }
+[ -n "$output" ] || { echo "--output is required" >&2; exit 2; }
+[ -d "$esper_root/.git" ] || { echo "Esper root is not a Git checkout: $esper_root" >&2; exit 1; }
+[ -f "$scenario" ] || { echo "scenario was not found: $scenario" >&2; exit 1; }
+
+command -v git >/dev/null 2>&1 || { echo "git executable was not found" >&2; exit 1; }
+actual_commit=$(git -C "$esper_root" rev-parse HEAD 2>/dev/null) || {
+    echo "failed to resolve Esper commit at $esper_root" >&2
+    exit 1
+}
+if [ "$actual_commit" != "$expected_commit" ]; then
+    echo "Esper commit mismatch: want $expected_commit, got $actual_commit" >&2
+    exit 1
+fi
+
+java_bin=${JAVA:-java}
+javac_bin=${JAVAC:-javac}
+mvn_bin=${MAVEN:-mvn}
+if [ -n "${JAVA_HOME:-}" ]; then
+    java_bin="$JAVA_HOME/bin/java"
+    javac_bin="$JAVA_HOME/bin/javac"
+fi
+if [ -n "${MAVEN_HOME:-}" ]; then
+    mvn_bin="$MAVEN_HOME/bin/mvn"
+fi
+command -v "$java_bin" >/dev/null 2>&1 || { echo "Java executable was not found: $java_bin" >&2; exit 1; }
+command -v "$javac_bin" >/dev/null 2>&1 || { echo "javac executable was not found: $javac_bin" >&2; exit 1; }
+command -v "$mvn_bin" >/dev/null 2>&1 || { echo "Maven executable was not found: $mvn_bin" >&2; exit 1; }
+command -v jq >/dev/null 2>&1 || { echo "jq executable was not found; it is required to validate the scenario and oracle trace" >&2; exit 1; }
+
+java_version=$("$java_bin" -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | sed -n '1p')
+[ "$java_version" = "17" ] || {
+    echo "Java 17 is required; detected version: $java_version" >&2
+    exit 1
+}
+
+if ! jq -e '
+    .version == "esper-parity/v1" and
+    .id == "infra-nwtable-on-merge-multiaction" and
+    .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
+    .javaSource == "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java" and
+    (.javaRuntimes | type == "array" and length == 6) and
+    ([.javaRuntimes[] | startswith("java-runtime-")] | all) and
+    (.javaNames == ["InfraMultiactionDeleteUpdate{namedWindow=true}", "InfraMultiactionDeleteUpdate{namedWindow=false}", "InfraUpdateOrderOfFields{namedWindow=true}", "InfraUpdateOrderOfFields{namedWindow=false}", "InfraSubqueryNotMatched{namedWindow=true}", "InfraSubqueryNotMatched{namedWindow=false}"]) and
+    (.javaStaticIds == ["java-d718ed89dce189e3cb3b", "java-d718ed89dce189e3cb3b", "java-71292c39e6d9067bb77d", "java-71292c39e6d9067bb77d", "java-1b30fec400708094c9a1", "java-1b30fec400708094c9a1"]) and
+    (.javaFlags | type == "array" and length == 0) and
+    (.cases | type == "array" and length == 6) and
+    ([.cases[].case] == ["multiaction-nw", "multiaction-table", "orderoffields-nw", "orderoffields-table", "subquery-nw", "subquery-table"]) and
+    ([.cases[].ordinal] == [20, 21, 22, 23, 24, 25]) and
+    ([.cases[].runtimeId] == .javaRuntimes) and
+    ([.cases[].executionName] == .javaNames) and
+    (.steps | type == "array" and length == 109) and
+    ([.steps[] | select(.op == "case")] | length == 6) and
+    ([.steps[] | select(.op == "deploy")] | length == 18) and
+    ([.steps[] | select(.op == "deployed")] | length == 22) and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean")] | length == 19) and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean_ST0")] | length == 12) and
+    ([.steps[] | select(.op == "send" and .eventType == "SupportBean_S0")] | length == 9) and
+    ([.steps[] | select(.op == "snapshot")] | length == 15) and
+    ([.steps[] | select(.op == "undeploy")] | length == 2) and
+    ([.steps[] | select(.op == "undeploy-all")] | length == 6) and
+    ([.steps[] | select(.op != "case" and .op != "deploy" and .op != "deployed" and .op != "send" and .op != "snapshot" and .op != "undeploy" and .op != "undeploy-all")] | length == 0)
+' "$scenario" >/dev/null 2>&1; then
+    echo "scenario is not a valid infra-nwtable-on-merge-multiaction replay: $scenario" >&2
+    exit 1
+fi
+
+if [ "$skip_build" -eq 0 ]; then
+    "$mvn_bin" -f "$esper_root/pom.xml" -pl compiler,runtime -am test-compile \
+        -DskipTests=true -Dcheckstyle.skip=true -Dgpg.skip=true \
+        -Dfile.encoding=UTF-8 -Dproject.build.sourceEncoding=UTF-8 \
+        -Dproject.reporting.outputEncoding=UTF-8 -Duser.timezone=UTC
+fi
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/esper-infra-nwtable-on-merge-multiaction.XXXXXX")
+cleanup() {
+    status=$?
+    rm -rf "$work"
+    exit $status
+}
+trap cleanup EXIT HUP INT TERM
+
+"$mvn_bin" -q -f "$esper_root/compiler/pom.xml" dependency:build-classpath \
+    -Dmdep.outputFile="$work/compiler-cp.txt" -Dmdep.includeScope=runtime \
+    -Dgpg.skip=true -Dfile.encoding=UTF-8 -Duser.timezone=UTC
+"$mvn_bin" -q -f "$esper_root/runtime/pom.xml" dependency:build-classpath \
+    -Dmdep.outputFile="$work/runtime-cp.txt" -Dmdep.includeScope=runtime \
+    -Dgpg.skip=true -Dfile.encoding=UTF-8 -Duser.timezone=UTC
+
+classes="$work/classes"
+mkdir -p "$classes"
+# Windows javac/java need ';' separators and native paths; the Maven
+# dependency classpath files already use the platform separator.
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+        native_path() { cygpath -w "$1"; }
+        cp_sep=';'
+        ;;
+    *)
+        native_path() { printf '%s' "$1"; }
+        cp_sep=':'
+        ;;
+esac
+compiler_cp=$(tr -d '\r\n' < "$work/compiler-cp.txt")
+runtime_cp=$(tr -d '\r\n' < "$work/runtime-cp.txt")
+classpath="$(native_path "$classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/compiler/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/runtime/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common-avro/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common-avro/lib/avro-1.11.3.jar")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common-avro/lib/jackson-annotations-2.14.2.jar")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common-avro/lib/jackson-core-2.14.2.jar")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common-avro/lib/jackson-databind-2.14.2.jar")"
+# regression-lib classes provide the SupportBean_ST0 bean the
+# InfraMultiactionDeleteUpdate merge triggers on.
+classpath="$classpath$cp_sep$(native_path "$esper_root/regression-lib/target/classes")"
+classpath="$classpath$cp_sep$(native_path "$esper_root/common-xmlxsd/target/classes")"
+classpath="$classpath$cp_sep$compiler_cp$cp_sep$runtime_cp"
+
+"$javac_bin" -encoding UTF-8 -cp "$classpath" -d "$(native_path "$classes")" \
+    "$script_root/InfraNWTableOnMergeMultiactionScenarioOracle.java"
+
+mkdir -p "$(dirname "$output")"
+"$java_bin" -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Duser.language=en \
+    -Duser.country=US -Duser.variant= -cp "$classpath" \
+    InfraNWTableOnMergeMultiactionScenarioOracle "$scenario" > "$output"
+if ! jq -e '
+    def isdeployed($index; $case; $statement; $seq):
+        .records[$index].operation == "deployed" and
+        .records[$index].case == $case and
+        .records[$index].statement == $statement and
+        .records[$index].sequence == $seq;
+    def issnapshot($index; $case; $rows):
+        .records[$index].operation == "snapshot" and
+        .records[$index].case == $case and
+        .records[$index].statement == "Create" and
+        .records[$index].sequence == 0 and
+        ([.records[$index].new[].fields] == $rows);
+    def islistener($index; $case; $seq; $newfields):
+        .records[$index].operation == "listener" and
+        .records[$index].case == $case and
+        .records[$index].statement == "Merge" and
+        .records[$index].sequence == $seq and
+        (.records[$index] | has("old")) and
+        (.records[$index].new[0].fields | .intPrimitive == $newfields[0] and
+            .intBoxed == $newfields[1] and .doublePrimitive == $newfields[2]);
+    def mducase($base; $case):
+        isdeployed($base; $case; "create"; 1) and
+        isdeployed($base+1; $case; "insert"; 1) and
+        isdeployed($base+2; $case; "merge"; 1) and
+        issnapshot($base+3; $case; [{"theString": "E1", "intPrimitive": 1}]) and
+        issnapshot($base+4; $case; [{"theString": "E1", "intPrimitive": 1}]) and
+        issnapshot($base+5; $case; [{"theString": "E1", "intPrimitive": 1},
+            {"theString": "E3", "intPrimitive": 3}]) and
+        issnapshot($base+6; $case; [{"theString": "E1", "intPrimitive": 1},
+            {"theString": "E3", "intPrimitive": 3},
+            {"theString": "E4", "intPrimitive": 3000}]) and
+        issnapshot($base+7; $case; [{"theString": "E1", "intPrimitive": 1},
+            {"theString": "E3", "intPrimitive": 3},
+            {"theString": "E4", "intPrimitive": 3000},
+            {"theString": "E5", "intPrimitive": 999}]) and
+        issnapshot($base+8; $case; [{"theString": "E1", "intPrimitive": 1},
+            {"theString": "E6", "intPrimitive": 1999},
+            {"theString": "E3", "intPrimitive": 3},
+            {"theString": "E4", "intPrimitive": 3000},
+            {"theString": "E5", "intPrimitive": 999}]) and
+        isdeployed($base+9; $case; "merge"; 2);
+    def uofcase($base; $case):
+        isdeployed($base; $case; "create"; 1) and
+        isdeployed($base+1; $case; "insert"; 1) and
+        isdeployed($base+2; $case; "merge"; 1) and
+        islistener($base+3; $case; 1; [5, 5, 1]) and
+        islistener($base+4; $case; 2; [6, 6, 10]) and
+        islistener($base+5; $case; 3; [7, 7, 5]);
+    def subcase($base; $case; $nw):
+        isdeployed($base; $case; "create"; 1) and
+        isdeployed($base+1; $case; "create-two"; 1) and
+        isdeployed($base+2; $case; "insert"; 1) and
+        isdeployed($base+3; $case; "merge"; 1) and
+        issnapshot($base+4; $case; [{"string": "Y", "intPrimitive": 50}]) and
+        (($nw | not) or
+            issnapshot($base+5; $case; [{"string": "Y", "intPrimitive": 51}]));
+    .version == "esper-parity/v1" and
+    .id == "infra-nwtable-on-merge-multiaction" and
+    .javaCommit == "9e1b9f1cc9117fea4bf33ab043762c045d73839c" and
+    (.records | type == "array" and length == 43) and
+    ([.records[].operation] | all(. == "deployed" or . == "listener" or . == "snapshot")) and
+    ([.records[].time] | all(. == "1970-01-01T00:00:00Z")) and
+    mducase(0; "multiaction-nw") and
+    mducase(10; "multiaction-table") and
+    uofcase(20; "orderoffields-nw") and
+    uofcase(26; "orderoffields-table") and
+    subcase(32; "subquery-nw"; true) and
+    subcase(38; "subquery-table"; false)
+' "$output" >/dev/null 2>&1; then
+    echo "Java oracle produced an invalid infra-nwtable-on-merge-multiaction trace: $output" >&2
+    exit 1
+fi
+
+echo "javaCommit=$actual_commit java=$java_version output=$output"

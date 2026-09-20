@@ -156,6 +156,31 @@ Active: Draft 4.481 ('infra-nwtable-on-merge-insert-other-stream').
   (ParityReview481): PASS all nine areas; one P3 latent note (composite-PK lookup vs
   name-only predicate — forced by MergeIntoTableWhen's one-key-per-PK-column API,
   observably identical for the pinned single-send scenario).
+  Committed and pushed as a2f749243.
+
+## Current work unit
+Active: Draft 4.482 ('infra-nwtable-on-merge-multiaction').
+
+- [x] Contract frozen (.omp/contract-482.md) by NextJavaContract482 + NextGoSurface482:
+  InfraNWTableOnMerge ords 20-25 (InfraMultiactionDeleteUpdate six ordered matched
+  actions; InfraUpdateOrderOfFields left-to-right UPDATE SET with initial.*;
+  InfraSubqueryNotMatched correlated subquery in not-matched insert). Runtime IDs
+  java-runtime-dfa83c0593d19172be7d / -ffbda0563d50878dafd8 / -3034e5da517c1235da22 /
+  -cb5eefe84a486b090e53 / -905164d98662721e5509 / -d3e1f3aa50c4375f657f. Asset-only;
+  new sibling runner.
+- [x] Assets (OnMergeMultiactionAssets agent): oracle + scenario (6 cases / 109
+  steps) + runner + run.go wiring. Zero shared-core changes confirmed; the worker's
+  hand-assembled-classpath trace was regenerated via the canonical run script.
+- [x] Java trace regenerated (43 records); `-mode infra-nwtable-on-merge-multiaction-diff`
+  reports status passing / 0 differences; Go trace checked in.
+- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
+  case.infra-nwtable-on-merge-multiaction (721 cases / 345 DV / 1325 DV runtime
+  IDs / 3875 associations); capability trigger.table-named-window DV list extended.
+- [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace mutations,
+  checked-in evidence, 6 raw-scenario mutations, runtime-ID mapping) all green.
+- [x] make check GREEN (parity 80s, internal/esper 71s; one flaky parity failure on
+  first run, clean on re-run); independent parity review (ParityReview482): PASS all
+  nine areas; one P3 comment fix applied (charPrimitive zero char default wording).
 
 ## Current work unit
 Active: Draft 4.480 ('infra-nwtable-on-merge-nested-insertstream').
