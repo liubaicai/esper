@@ -84,7 +84,20 @@ Active: Draft 4.476 ('context-selection-faf-nested').
   the context-bound plan error (insert-into inherits context at build time).
 - [x] make check exit 0 (check-layout incl. facade regen, go vet, full go test; parity 79s,
   internal/esper 69s).
-- [ ] Independent parity review (ParityReview476) + commit/push.
+- [x] Independent parity review (ParityReview476): initial FAIL with P1x3 + P1 P3 —
+  over-admission (hasInitiatedParent chain-walk vs direct-parent dispatch), route drop for
+  initiated leaves under initiated parents, parent.startTime = leaf creation time, missing
+  result.Time. All fixed (direct-parent gate + NewNestedContext shape rejection, per-leaf
+  routing in processNestedInitiatedTerminated, nestedParentTimes, result.Time); re-review PASS.
+- [x] Shipped; Git owns identity. Draft 4.476 committed and pushed as `7f279135a`.
+
+## Next work unit (prefetched)
+ContextAdminListen ord 5 ContextAdminPartitionAddRemoveListener (java-runtime-206c08a7f3d6c239050c,
+RUNTIMEOPS, static java-3a026095a61c4060c91b). Contract frozen by NextJavaContract10 +
+NextGoSurface10 + reviewer prefetch: scenario A flat `start S0 end S1`, scenario B nested
+`NeverEndingStory start @now` + `ABSession start S0 as s0 end S1`. Go surface: listener APIs
+exist; runner needs remove-partition-listener(s) ops + admin:partition-listeners snapshot;
+leaf-initiated path already handles the never-ending parent. Asset-shaped unit.
 
 
 ## Current work unit
