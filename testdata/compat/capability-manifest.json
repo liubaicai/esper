@@ -1570,7 +1570,11 @@
     "java-runtime-f21a6fc889f14608828f",
     "java-runtime-f7a73c74e857ffbdfd15",
     "java-runtime-5816ec0ef519ec8a48e1",
-    "java-runtime-3cca4ced23a6097b5023"
+    "java-runtime-3cca4ced23a6097b5023",
+    "java-runtime-27e7ce929b90e4009b48",
+    "java-runtime-d52d06b4618e30451543",
+    "java-runtime-83451626aeee59b34ac2",
+    "java-runtime-b8b3e8c1f04c0c918ea2"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46648,6 +46652,67 @@
    "notes": [
     "Born-DV: InfraInsertOnly remaining six executions (ord 46 nw soda+useColumnNames; ords 47-51 all five table variants: useEquivalent where 1=2 / plain / useColumnNames / soda / soda+useColumnNames) replayed via MergeIntoNamedWindowWhen + MergeIntoTableWhen with WhenNotMatchedAny; InfraDeleteThenUpdate{nw,table} (ords 52-53) replays the matched delete-then-update action chain with the FAF seed, pinning the nw-update-wins / table-delete-wins divergence. Engine fix: merge listener dispatch now reports per-action deltas (delete contributes the removed row to old, the following update contributes the same pre-delete row to old plus the updated row to new) while the named window retains the updated row and the table applies the net effect. Java/Go 46 records, 0 differences."
    ]
+  },
+  {
+   "id": "case.infra-table-select-enum-multikey",
+   "javaRuntimeIds": [
+    "java-runtime-27e7ce929b90e4009b48",
+    "java-runtime-d52d06b4618e30451543",
+    "java-runtime-83451626aeee59b34ac2",
+    "java-runtime-b8b3e8c1f04c0c918ea2"
+   ],
+   "javaStaticIds": [
+    "java-ece967984c50b6e02d47",
+    "java-2ae2dfa34214fa74ffc8",
+    "java-79057cf89b8898584f05",
+    "java-2a4767401dba7efd8f97"
+   ],
+   "javaNames": [
+    "InfraTableSelectEnum",
+    "InfraTableSelectMultikeyWArraySingleArray",
+    "InfraTableSelectMultikeyWArrayTwoArray",
+    "InfraTableSelectMultikeyWArrayComposite"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableSelect.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_table_select_enum_multikey.go"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "select",
+    "enum",
+    "multikey",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-select-enum-multikey.json",
+    "testdata/parity/infra-table-select-enum-multikey.trace.json",
+    "testdata/parity/infra-table-select-enum-multikey.go.trace.json",
+    "testdata/parity/infra-table-select-enum-multikey.evidence.json",
+    "tools/java-oracle/InfraTableSelectEnumMultikeyScenarioOracle.java",
+    "tools/java-oracle/run-infra-table-select-enum-multikey.sh",
+    "javaCommit=9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+    "java=17"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-27e7ce929b90e4009b48",
+    "java-runtime-d52d06b4618e30451543",
+    "java-runtime-83451626aeee59b34ac2",
+    "java-runtime-b8b3e8c1f04c0c918ea2"
+   ],
+   "notes": [
+    "Born-DV: InfraTableSelect ords 1-4 \u2014 InfraTableSelectEnum (firstOf() yields the first table row's Object[] underlying via iterator), InfraTableSelectMultikeyWArraySingleArray (int[primitive] array PK content equality), InfraTableSelectMultikeyWArrayTwoArray (two-array composite PK incl. empty-array component), InfraTableSelectMultikeyWArrayComposite (three-string PK + btree secondary index + lexicographic v > p12 gate). Java/Go 18 records, 0 differences. Ord 0 InfraTableSelectStarPublicTypeVisibility deferred (14-sub-assertion select-shape matrix, different semantics cluster)."
+   ]
   }
  ],
  "mappings": [
@@ -49890,13 +49955,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-nwtable-on-merge-insertonly-deletethenupdate"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-select-enum-multikey"
   }
  ],
  "summary": {
-  "inventoriedCases": 725,
-  "implementedCases": 723,
-  "differentialVerifiedCases": 349,
-  "differentialVerifiedRuntimeIds": 1353,
+  "inventoriedCases": 726,
+  "implementedCases": 724,
+  "differentialVerifiedCases": 350,
+  "differentialVerifiedRuntimeIds": 1357,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49906,13 +49975,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3903,
-  "referencedJavaRuntimeIds": 3475,
+  "runtimeAssociationCount": 3907,
+  "referencedJavaRuntimeIds": 3479,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 661,
+  "unreferencedJavaRuntimeIds": 657,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 725,
+  "totalCases": 726,
   "totalCapabilities": 122
  }
 }

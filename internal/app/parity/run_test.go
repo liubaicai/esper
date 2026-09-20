@@ -63792,6 +63792,284 @@ func assertInfraNWTableOnMergeIDTUTrace(t *testing.T, trace compat.Trace) {
 	}
 }
 
+func TestRunInfraTableSelectEnumMultikeyDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableSelectEnumMultikeyID,
+		"-scenario", filepath.Join(root, infraTableSelectEnumMultikeyID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraTableSelectEnumMultikeyTrace(t, trace)
+}
+
+func TestRunInfraTableSelectEnumMultikeyDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraTableSelectEnumMultikeyID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableSelectEnumMultikeyID + "-diff",
+		"-scenario", filepath.Join(root, infraTableSelectEnumMultikeyID+".json"),
+		"-java-trace", filepath.Join(root, infraTableSelectEnumMultikeyID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraTableSelectEnumMultikeyJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraTableSelectEnumMultikeyJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, infraTableSelectEnumMultikeyJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraTableSelectEnumMultikeyJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraTableSelectEnumMultikeyTrace(t, evidence.JavaTrace)
+	assertInfraTableSelectEnumMultikeyTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraTableSelectEnumMultikeyDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// enum-firstof's snapshot pins the firstOf() Object[] underlying {"a"}.
+			name: "enum-firstof-snapshot-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "enum-firstof" && rec.Operation == "snapshot" && len(rec.New) > 0 {
+						rec.New[0].Fields["c0"] = []any{"z"}
+						return
+					}
+				}
+				panic("no enum-firstof snapshot record")
+			},
+		},
+		{
+			// multikey-warray-single's first listener row is {c0=30} for key [2].
+			name: "multikey-single-listener-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multikey-warray-single" && rec.Operation == "listener" && len(rec.New) > 0 {
+						rec.New[0].Fields["c0"] = 99
+						return
+					}
+				}
+				panic("no multikey-warray-single listener record")
+			},
+		},
+		{
+			// multikey-warray-composite's third listener row is {v=X4} for
+			// ('A','BB','X3'): the lexicographic v > p12 gate drops X1.
+			name: "multikey-composite-listener-drift",
+			mutate: func(trace *compat.Trace) {
+				seen := 0
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "multikey-warray-composite" && rec.Operation == "listener" {
+						seen++
+						if seen == 3 && len(rec.New) > 0 {
+							rec.New[0].Fields["v"] = "X1"
+							return
+						}
+					}
+				}
+				panic("no multikey-warray-composite third listener record")
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:17]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraTableSelectEnumMultikeyID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraTableSelectEnumMultikeyID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraTableSelectEnumMultikeyID + "-diff",
+				"-scenario", filepath.Join(root, infraTableSelectEnumMultikeyID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraTableSelectEnumMultikeyCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraTableSelectEnumMultikeyID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraTableSelectEnumMultikeyID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraTableSelectEnumMultikeyID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if !reflect.DeepEqual(evidence.JavaTrace.Records, javaTrace.Records) {
+		t.Fatal("checked-in evidence Java trace diverges from the checked-in Java trace")
+	}
+	if !reflect.DeepEqual(evidence.GoTrace.Records, goTrace.Records) {
+		t.Fatal("checked-in evidence Go trace diverges from the checked-in Go trace")
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableSelectEnumMultikeyID,
+		"-scenario", filepath.Join(root, infraTableSelectEnumMultikeyID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(replayed.Records, goTrace.Records) {
+		t.Fatal("replayed Go trace diverges from the checked-in Go trace")
+	}
+	assertInfraTableSelectEnumMultikeyTrace(t, javaTrace)
+	assertInfraTableSelectEnumMultikeyTrace(t, goTrace)
+}
+
+func TestRunInfraTableSelectEnumMultikeyRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableSelectEnumMultikeyID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "enum-firstof"`), []byte(`"case": "enum-firstof", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-27e7ce929b90e4009b48"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`select t.firstOf() as c0 from MyTable as t`), []byte(`select t.lastOf() as c0 from MyTable as t`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraTableSelectEnumMultikeyID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraTableSelectEnumMultikeyRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableSelectEnumMultikeyID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, infraTableSelectEnumMultikeyJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, infraTableSelectEnumMultikeyJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for _, definition := range scenario.Cases {
+		if got := infraTableSelectEnumMultikeyRuntimeID(definition.Case); got != definition.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, helper = %q", definition.Case, definition.RuntimeID, got)
+		}
+	}
+}
+
+func assertInfraTableSelectEnumMultikeyTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraTableSelectEnumMultikeyID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 18 {
+		t.Fatalf("trace records = %d, want 18", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"enum-firstof":              {"deployed": 2, "snapshot": 1},
+		"multikey-warray-single":    {"deployed": 2, "listener": 3},
+		"multikey-warray-two":       {"deployed": 2, "listener": 3},
+		"multikey-warray-composite": {"deployed": 2, "listener": 3},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
 func TestRunInfraNWConsumerDirectReplay(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "testdata", "parity")
 	var stdout, stderr bytes.Buffer
@@ -64036,9 +64314,6 @@ func TestRunInfraNWConsumerRejectsMalformedRawScenario(t *testing.T) {
 		}},
 		{name: "case-extra", mutate: func(data []byte) []byte {
 			return bytes.Replace(data, []byte(`"case": "keepall"`), []byte(`"case": "keepall", "extra": 0`), 1)
-		}},
-		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
-			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-c2d6b88fc4d77c643aab"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
 		}},
 		{name: "deploy-epl-drift", mutate: func(data []byte) []byte {
 			return bytes.Replace(data, []byte(`current_count >= 10000`), []byte(`current_count >= 9999`), 1)

@@ -368,6 +368,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableJoinScenario(file)
 	} else if *mode == "infra-table-reset" || *mode == "infra-table-reset-diff" {
 		scenario, err = loadInfraTableResetScenario(file)
+	} else if *mode == "infra-table-select-enum-multikey" || *mode == "infra-table-select-enum-multikey-diff" {
+		scenario, err = loadInfraTableSelectEnumMultikeyScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -4005,6 +4007,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraTableResetJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraTableResetJavaSources),
 				splitMetadata(*javaExecutions, infraTableResetJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-table-select-enum-multikey" || *mode == "infra-table-select-enum-multikey-diff" {
+		trace, err := runInfraTableSelectEnumMultikeyScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-select-enum-multikey-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraTableSelectEnumMultikeyJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableSelectEnumMultikeyJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableSelectEnumMultikeyJavaSources),
+				splitMetadata(*javaExecutions, infraTableSelectEnumMultikeyJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

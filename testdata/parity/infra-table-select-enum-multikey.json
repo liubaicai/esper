@@ -1,0 +1,104 @@
+{
+  "version": "esper-parity/v1",
+  "id": "infra-table-select-enum-multikey",
+  "description": "InfraTableSelect ordinals 1-4: InfraTableSelectEnum deploys an unkeyed MyTable(p string) plus a 's0' select of t.firstOf() as c0, seeds {'a'} via fire-and-forget insert and observes the iterator row whose c0 is the first table row's Object[] underlying; InfraTableSelectMultikeyWArraySingleArray joins SupportEventWithManyArray.intOne to the int[primitive] primary key of a table filled from SupportEventWithIntArray; InfraTableSelectMultikeyWArrayTwoArray joins intOne/intTwo to a two-array-key table filled and probed through the same event type filtered on id 'I'/'Q'; InfraTableSelectMultikeyWArrayComposite joins SupportBean_S1 to a three-string-key table with a btree secondary index and a lexicographic v > p12 range predicate. Java milestone(0) checkpoints are harness no-ops and carry no steps (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableSelect.java).",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableSelect.java",
+  "javaRuntimes": [
+    "java-runtime-27e7ce929b90e4009b48",
+    "java-runtime-d52d06b4618e30451543",
+    "java-runtime-83451626aeee59b34ac2",
+    "java-runtime-b8b3e8c1f04c0c918ea2"
+  ],
+  "javaNames": [
+    "InfraTableSelectEnum",
+    "InfraTableSelectMultikeyWArraySingleArray",
+    "InfraTableSelectMultikeyWArrayTwoArray",
+    "InfraTableSelectMultikeyWArrayComposite"
+  ],
+  "javaStaticIds": [
+    "java-ece967984c50b6e02d47",
+    "java-2ae2dfa34214fa74ffc8",
+    "java-79057cf89b8898584f05",
+    "java-2a4767401dba7efd8f97"
+  ],
+  "javaFlags": [],
+  "cases": [
+    {
+      "case": "enum-firstof",
+      "ordinal": 1,
+      "runtimeId": "java-runtime-27e7ce929b90e4009b48",
+      "executionName": "InfraTableSelectEnum",
+      "observation": "iterator; unkeyed MyTable(p string) seeded {'a'} by fire-and-forget insert; the s0 iterator row carries c0 = Object[]{'a'} — firstOf() yields the first table row's underlying, not an EventBean; no listener is attached",
+      "epl": "@public create table MyTable(p string);\n@name('s0') select t.firstOf() as c0 from MyTable as t;\n"
+    },
+    {
+      "case": "multikey-warray-single",
+      "ordinal": 2,
+      "runtimeId": "java-runtime-d52d06b4618e30451543",
+      "executionName": "InfraTableSelectMultikeyWArraySingleArray",
+      "observation": "listener; int[primitive] primary key k filled from SupportEventWithIntArray.array by content equality; SupportEventWithManyArray.intOne probes [2]/[1,3]/[1,2] yield c0 30/20/10",
+      "epl": "@public create table MyTable(k int[primitive] primary key, value int);\ninsert into MyTable select array as k, value from SupportEventWithIntArray;\n@name('s0') select t.value as c0 from SupportEventWithManyArray, MyTable as t where k = intOne;\n"
+    },
+    {
+      "case": "multikey-warray-two",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-83451626aeee59b34ac2",
+      "executionName": "InfraTableSelectMultikeyWArrayTwoArray",
+      "observation": "listener; two int[primitive] primary keys k1/k2 filled from SupportEventWithManyArray(id='I') and probed by id='Q' sends; the empty array [] is a valid key component; probes ([2],[])/([1,2],[3,4])/([1,3],[1]) yield c0 30/10/20",
+      "epl": "@public create table MyTable(k1 int[primitive] primary key, k2 int[primitive] primary key, value int);\ninsert into MyTable select intOne as k1, intTwo as k2, value from SupportEventWithManyArray(id = 'I');\n@name('s0') select t.value as c0 from SupportEventWithManyArray(id='Q'), MyTable as t where k1 = intOne and k2 = intTwo;\n"
+    },
+    {
+      "case": "multikey-warray-composite",
+      "ordinal": 4,
+      "runtimeId": "java-runtime-b8b3e8c1f04c0c918ea2",
+      "executionName": "InfraTableSelectMultikeyWArrayComposite",
+      "observation": "listener; three string primary keys k0/k1/k2 plus a planning-only btree index on (k0,k1,v); SupportBean_S1 probes join on k0=p10 and k1=p11 with lexicographic v>p12 — ('A','CC','') yields X3, ('C','CC','') yields X4, ('A','BB','X3') yields X4 because 'X1' is not > 'X3', and ('A','BB','Z') leaves the listener uninvoked",
+      "epl": "@public create table MyTable(k0 string primary key, k1 string primary key, k2 string primary key, v string);\ncreate index MyIndex on MyTable(k0, k1, v btree);\ninsert into MyTable select p00 as k0, p01 as k1, p02 as k2, p03 as v from SupportBean_S0;\n@name('s0') select t.v as v from SupportBean_S1, MyTable as t where k0 = p10 and k1 = p11 and v > p12;\n"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "enum-firstof"},
+    {"op": "deploy", "case": "enum-firstof", "statement": "module", "epl": "@public create table MyTable(p string);\n@name('s0') select t.firstOf() as c0 from MyTable as t;\n"},
+    {"op": "deployed", "case": "enum-firstof", "statement": "module"},
+    {"op": "deployed", "case": "enum-firstof", "statement": "s0"},
+    {"op": "deploy", "case": "enum-firstof", "statement": "FafInsert", "epl": "insert into MyTable select 'a' as p"},
+    {"op": "snapshot", "case": "enum-firstof", "statement": "s0", "mode": "ordered", "fields": ["c0"]},
+    {"op": "undeploy-all", "case": "enum-firstof"},
+    {"op": "case", "case": "multikey-warray-single"},
+    {"op": "deploy", "case": "multikey-warray-single", "statement": "module", "epl": "@public create table MyTable(k int[primitive] primary key, value int);\ninsert into MyTable select array as k, value from SupportEventWithIntArray;\n@name('s0') select t.value as c0 from SupportEventWithManyArray, MyTable as t where k = intOne;\n"},
+    {"op": "deployed", "case": "multikey-warray-single", "statement": "module"},
+    {"op": "deployed", "case": "multikey-warray-single", "statement": "s0"},
+    {"op": "send", "case": "multikey-warray-single", "eventType": "SupportEventWithIntArray", "payload": {"id": "E1", "array": [1, 2], "value": 10}},
+    {"op": "send", "case": "multikey-warray-single", "eventType": "SupportEventWithIntArray", "payload": {"id": "E2", "array": [1, 3], "value": 20}},
+    {"op": "send", "case": "multikey-warray-single", "eventType": "SupportEventWithIntArray", "payload": {"id": "E3", "array": [2], "value": 30}},
+    {"op": "send", "case": "multikey-warray-single", "eventType": "SupportEventWithManyArray", "payload": {"intOne": [2]}},
+    {"op": "send", "case": "multikey-warray-single", "eventType": "SupportEventWithManyArray", "payload": {"intOne": [1, 3]}},
+    {"op": "send", "case": "multikey-warray-single", "eventType": "SupportEventWithManyArray", "payload": {"intOne": [1, 2]}},
+    {"op": "undeploy-all", "case": "multikey-warray-single"},
+    {"op": "case", "case": "multikey-warray-two"},
+    {"op": "deploy", "case": "multikey-warray-two", "statement": "module", "epl": "@public create table MyTable(k1 int[primitive] primary key, k2 int[primitive] primary key, value int);\ninsert into MyTable select intOne as k1, intTwo as k2, value from SupportEventWithManyArray(id = 'I');\n@name('s0') select t.value as c0 from SupportEventWithManyArray(id='Q'), MyTable as t where k1 = intOne and k2 = intTwo;\n"},
+    {"op": "deployed", "case": "multikey-warray-two", "statement": "module"},
+    {"op": "deployed", "case": "multikey-warray-two", "statement": "s0"},
+    {"op": "send", "case": "multikey-warray-two", "eventType": "SupportEventWithManyArray", "payload": {"id": "I", "intOne": [1, 2], "intTwo": [3, 4], "value": 10}},
+    {"op": "send", "case": "multikey-warray-two", "eventType": "SupportEventWithManyArray", "payload": {"id": "I", "intOne": [1, 3], "intTwo": [1], "value": 20}},
+    {"op": "send", "case": "multikey-warray-two", "eventType": "SupportEventWithManyArray", "payload": {"id": "I", "intOne": [2], "intTwo": [], "value": 30}},
+    {"op": "send", "case": "multikey-warray-two", "eventType": "SupportEventWithManyArray", "payload": {"id": "Q", "intOne": [2], "intTwo": [], "value": -1}},
+    {"op": "send", "case": "multikey-warray-two", "eventType": "SupportEventWithManyArray", "payload": {"id": "Q", "intOne": [1, 2], "intTwo": [3, 4], "value": -1}},
+    {"op": "send", "case": "multikey-warray-two", "eventType": "SupportEventWithManyArray", "payload": {"id": "Q", "intOne": [1, 3], "intTwo": [1], "value": -1}},
+    {"op": "undeploy-all", "case": "multikey-warray-two"},
+    {"op": "case", "case": "multikey-warray-composite"},
+    {"op": "deploy", "case": "multikey-warray-composite", "statement": "module", "epl": "@public create table MyTable(k0 string primary key, k1 string primary key, k2 string primary key, v string);\ncreate index MyIndex on MyTable(k0, k1, v btree);\ninsert into MyTable select p00 as k0, p01 as k1, p02 as k2, p03 as v from SupportBean_S0;\n@name('s0') select t.v as v from SupportBean_S1, MyTable as t where k0 = p10 and k1 = p11 and v > p12;\n"},
+    {"op": "deployed", "case": "multikey-warray-composite", "statement": "module"},
+    {"op": "deployed", "case": "multikey-warray-composite", "statement": "s0"},
+    {"op": "send", "case": "multikey-warray-composite", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "A", "p01": "BB", "p02": "CCC", "p03": "X1"}},
+    {"op": "send", "case": "multikey-warray-composite", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "A", "p01": "BB", "p02": "DDDD", "p03": "X4"}},
+    {"op": "send", "case": "multikey-warray-composite", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "A", "p01": "CC", "p02": "CCC", "p03": "X3"}},
+    {"op": "send", "case": "multikey-warray-composite", "eventType": "SupportBean_S0", "payload": {"id": 0, "p00": "C", "p01": "CC", "p02": "CCC", "p03": "X4"}},
+    {"op": "send", "case": "multikey-warray-composite", "eventType": "SupportBean_S1", "payload": {"id": 0, "p10": "A", "p11": "CC", "p12": ""}},
+    {"op": "send", "case": "multikey-warray-composite", "eventType": "SupportBean_S1", "payload": {"id": 0, "p10": "C", "p11": "CC", "p12": ""}},
+    {"op": "send", "case": "multikey-warray-composite", "eventType": "SupportBean_S1", "payload": {"id": 0, "p10": "A", "p11": "BB", "p12": "X3"}},
+    {"op": "send", "case": "multikey-warray-composite", "eventType": "SupportBean_S1", "payload": {"id": 0, "p10": "A", "p11": "BB", "p12": "Z"}},
+    {"op": "undeploy-all", "case": "multikey-warray-composite"}
+  ]
+}

@@ -55,97 +55,38 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
 
 ## Current work unit
-Active: Draft 4.486 ('infra-nwtable-on-merge-insertonly-deletethenupdate').
+Active: Draft 4.487 ('infra-table-select-enum-multikey').
 
-- [x] Contract frozen (.omp/contract-486.md) by NextJavaContract486 + NextGoSurface486:
-  InfraNWTableOnMerge ords 46-53 — six remaining InfraInsertOnly executions
-  (ord 46 nw soda+colnames; ords 47-51 all five table variants) +
-  InfraDeleteThenUpdate{nw,table} (ords 52-53, delete-then-update multi-action
-  with nw-update-wins / table-delete-wins divergence + FAF seed). Runtime IDs
-  java-runtime-5cdc46289e4fac78a0c5 / -8e9616eb8385c473d45a /
-  -af614186a63cbeb33ae5 / -eb7754c9e46c8c465c14 / -f21a6fc889f14608828f /
-  -f7a73c74e857ffbdfd15 / -5816ec0ef519ec8a48e1 / -3cca4ced23a6097b5023.
-- [x] Assets (OnMergeInsertOnlyDTUAssets agent): oracle + scenario (8 cases /
-  80 steps) + runner + run.go wiring.
-- [x] **Engine fix (shared core, contract deviation)**: the contract predicted
-  zero shared-core work, but the delete-then-update listener surface required
-  per-action delta reporting — Java's merge listener sees the delete's removed
-  row in old plus the update's pre-delete row in old and updated row in new.
-  evaluateTableMergeActions now returns per-action deltas; mergeWhere gained
-  namedWindowMergeDeleteThenUpdate (nw retains updated row) and the table path
-  applies the net effect (delete wins). Files: internal/esper/state.go,
-  internal/esper/trigger.go.
-- [x] Java trace regenerated via run-infra-nwtable-on-merge-insertonly-
-  deletethenupdate.sh (46 records, javaCommit 9e1b9f1cc9117fea4bf33ab043762c045d73839c);
-  `-mode infra-nwtable-on-merge-insertonly-deletethenupdate-diff` reports
-  status passing / 0 differences; Go trace + evidence checked in.
-- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
-  case.infra-nwtable-on-merge-insertonly-deletethenupdate (725 cases / 349 DV /
-  1353 DV runtime IDs / 3903 associations); capability trigger.table-named-window
-  DV list extended. InfraNWTableOnMerge.java now has all 61 executions referenced.
+- [x] Contract frozen (.omp/contract-487.md) by NextJavaContract487 +
+  NextGoSurface487: InfraTableSelect.java ords 1-4 — InfraTableSelectEnum
+  (firstOf() iterator row), MultikeyWArraySingleArray/TwoArray (int[primitive]
+  array PK content equality incl. empty-array component), MultikeyWArrayComposite
+  (three-string PK + btree index + lexicographic v > p12). Runtime IDs
+  java-runtime-27e7ce929b90e4009b48 / -d52d06b4618e30451543 /
+  -83451626aeee59b34ac2 / -b8b3e8c1f04c0c918ea2. Ord 0 deferred (select-shape
+  matrix, different cluster).
+- [x] Assets (TableSelectAssets487 agent): oracle + run script + scenario
+  (4 cases / 42 steps) + runner + run.go wiring. Zero shared-core changes.
+  Primary-agent fix to the delivered run script: regression-lib added to the
+  Maven build module list and javac classpath (support beans live there).
+- [x] Java trace regenerated via run-infra-table-select-enum-multikey.sh
+  (18 records, javaCommit 9e1b9f1cc9117fea4bf33ab043762c045d73839c);
+  `-mode infra-table-select-enum-multikey-diff` reports status passing /
+  0 differences; Go trace + evidence checked in.
+- [x] Manifest updated: new born-DV case.infra-table-select-enum-multikey
+  (726 cases / 350 DV / 1357 DV runtime IDs); capability
+  trigger.table-named-window DV list extended to 83.
 - [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace
-  mutations incl. the nw-update-wins/table-delete-wins snapshots, checked-in
+  mutations incl. firstOf Object[] and lexicographic-gate pins, checked-in
   evidence, 5 raw-scenario mutations, runtime-ID mapping) all green.
-- [x] make check GREEN (parity 81s, internal/esper 70s). The context-init-term
-  diff flake seen under full-suite load was root-caused and fixed in this
-  commit: processInitiatedTerminated, its nested sibling, processContextFanOut,
-  and drainOutputPartitions iterated `sort.Strings` over `token:%p` pointer
-  keys — pointer order, not creation order. Fresh processes allocate
-  monotonically so isolated runs were stable; under suite heap pressure the
-  order flips and merged listener rows swap (records[9]/[10] SB01/SB02 in
-  context-init-term-duration). All four sites now use sortedPartitionKeys
-  (partitionID = creation order). Verified: 30/30 isolated + 2 full shuffled
-  parity suites + make check green.
-- [x] Independent parity review (ParityReview486): PASS, no P0/P1/P2. Three
-  P3s addressed: mergeWhere fallback comment narrowed to delta-carrying
-  actions (MergeUpdate multi-update chains keep pre-delta net-effect shape,
-  not yet differential-exercised); the flake fix recorded here; the tail-loop
-  InsertIntoTarget check confirmed consistent with the main loop's error.
-- [x] N+1 scouts (NextJavaContract487 + NextGoSurface487) prefetched
-  InfraTableSelect.java ords 0-4 (5 unreferenced executions, no flags).
+- [ ] Independent parity review pending; N+2 scout selection pending.
 
-- [x] Contract frozen (.omp/contract-485.md) by NextJavaContract485 + NextGoSurface485:
-  InfraNWTableOnMerge ords 40-45 — InfraInvalid{nw,table} (13 tryInvalidCompile
-  probes each, compile-error op precedent) + InfraInsertOnly{namedWindow=true}
-  x 4 variants (useEquivalent / plain / useColumnNames / soda). Runtime IDs
-  java-runtime-99b2d413519187b56232 / -33b1e837bc8b373bb198 /
-  -651148621e89ec5465b0 / -e51caa89fbde4ab34197 / -8900ac7e3d063d8b8842 /
-  -b581753558f219b16a2a. Asset-only; every clause family already in trigger.go.
-- [x] Assets (OnMergeInvalidInsertOnlyAssets agent): oracle + scenario
-  (6 cases / 81 steps) + runner + run.go wiring. Zero shared-core changes confirmed.
-- [x] Java trace regenerated (49 records); `-mode infra-nwtable-on-merge-invalid-insertonly-diff`
-  reports status passing / 0 differences; Go trace checked in.
-- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
-  case.infra-nwtable-on-merge-invalid-insertonly (724 cases / 348 DV / 1345 DV
-  runtime IDs / 3895 associations); capability trigger.table-named-window DV list extended.
-- [x] run_test.go: six pinned tests (direct replay, diff evidence, 3 trace mutations,
-  checked-in evidence, 5 raw-scenario mutations, runtime-ID mapping) all green.
-- [x] make check GREEN (parity 82s, internal/esper 70s); independent parity review
-  (ParityReview485): PASS, two P3s fixed (evidence list extended to full artifact
-  set, javaNames separator corrected to ', ').
+## Previous work unit (shipped)
+Draft 4.486 ('infra-nwtable-on-merge-insertonly-deletethenupdate') committed
+and pushed as 244069315; Git owns identity. Parity review PASS (three P3s
+addressed). Includes the context-init-term flake root-cause fix
+(sortedPartitionKeys replacing pointer-string sorts at four sites).
 
-- [x] Contract frozen (.omp/contract-484.md) by NextJavaContract484 + NextGoSurface484:
-  InfraNWTableOnMerge ords 32-39 (InfraFlow{nw,table} 4-branch merge with filtered
-  sources + feeder + delete-all + two-pass + wildcard tail + ambiguous-columns module;
-  InfraInnerTypeAndVariable{nw,table}x{OBJECTARRAY,MAP,DEFAULT} tri-state myvar +
-  nested-fragment c2 + matched-delete). Runtime IDs java-runtime-403bba8c6b29e32b1a8f /
-  -ae05c015767242106de7 / -3303d0922bd2d722fa3c / -f20972a347aabfcc0260 /
-  -484a8e636d3734b87673 / -76d16e1334c83e6d4002 / -462d190f20742a0c266d /
-  -8495f57749c2105b15a8. Asset-only; new sibling runner.
-- [x] Assets (OnMergeFlowITVAssets agent, two passes — first delivery hit a budget
-  stop after 3/5 files; steered back to finish the runner + run.go): oracle + scenario
-  (8 cases / 282 steps) + runner + run.go wiring. Zero shared-core changes confirmed.
-- [x] Java trace regenerated (195 records); `-mode infra-nwtable-on-merge-flow-itv-diff`
-  reports status passing / 0 differences; Go trace checked in.
-- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
-  case.infra-nwtable-on-merge-flow-itv (723 cases / 347 DV / 1339 DV runtime
-  IDs / 3889 associations); capability trigger.table-named-window DV list extended.
-- [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace mutations,
-  checked-in evidence, 6 raw-scenario mutations, runtime-ID mapping) all green.
-- [x] make check GREEN (parity 82s, internal/esper 71s); independent parity review
-  (ParityReview484): initial FAIL on one P2 (runner created #unique windows with
-  keep-all retention); fixed to esper.Unique matching the pinned EPL, re-diff still
-  passing / 0 differences; re-review PASS, no remaining findings.
 
 ## Deferred work items
 
