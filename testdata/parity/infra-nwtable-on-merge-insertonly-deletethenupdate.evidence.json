@@ -1,0 +1,1835 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-5cdc46289e4fac78a0c5",
+    "java-runtime-8e9616eb8385c473d45a",
+    "java-runtime-af614186a63cbeb33ae5",
+    "java-runtime-eb7754c9e46c8c465c14",
+    "java-runtime-f21a6fc889f14608828f",
+    "java-runtime-f7a73c74e857ffbdfd15",
+    "java-runtime-5816ec0ef519ec8a48e1",
+    "java-runtime-3cca4ced23a6097b5023"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+  ],
+  "javaExecutions": [
+    "InfraInsertOnly{namedWindow=true, useEquivalent=false, soda=true, useColumnNames=true}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=true, soda=false, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=false, soda=false, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=false, soda=false, useColumnNames=true}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=false, soda=true, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=false, soda=true, useColumnNames=true}",
+    "InfraDeleteThenUpdate{namedWindow=true}",
+    "InfraDeleteThenUpdate{namedWindow=false}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-insertonly-deletethenupdate",
+    "steps": [
+      {
+        "op": "case",
+        "case": "insertonly-nw-soda-colnames"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw-soda-colnames",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create window InsertOnlyInfra#unique(p0) as (p0 string, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw-soda-colnames",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-nw-soda-colnames",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean as provider merge InsertOnlyInfra insert(p0, p1) select provider.theString, intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-nw-soda-colnames",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw-soda-colnames",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw-soda-colnames",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-nw-soda-colnames",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-nw-soda-colnames",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-nw-soda-colnames"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-table-equivalent"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table-equivalent",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create table InsertOnlyInfra (p0 string primary key, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table-equivalent",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table-equivalent",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean merge InsertOnlyInfra where 1=2 when not matched then insert select theString as p0, intPrimitive as p1"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table-equivalent",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table-equivalent",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table-equivalent",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table-equivalent",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table-equivalent",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-table-equivalent"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-table"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create table InsertOnlyInfra (p0 string primary key, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean merge InsertOnlyInfra insert select theString as p0, intPrimitive as p1"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-table"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-table-colnames"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table-colnames",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create table InsertOnlyInfra (p0 string primary key, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table-colnames",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table-colnames",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean as provider merge InsertOnlyInfra insert(p0, p1) select provider.theString, intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table-colnames",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table-colnames",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table-colnames",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table-colnames",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table-colnames",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-table-colnames"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-table-soda"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table-soda",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create table InsertOnlyInfra (p0 string primary key, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table-soda",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table-soda",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean merge InsertOnlyInfra insert select theString as p0, intPrimitive as p1"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table-soda",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table-soda",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table-soda",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table-soda",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table-soda",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-table-soda"
+      },
+      {
+        "op": "case",
+        "case": "insertonly-table-soda-colnames"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table-soda-colnames",
+        "statement": "Window",
+        "epl": "@Name('Window') @public create table InsertOnlyInfra (p0 string primary key, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table-soda-colnames",
+        "statement": "Window"
+      },
+      {
+        "op": "deploy",
+        "case": "insertonly-table-soda-colnames",
+        "statement": "on",
+        "epl": "@name('on') on SupportBean as provider merge InsertOnlyInfra insert(p0, p1) select provider.theString, intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "insertonly-table-soda-colnames",
+        "statement": "on"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table-soda-colnames",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 1,
+          "theString": "E1"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table-soda-colnames",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "send",
+        "case": "insertonly-table-soda-colnames",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 2,
+          "theString": "E2"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "insertonly-table-soda-colnames",
+        "statement": "Window",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertonly-table-soda-colnames"
+      },
+      {
+        "op": "case",
+        "case": "deletethenupdate-nw"
+      },
+      {
+        "op": "deploy",
+        "case": "deletethenupdate-nw",
+        "statement": "create",
+        "epl": "@name('create') @public create window MyInfra#keepall() as (p0 string, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "deletethenupdate-nw",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "deletethenupdate-nw",
+        "statement": "merge",
+        "epl": "@name('merge') on SupportBean sb merge MyInfra where theString = p0 when matched then delete then update set p1 = intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "deletethenupdate-nw",
+        "statement": "merge"
+      },
+      {
+        "op": "deploy",
+        "case": "deletethenupdate-nw",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfra select 'A' as p0, 1 as p1"
+      },
+      {
+        "op": "snapshot",
+        "case": "deletethenupdate-nw",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "deletethenupdate-nw",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 10,
+          "theString": "A"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "deletethenupdate-nw",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "deletethenupdate-nw"
+      },
+      {
+        "op": "case",
+        "case": "deletethenupdate-table"
+      },
+      {
+        "op": "deploy",
+        "case": "deletethenupdate-table",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyInfra(p0 string primary key, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "deletethenupdate-table",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "deletethenupdate-table",
+        "statement": "merge",
+        "epl": "@name('merge') on SupportBean sb merge MyInfra where theString = p0 when matched then delete then update set p1 = intPrimitive"
+      },
+      {
+        "op": "deployed",
+        "case": "deletethenupdate-table",
+        "statement": "merge"
+      },
+      {
+        "op": "deploy",
+        "case": "deletethenupdate-table",
+        "statement": "FafInsert",
+        "epl": "insert into MyInfra select 'A' as p0, 1 as p1"
+      },
+      {
+        "op": "snapshot",
+        "case": "deletethenupdate-table",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "send",
+        "case": "deletethenupdate-table",
+        "eventType": "SupportBean",
+        "payload": {
+          "intPrimitive": 10,
+          "theString": "A"
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "deletethenupdate-table",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "deletethenupdate-table"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-insertonly-deletethenupdate",
+    "records": [
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 10
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 10
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-insertonly-deletethenupdate",
+    "records": [
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-nw-soda-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-equivalent",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "deployed",
+        "statement": "Window",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "deployed",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "listener",
+        "statement": "on",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertonly-table-soda-colnames",
+        "operation": "snapshot",
+        "statement": "Window",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": 2
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 10
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-nw",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "listener",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 10
+            }
+          }
+        ],
+        "old": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "A",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "deletethenupdate-table",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

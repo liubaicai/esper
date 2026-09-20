@@ -52,8 +52,57 @@ activity or a single coverage percentage.
 
 - Shipped: Draft 4.484 ('infra-nwtable-on-merge-flow-itv') committed and pushed as ef141897e; Git owns identity. Parity review initial FAIL on one P2 (#unique windows created with keep-all retention), fixed and re-reviewed PASS.
 
+- Shipped: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly') committed and pushed as 9ac32d036; Git owns identity. Parity review PASS, two P3s fixed.
+
 ## Current work unit
-Active: Draft 4.485 ('infra-nwtable-on-merge-invalid-insertonly').
+Active: Draft 4.486 ('infra-nwtable-on-merge-insertonly-deletethenupdate').
+
+- [x] Contract frozen (.omp/contract-486.md) by NextJavaContract486 + NextGoSurface486:
+  InfraNWTableOnMerge ords 46-53 — six remaining InfraInsertOnly executions
+  (ord 46 nw soda+colnames; ords 47-51 all five table variants) +
+  InfraDeleteThenUpdate{nw,table} (ords 52-53, delete-then-update multi-action
+  with nw-update-wins / table-delete-wins divergence + FAF seed). Runtime IDs
+  java-runtime-5cdc46289e4fac78a0c5 / -8e9616eb8385c473d45a /
+  -af614186a63cbeb33ae5 / -eb7754c9e46c8c465c14 / -f21a6fc889f14608828f /
+  -f7a73c74e857ffbdfd15 / -5816ec0ef519ec8a48e1 / -3cca4ced23a6097b5023.
+- [x] Assets (OnMergeInsertOnlyDTUAssets agent): oracle + scenario (8 cases /
+  80 steps) + runner + run.go wiring.
+- [x] **Engine fix (shared core, contract deviation)**: the contract predicted
+  zero shared-core work, but the delete-then-update listener surface required
+  per-action delta reporting — Java's merge listener sees the delete's removed
+  row in old plus the update's pre-delete row in old and updated row in new.
+  evaluateTableMergeActions now returns per-action deltas; mergeWhere gained
+  namedWindowMergeDeleteThenUpdate (nw retains updated row) and the table path
+  applies the net effect (delete wins). Files: internal/esper/state.go,
+  internal/esper/trigger.go.
+- [x] Java trace regenerated via run-infra-nwtable-on-merge-insertonly-
+  deletethenupdate.sh (46 records, javaCommit 9e1b9f1cc9117fea4bf33ab043762c045d73839c);
+  `-mode infra-nwtable-on-merge-insertonly-deletethenupdate-diff` reports
+  status passing / 0 differences; Go trace + evidence checked in.
+- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
+  case.infra-nwtable-on-merge-insertonly-deletethenupdate (725 cases / 349 DV /
+  1353 DV runtime IDs / 3903 associations); capability trigger.table-named-window
+  DV list extended. InfraNWTableOnMerge.java now has all 61 executions referenced.
+- [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace
+  mutations incl. the nw-update-wins/table-delete-wins snapshots, checked-in
+  evidence, 5 raw-scenario mutations, runtime-ID mapping) all green.
+- [x] make check GREEN (parity 81s, internal/esper 70s). The context-init-term
+  diff flake seen under full-suite load was root-caused and fixed in this
+  commit: processInitiatedTerminated, its nested sibling, processContextFanOut,
+  and drainOutputPartitions iterated `sort.Strings` over `token:%p` pointer
+  keys — pointer order, not creation order. Fresh processes allocate
+  monotonically so isolated runs were stable; under suite heap pressure the
+  order flips and merged listener rows swap (records[9]/[10] SB01/SB02 in
+  context-init-term-duration). All four sites now use sortedPartitionKeys
+  (partitionID = creation order). Verified: 30/30 isolated + 2 full shuffled
+  parity suites + make check green.
+- [x] Independent parity review (ParityReview486): PASS, no P0/P1/P2. Three
+  P3s addressed: mergeWhere fallback comment narrowed to delta-carrying
+  actions (MergeUpdate multi-update chains keep pre-delta net-effect shape,
+  not yet differential-exercised); the flake fix recorded here; the tail-loop
+  InsertIntoTarget check confirmed consistent with the main loop's error.
+- [x] N+1 scouts (NextJavaContract487 + NextGoSurface487) prefetched
+  InfraTableSelect.java ords 0-4 (5 unreferenced executions, no flags).
 
 - [x] Contract frozen (.omp/contract-485.md) by NextJavaContract485 + NextGoSurface485:
   InfraNWTableOnMerge ords 40-45 — InfraInvalid{nw,table} (13 tryInvalidCompile

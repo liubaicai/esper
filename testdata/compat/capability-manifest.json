@@ -1562,7 +1562,15 @@
     "java-runtime-651148621e89ec5465b0",
     "java-runtime-e51caa89fbde4ab34197",
     "java-runtime-8900ac7e3d063d8b8842",
-    "java-runtime-b581753558f219b16a2a"
+    "java-runtime-b581753558f219b16a2a",
+    "java-runtime-5cdc46289e4fac78a0c5",
+    "java-runtime-8e9616eb8385c473d45a",
+    "java-runtime-af614186a63cbeb33ae5",
+    "java-runtime-eb7754c9e46c8c465c14",
+    "java-runtime-f21a6fc889f14608828f",
+    "java-runtime-f7a73c74e857ffbdfd15",
+    "java-runtime-5816ec0ef519ec8a48e1",
+    "java-runtime-3cca4ced23a6097b5023"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46563,6 +46571,83 @@
    "notes": [
     "Born-DV: InfraInvalid compile-error probes (13 nw / 12 table, divergent probe 2 + NW-only probe 4) replayed via the build-error op; InfraInsertOnly four namedWindow=true variants (useEquivalent where 1=2 / plain / insert(p0,p1) column names / soda) replayed via MergeIntoNamedWindowWhen + WhenNotMatchedAny. Java/Go 49 records, 0 differences."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-on-merge-insertonly-deletethenupdate",
+   "javaRuntimeIds": [
+    "java-runtime-5cdc46289e4fac78a0c5",
+    "java-runtime-8e9616eb8385c473d45a",
+    "java-runtime-af614186a63cbeb33ae5",
+    "java-runtime-eb7754c9e46c8c465c14",
+    "java-runtime-f21a6fc889f14608828f",
+    "java-runtime-f7a73c74e857ffbdfd15",
+    "java-runtime-5816ec0ef519ec8a48e1",
+    "java-runtime-3cca4ced23a6097b5023"
+   ],
+   "javaStaticIds": [
+    "java-0b6e7bd4eb235001d140",
+    "java-0b6e7bd4eb235001d140",
+    "java-0b6e7bd4eb235001d140",
+    "java-0b6e7bd4eb235001d140",
+    "java-0b6e7bd4eb235001d140",
+    "java-0b6e7bd4eb235001d140",
+    "java-0acf62afc326a95d7216",
+    "java-0acf62afc326a95d7216"
+   ],
+   "javaNames": [
+    "InfraInsertOnly{namedWindow=true, useEquivalent=false, soda=true, useColumnNames=true}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=true, soda=false, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=false, soda=false, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=false, soda=false, useColumnNames=true}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=false, soda=true, useColumnNames=false}",
+    "InfraInsertOnly{namedWindow=false, useEquivalent=false, soda=true, useColumnNames=true}",
+    "InfraDeleteThenUpdate{namedWindow=true}",
+    "InfraDeleteThenUpdate{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_nwtable_on_merge_insertonly_deletethenupdate.go"
+   ],
+   "tags": [
+    "infra",
+    "nwtable",
+    "on-merge",
+    "insert-only",
+    "delete-then-update",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-on-merge-insertonly-deletethenupdate.json",
+    "testdata/parity/infra-nwtable-on-merge-insertonly-deletethenupdate.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-insertonly-deletethenupdate.go.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-insertonly-deletethenupdate.evidence.json",
+    "tools/java-oracle/InfraNWTableOnMergeInsertOnlyDeleteThenUpdateScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-on-merge-insertonly-deletethenupdate.sh",
+    "javaCommit=9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+    "java=17"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-5cdc46289e4fac78a0c5",
+    "java-runtime-8e9616eb8385c473d45a",
+    "java-runtime-af614186a63cbeb33ae5",
+    "java-runtime-eb7754c9e46c8c465c14",
+    "java-runtime-f21a6fc889f14608828f",
+    "java-runtime-f7a73c74e857ffbdfd15",
+    "java-runtime-5816ec0ef519ec8a48e1",
+    "java-runtime-3cca4ced23a6097b5023"
+   ],
+   "notes": [
+    "Born-DV: InfraInsertOnly remaining six executions (ord 46 nw soda+useColumnNames; ords 47-51 all five table variants: useEquivalent where 1=2 / plain / useColumnNames / soda / soda+useColumnNames) replayed via MergeIntoNamedWindowWhen + MergeIntoTableWhen with WhenNotMatchedAny; InfraDeleteThenUpdate{nw,table} (ords 52-53) replays the matched delete-then-update action chain with the FAF seed, pinning the nw-update-wins / table-delete-wins divergence. Engine fix: merge listener dispatch now reports per-action deltas (delete contributes the removed row to old, the following update contributes the same pre-delete row to old plus the updated row to new) while the named window retains the updated row and the table applies the net effect. Java/Go 46 records, 0 differences."
+   ]
   }
  ],
  "mappings": [
@@ -49801,13 +49886,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-nwtable-on-merge-invalid-insertonly"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-nwtable-on-merge-insertonly-deletethenupdate"
   }
  ],
  "summary": {
-  "inventoriedCases": 724,
-  "implementedCases": 722,
-  "differentialVerifiedCases": 348,
-  "differentialVerifiedRuntimeIds": 1345,
+  "inventoriedCases": 725,
+  "implementedCases": 723,
+  "differentialVerifiedCases": 349,
+  "differentialVerifiedRuntimeIds": 1353,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49817,13 +49906,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3895,
+  "runtimeAssociationCount": 3903,
   "referencedJavaRuntimeIds": 3475,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 661,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 724,
+  "totalCases": 725,
   "totalCapabilities": 122
  }
 }

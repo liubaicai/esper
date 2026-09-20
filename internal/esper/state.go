@@ -3476,12 +3476,14 @@ const (
 	namedWindowMergeNoop namedWindowMergeAction = iota
 	namedWindowMergeUpdate
 	namedWindowMergeDelete
+	namedWindowMergeDeleteThenUpdate
 )
 
 type namedWindowMergeDecision struct {
 	matched    bool
 	action     namedWindowMergeAction
 	underlying any
+	deltas     []mergeActionDelta
 }
 
 // mergeWhere evaluates all match decisions against one named-window state
@@ -3513,7 +3515,7 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 		if err != nil {
 			return NamedWindowDelta{}, err
 		}
-		if decision.action != namedWindowMergeNoop && decision.action != namedWindowMergeUpdate && decision.action != namedWindowMergeDelete {
+		if decision.action != namedWindowMergeNoop && decision.action != namedWindowMergeUpdate && decision.action != namedWindowMergeDelete && decision.action != namedWindowMergeDeleteThenUpdate {
 			return NamedWindowDelta{}, NewError(ErrorInvalidRule, "named-window merge returned an unknown action")
 		}
 		if decision.matched {
@@ -3571,13 +3573,37 @@ func (w *NamedWindow) mergeWhere(ctx context.Context, decide func(Event) (namedW
 		switch decision.action {
 		case namedWindowMergeNoop:
 			entries = append(entries, entry)
-		case namedWindowMergeDelete:
-			delta.Old = append(delta.Old, entry.event)
-		case namedWindowMergeUpdate:
-			updated := preparedUpdates[index]
-			delta.Old = append(delta.Old, entry.event)
-			delta.New = append(delta.New, updated)
-			entries = append(entries, storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt})
+		case namedWindowMergeDelete, namedWindowMergeUpdate, namedWindowMergeDeleteThenUpdate:
+			if len(decision.deltas) == 0 {
+				// MergeUpdate decisions carry no deltas, so a matched
+				// update-only chain lands here and reports the net effect
+				// (old=[original], new=[final], one retained row). Java's
+				// applyNamedWindow retains each update's copy instead; that
+				// per-action shape is not yet exercised by a differential
+				// scenario, so the fallback keeps the pre-delta behavior.
+				delta.Old = append(delta.Old, entry.event)
+				if decision.action != namedWindowMergeDelete {
+					updated := preparedUpdates[index]
+					delta.New = append(delta.New, updated)
+					entries = append(entries, storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt})
+				}
+				continue
+			}
+			// Java's merge listener reports per-action deltas: every action
+			// contributes the original row to old, and every update action
+			// contributes its copy to new. The named window retains each
+			// update's copy; a delete removes the original row.
+			for _, actionDelta := range decision.deltas {
+				delta.Old = append(delta.Old, entry.event)
+				if actionDelta.new.Underlying() == nil {
+					continue
+				}
+				updated := actionDelta.new
+				updated.typeName = state.def.name
+				updated.streamType = state.def.name
+				delta.New = append(delta.New, updated)
+				entries = append(entries, storedEvent{event: updated, receivedAt: entry.receivedAt, expiresAt: entry.expiresAt})
+			}
 		}
 	}
 	if insertEvent {

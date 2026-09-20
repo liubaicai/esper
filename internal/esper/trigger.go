@@ -2033,6 +2033,32 @@ func tableEventFromValues(table *Table, tableName string, values map[string]any,
 	return event, nil
 }
 
+// tableRowFromEvent converts a merge-action delta event back into a TableRow
+// for listener dispatch. The event's underlying is the table row's merged
+// value; the row's key is recomputed from the table's primary-key columns.
+func tableRowFromEvent(table *Table, scope string, event Event) (TableRow, error) {
+	if table == nil {
+		return TableRow{}, NewError(ErrorUnknownName, "merge target table is not available")
+	}
+	underlying := event.Underlying()
+	if underlying == nil {
+		return TableRow{}, NewError(ErrorState, "merge delta event has no underlying")
+	}
+	values := valuesFromMergeUnderlying(table.Definition().schema, underlying)
+	state, err := table.stateForScope(scope, false)
+	if err != nil {
+		return TableRow{}, err
+	}
+	if state == nil {
+		return TableRow{}, NewError(ErrorState, "merge target table has no state")
+	}
+	converted, _, err := state.convertValues(values, true)
+	if err != nil {
+		return TableRow{}, err
+	}
+	return TableRow{values: converted}, nil
+}
+
 func eventsToResults(events []Event) []Result {
 	if len(events) == 0 {
 		return nil
@@ -2283,10 +2309,13 @@ func rollupKeyLevels(count int) [][]int {
 // detached working target. The caller commits the returned final value once,
 // which keeps the old/new lifecycle equivalent to one Esper merge action even
 // when several conditional actions ran internally. Table targets terminate on
-// delete. Named Window targets preserve the one observed Java exception where
-// a two-action delete followed by an unconditional update updates the row;
-// conditional multi-action chains still terminate on delete.
-func evaluateTableMergeActions(engine *Engine, schema Schema, original any, evaluation EvalContext, actions []TableMergeAction, now time.Time, deleteTerminates bool) (underlying any, matched, deleted, updated bool, err error) {
+// delete and mutate the row in place, so each action sees the post-previous-
+// action underlying. Named Window targets evaluate every action against the
+// original row — Java copies the row per update action — and preserve the one
+// observed Java exception where a two-action delete followed by an
+// unconditional update updates the row; conditional multi-action chains still
+// terminate on delete.
+func evaluateTableMergeActions(engine *Engine, schema Schema, original any, evaluation EvalContext, actions []TableMergeAction, now time.Time, tableTarget bool) (underlying any, matched, deleted, updated bool, deltas []mergeActionDelta, err error) {
 	initialGroup := append([]Event(nil), evaluation.InitialGroup...)
 	if len(initialGroup) == 0 {
 		initialGroup = append([]Event(nil), evaluation.Group...)
@@ -2300,10 +2329,14 @@ func evaluateTableMergeActions(engine *Engine, schema Schema, original any, eval
 	} else if original != nil {
 		workingEvent, err = newEvent(schema, original, now)
 		if err != nil {
-			return nil, false, false, false, err
+			return nil, false, false, false, nil, err
 		}
 		hasWorkingEvent = true
 	}
+	// For named-window targets every action evaluates against the original
+	// row; for table targets the row mutates in place.
+	originalEvent := workingEvent
+	originalUnderlying := workingUnderlying
 
 	for actionIndex, action := range actions {
 		step := evaluation
@@ -2320,38 +2353,108 @@ func evaluateTableMergeActions(engine *Engine, schema Schema, original any, eval
 		matched = true
 		if action.InsertTarget != "" {
 			if err := queueMergeInsertEvent(engine, action, step, now); err != nil {
-				return nil, false, false, false, err
+				return nil, false, false, false, nil, err
 			}
 			continue
 		}
 		if action.InsertIntoTarget {
-			return nil, false, false, false, NewError(ErrorInvalidRule, "matched merge action cannot insert into the merge target")
+			return nil, false, false, false, nil, NewError(ErrorInvalidRule, "matched merge action cannot insert into the merge target")
 		}
 		if action.Delete {
 			deleted = true
 			updated = false
-			if deleteTerminates || !canContinueAfterNamedWindowDelete(actions, actionIndex) {
-				return workingUnderlying, true, true, false, nil
+			if hasWorkingEvent {
+				old := workingEvent
+				if !tableTarget {
+					old = originalEvent
+				}
+				deltas = append(deltas, mergeActionDelta{old: old})
+			}
+			if tableTarget {
+				// The delete wins for the table state, but Java's merge
+				// listener still reports every remaining action's delta
+				// against the sequentially-mutated row: each action sees
+				// the post-previous-action underlying as its old row.
+				for _, remaining := range actions[actionIndex+1:] {
+					if remaining.InsertIntoTarget {
+						return nil, false, false, false, nil, NewError(ErrorInvalidRule, "matched merge action cannot insert into the merge target")
+					}
+					tailStep := step
+					tailStep.Group = []Event{workingEvent}
+					if remaining.InsertTarget != "" {
+						condition, ok := boolValue(remaining.Condition.eval(tailStep))
+						if !ok || !condition {
+							continue
+						}
+						if err := queueMergeInsertEvent(engine, remaining, tailStep, now); err != nil {
+							return nil, false, false, false, nil, err
+						}
+						continue
+					}
+					condition, ok := boolValue(remaining.Condition.eval(tailStep))
+					if !ok || !condition {
+						continue
+					}
+					if remaining.Delete {
+						deltas = append(deltas, mergeActionDelta{old: workingEvent})
+						continue
+					}
+					values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, workingUnderlying, remaining.Assignments, tailStep, now, false)
+					if assignmentErr != nil {
+						return nil, false, false, false, nil, assignmentErr
+					}
+					remainingUnderlying, mergeErr := mergeSchemaUnderlying(schema, workingUnderlying, values)
+					if mergeErr != nil {
+						return nil, false, false, false, nil, mergeErr
+					}
+					remainingEvent, eventErr := newEvent(schema, remainingUnderlying, now)
+					if eventErr != nil {
+						return nil, false, false, false, nil, eventErr
+					}
+					deltas = append(deltas, mergeActionDelta{old: workingEvent, new: remainingEvent})
+					workingUnderlying = remainingUnderlying
+					workingEvent = remainingEvent
+				}
+				return workingUnderlying, true, true, false, deltas, nil
+			}
+			if !canContinueAfterNamedWindowDelete(actions, actionIndex) {
+				return workingUnderlying, true, true, false, deltas, nil
 			}
 			continue
 		}
-		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, workingUnderlying, action.Assignments, step, now, false)
+		baseUnderlying := workingUnderlying
+		baseEvent := workingEvent
+		if !tableTarget {
+			baseUnderlying = originalUnderlying
+			baseEvent = originalEvent
+		}
+		values, assignmentErr := evaluateTriggerAssignmentsForTarget(schema, baseUnderlying, action.Assignments, step, now, false)
 		if assignmentErr != nil {
-			return nil, false, false, false, assignmentErr
+			return nil, false, false, false, nil, assignmentErr
 		}
-		workingUnderlying, err = mergeSchemaUnderlying(schema, workingUnderlying, values)
-		if err != nil {
-			return nil, false, false, false, err
+		newUnderlying, mergeErr := mergeSchemaUnderlying(schema, baseUnderlying, values)
+		if mergeErr != nil {
+			return nil, false, false, false, nil, mergeErr
 		}
-		workingEvent, err = newEvent(schema, workingUnderlying, now)
-		if err != nil {
-			return nil, false, false, false, err
+		newEvent, eventErr := newEvent(schema, newUnderlying, now)
+		if eventErr != nil {
+			return nil, false, false, false, nil, eventErr
+		}
+		deltas = append(deltas, mergeActionDelta{old: baseEvent, new: newEvent})
+		workingUnderlying = newUnderlying
+		if tableTarget {
+			workingEvent = newEvent
 		}
 		hasWorkingEvent = true
 		deleted = false
 		updated = true
 	}
-	return workingUnderlying, matched, false, updated, nil
+	return workingUnderlying, matched, false, updated, deltas, nil
+}
+
+type mergeActionDelta struct {
+	old Event
+	new Event
 }
 
 func canContinueAfterNamedWindowDelete(actions []TableMergeAction, deleteIndex int) bool {
@@ -2622,7 +2725,7 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 				if !clause.Matched {
 					continue
 				}
-				underlying, actionMatched, deleted, updated, actionErr := evaluateTableMergeActions(engine, schema, candidate.Underlying(), evaluation, tableMergeClauseActions(clause), now, false)
+				underlying, actionMatched, deleted, updated, deltas, actionErr := evaluateTableMergeActions(engine, schema, candidate.Underlying(), evaluation, tableMergeClauseActions(clause), now, false)
 				if actionErr != nil {
 					return namedWindowMergeDecision{}, actionErr
 				}
@@ -2630,12 +2733,18 @@ func executeNamedWindowAction(ctx context.Context, engine *Engine, definition *t
 					continue
 				}
 				if deleted {
-					return namedWindowMergeDecision{matched: true, action: namedWindowMergeDelete}, nil
+					return namedWindowMergeDecision{matched: true, action: namedWindowMergeDelete, deltas: deltas}, nil
+				}
+				// A delete-then-update chain reports per-action deltas and
+				// retains the updated row; a leading delete delta is the
+				// discriminator (its new event is absent).
+				if len(deltas) > 1 && deltas[0].new.Underlying() == nil {
+					return namedWindowMergeDecision{matched: true, action: namedWindowMergeDeleteThenUpdate, underlying: underlying, deltas: deltas}, nil
 				}
 				if !updated {
 					return namedWindowMergeDecision{matched: true}, nil
 				}
-				return namedWindowMergeDecision{matched: true, action: namedWindowMergeUpdate, underlying: underlying}, nil
+				return namedWindowMergeDecision{matched: true, action: namedWindowMergeUpdate, underlying: underlying, deltas: deltas}, nil
 			}
 			return namedWindowMergeDecision{matched: true}, nil
 		}, func() (any, bool, error) {
@@ -2993,32 +3102,50 @@ func executeTriggerActionWithTags(ctx context.Context, engine *Engine, definitio
 				continue
 			}
 			if found {
-				underlying, actionMatched, deleted, updated, actionErr := evaluateTableMergeActions(engine, table.Definition().schema, targetUnderlying, evaluation, tableMergeClauseActions(clause), now, true)
+				underlying, actionMatched, deleted, updated, deltas, actionErr := evaluateTableMergeActions(engine, table.Definition().schema, targetUnderlying, evaluation, tableMergeClauseActions(clause), now, true)
 				if actionErr != nil {
 					return tableMutationResult{}, actionErr
 				}
 				if !actionMatched {
 					continue
 				}
+				// Java's merge listener reports per-action deltas: a delete
+				// contributes the removed row to old, and a following update
+				// contributes the same pre-delete row to old plus the updated
+				// row to new. The table state applies only the net effect.
+				// A delta's old is always populated (newEvent rejects nil
+				// underlyings); a nil new marks a delete delta.
+				for _, actionDelta := range deltas {
+					oldRow, rowErr := tableRowFromEvent(table, scope, actionDelta.old)
+					if rowErr != nil {
+						return tableMutationResult{}, rowErr
+					}
+					mutation.oldRows = append(mutation.oldRows, oldRow)
+					if actionDelta.new.Underlying() != nil {
+						newRow, rowErr := tableRowFromEvent(table, scope, actionDelta.new)
+						if rowErr != nil {
+							return tableMutationResult{}, rowErr
+						}
+						mutation.newRows = append(mutation.newRows, newRow)
+					}
+				}
 				if deleted {
-					row, deletedRow, deleteErr := table.deleteInScope(ctx, scope, keys...)
+					_, deletedRow, deleteErr := table.deleteInScope(ctx, scope, keys...)
 					if deleteErr != nil {
 						return tableMutationResult{}, deleteErr
 					}
-					if deletedRow {
-						mutation.oldRows = append(mutation.oldRows, row)
+					if !deletedRow {
+						return tableMutationResult{}, NewError(ErrorState, "merge delete found no table row")
 					}
 					return mutation, nil
 				}
 				if !updated {
 					return mutation, nil
 				}
-				row, updateErr := table.updateInScope(ctx, scope, keys, valuesFromMergeUnderlying(table.Definition().schema, underlying))
+				_, updateErr := table.updateInScope(ctx, scope, keys, valuesFromMergeUnderlying(table.Definition().schema, underlying))
 				if updateErr != nil {
 					return tableMutationResult{}, updateErr
 				}
-				mutation.oldRows = append(mutation.oldRows, old)
-				mutation.newRows = append(mutation.newRows, row)
 				return mutation, nil
 			}
 			condition, ok := boolValue(clause.Condition.eval(evaluation))

@@ -7777,11 +7777,7 @@ func (r *statementRuntime) drainOutputAssignments() []VariableAssignment {
 	}
 	assignments := append([]VariableAssignment(nil), r.pendingOutputAssignments...)
 	r.pendingOutputAssignments = nil
-	keys := make([]string, 0, len(r.partitions))
-	for key := range r.partitions {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(r.partitions)
 	for _, key := range keys {
 		assignments = append(assignments, r.partitions[key].drainOutputAssignments()...)
 	}
@@ -9864,11 +9860,7 @@ func (s *Statement) processInitiatedTerminated(definition ContextDefinition, eve
 		}
 	}
 
-	keys := make([]string, 0, len(s.runtime.partitions))
-	for partitionKey := range s.runtime.partitions {
-		keys = append(keys, partitionKey)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(s.runtime.partitions)
 	if len(keys) == 0 {
 		return ResultBatch{}, false, nil
 	}
@@ -10164,11 +10156,7 @@ func (s *Statement) processNestedInitiatedTerminated(definition ContextDefinitio
 		}
 	}
 
-	keys := make([]string, 0, len(s.runtime.partitions))
-	for partitionKey := range s.runtime.partitions {
-		keys = append(keys, partitionKey)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(s.runtime.partitions)
 	if len(keys) == 0 {
 		return ResultBatch{}, false, nil
 	}
@@ -10629,11 +10617,7 @@ func (s *Statement) processContextFanOut(definition ContextDefinition, event Eve
 	if s == nil || s.engine == nil {
 		return ResultBatch{}, false, NewError(ErrorDependency, "context has no engine")
 	}
-	keys := make([]string, 0, len(s.runtime.partitions))
-	for partitionKey := range s.runtime.partitions {
-		keys = append(keys, partitionKey)
-	}
-	sort.Strings(keys)
+	keys := sortedPartitionKeys(s.runtime.partitions)
 	var result ResultBatch
 	var changed bool
 	for _, partitionKey := range keys {

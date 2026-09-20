@@ -146,6 +146,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableOnMergeFlowITVScenario(file)
 	} else if *mode == "infra-nwtable-on-merge-invalid-insertonly" || *mode == "infra-nwtable-on-merge-invalid-insertonly-diff" {
 		scenario, err = loadInfraNWTableOnMergeInvalidInsertOnlyScenario(file)
+	} else if *mode == "infra-nwtable-on-merge-insertonly-deletethenupdate" || *mode == "infra-nwtable-on-merge-insertonly-deletethenupdate-diff" {
+		scenario, err = loadInfraNWTableOnMergeInsertOnlyDeleteThenUpdateScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-silent" || *mode == "infra-namedwindow-on-delete-silent-diff" {
 		scenario, err = loadInfraNWOnDeleteSilentScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-indexes" || *mode == "infra-namedwindow-on-delete-indexes-diff" {
@@ -590,6 +592,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergeInvalidInsertOnlyJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableOnMergeInvalidInsertOnlyJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableOnMergeInvalidInsertOnlyJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-on-merge-insertonly-deletethenupdate" || *mode == "infra-nwtable-on-merge-insertonly-deletethenupdate-diff" {
+		trace, err := runInfraNWTableOnMergeInsertOnlyDeleteThenUpdateScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-on-merge-insertonly-deletethenupdate-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableOnMergeIDTUJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergeIDTUJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableOnMergeIDTUJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableOnMergeIDTUJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
