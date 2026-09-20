@@ -91,13 +91,27 @@ Active: Draft 4.476 ('context-selection-faf-nested').
   routing in processNestedInitiatedTerminated, nestedParentTimes, result.Time); re-review PASS.
 - [x] Shipped; Git owns identity. Draft 4.476 committed and pushed as `7f279135a`.
 
-## Next work unit (prefetched)
-ContextAdminListen ord 5 ContextAdminPartitionAddRemoveListener (java-runtime-206c08a7f3d6c239050c,
-RUNTIMEOPS, static java-3a026095a61c4060c91b). Contract frozen by NextJavaContract10 +
-NextGoSurface10 + reviewer prefetch: scenario A flat `start S0 end S1`, scenario B nested
-`NeverEndingStory start @now` + `ABSession start S0 as s0 end S1`. Go surface: listener APIs
-exist; runner needs remove-partition-listener(s) ops + admin:partition-listeners snapshot;
-leaf-initiated path already handles the never-ending parent. Asset-shaped unit.
+## Current work unit
+Active: Draft 4.477 ('context-admin-listen-partition-addremove').
+
+- [x] Contract frozen (.omp/contract-477.md): ContextAdminListen ord 5
+  ContextAdminPartitionAddRemoveListener (java-runtime-206c08a7f3d6c239050c, RUNTIMEOPS,
+  static java-3a026095a61c4060c91b). Two scenarios: A flat `start S0 end S1`, B nested
+  `NeverEndingStory start @now` + `ABSession start S0 as s0 end S1`.
+- [x] Smoke test confirmed zero shared-core changes needed: the leaf-initiated path
+  (processNestedInitiatedTerminated) handles the never-ending initiated parent; listener
+  allocated/deallocated notifications fire correctly (3 listeners → allocated, l0 removed →
+  deallocated to l1/l2 only, remove-all → silent).
+- [x] Assets (AdminListenAssets agent): oracle + scenario (2 cases / 32 steps) + runner
+  extended with remove-partition-listener(s) ops + admin:partition-listeners snapshot +
+  kind-aware identifier rendering (@now parent renders no initiatingEvent).
+- [x] Shared validator: internal/compat/scenario.go gained remove-partition-listener(s) ops
+  and the name-only admin:partition-listeners snapshot form.
+- [x] Java trace regenerated (55 records); `-mode context-admin-listen-diff` reports
+  status passing / 0 differences.
+- [x] Manifest/roadmap/CHANGELOG updated: case.context-admin-listen extended to ord 5
+  (717 cases / 341 DV / 1299 DV runtime IDs / 3849 associations).
+- [ ] make check + independent parity review + commit/push.
 
 
 ## Current work unit

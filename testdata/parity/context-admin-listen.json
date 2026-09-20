@@ -1,22 +1,28 @@
 {
   "version": "esper-parity/v1",
   "id": "context-admin-listen",
-  "description": "ContextAdminListen context listener surface: a category context whose two partitions allocate eagerly at activation with the second carrying label 'neg' (ord 2); a nested category-over-keyed context emitting one created event at ctx deploy, statement-added then activated at s0 deploy, a single nested-leaf partition-allocated on the first event, and statement-removed/partition-deallocated/deactivated/destroyed teardown order (ord 3); three context-state listeners registered before deploy each observing created, listener[0] removed before undeploy so only listeners[1..2] observe destroyed, the listener iterator yielding [l1,l2] in registration order, remove-all emptying the registry, and a redeploy+undeploy-all tail staying silent (ord 4); and one partition-state listener added after ctx deploy observing statement-added(a)/activated/statement-added(b) then exactly one partition-allocated despite two statements (ord 6). context-event records carry the listener label, event kind, runtimeURI normalized to 'default', the ctx deploy-step label as contextDeploymentId, statement deploy labels, partition ids and normalized identifiers (category label / nested parent+leaf key segments / initiated-terminated initiating event type). admin records mirror the listener-registry iterators (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java).",
+  "description": "ContextAdminListen context listener surface: a category context whose two partitions allocate eagerly at activation with the second carrying label 'neg' (ord 2); a nested category-over-keyed context emitting one created event at ctx deploy, statement-added then activated at s0 deploy, a single nested-leaf partition-allocated on the first event, and statement-removed/partition-deallocated/deactivated/destroyed teardown order (ord 3); three context-state listeners registered before deploy each observing created, listener[0] removed before undeploy so only listeners[1..2] observe destroyed, the listener iterator yielding [l1,l2] in registration order, remove-all emptying the registry, and a redeploy+undeploy-all tail staying silent (ord 4); the partition-listener registry lifecycle replayed twice — flat MyContextStartEnd and nested MyContextStartEndWithNeverEnding whose NeverEndingStory parent starts at @now over an ABSession leaf — where three partition-state listeners added after the ctx and s0 deploys each observe one partition-allocated on S0(1), removing l0 leaves it silent while l1/l2 observe the deallocated on S1(1), the partition-listener iterator yields [l1,l2], remove-all empties the registry, and S0(2)/S1(2) silently allocate and deallocate leaf id 1 before undeploy-all (ord 5); and one partition-state listener added after ctx deploy observing statement-added(a)/activated/statement-added(b) then exactly one partition-allocated despite two statements (ord 6). context-event records carry the listener label, event kind, runtimeURI normalized to 'default', the ctx deploy-step label as contextDeploymentId, statement deploy labels, partition ids and normalized identifiers (category label / nested parent+leaf key segments / initiated-terminated initiating event type; the @now parent level renders initiatedTerminated with no initiatingEvent). admin records mirror the listener-registry iterators, context-state and per-context partition-state (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java).",
   "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
   "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java",
   "javaRuntimes": [
     "java-runtime-2021f021c6e12684fb81",
     "java-runtime-4b1466f2815a381815b2",
     "java-runtime-410d2c5d3daf011b6c7b",
+    "java-runtime-206c08a7f3d6c239050c",
+    "java-runtime-206c08a7f3d6c239050c",
     "java-runtime-6dd25578221d74ff6660"
   ],
   "javaNames": [
     "ContextAdminListenCategory",
     "ContextAdminListenNested",
     "ContextAddRemoveListener",
+    "ContextAdminPartitionAddRemoveListener",
+    "ContextAdminPartitionAddRemoveListener",
     "ContextAdminListenMultipleStatements"
   ],
   "javaStaticIds": [
+    "java-3a026095a61c4060c91b",
+    "java-3a026095a61c4060c91b",
     "java-3a026095a61c4060c91b",
     "java-3a026095a61c4060c91b",
     "java-3a026095a61c4060c91b",
@@ -50,6 +56,22 @@
       "executionName": "ContextAddRemoveListener",
       "observation": "context-event+admin; three context-state listeners registered before deploy each observe created; removing l0 before ctx undeploy leaves l0 silent while l1 and l2 observe destroyed; the listener iterator yields [l1,l2] in registration order; remove-listeners empties the registry; a redeploy plus undeploy-all tail invokes no listener",
       "epl": "@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1"
+    },
+    {
+      "case": "partition-add-remove-listener",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-206c08a7f3d6c239050c",
+      "executionName": "ContextAdminPartitionAddRemoveListener",
+      "observation": "context-event+admin; three partition-state listeners registered after the ctx and s0 deploys each observe one partition-allocated on SupportBean_S0(1) whose initiatedTerminated identifier carries initiatingEvent SupportBean_S0; removing l0 leaves it silent while l1 and l2 observe the partition-deallocated on SupportBean_S1(1); the partition-listener iterator yields [l1,l2] in registration order; remove-all empties the registry; SupportBean_S0(2)/SupportBean_S1(2) silently allocate and deallocate leaf id 1; undeploy-all",
+      "epl": "@name('ctx') @public create context MyContextStartEnd start SupportBean_S0 as s0 end SupportBean_S1"
+    },
+    {
+      "case": "partition-add-remove-listener-nested",
+      "ordinal": 5,
+      "runtimeId": "java-runtime-206c08a7f3d6c239050c",
+      "executionName": "ContextAdminPartitionAddRemoveListener",
+      "observation": "context-event+admin; the same partition-listener registry lifecycle under a nested context whose NeverEndingStory parent starts at @now and whose ABSession leaf runs start SupportBean_S0 as s0 end SupportBean_S1; the allocated identifier nests a parent initiatedTerminated level with no initiatingEvent over the leaf's SupportBean_S0 initiatingEvent; the iterator yields [l1,l2], remove-all empties the registry and the S0(2)/S1(2) tail stays silent",
+      "epl": "@name('ctx') @public create context MyContextStartEndWithNeverEnding context NeverEndingStory start @now, context ABSession start SupportBean_S0 as s0 end SupportBean_S1"
     },
     {
       "case": "multiple-statements",
@@ -222,6 +244,212 @@
     {
       "op": "undeploy-all",
       "case": "add-remove-listener"
+    },
+    {
+      "op": "case",
+      "case": "partition-add-remove-listener"
+    },
+    {
+      "op": "deploy",
+      "case": "partition-add-remove-listener",
+      "statement": "ctx",
+      "epl": "@name('ctx') @public create context MyContextStartEnd start SupportBean_S0 as s0 end SupportBean_S1"
+    },
+    {
+      "op": "deployed",
+      "case": "partition-add-remove-listener",
+      "statement": "ctx"
+    },
+    {
+      "op": "deploy",
+      "case": "partition-add-remove-listener",
+      "statement": "s0",
+      "epl": "@name('s0') context MyContextStartEnd select count(*) from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "partition-add-remove-listener",
+      "statement": "s0"
+    },
+    {
+      "op": "add-partition-listener",
+      "case": "partition-add-remove-listener",
+      "statement": "l0",
+      "name": "ctx"
+    },
+    {
+      "op": "add-partition-listener",
+      "case": "partition-add-remove-listener",
+      "statement": "l1",
+      "name": "ctx"
+    },
+    {
+      "op": "add-partition-listener",
+      "case": "partition-add-remove-listener",
+      "statement": "l2",
+      "name": "ctx"
+    },
+    {
+      "op": "send",
+      "case": "partition-add-remove-listener",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "remove-partition-listener",
+      "case": "partition-add-remove-listener",
+      "statement": "l0",
+      "name": "ctx"
+    },
+    {
+      "op": "send",
+      "case": "partition-add-remove-listener",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "snapshot",
+      "case": "partition-add-remove-listener",
+      "name": "ctx",
+      "mode": "admin:partition-listeners"
+    },
+    {
+      "op": "remove-partition-listeners",
+      "case": "partition-add-remove-listener",
+      "name": "ctx"
+    },
+    {
+      "op": "snapshot",
+      "case": "partition-add-remove-listener",
+      "name": "ctx",
+      "mode": "admin:partition-listeners"
+    },
+    {
+      "op": "send",
+      "case": "partition-add-remove-listener",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 2
+      }
+    },
+    {
+      "op": "send",
+      "case": "partition-add-remove-listener",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 2
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "partition-add-remove-listener"
+    },
+    {
+      "op": "case",
+      "case": "partition-add-remove-listener-nested"
+    },
+    {
+      "op": "deploy",
+      "case": "partition-add-remove-listener-nested",
+      "statement": "ctx",
+      "epl": "@name('ctx') @public create context MyContextStartEndWithNeverEnding context NeverEndingStory start @now, context ABSession start SupportBean_S0 as s0 end SupportBean_S1"
+    },
+    {
+      "op": "deployed",
+      "case": "partition-add-remove-listener-nested",
+      "statement": "ctx"
+    },
+    {
+      "op": "deploy",
+      "case": "partition-add-remove-listener-nested",
+      "statement": "s0",
+      "epl": "@name('s0') context MyContextStartEndWithNeverEnding select count(*) from SupportBean"
+    },
+    {
+      "op": "deployed",
+      "case": "partition-add-remove-listener-nested",
+      "statement": "s0"
+    },
+    {
+      "op": "add-partition-listener",
+      "case": "partition-add-remove-listener-nested",
+      "statement": "l0",
+      "name": "ctx"
+    },
+    {
+      "op": "add-partition-listener",
+      "case": "partition-add-remove-listener-nested",
+      "statement": "l1",
+      "name": "ctx"
+    },
+    {
+      "op": "add-partition-listener",
+      "case": "partition-add-remove-listener-nested",
+      "statement": "l2",
+      "name": "ctx"
+    },
+    {
+      "op": "send",
+      "case": "partition-add-remove-listener-nested",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "remove-partition-listener",
+      "case": "partition-add-remove-listener-nested",
+      "statement": "l0",
+      "name": "ctx"
+    },
+    {
+      "op": "send",
+      "case": "partition-add-remove-listener-nested",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 1
+      }
+    },
+    {
+      "op": "snapshot",
+      "case": "partition-add-remove-listener-nested",
+      "name": "ctx",
+      "mode": "admin:partition-listeners"
+    },
+    {
+      "op": "remove-partition-listeners",
+      "case": "partition-add-remove-listener-nested",
+      "name": "ctx"
+    },
+    {
+      "op": "snapshot",
+      "case": "partition-add-remove-listener-nested",
+      "name": "ctx",
+      "mode": "admin:partition-listeners"
+    },
+    {
+      "op": "send",
+      "case": "partition-add-remove-listener-nested",
+      "eventType": "SupportBean_S0",
+      "payload": {
+        "id": 2
+      }
+    },
+    {
+      "op": "send",
+      "case": "partition-add-remove-listener-nested",
+      "eventType": "SupportBean_S1",
+      "payload": {
+        "id": 2
+      }
+    },
+    {
+      "op": "undeploy-all",
+      "case": "partition-add-remove-listener-nested"
     },
     {
       "op": "case",

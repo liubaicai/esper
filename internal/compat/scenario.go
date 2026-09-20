@@ -172,7 +172,9 @@ func (s Scenario) Validate() error {
 				return fmt.Errorf("compat: step %d deployed has no statement", i)
 			}
 		case "snapshot", "snapshot-selector":
-			if strings.TrimSpace(step.Statement) == "" {
+			// admin:partition-listeners snapshots target a context by name
+			// rather than a statement.
+			if strings.TrimSpace(step.Statement) == "" && !(step.Op == "snapshot" && step.Mode == "admin:partition-listeners" && strings.TrimSpace(step.Name) != "") {
 				return fmt.Errorf("compat: step %d %s has no statement", i, step.Op)
 			}
 			if step.Op == "snapshot-selector" {
@@ -214,7 +216,8 @@ func (s Scenario) Validate() error {
 			if strings.TrimSpace(step.Statement) == "" {
 				return fmt.Errorf("compat: step %d build has no statement", i)
 			}
-		case "add-listener", "add-partition-listener", "remove-listener", "remove-listeners":
+		case "add-listener", "add-partition-listener", "remove-listener", "remove-listeners",
+			"remove-partition-listener", "remove-partition-listeners":
 			// Context lifecycle listener registration steps; the runner
 			// pins the full step key, so no field-level checks are needed.
 		case "unrepresentable":

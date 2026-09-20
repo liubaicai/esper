@@ -19,22 +19,28 @@ const (
 	contextAdminListenSource     = "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java"
 )
 
-const contextAdminListenDescription = "ContextAdminListen context listener surface: a category context whose two partitions allocate eagerly at activation with the second carrying label 'neg' (ord 2); a nested category-over-keyed context emitting one created event at ctx deploy, statement-added then activated at s0 deploy, a single nested-leaf partition-allocated on the first event, and statement-removed/partition-deallocated/deactivated/destroyed teardown order (ord 3); three context-state listeners registered before deploy each observing created, listener[0] removed before undeploy so only listeners[1..2] observe destroyed, the listener iterator yielding [l1,l2] in registration order, remove-all emptying the registry, and a redeploy+undeploy-all tail staying silent (ord 4); and one partition-state listener added after ctx deploy observing statement-added(a)/activated/statement-added(b) then exactly one partition-allocated despite two statements (ord 6). context-event records carry the listener label, event kind, runtimeURI normalized to 'default', the ctx deploy-step label as contextDeploymentId, statement deploy labels, partition ids and normalized identifiers (category label / nested parent+leaf key segments / initiated-terminated initiating event type). admin records mirror the listener-registry iterators (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java)."
+const contextAdminListenDescription = "ContextAdminListen context listener surface: a category context whose two partitions allocate eagerly at activation with the second carrying label 'neg' (ord 2); a nested category-over-keyed context emitting one created event at ctx deploy, statement-added then activated at s0 deploy, a single nested-leaf partition-allocated on the first event, and statement-removed/partition-deallocated/deactivated/destroyed teardown order (ord 3); three context-state listeners registered before deploy each observing created, listener[0] removed before undeploy so only listeners[1..2] observe destroyed, the listener iterator yielding [l1,l2] in registration order, remove-all emptying the registry, and a redeploy+undeploy-all tail staying silent (ord 4); the partition-listener registry lifecycle replayed twice — flat MyContextStartEnd and nested MyContextStartEndWithNeverEnding whose NeverEndingStory parent starts at @now over an ABSession leaf — where three partition-state listeners added after the ctx and s0 deploys each observe one partition-allocated on S0(1), removing l0 leaves it silent while l1/l2 observe the deallocated on S1(1), the partition-listener iterator yields [l1,l2], remove-all empties the registry, and S0(2)/S1(2) silently allocate and deallocate leaf id 1 before undeploy-all (ord 5); and one partition-state listener added after ctx deploy observing statement-added(a)/activated/statement-added(b) then exactly one partition-allocated despite two statements (ord 6). context-event records carry the listener label, event kind, runtimeURI normalized to 'default', the ctx deploy-step label as contextDeploymentId, statement deploy labels, partition ids and normalized identifiers (category label / nested parent+leaf key segments / initiated-terminated initiating event type; the @now parent level renders initiatedTerminated with no initiatingEvent). admin records mirror the listener-registry iterators, context-state and per-context partition-state (Java source regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java)."
 
 var (
 	contextAdminListenJavaRuntimeIDs = []string{
 		"java-runtime-2021f021c6e12684fb81",
 		"java-runtime-4b1466f2815a381815b2",
 		"java-runtime-410d2c5d3daf011b6c7b",
+		"java-runtime-206c08a7f3d6c239050c",
+		"java-runtime-206c08a7f3d6c239050c",
 		"java-runtime-6dd25578221d74ff6660",
 	}
 	contextAdminListenJavaExecutions = []string{
 		"ContextAdminListenCategory",
 		"ContextAdminListenNested",
 		"ContextAddRemoveListener",
+		"ContextAdminPartitionAddRemoveListener",
+		"ContextAdminPartitionAddRemoveListener",
 		"ContextAdminListenMultipleStatements",
 	}
 	contextAdminListenJavaStaticIDs = []string{
+		"java-3a026095a61c4060c91b",
+		"java-3a026095a61c4060c91b",
 		"java-3a026095a61c4060c91b",
 		"java-3a026095a61c4060c91b",
 		"java-3a026095a61c4060c91b",
@@ -45,9 +51,11 @@ var (
 		"category",
 		"nested",
 		"add-remove-listener",
+		"partition-add-remove-listener",
+		"partition-add-remove-listener-nested",
 		"multiple-statements",
 	}
-	contextAdminListenOrdinals = []int{2, 3, 4, 6}
+	contextAdminListenOrdinals = []int{2, 3, 4, 5, 5, 6}
 	contextAdminListenSources  = []string{contextAdminListenSource}
 )
 
@@ -55,6 +63,8 @@ var contextAdminListenCaseObservations = []string{
 	"context-event; a context-state listener registered before deploy observes created at ctx deploy and re-entrantly registers as a partition listener; deploying s0 into the two-category context eagerly allocates pos then neg (allocated[1] label 'neg') before activated; no events are sent; undeploying s0 then ctx emits statement-removed, two partition-deallocated, deactivated and destroyed",
 	"context-event; nested category-over-keyed context: ctx deploy emits created, s0 deploy emits statement-added then activated, SupportBean(\"E1\",1) emits exactly one partition-allocated whose nested identifier carries parent label 'pos' and leaf keys [\"E1\"], s0 undeploy emits statement-removed/partition-deallocated/deactivated and ctx undeploy emits destroyed",
 	"context-event+admin; three context-state listeners registered before deploy each observe created; removing l0 before ctx undeploy leaves l0 silent while l1 and l2 observe destroyed; the listener iterator yields [l1,l2] in registration order; remove-listeners empties the registry; a redeploy plus undeploy-all tail invokes no listener",
+	"context-event+admin; three partition-state listeners registered after the ctx and s0 deploys each observe one partition-allocated on SupportBean_S0(1) whose initiatedTerminated identifier carries initiatingEvent SupportBean_S0; removing l0 leaves it silent while l1 and l2 observe the partition-deallocated on SupportBean_S1(1); the partition-listener iterator yields [l1,l2] in registration order; remove-all empties the registry; SupportBean_S0(2)/SupportBean_S1(2) silently allocate and deallocate leaf id 1; undeploy-all",
+	"context-event+admin; the same partition-listener registry lifecycle under a nested context whose NeverEndingStory parent starts at @now and whose ABSession leaf runs start SupportBean_S0 as s0 end SupportBean_S1; the allocated identifier nests a parent initiatedTerminated level with no initiatingEvent over the leaf's SupportBean_S0 initiatingEvent; the iterator yields [l1,l2], remove-all empties the registry and the S0(2)/S1(2) tail stays silent",
 	"context-event; one partition-state listener added after ctx deploy observes statement-added(a), activated, statement-added(b) — activated fires once after the first statement — and SupportBean_S0(1) emits exactly one partition-allocated despite two deployed statements; undeploy-all tears down a, b and the context in dependency order",
 }
 
@@ -62,6 +72,8 @@ var contextAdminListenCaseEPLs = []string{
 	"@name('s0') context MyContext select count(*) from SupportBean",
 	"@name('s0') context MyContext select count(*) from SupportBean",
 	"@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1",
+	"@name('ctx') @public create context MyContextStartEnd start SupportBean_S0 as s0 end SupportBean_S1",
+	"@name('ctx') @public create context MyContextStartEndWithNeverEnding context NeverEndingStory start @now, context ABSession start SupportBean_S0 as s0 end SupportBean_S1",
 	"@name('a') context MyContextStartS0EndS1 select count(*) from SupportBean",
 }
 
@@ -71,13 +83,16 @@ var contextAdminListenCaseEPLs = []string{
 // compileWithoutPath marks the ord-4 deploys whose Java execution calls the
 // path-less compileDeploy overload. add-listener/add-partition-listener carry
 // the listener label in statement (the context deploy label in name for
-// partition listeners); remove-listener/remove-listeners mirror the registry
+// partition listeners); remove-listener/remove-listeners and
+// remove-partition-listener/remove-partition-listeners mirror the registry
 // removals; snapshot mode "admin:listeners" mirrors the
-// getContextStateListeners iterator assertion. The category and nested cases
-// carry no deployed record for 'ctx': Go marks env-registered contexts created
-// lazily at the first statement deploy, so the created event arrives with the
-// s0 deploy while Java emits it at the ctx deploy — dropping the deployed
-// marker keeps both record streams aligned.
+// getContextStateListeners iterator assertion and "admin:partition-listeners"
+// the per-context getContextPartitionStateListeners iterator. The category
+// and nested cases carry no deployed record for 'ctx': Go marks
+// env-registered contexts created lazily at the first statement deploy, so
+// the created event arrives with the s0 deploy while Java emits it at the
+// ctx deploy — dropping the deployed marker keeps both record streams
+// aligned.
 var contextAdminListenCaseSteps = map[string][]string{
 	"category": {
 		"add-listener|l0||||||||",
@@ -111,6 +126,42 @@ var contextAdminListenCaseSteps = map[string][]string{
 		"snapshot|ctx|||||||admin:listeners|",
 		"deploy|ctx|||@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1|||1||",
 		"deployed|ctx||||||||",
+		"undeploy-all|||||||||",
+	},
+	"partition-add-remove-listener": {
+		"deploy|ctx|||@name('ctx') @public create context MyContextStartEnd start SupportBean_S0 as s0 end SupportBean_S1|||||",
+		"deployed|ctx||||||||",
+		"deploy|s0|||@name('s0') context MyContextStartEnd select count(*) from SupportBean|||||",
+		"deployed|s0||||||||",
+		"add-partition-listener|l0|ctx|||||||",
+		"add-partition-listener|l1|ctx|||||||",
+		"add-partition-listener|l2|ctx|||||||",
+		"send|||SupportBean_S0||{\"id\":1}||||",
+		"remove-partition-listener|l0|ctx|||||||",
+		"send|||SupportBean_S1||{\"id\":1}||||",
+		"snapshot||ctx||||||admin:partition-listeners|",
+		"remove-partition-listeners||ctx|||||||",
+		"snapshot||ctx||||||admin:partition-listeners|",
+		"send|||SupportBean_S0||{\"id\":2}||||",
+		"send|||SupportBean_S1||{\"id\":2}||||",
+		"undeploy-all|||||||||",
+	},
+	"partition-add-remove-listener-nested": {
+		"deploy|ctx|||@name('ctx') @public create context MyContextStartEndWithNeverEnding context NeverEndingStory start @now, context ABSession start SupportBean_S0 as s0 end SupportBean_S1|||||",
+		"deployed|ctx||||||||",
+		"deploy|s0|||@name('s0') context MyContextStartEndWithNeverEnding select count(*) from SupportBean|||||",
+		"deployed|s0||||||||",
+		"add-partition-listener|l0|ctx|||||||",
+		"add-partition-listener|l1|ctx|||||||",
+		"add-partition-listener|l2|ctx|||||||",
+		"send|||SupportBean_S0||{\"id\":1}||||",
+		"remove-partition-listener|l0|ctx|||||||",
+		"send|||SupportBean_S1||{\"id\":1}||||",
+		"snapshot||ctx||||||admin:partition-listeners|",
+		"remove-partition-listeners||ctx|||||||",
+		"snapshot||ctx||||||admin:partition-listeners|",
+		"send|||SupportBean_S0||{\"id\":2}||||",
+		"send|||SupportBean_S1||{\"id\":2}||||",
 		"undeploy-all|||||||||",
 	},
 	"multiple-statements": {
@@ -241,7 +292,7 @@ func (l *contextAdminListenListener) record(kind string, state esper.ContextStat
 		value["contextName"] = partition.ContextName
 		value["partitionId"] = partition.PartitionID
 		if partition.Allocated {
-			value["identifier"] = contextAdminListenIdentifier(partition.Descriptor)
+			value["identifier"] = s.contextAdminListenIdentifier(partition.Descriptor)
 		}
 	}
 	if state.StatementName != "" {
@@ -297,23 +348,35 @@ func (s *contextAdminListenCaseState) normalizeStatementDeploymentID(statementNa
 // Java's typed ContextPartitionIdentifier classes map to descriptor
 // properties — category label, nested parent.* plus leaf key segments, hash
 // bucket, partitioned keyN values, or the initiated-terminated initiating
-// event type (Java's properties["s0"] presence assertion).
-func contextAdminListenIdentifier(descriptor esper.ContextPartitionDescriptor) map[string]any {
+// event type (Java's properties["s0"] presence assertion). An initiated level
+// with no initiating event — the @now parent of the nested ord-5 context —
+// renders {"type":"initiatedTerminated"} with no initiatingEvent key, which
+// the descriptor properties alone cannot express, so the level's registered
+// context kind resolves the shape.
+func (s *contextAdminListenCaseState) contextAdminListenIdentifier(descriptor esper.ContextPartitionDescriptor) map[string]any {
 	props := descriptor.Properties()
 	if _, nested := props["parent.name"]; nested {
-		parent := contextAdminListenFlatIdentifier(props, "parent.")
-		leaf := contextAdminListenFlatIdentifier(props, "")
+		parent := s.contextAdminListenFlatIdentifier(props, "parent.")
+		leaf := s.contextAdminListenFlatIdentifier(props, "")
 		return map[string]any{"type": "nested", "identifiers": []any{parent, leaf}}
 	}
-	return contextAdminListenFlatIdentifier(props, "")
+	return s.contextAdminListenFlatIdentifier(props, "")
 }
 
-func contextAdminListenFlatIdentifier(props map[string]any, prefix string) map[string]any {
+func (s *contextAdminListenCaseState) contextAdminListenFlatIdentifier(props map[string]any, prefix string) map[string]any {
 	if raw, ok := props[prefix+"initiating_event"]; ok {
 		if event, isEvent := raw.(esper.Event); isEvent {
 			return map[string]any{"type": "initiatedTerminated", "initiatingEvent": event.TypeName()}
 		}
 		return map[string]any{"type": "initiatedTerminated", "initiatingEvent": fmt.Sprint(raw)}
+	}
+	if name, ok := props[prefix+"name"].(string); ok {
+		if definition, registered := s.env.Context(name); registered && definition.Kind() == esper.ContextInitiatedTerminated {
+			// An initiated level whose start carried no triggering event
+			// (`start @now`) has no initiating_event property; Java still
+			// types the identifier initiatedTerminated.
+			return map[string]any{"type": "initiatedTerminated"}
+		}
 	}
 	if label, ok := props[prefix+"label"].(string); ok {
 		return map[string]any{"type": "category", "label": label}
@@ -392,6 +455,14 @@ func executeContextAdminListen(ctx context.Context, scenario compat.Scenario, tr
 			state.removeListener(step.Statement)
 		case "remove-listeners":
 			state.removeListeners()
+		case "remove-partition-listener":
+			if err := state.removePartitionListener(step.Statement, step.Name); err != nil {
+				return *trace, err
+			}
+		case "remove-partition-listeners":
+			if err := state.removePartitionListeners(step.Name); err != nil {
+				return *trace, err
+			}
 		case "snapshot":
 			if err := state.snapshot(step); err != nil {
 				return *trace, err
@@ -504,6 +575,46 @@ func (s *contextAdminListenCaseState) registerInitTermContext(label, name string
 	return nil
 }
 
+// registerNestedInitTermContext registers the ord-5 nested context
+// `context NeverEndingStory start @now, context ABSession start
+// SupportBean_S0 as s0 end SupportBean_S1` under the deploy label. The @now
+// parent maps to a non-overlapping initiated context whose start is always
+// true — it activates on the first event rather than at deploy, observably
+// equivalent because listeners register after deploy and the parent emits no
+// partition events (Java fires allocated only at leaf instantiation).
+// CreateNestedContext requires a registered parent, so the parent registers
+// through CreateInitiatedContext (the registering form of NewInitiatedContext)
+// before the leaf composes below it.
+func (s *contextAdminListenCaseState) registerNestedInitTermContext(label, name string) error {
+	if _, ok := s.env.Context(name); ok {
+		s.contextByLabel[label] = name
+		if _, owned := s.contextOwner[name]; !owned {
+			s.contextOwner[name] = label
+		}
+		return nil
+	}
+	if _, err := esper.CreateInitiatedContext(s.env, "NeverEndingStory",
+		esper.Literal("global"), esper.Literal(true)); err != nil {
+		return err
+	}
+	s.registeredCtx = append(s.registeredCtx, "NeverEndingStory")
+	start := esper.Equal[string](esper.TypeName(esper.EventValue[esper.Event]()), esper.Literal("SupportBean_S0"))
+	end := esper.Equal[string](esper.TypeName(esper.EventValue[esper.Event]()), esper.Literal("SupportBean_S1"))
+	leaf, err := esper.NewInitiatedTerminatedContext("ABSession", esper.Literal("global"), start, end)
+	if err != nil {
+		return err
+	}
+	if _, err := esper.CreateNestedContext(s.env, name, "NeverEndingStory", leaf); err != nil {
+		return err
+	}
+	s.contextByLabel[label] = name
+	if _, owned := s.contextOwner[name]; !owned {
+		s.contextOwner[name] = label
+	}
+	s.registeredCtx = append(s.registeredCtx, name)
+	return nil
+}
+
 // deploy executes one deploy step: registration fixtures model create-context
 // EPL at their scenario positions (the established approved difference for
 // the missing deployable statement types) and statement fixtures deploy
@@ -569,6 +680,24 @@ func (s *contextAdminListenCaseState) deploy(ctx context.Context, step compat.St
 	case "add-remove-listener":
 		if label == "ctx" {
 			return s.registerInitTermContext(label, "MyContext")
+		}
+	case "partition-add-remove-listener":
+		switch label {
+		case "ctx":
+			return s.registerInitTermContext(label, "MyContextStartEnd")
+		case "s0":
+			plan, err := countPlan(beanSource, "s0", "MyContextStartEnd")
+			_, err = s.deployPlan(label, plan, err)
+			return err
+		}
+	case "partition-add-remove-listener-nested":
+		switch label {
+		case "ctx":
+			return s.registerNestedInitTermContext(label, "MyContextStartEndWithNeverEnding")
+		case "s0":
+			plan, err := countPlan(beanSource, "s0", "MyContextStartEndWithNeverEnding")
+			_, err = s.deployPlan(label, plan, err)
+			return err
 		}
 	case "multiple-statements":
 		switch label {
@@ -663,27 +792,63 @@ func (s *contextAdminListenCaseState) removeListeners() {
 	s.engine.RemoveContextStateListeners()
 }
 
-// snapshot emits one {"operation":"admin"} record for the pinned probe:
-// "admin:listeners" mirrors the getContextStateListeners iterator, carrying
-// the registered listener labels in registration order.
-func (s *contextAdminListenCaseState) snapshot(step compat.Step) error {
-	if step.Mode != "admin:listeners" {
-		return fmt.Errorf("%s: unknown admin probe %q", contextAdminListenID, step.Mode)
+// removePartitionListener mirrors
+// removeContextPartitionStateListener(depId, ctxName, listener) for one
+// labeled listener on the context registered under the given deploy label.
+func (s *contextAdminListenCaseState) removePartitionListener(label, contextLabel string) error {
+	listener, ok := s.listeners[label]
+	if !ok {
+		return nil
 	}
+	contextName, ok := s.contextByLabel[contextLabel]
+	if !ok {
+		return fmt.Errorf("%s: no context registered under label %q", contextAdminListenID, contextLabel)
+	}
+	s.engine.RemoveContextPartitionStateListener(contextName, listener)
+	return nil
+}
+
+// removePartitionListeners mirrors
+// removeContextPartitionStateListeners(depId, ctxName).
+func (s *contextAdminListenCaseState) removePartitionListeners(contextLabel string) error {
+	contextName, ok := s.contextByLabel[contextLabel]
+	if !ok {
+		return fmt.Errorf("%s: no context registered under label %q", contextAdminListenID, contextLabel)
+	}
+	s.engine.RemoveContextPartitionStateListeners(contextName)
+	return nil
+}
+
+// snapshot emits one {"operation":"admin"} record for the pinned probe:
+// "admin:listeners" mirrors the getContextStateListeners iterator and
+// "admin:partition-listeners" mirrors the per-context
+// getContextPartitionStateListeners iterator, each carrying the registered
+// listener labels in registration order.
+func (s *contextAdminListenCaseState) snapshot(step compat.Step) error {
 	labels := []string{}
-	registered := s.engine.ContextStateListeners()
-	for _, candidate := range registered {
-		matched := ""
-		for label, listener := range s.listeners {
-			if listener == candidate {
-				matched = label
-				break
+	switch step.Mode {
+	case "admin:listeners":
+		for _, candidate := range s.engine.ContextStateListeners() {
+			matched, err := s.listenerLabel(candidate)
+			if err != nil {
+				return err
 			}
+			labels = append(labels, matched)
 		}
-		if matched == "" {
-			return fmt.Errorf("%s: unregistered listener in ContextStateListeners snapshot", contextAdminListenID)
+	case "admin:partition-listeners":
+		contextName, ok := s.contextByLabel[step.Name]
+		if !ok {
+			return fmt.Errorf("%s: no context registered under label %q", contextAdminListenID, step.Name)
 		}
-		labels = append(labels, matched)
+		for _, candidate := range s.engine.ContextPartitionStateListeners(contextName) {
+			matched, err := s.listenerLabel(candidate)
+			if err != nil {
+				return err
+			}
+			labels = append(labels, matched)
+		}
+	default:
+		return fmt.Errorf("%s: unknown admin probe %q", contextAdminListenID, step.Mode)
 	}
 	s.trace.Records = append(s.trace.Records, compat.TraceRecord{
 		Case:      s.caseName,
@@ -694,6 +859,17 @@ func (s *contextAdminListenCaseState) snapshot(step compat.Step) error {
 		Value:     map[string]any{"listeners": labels},
 	})
 	return nil
+}
+
+// listenerLabel resolves a registered listener instance back to its step
+// label, matching the oracle's identity lookup over the labeled listeners.
+func (s *contextAdminListenCaseState) listenerLabel(candidate any) (string, error) {
+	for label, listener := range s.listeners {
+		if any(listener) == candidate {
+			return label, nil
+		}
+	}
+	return "", fmt.Errorf("%s: unregistered listener in listener registry iterator", contextAdminListenID)
 }
 
 // undeploy removes the deployment registered under the label, or destroys the

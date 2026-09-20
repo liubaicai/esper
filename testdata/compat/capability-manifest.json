@@ -1598,7 +1598,8 @@
     "java-runtime-c91629ba5a771e1725db",
     "java-runtime-d59fd16257279a2118a7",
     "java-runtime-f04b99d603d61f3808fb",
-    "java-runtime-f51a1493ad61c1f0d0d1"
+    "java-runtime-f51a1493ad61c1f0d0d1",
+    "java-runtime-206c08a7f3d6c239050c"
    ],
    "representativeScenarioIds": [
     "context-hash-segmented",
@@ -45074,9 +45075,11 @@
     "java-runtime-2021f021c6e12684fb81",
     "java-runtime-4b1466f2815a381815b2",
     "java-runtime-410d2c5d3daf011b6c7b",
-    "java-runtime-6dd25578221d74ff6660"
+    "java-runtime-6dd25578221d74ff6660",
+    "java-runtime-206c08a7f3d6c239050c"
    ],
    "javaStaticIds": [
+    "java-3a026095a61c4060c91b",
     "java-3a026095a61c4060c91b",
     "java-3a026095a61c4060c91b",
     "java-3a026095a61c4060c91b",
@@ -45086,7 +45089,8 @@
     "ContextAdminListenCategory",
     "ContextAdminListenNested",
     "ContextAddRemoveListener",
-    "ContextAdminListenMultipleStatements"
+    "ContextAdminListenMultipleStatements",
+    "ContextAdminPartitionAddRemoveListener"
    ],
    "javaSourceFiles": [
     "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextAdminListen.java"
@@ -45132,10 +45136,11 @@
     "java-runtime-2021f021c6e12684fb81",
     "java-runtime-4b1466f2815a381815b2",
     "java-runtime-410d2c5d3daf011b6c7b",
-    "java-runtime-6dd25578221d74ff6660"
+    "java-runtime-6dd25578221d74ff6660",
+    "java-runtime-206c08a7f3d6c239050c"
    ],
    "notes": [
-    "ContextAdminListen ords 2/3/4/6 born-differential: eager category allocation, nested-leaf allocation, listener add/remove/registry order, single activation across statements. Ord 5 ContextAdminPartitionAddRemoveListener deferred: scenario B needs nested initiated-parent contexts (NewNestedContext rejects ContextInitiatedTerminated parents).",
+    "ContextAdminListen ords 2/3/4/6 born-differential: eager category allocation, nested-leaf allocation, listener add/remove/registry order, single activation across statements. Draft 4.477 adds ord 5 ContextAdminPartitionAddRemoveListener (both scenarios: flat start-S0-end-S1 and nested NeverEndingStory-start-@now + ABSession init-term leaf): partition-state listener add/remove/remove-all, registration-order iterator, silent post-removal lifecycle. The nested scenario exercises the leaf-initiated path under a never-ending initiated parent (unblocked by 4.476).",
     "Shared-core fixes: ContextStateEvent.RuntimeURI now populated; activated emits after eager partition materialization; deallocated suppressed for flat non-hash kinds on teardown (Esper gates partition termination on terminateChildContexts=false for single-level non-hash controllers); lifecycle termination still notifies via releaseContextPartitionKindLocked."
    ]
   },
@@ -49159,7 +49164,7 @@
   "inventoriedCases": 717,
   "implementedCases": 715,
   "differentialVerifiedCases": 341,
-  "differentialVerifiedRuntimeIds": 1298,
+  "differentialVerifiedRuntimeIds": 1299,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49169,10 +49174,10 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3848,
-  "referencedJavaRuntimeIds": 3474,
+  "runtimeAssociationCount": 3849,
+  "referencedJavaRuntimeIds": 3475,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 662,
+  "unreferencedJavaRuntimeIds": 661,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
   "totalCases": 717,

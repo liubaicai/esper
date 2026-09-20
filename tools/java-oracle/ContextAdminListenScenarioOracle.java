@@ -47,7 +47,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Scenario oracle for ContextAdminListen (ords 2,3,4,6). Replays the shared
+ * Scenario oracle for ContextAdminListen (ords 2,3,4,5,6). Replays the shared
  * scenario: each case runs on the default runtime (URI "default", the value
  * the Java executions assert on statement and partition events), deploy steps
  * compile the pinned EPL text against the accumulated module path
@@ -61,8 +61,12 @@ import java.util.regex.Pattern;
  * itself as a partition listener inside onContextCreated and asserts
  * getContextProperties is non-null inside onContextPartitionAllocated,
  * exactly like SupportContextListener. admin:listeners snapshot steps mirror
- * the getContextStateListeners iterator, emitting the registered listener
- * labels in iteration order.
+ * the getContextStateListeners iterator and admin:partition-listeners steps
+ * the per-context getContextPartitionStateListeners iterator, emitting the
+ * registered listener labels in iteration order. The ord-5 cases register
+ * listeners through addContextPartitionStateListener only, so no created
+ * event reaches them; the nested case's @now parent level renders an
+ * initiatedTerminated identifier with no initiatingEvent.
  */
 public class ContextAdminListenScenarioOracle {
 
@@ -76,22 +80,30 @@ public class ContextAdminListenScenarioOracle {
         "category",
         "nested",
         "add-remove-listener",
+        "partition-add-remove-listener",
+        "partition-add-remove-listener-nested",
         "multiple-statements",
     };
-    private static final int[] ORDINALS = {2, 3, 4, 6};
+    private static final int[] ORDINALS = {2, 3, 4, 5, 5, 6};
     private static final String[] RUNTIME_IDS = {
         "java-runtime-2021f021c6e12684fb81",
         "java-runtime-4b1466f2815a381815b2",
         "java-runtime-410d2c5d3daf011b6c7b",
+        "java-runtime-206c08a7f3d6c239050c",
+        "java-runtime-206c08a7f3d6c239050c",
         "java-runtime-6dd25578221d74ff6660",
     };
     private static final String[] EXECUTION_NAMES = {
         "ContextAdminListenCategory",
         "ContextAdminListenNested",
         "ContextAddRemoveListener",
+        "ContextAdminPartitionAddRemoveListener",
+        "ContextAdminPartitionAddRemoveListener",
         "ContextAdminListenMultipleStatements",
     };
     private static final String[] STATIC_IDS = {
+        "java-3a026095a61c4060c91b",
+        "java-3a026095a61c4060c91b",
         "java-3a026095a61c4060c91b",
         "java-3a026095a61c4060c91b",
         "java-3a026095a61c4060c91b",
@@ -102,12 +114,16 @@ public class ContextAdminListenScenarioOracle {
         "context-event; a context-state listener registered before deploy observes created at ctx deploy and re-entrantly registers as a partition listener; deploying s0 into the two-category context eagerly allocates pos then neg (allocated[1] label 'neg') before activated; no events are sent; undeploying s0 then ctx emits statement-removed, two partition-deallocated, deactivated and destroyed",
         "context-event; nested category-over-keyed context: ctx deploy emits created, s0 deploy emits statement-added then activated, SupportBean(\"E1\",1) emits exactly one partition-allocated whose nested identifier carries parent label 'pos' and leaf keys [\"E1\"], s0 undeploy emits statement-removed/partition-deallocated/deactivated and ctx undeploy emits destroyed",
         "context-event+admin; three context-state listeners registered before deploy each observe created; removing l0 before ctx undeploy leaves l0 silent while l1 and l2 observe destroyed; the listener iterator yields [l1,l2] in registration order; remove-listeners empties the registry; a redeploy plus undeploy-all tail invokes no listener",
+        "context-event+admin; three partition-state listeners registered after the ctx and s0 deploys each observe one partition-allocated on SupportBean_S0(1) whose initiatedTerminated identifier carries initiatingEvent SupportBean_S0; removing l0 leaves it silent while l1 and l2 observe the partition-deallocated on SupportBean_S1(1); the partition-listener iterator yields [l1,l2] in registration order; remove-all empties the registry; SupportBean_S0(2)/SupportBean_S1(2) silently allocate and deallocate leaf id 1; undeploy-all",
+        "context-event+admin; the same partition-listener registry lifecycle under a nested context whose NeverEndingStory parent starts at @now and whose ABSession leaf runs start SupportBean_S0 as s0 end SupportBean_S1; the allocated identifier nests a parent initiatedTerminated level with no initiatingEvent over the leaf's SupportBean_S0 initiatingEvent; the iterator yields [l1,l2], remove-all empties the registry and the S0(2)/S1(2) tail stays silent",
         "context-event; one partition-state listener added after ctx deploy observes statement-added(a), activated, statement-added(b) — activated fires once after the first statement — and SupportBean_S0(1) emits exactly one partition-allocated despite two deployed statements; undeploy-all tears down a, b and the context in dependency order",
     };
     private static final String[] CASE_EPLS = {
         "@name('s0') context MyContext select count(*) from SupportBean",
         "@name('s0') context MyContext select count(*) from SupportBean",
         "@name('ctx') @public create context MyContext start SupportBean_S0 as s0 end SupportBean_S1",
+        "@name('ctx') @public create context MyContextStartEnd start SupportBean_S0 as s0 end SupportBean_S1",
+        "@name('ctx') @public create context MyContextStartEndWithNeverEnding context NeverEndingStory start @now, context ABSession start SupportBean_S0 as s0 end SupportBean_S1",
         "@name('a') context MyContextStartS0EndS1 select count(*) from SupportBean",
     };
 
@@ -157,6 +173,42 @@ public class ContextAdminListenScenarioOracle {
             "deploy|b|||@name('b') context MyContextStartS0EndS1 select count(*) from SupportBean_S0|||||",
             "deployed|b||||||||",
             "send|||SupportBean_S0||{\"id\":1}||||",
+            "undeploy-all|||||||||",
+        });
+        CASE_STEPS.put("partition-add-remove-listener", new String[]{
+            "deploy|ctx|||@name('ctx') @public create context MyContextStartEnd start SupportBean_S0 as s0 end SupportBean_S1|||||",
+            "deployed|ctx||||||||",
+            "deploy|s0|||@name('s0') context MyContextStartEnd select count(*) from SupportBean|||||",
+            "deployed|s0||||||||",
+            "add-partition-listener|l0|ctx|||||||",
+            "add-partition-listener|l1|ctx|||||||",
+            "add-partition-listener|l2|ctx|||||||",
+            "send|||SupportBean_S0||{\"id\":1}||||",
+            "remove-partition-listener|l0|ctx|||||||",
+            "send|||SupportBean_S1||{\"id\":1}||||",
+            "snapshot||ctx||||||admin:partition-listeners|",
+            "remove-partition-listeners||ctx|||||||",
+            "snapshot||ctx||||||admin:partition-listeners|",
+            "send|||SupportBean_S0||{\"id\":2}||||",
+            "send|||SupportBean_S1||{\"id\":2}||||",
+            "undeploy-all|||||||||",
+        });
+        CASE_STEPS.put("partition-add-remove-listener-nested", new String[]{
+            "deploy|ctx|||@name('ctx') @public create context MyContextStartEndWithNeverEnding context NeverEndingStory start @now, context ABSession start SupportBean_S0 as s0 end SupportBean_S1|||||",
+            "deployed|ctx||||||||",
+            "deploy|s0|||@name('s0') context MyContextStartEndWithNeverEnding select count(*) from SupportBean|||||",
+            "deployed|s0||||||||",
+            "add-partition-listener|l0|ctx|||||||",
+            "add-partition-listener|l1|ctx|||||||",
+            "add-partition-listener|l2|ctx|||||||",
+            "send|||SupportBean_S0||{\"id\":1}||||",
+            "remove-partition-listener|l0|ctx|||||||",
+            "send|||SupportBean_S1||{\"id\":1}||||",
+            "snapshot||ctx||||||admin:partition-listeners|",
+            "remove-partition-listeners||ctx|||||||",
+            "snapshot||ctx||||||admin:partition-listeners|",
+            "send|||SupportBean_S0||{\"id\":2}||||",
+            "send|||SupportBean_S1||{\"id\":2}||||",
             "undeploy-all|||||||||",
         });
     }
@@ -257,6 +309,32 @@ public class ContextAdminListenScenarioOracle {
                         listeners.put(label, listener);
                         break;
                     }
+                    case "remove-partition-listener": {
+                        RecordingContextListener listener = listeners.get(step.getString("statement", ""));
+                        if (listener == null) {
+                            break;
+                        }
+                        String contextLabel = step.getString("name", "");
+                        String deploymentId = deploymentIds.get(contextLabel);
+                        String contextName = contextNames.get(contextLabel);
+                        if (deploymentId == null || contextName == null) {
+                            throw new IllegalStateException("no context deployment for label " + contextLabel);
+                        }
+                        runtime.getContextPartitionService().removeContextPartitionStateListener(
+                            deploymentId, contextName, listener);
+                        break;
+                    }
+                    case "remove-partition-listeners": {
+                        String contextLabel = step.getString("name", "");
+                        String deploymentId = deploymentIds.get(contextLabel);
+                        String contextName = contextNames.get(contextLabel);
+                        if (deploymentId == null || contextName == null) {
+                            throw new IllegalStateException("no context deployment for label " + contextLabel);
+                        }
+                        runtime.getContextPartitionService().removeContextPartitionStateListeners(
+                            deploymentId, contextName);
+                        break;
+                    }
                     case "add-partition-listener": {
                         String label = step.getString("statement", "");
                         if (listeners.containsKey(label)) {
@@ -286,7 +364,8 @@ public class ContextAdminListenScenarioOracle {
                         runtime.getContextPartitionService().removeContextStateListeners();
                         break;
                     case "snapshot":
-                        snapshotStep(runtime, caseName, step, records, listeners);
+                        snapshotStep(runtime, caseName, step, records, listeners,
+                            deploymentIds, contextNames);
                         break;
                     case "undeploy": {
                         String owner = step.getString("statement", "");
@@ -400,42 +479,67 @@ public class ContextAdminListenScenarioOracle {
 
     /**
      * Emits one {"operation":"admin"} record for the pinned probe:
-     * "admin:listeners" mirrors the getContextStateListeners iterator,
-     * carrying the registered listener labels in iteration order.
+     * "admin:listeners" mirrors the getContextStateListeners iterator and
+     * "admin:partition-listeners" mirrors the per-context
+     * getContextPartitionStateListeners iterator, each carrying the
+     * registered listener labels in iteration order.
      */
     private static void snapshotStep(EPRuntime runtime, String caseName, JsonObject step,
                                      List<JsonObject> records,
-                                     Map<String, RecordingContextListener> listeners) {
-        if (!"admin:listeners".equals(step.getString("mode", ""))) {
-            throw new IllegalStateException("unknown admin probe " + step.getString("mode", ""));
-        }
+                                     Map<String, RecordingContextListener> listeners,
+                                     Map<String, String> deploymentIds,
+                                     Map<String, String> contextNames) {
+        String mode = step.getString("mode", "");
         JsonArray labels = new JsonArray();
-        for (Iterator<ContextStateListener> it =
-                 runtime.getContextPartitionService().getContextStateListeners(); it.hasNext(); ) {
-            ContextStateListener candidate = it.next();
-            String matched = null;
-            for (Map.Entry<String, RecordingContextListener> entry : listeners.entrySet()) {
-                if (entry.getValue() == candidate) {
-                    matched = entry.getKey();
-                    break;
-                }
+        if ("admin:listeners".equals(mode)) {
+            for (Iterator<ContextStateListener> it =
+                     runtime.getContextPartitionService().getContextStateListeners(); it.hasNext(); ) {
+                labels.add(listenerLabel(listeners, it.next()));
             }
-            if (matched == null) {
-                throw new IllegalStateException("unregistered listener in getContextStateListeners");
+        } else if ("admin:partition-listeners".equals(mode)) {
+            String contextLabel = step.getString("name", "");
+            String deploymentId = deploymentIds.get(contextLabel);
+            String contextName = contextNames.get(contextLabel);
+            if (deploymentId == null || contextName == null) {
+                throw new IllegalStateException("no context deployment for label " + contextLabel);
             }
-            labels.add(matched);
+            for (Iterator<ContextPartitionStateListener> it =
+                     runtime.getContextPartitionService().getContextPartitionStateListeners(
+                         deploymentId, contextName); it.hasNext(); ) {
+                labels.add(listenerLabel(listeners, it.next()));
+            }
+        } else {
+            throw new IllegalStateException("unknown admin probe " + mode);
         }
         JsonObject record = new JsonObject();
         record.add("case", caseName);
         record.add("operation", "admin");
-        record.add("statement", step.getString("statement", ""));
+        String statement = step.getString("statement", "");
+        if (!statement.isEmpty()) {
+            record.add("statement", statement);
+        }
         record.add("sequence", 0);
         record.add("time", Instant.ofEpochMilli(
             runtime.getEventService().getCurrentTime()).toString());
+        String name = step.getString("name", "");
+        if (!name.isEmpty()) {
+            record.add("name", name);
+        }
         JsonObject value = new JsonObject();
         value.add("listeners", labels);
         record.add("value", value);
         records.add(record);
+    }
+
+    /** Resolves a registered listener instance back to its step label. */
+    private static String listenerLabel(Map<String, RecordingContextListener> listeners,
+                                        Object candidate) {
+        for (Map.Entry<String, RecordingContextListener> entry : listeners.entrySet()) {
+            if (entry.getValue() == candidate) {
+                return entry.getKey();
+            }
+        }
+        throw new IllegalStateException("unregistered listener in listener registry iterator");
     }
 
     /**

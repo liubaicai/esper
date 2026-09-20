@@ -65533,6 +65533,24 @@ func assertContextAdminListenTrace(t *testing.T, trace compat.Trace) {
 		{"add-remove-listener", "admin", "ctx", "", 0, `map[listeners:[l1 l2]]`},
 		{"add-remove-listener", "admin", "ctx", "", 0, `map[listeners:[]]`},
 		{"add-remove-listener", "deployed", "ctx", "", 2, ``},
+		{"partition-add-remove-listener", "deployed", "ctx", "", 1, ``},
+		{"partition-add-remove-listener", "deployed", "s0", "", 1, ``},
+		{"partition-add-remove-listener", "context-event", "", "l0", 1, `map[contextDeploymentId:ctx contextName:MyContextStartEnd event:partition-allocated identifier:map[initiatingEvent:SupportBean_S0 type:initiatedTerminated] partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener", "context-event", "", "l1", 1, `map[contextDeploymentId:ctx contextName:MyContextStartEnd event:partition-allocated identifier:map[initiatingEvent:SupportBean_S0 type:initiatedTerminated] partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener", "context-event", "", "l2", 1, `map[contextDeploymentId:ctx contextName:MyContextStartEnd event:partition-allocated identifier:map[initiatingEvent:SupportBean_S0 type:initiatedTerminated] partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener", "context-event", "", "l1", 2, `map[contextDeploymentId:ctx contextName:MyContextStartEnd event:partition-deallocated partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener", "context-event", "", "l2", 2, `map[contextDeploymentId:ctx contextName:MyContextStartEnd event:partition-deallocated partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener", "admin", "", "ctx", 0, `map[listeners:[l1 l2]]`},
+		{"partition-add-remove-listener", "admin", "", "ctx", 0, `map[listeners:[]]`},
+		{"partition-add-remove-listener-nested", "deployed", "ctx", "", 1, ``},
+		{"partition-add-remove-listener-nested", "deployed", "s0", "", 1, ``},
+		{"partition-add-remove-listener-nested", "context-event", "", "l0", 1, `map[contextDeploymentId:ctx contextName:MyContextStartEndWithNeverEnding event:partition-allocated identifier:map[identifiers:[map[type:initiatedTerminated] map[initiatingEvent:SupportBean_S0 type:initiatedTerminated]] type:nested] partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener-nested", "context-event", "", "l1", 1, `map[contextDeploymentId:ctx contextName:MyContextStartEndWithNeverEnding event:partition-allocated identifier:map[identifiers:[map[type:initiatedTerminated] map[initiatingEvent:SupportBean_S0 type:initiatedTerminated]] type:nested] partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener-nested", "context-event", "", "l2", 1, `map[contextDeploymentId:ctx contextName:MyContextStartEndWithNeverEnding event:partition-allocated identifier:map[identifiers:[map[type:initiatedTerminated] map[initiatingEvent:SupportBean_S0 type:initiatedTerminated]] type:nested] partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener-nested", "context-event", "", "l1", 2, `map[contextDeploymentId:ctx contextName:MyContextStartEndWithNeverEnding event:partition-deallocated partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener-nested", "context-event", "", "l2", 2, `map[contextDeploymentId:ctx contextName:MyContextStartEndWithNeverEnding event:partition-deallocated partitionId:0 runtimeURI:default]`},
+		{"partition-add-remove-listener-nested", "admin", "", "ctx", 0, `map[listeners:[l1 l2]]`},
+		{"partition-add-remove-listener-nested", "admin", "", "ctx", 0, `map[listeners:[]]`},
 		{"multiple-statements", "deployed", "ctx", "", 1, ``},
 		{"multiple-statements", "context-event", "", "l0", 1, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:statement-added runtimeURI:default statementDeploymentId:a statementName:a]`},
 		{"multiple-statements", "context-event", "", "l0", 2, `map[contextDeploymentId:ctx contextName:MyContextStartS0EndS1 event:activated runtimeURI:default]`},
@@ -65663,27 +65681,27 @@ func TestRunContextAdminListenDiffRejectsTraceMutations(t *testing.T) {
 			},
 		},
 		{
-			// Record 29 is ord 6's single activation: activated fires once
+			// Record 47 is ord 6's single activation: activated fires once
 			// after the first statement add, before the second.
 			name: "multiple-statements-activated-order-drift",
 			mutate: func(trace *compat.Trace) {
-				value := trace.Records[29].Value.(map[string]any)
+				value := trace.Records[47].Value.(map[string]any)
 				value["event"] = "statement-added"
 			},
 		},
 		{
-			// Record 33 is ord 6's single partition allocation: one
+			// Record 51 is ord 6's single partition allocation: one
 			// partition-allocated despite two statements.
 			name: "multiple-statements-allocated-drift",
 			mutate: func(trace *compat.Trace) {
-				value := trace.Records[33].Value.(map[string]any)
+				value := trace.Records[51].Value.(map[string]any)
 				value["event"] = "partition-deallocated"
 			},
 		},
 		{
 			name: "record-count-short",
 			mutate: func(trace *compat.Trace) {
-				trace.Records = trace.Records[:35]
+				trace.Records = trace.Records[:53]
 			},
 		},
 	}

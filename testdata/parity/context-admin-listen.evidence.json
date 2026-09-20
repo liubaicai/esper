@@ -5,6 +5,8 @@
     "java-runtime-2021f021c6e12684fb81",
     "java-runtime-4b1466f2815a381815b2",
     "java-runtime-410d2c5d3daf011b6c7b",
+    "java-runtime-206c08a7f3d6c239050c",
+    "java-runtime-206c08a7f3d6c239050c",
     "java-runtime-6dd25578221d74ff6660"
   ],
   "javaSourceFiles": [
@@ -14,6 +16,8 @@
     "ContextAdminListenCategory",
     "ContextAdminListenNested",
     "ContextAddRemoveListener",
+    "ContextAdminPartitionAddRemoveListener",
+    "ContextAdminPartitionAddRemoveListener",
     "ContextAdminListenMultipleStatements"
   ],
   "scenario": {
@@ -179,6 +183,212 @@
       {
         "op": "undeploy-all",
         "case": "add-remove-listener"
+      },
+      {
+        "op": "case",
+        "case": "partition-add-remove-listener"
+      },
+      {
+        "op": "deploy",
+        "case": "partition-add-remove-listener",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyContextStartEnd start SupportBean_S0 as s0 end SupportBean_S1"
+      },
+      {
+        "op": "deployed",
+        "case": "partition-add-remove-listener",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "partition-add-remove-listener",
+        "statement": "s0",
+        "epl": "@name('s0') context MyContextStartEnd select count(*) from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "partition-add-remove-listener",
+        "statement": "s0"
+      },
+      {
+        "op": "add-partition-listener",
+        "case": "partition-add-remove-listener",
+        "statement": "l0",
+        "name": "ctx"
+      },
+      {
+        "op": "add-partition-listener",
+        "case": "partition-add-remove-listener",
+        "statement": "l1",
+        "name": "ctx"
+      },
+      {
+        "op": "add-partition-listener",
+        "case": "partition-add-remove-listener",
+        "statement": "l2",
+        "name": "ctx"
+      },
+      {
+        "op": "send",
+        "case": "partition-add-remove-listener",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "remove-partition-listener",
+        "case": "partition-add-remove-listener",
+        "statement": "l0",
+        "name": "ctx"
+      },
+      {
+        "op": "send",
+        "case": "partition-add-remove-listener",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "partition-add-remove-listener",
+        "name": "ctx",
+        "mode": "admin:partition-listeners"
+      },
+      {
+        "op": "remove-partition-listeners",
+        "case": "partition-add-remove-listener",
+        "name": "ctx"
+      },
+      {
+        "op": "snapshot",
+        "case": "partition-add-remove-listener",
+        "name": "ctx",
+        "mode": "admin:partition-listeners"
+      },
+      {
+        "op": "send",
+        "case": "partition-add-remove-listener",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "partition-add-remove-listener",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "partition-add-remove-listener"
+      },
+      {
+        "op": "case",
+        "case": "partition-add-remove-listener-nested"
+      },
+      {
+        "op": "deploy",
+        "case": "partition-add-remove-listener-nested",
+        "statement": "ctx",
+        "epl": "@name('ctx') @public create context MyContextStartEndWithNeverEnding context NeverEndingStory start @now, context ABSession start SupportBean_S0 as s0 end SupportBean_S1"
+      },
+      {
+        "op": "deployed",
+        "case": "partition-add-remove-listener-nested",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "partition-add-remove-listener-nested",
+        "statement": "s0",
+        "epl": "@name('s0') context MyContextStartEndWithNeverEnding select count(*) from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "partition-add-remove-listener-nested",
+        "statement": "s0"
+      },
+      {
+        "op": "add-partition-listener",
+        "case": "partition-add-remove-listener-nested",
+        "statement": "l0",
+        "name": "ctx"
+      },
+      {
+        "op": "add-partition-listener",
+        "case": "partition-add-remove-listener-nested",
+        "statement": "l1",
+        "name": "ctx"
+      },
+      {
+        "op": "add-partition-listener",
+        "case": "partition-add-remove-listener-nested",
+        "statement": "l2",
+        "name": "ctx"
+      },
+      {
+        "op": "send",
+        "case": "partition-add-remove-listener-nested",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "remove-partition-listener",
+        "case": "partition-add-remove-listener-nested",
+        "statement": "l0",
+        "name": "ctx"
+      },
+      {
+        "op": "send",
+        "case": "partition-add-remove-listener-nested",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 1
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "partition-add-remove-listener-nested",
+        "name": "ctx",
+        "mode": "admin:partition-listeners"
+      },
+      {
+        "op": "remove-partition-listeners",
+        "case": "partition-add-remove-listener-nested",
+        "name": "ctx"
+      },
+      {
+        "op": "snapshot",
+        "case": "partition-add-remove-listener-nested",
+        "name": "ctx",
+        "mode": "admin:partition-listeners"
+      },
+      {
+        "op": "send",
+        "case": "partition-add-remove-listener-nested",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "partition-add-remove-listener-nested",
+        "eventType": "SupportBean_S1",
+        "payload": {
+          "id": 2
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "partition-add-remove-listener-nested"
       },
       {
         "op": "case",
@@ -599,6 +809,268 @@
         "statement": "ctx",
         "sequence": 2,
         "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-allocated",
+          "identifier": {
+            "initiatingEvent": "SupportBean_S0",
+            "type": "initiatedTerminated"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-allocated",
+          "identifier": {
+            "initiatingEvent": "SupportBean_S0",
+            "type": "initiatedTerminated"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-allocated",
+          "identifier": {
+            "initiatingEvent": "SupportBean_S0",
+            "type": "initiatedTerminated"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "admin",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "ctx",
+        "value": {
+          "listeners": [
+            "l1",
+            "l2"
+          ]
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "admin",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "ctx",
+        "value": {
+          "listeners": []
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-allocated",
+          "identifier": {
+            "identifiers": [
+              {
+                "type": "initiatedTerminated"
+              },
+              {
+                "initiatingEvent": "SupportBean_S0",
+                "type": "initiatedTerminated"
+              }
+            ],
+            "type": "nested"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-allocated",
+          "identifier": {
+            "identifiers": [
+              {
+                "type": "initiatedTerminated"
+              },
+              {
+                "initiatingEvent": "SupportBean_S0",
+                "type": "initiatedTerminated"
+              }
+            ],
+            "type": "nested"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-allocated",
+          "identifier": {
+            "identifiers": [
+              {
+                "type": "initiatedTerminated"
+              },
+              {
+                "initiatingEvent": "SupportBean_S0",
+                "type": "initiatedTerminated"
+              }
+            ],
+            "type": "nested"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "admin",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "ctx",
+        "value": {
+          "listeners": [
+            "l1",
+            "l2"
+          ]
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "admin",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "ctx",
+        "value": {
+          "listeners": []
+        }
       },
       {
         "case": "multiple-statements",
@@ -1089,6 +1561,268 @@
         "statement": "ctx",
         "sequence": 2,
         "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-allocated",
+          "identifier": {
+            "initiatingEvent": "SupportBean_S0",
+            "type": "initiatedTerminated"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-allocated",
+          "identifier": {
+            "initiatingEvent": "SupportBean_S0",
+            "type": "initiatedTerminated"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-allocated",
+          "identifier": {
+            "initiatingEvent": "SupportBean_S0",
+            "type": "initiatedTerminated"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEnd",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "admin",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "ctx",
+        "value": {
+          "listeners": [
+            "l1",
+            "l2"
+          ]
+        }
+      },
+      {
+        "case": "partition-add-remove-listener",
+        "operation": "admin",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "ctx",
+        "value": {
+          "listeners": []
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l0",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-allocated",
+          "identifier": {
+            "identifiers": [
+              {
+                "type": "initiatedTerminated"
+              },
+              {
+                "initiatingEvent": "SupportBean_S0",
+                "type": "initiatedTerminated"
+              }
+            ],
+            "type": "nested"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-allocated",
+          "identifier": {
+            "identifiers": [
+              {
+                "type": "initiatedTerminated"
+              },
+              {
+                "initiatingEvent": "SupportBean_S0",
+                "type": "initiatedTerminated"
+              }
+            ],
+            "type": "nested"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-allocated",
+          "identifier": {
+            "identifiers": [
+              {
+                "type": "initiatedTerminated"
+              },
+              {
+                "initiatingEvent": "SupportBean_S0",
+                "type": "initiatedTerminated"
+              }
+            ],
+            "type": "nested"
+          },
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l1",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "context-event",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "l2",
+        "value": {
+          "contextDeploymentId": "ctx",
+          "contextName": "MyContextStartEndWithNeverEnding",
+          "event": "partition-deallocated",
+          "partitionId": 0,
+          "runtimeURI": "default"
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "admin",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "ctx",
+        "value": {
+          "listeners": [
+            "l1",
+            "l2"
+          ]
+        }
+      },
+      {
+        "case": "partition-add-remove-listener-nested",
+        "operation": "admin",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "name": "ctx",
+        "value": {
+          "listeners": []
+        }
       },
       {
         "case": "multiple-statements",
