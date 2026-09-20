@@ -1475,7 +1475,8 @@
     "internal/esper/faf.go",
     "internal/app/parity/infra_table_update_and_index.go",
     "internal/esper/trigger_index.go",
-    "internal/compat/scenario.go"
+    "internal/compat/scenario.go",
+    "internal/app/parity/infra_table_faf_execute_query.go"
    ],
    "phase": 1,
    "status": "implemented",
@@ -1582,7 +1583,11 @@
     "java-runtime-59f3f0884fc9ae9d749f",
     "java-runtime-1118b36d6f38fa1c78a8",
     "java-runtime-16e0f7011601678fa5df",
-    "java-runtime-0b3580bcd42327b7d2bb"
+    "java-runtime-0b3580bcd42327b7d2bb",
+    "java-runtime-a79e19dc5f135bb8e628",
+    "java-runtime-a68109b2bb91de4ce1cd",
+    "java-runtime-196ff792f0f739c8d97c",
+    "java-runtime-b995c40f3c052bcc277e"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46786,6 +46791,65 @@
    "notes": [
     "Born-DV: InfraTableUpdateAndIndex ords 0-4 \u2014 InfraEarlyUniqueIndexViolation (deploy/FAF/on-update/compile unique-violation phases), InfraLateUniqueIndexViolation (create-index-vs-on-merge conflict + mid-test undeploy), InfraFAFUpdate (FAF update + secondary-index select), InfraTableKeyUpdateSingleKey/MultiKey (on-update primary-key rename). Java/Go 34 records, 0 differences. Shared-core additions: Table.CreateIndex validates existing rows + merge-updated-column conflict; send-driven trigger updates are atomic; env.Build rejects merge when-matched updates of unique-key columns."
    ]
+  },
+  {
+   "id": "case.infra-table-faf-execute-query",
+   "javaRuntimeIds": [
+    "java-runtime-a79e19dc5f135bb8e628",
+    "java-runtime-a68109b2bb91de4ce1cd",
+    "java-runtime-196ff792f0f739c8d97c",
+    "java-runtime-b995c40f3c052bcc277e"
+   ],
+   "javaStaticIds": [
+    "java-1899404b366f6f3c1a31",
+    "java-11e9c7fcb6e1617929a9",
+    "java-db32f6072d9b36a84471",
+    "java-c87f698c077e7dd7ada7"
+   ],
+   "javaNames": [
+    "InfraFAFInsert",
+    "InfraFAFDelete",
+    "InfraFAFUpdate",
+    "InfraFAFSelect"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableFAFExecuteQuery.java"
+   ],
+   "goTests": [
+    "internal/app/parity/infra_table_faf_execute_query.go"
+   ],
+   "tags": [
+    "infra",
+    "table",
+    "fire-and-forget",
+    "born-differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-table-faf-execute-query.json",
+    "testdata/parity/infra-table-faf-execute-query.trace.json",
+    "testdata/parity/infra-table-faf-execute-query.go.trace.json",
+    "testdata/parity/infra-table-faf-execute-query.evidence.json",
+    "tools/java-oracle/InfraTableFAFExecuteQueryScenarioOracle.java",
+    "tools/java-oracle/run-infra-table-faf-execute-query.sh",
+    "javaCommit=9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+    "java=17"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-a79e19dc5f135bb8e628",
+    "java-runtime-a68109b2bb91de4ce1cd",
+    "java-runtime-196ff792f0f739c8d97c",
+    "java-runtime-b995c40f3c052bcc277e"
+   ],
+   "notes": [
+    "Born-DV: InfraTableFAFExecuteQuery ords 0-3 \u2014 InfraFAFInsert (unkeyed table, empty FAF result array, ordered iterator), InfraFAFDelete (delete-all + iteratorCount 10->0), InfraFAFUpdate (update-all, @Name statement name != table name), InfraFAFSelect (select-star FAF result array). Java/Go 12 records, 0 differences. Fully asset-only; no shared-core changes."
+   ]
   }
  ],
  "mappings": [
@@ -50036,13 +50100,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-table-update-and-index"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-table-faf-execute-query"
   }
  ],
  "summary": {
-  "inventoriedCases": 727,
-  "implementedCases": 725,
-  "differentialVerifiedCases": 351,
-  "differentialVerifiedRuntimeIds": 1362,
+  "inventoriedCases": 728,
+  "implementedCases": 726,
+  "differentialVerifiedCases": 352,
+  "differentialVerifiedRuntimeIds": 1366,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -50052,13 +50120,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3912,
-  "referencedJavaRuntimeIds": 3484,
+  "runtimeAssociationCount": 3916,
+  "referencedJavaRuntimeIds": 3488,
   "totalJavaRuntimeIds": 4136,
-  "unreferencedJavaRuntimeIds": 652,
+  "unreferencedJavaRuntimeIds": 648,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 727,
+  "totalCases": 728,
   "totalCapabilities": 122
  }
 }

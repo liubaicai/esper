@@ -64324,6 +64324,284 @@ func assertInfraTableUpdateIndexTrace(t *testing.T, trace compat.Trace) {
 	}
 }
 
+func TestRunInfraTableFAFExecuteQueryDirectReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableFAFID,
+		"-scenario", filepath.Join(root, infraTableFAFID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	trace, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertInfraTableFAFTrace(t, trace)
+}
+
+func TestRunInfraTableFAFExecuteQueryDiffWritesPassingEvidence(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	evidencePath := filepath.Join(t.TempDir(), infraTableFAFID+".evidence.json")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableFAFID + "-diff",
+		"-scenario", filepath.Join(root, infraTableFAFID+".json"),
+		"-java-trace", filepath.Join(root, infraTableFAFID+".trace.json"),
+		"-evidence", evidencePath,
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("diff exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("passing diff wrote stdout = %q", stdout.String())
+	}
+	evidence, err := loadDifferentialEvidenceFile(evidencePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("evidence = %#v", evidence)
+	}
+	if evidence.JavaCommit != infraTableFAFJavaCommit ||
+		!reflect.DeepEqual(evidence.JavaRuntimeIDs, infraTableFAFJavaRuntimeIDs) ||
+		!reflect.DeepEqual(evidence.JavaSourceFiles, infraTableFAFJavaSources) ||
+		!reflect.DeepEqual(evidence.JavaExecutions, infraTableFAFJavaExecutions) {
+		t.Fatalf("Java metadata = %#v", evidence)
+	}
+	assertInfraTableFAFTrace(t, evidence.JavaTrace)
+	assertInfraTableFAFTrace(t, evidence.GoTrace)
+}
+
+func TestRunInfraTableFAFExecuteQueryDiffRejectsTraceMutations(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	tests := []struct {
+		name   string
+		mutate func(*compat.Trace)
+	}{
+		{
+			// faf-insert's snapshot pins the single {p0=a,p1=1} row.
+			name: "faf-insert-snapshot-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "faf-insert" && rec.Operation == "snapshot" && len(rec.New) > 0 {
+						rec.New[0].Fields["p0"] = "z"
+						return
+					}
+				}
+				panic("no faf-insert snapshot record")
+			},
+		},
+		{
+			// faf-delete's second snapshot pins count=0 after delete-all.
+			name: "faf-delete-count-drift",
+			mutate: func(trace *compat.Trace) {
+				seen := 0
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "faf-delete" && rec.Operation == "snapshot" {
+						seen++
+						if seen == 2 {
+							five := int64(5)
+							rec.Count = &five
+							return
+						}
+					}
+				}
+				panic("no faf-delete second snapshot record")
+			},
+		},
+		{
+			// faf-update's snapshot pins p1=ABC on both rows.
+			name: "faf-update-snapshot-drift",
+			mutate: func(trace *compat.Trace) {
+				for index := range trace.Records {
+					rec := &trace.Records[index]
+					if rec.Case == "faf-update" && rec.Operation == "snapshot" && len(rec.New) > 0 {
+						rec.New[0].Fields["p1"] = "XYZ"
+						return
+					}
+				}
+				panic("no faf-update snapshot record")
+			},
+		},
+		{
+			name: "record-count-short",
+			mutate: func(trace *compat.Trace) {
+				trace.Records = trace.Records[:11]
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			javaTracePath := writeJavaTraceFixtureFromEvidence(t,
+				filepath.Join(root, infraTableFAFID+".evidence.json"), test.mutate)
+			evidencePath := filepath.Join(t.TempDir(), infraTableFAFID+".evidence.json")
+			var stdout, stderr bytes.Buffer
+			code := Run([]string{
+				"-mode", infraTableFAFID + "-diff",
+				"-scenario", filepath.Join(root, infraTableFAFID+".json"),
+				"-java-trace", javaTracePath,
+				"-evidence", evidencePath,
+			}, &stdout, &stderr)
+			if code == 0 {
+				t.Fatalf("mutation %q unexpectedly passed; stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+			evidence, err := loadDifferentialEvidenceFile(evidencePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if evidence.Status != "different" || len(evidence.Differences) == 0 {
+				t.Fatalf("mutation %q evidence = %#v", test.name, evidence)
+			}
+		})
+	}
+}
+
+func TestRunInfraTableFAFExecuteQueryCheckedInEvidenceMatchesTraceAndReplay(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	javaTrace, err := loadTraceFile(filepath.Join(root, infraTableFAFID+".trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	goTrace, err := loadTraceFile(filepath.Join(root, infraTableFAFID+".go.trace.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence, err := loadDifferentialEvidenceFile(filepath.Join(root, infraTableFAFID+".evidence.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evidence.Status != "passing" || len(evidence.Differences) != 0 {
+		t.Fatalf("checked-in evidence = %#v", evidence)
+	}
+	if !reflect.DeepEqual(evidence.JavaTrace.Records, javaTrace.Records) {
+		t.Fatal("checked-in evidence Java trace diverges from the checked-in Java trace")
+	}
+	if !reflect.DeepEqual(evidence.GoTrace.Records, goTrace.Records) {
+		t.Fatal("checked-in evidence Go trace diverges from the checked-in Go trace")
+	}
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{
+		"-mode", infraTableFAFID,
+		"-scenario", filepath.Join(root, infraTableFAFID+".json"),
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("replay exit code = %d, stderr = %q", code, stderr.String())
+	}
+	replayed, err := compat.LoadTrace(strings.NewReader(stdout.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(replayed.Records, goTrace.Records) {
+		t.Fatal("replayed Go trace diverges from the checked-in Go trace")
+	}
+	assertInfraTableFAFTrace(t, javaTrace)
+	assertInfraTableFAFTrace(t, goTrace)
+}
+
+func TestRunInfraTableFAFExecuteQueryRejectsMalformedRawScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableFAFID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func([]byte) []byte
+	}{
+		{name: "top-level-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"steps": [`), []byte(`"extra": 0, "steps": [`), 1)
+		}},
+		{name: "case-extra", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"case": "faf-insert"`), []byte(`"case": "faf-insert", "extra": 0`), 1)
+		}},
+		{name: "case-runtime-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`"runtimeId": "java-runtime-a79e19dc5f135bb8e628"`), []byte(`"runtimeId": "java-runtime-wrong"`), 1)
+		}},
+		{name: "epl-drift", mutate: func(data []byte) []byte {
+			return bytes.Replace(data, []byte(`insert into MyTableINS (p0, p1) select 'a', 1`), []byte(`insert into MyTableINS (p0, p1) select 'b', 1`), 1)
+		}},
+		{name: "trailing-json", mutate: func(data []byte) []byte {
+			return append(append([]byte(nil), data...), []byte("\n{}\n")...)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mutated := test.mutate(data)
+			if bytes.Equal(mutated, data) {
+				t.Fatalf("raw mutation %q did not change scenario", test.name)
+			}
+			scenarioPath := filepath.Join(t.TempDir(), "scenario.json")
+			if err := os.WriteFile(scenarioPath, mutated, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			if code := Run([]string{
+				"-mode", infraTableFAFID,
+				"-scenario", scenarioPath,
+			}, &stdout, &stderr); code == 0 {
+				t.Fatalf("malformed scenario %q unexpectedly replayed: stdout=%q stderr=%q", test.name, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunInfraTableFAFExecuteQueryRuntimeIDMappingMatchesScenario(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "testdata", "parity")
+	data, err := os.ReadFile(filepath.Join(root, infraTableFAFID+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var scenario struct {
+		JavaRuntimes []string `json:"javaRuntimes"`
+		JavaNames    []string `json:"javaNames"`
+		Cases        []struct {
+			Case      string `json:"case"`
+			RuntimeID string `json:"runtimeId"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(data, &scenario); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(scenario.JavaRuntimes, infraTableFAFJavaRuntimeIDs) {
+		t.Fatalf("javaRuntimes = %#v", scenario.JavaRuntimes)
+	}
+	if !reflect.DeepEqual(scenario.JavaNames, infraTableFAFJavaExecutions) {
+		t.Fatalf("javaNames = %#v", scenario.JavaNames)
+	}
+	for _, definition := range scenario.Cases {
+		if got := infraTableFAFRuntimeID(definition.Case); got != definition.RuntimeID {
+			t.Fatalf("case %q runtimeId = %q, helper = %q", definition.Case, definition.RuntimeID, got)
+		}
+	}
+}
+
+func assertInfraTableFAFTrace(t *testing.T, trace compat.Trace) {
+	t.Helper()
+	if trace.Version != compat.ScenarioVersion || trace.ID != infraTableFAFID {
+		t.Fatalf("trace identity = %q/%q", trace.Version, trace.ID)
+	}
+	if len(trace.Records) != 12 {
+		t.Fatalf("trace records = %d, want 12", len(trace.Records))
+	}
+	counts := map[string]map[string]int{}
+	for _, record := range trace.Records {
+		if counts[record.Case] == nil {
+			counts[record.Case] = map[string]int{}
+		}
+		counts[record.Case][record.Operation]++
+	}
+	want := map[string]map[string]int{
+		"faf-insert": {"deployed": 1, "snapshot": 1},
+		"faf-delete": {"deployed": 2, "snapshot": 2},
+		"faf-update": {"deployed": 2, "snapshot": 1},
+		"faf-select": {"deployed": 2, "snapshot": 1},
+	}
+	if !reflect.DeepEqual(counts, want) {
+		t.Fatalf("record counts = %#v, want %#v", counts, want)
+	}
+}
+
 func assertInfraTableSelectEnumMultikeyTrace(t *testing.T, trace compat.Trace) {
 	t.Helper()
 	if trace.Version != compat.ScenarioVersion || trace.ID != infraTableSelectEnumMultikeyID {

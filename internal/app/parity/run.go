@@ -372,6 +372,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraTableSelectEnumMultikeyScenario(file)
 	} else if *mode == "infra-table-update-and-index" || *mode == "infra-table-update-and-index-diff" {
 		scenario, err = loadInfraTableUpdateIndexScenario(file)
+	} else if *mode == "infra-table-faf-execute-query" || *mode == "infra-table-faf-execute-query-diff" {
+		scenario, err = loadInfraTableFAFScenario(file)
 	} else {
 		scenario, err = compat.LoadScenario(file)
 	}
@@ -4041,6 +4043,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraTableUpdateIndexJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraTableUpdateIndexJavaSources),
 				splitMetadata(*javaExecutions, infraTableUpdateIndexJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-table-faf-execute-query" || *mode == "infra-table-faf-execute-query-diff" {
+		trace, err := runInfraTableFAFScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-table-faf-execute-query-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraTableFAFJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraTableFAFJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraTableFAFJavaSources),
+				splitMetadata(*javaExecutions, infraTableFAFJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)

@@ -1,0 +1,719 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-a79e19dc5f135bb8e628",
+    "java-runtime-a68109b2bb91de4ce1cd",
+    "java-runtime-196ff792f0f739c8d97c",
+    "java-runtime-b995c40f3c052bcc277e"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/tbl/InfraTableFAFExecuteQuery.java"
+  ],
+  "javaExecutions": [
+    "InfraFAFInsert",
+    "InfraFAFDelete",
+    "InfraFAFUpdate",
+    "InfraFAFSelect"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-faf-execute-query",
+    "steps": [
+      {
+        "op": "case",
+        "case": "faf-insert"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-insert",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyTableINS as (p0 string, p1 int)"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-insert",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-insert",
+        "statement": "FafInsert",
+        "epl": "insert into MyTableINS (p0, p1) select 'a', 1"
+      },
+      {
+        "op": "snapshot",
+        "case": "faf-insert",
+        "statement": "create",
+        "mode": "ordered"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "faf-insert"
+      },
+      {
+        "op": "case",
+        "case": "faf-delete"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-delete",
+        "statement": "create",
+        "epl": "@name('create') @public create table MyTableDEL as (p0 string primary key, thesum sum(int))"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-delete",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-delete",
+        "statement": "into",
+        "epl": "into table MyTableDEL select theString, sum(intPrimitive) as thesum from SupportBean group by theString"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-delete",
+        "statement": "into"
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G0",
+          "intPrimitive": 0
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G3",
+          "intPrimitive": 3
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G4",
+          "intPrimitive": 4
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G5",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G6",
+          "intPrimitive": 6
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G7",
+          "intPrimitive": 7
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G8",
+          "intPrimitive": 8
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-delete",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "G9",
+          "intPrimitive": 9
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "faf-delete",
+        "statement": "create",
+        "mode": "any",
+        "count": 10
+      },
+      {
+        "op": "deploy",
+        "case": "faf-delete",
+        "statement": "FafDelete",
+        "epl": "delete from MyTableDEL"
+      },
+      {
+        "op": "snapshot",
+        "case": "faf-delete",
+        "statement": "create",
+        "mode": "any",
+        "count": 0
+      },
+      {
+        "op": "undeploy-all",
+        "case": "faf-delete"
+      },
+      {
+        "op": "case",
+        "case": "faf-update"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "create",
+        "epl": "@Name('TheTable') @public create table MyTableUPD as (p0 string primary key, p1 string, thesum sum(int))"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-update",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "into",
+        "epl": "into table MyTableUPD select theString, sum(intPrimitive) as thesum from SupportBean group by theString"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-update",
+        "statement": "into"
+      },
+      {
+        "op": "send",
+        "case": "faf-update",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-update",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "deploy",
+        "case": "faf-update",
+        "statement": "FafUpdate",
+        "epl": "update MyTableUPD set p1 = 'ABC'"
+      },
+      {
+        "op": "snapshot",
+        "case": "faf-update",
+        "statement": "TheTable",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "faf-update"
+      },
+      {
+        "op": "case",
+        "case": "faf-select"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-select",
+        "statement": "create",
+        "epl": "@Name('TheTable') @public create table MyTableSEL as (p0 string primary key, thesum sum(int))"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-select",
+        "statement": "create"
+      },
+      {
+        "op": "deploy",
+        "case": "faf-select",
+        "statement": "into",
+        "epl": "into table MyTableSEL select theString, sum(intPrimitive) as thesum from SupportBean group by theString"
+      },
+      {
+        "op": "deployed",
+        "case": "faf-select",
+        "statement": "into"
+      },
+      {
+        "op": "send",
+        "case": "faf-select",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "faf-select",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot",
+        "case": "faf-select",
+        "statement": "FafSelect",
+        "epl": "select * from MyTableSEL",
+        "mode": "any"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "faf-select"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-faf-execute-query",
+    "records": [
+      {
+        "case": "faf-insert",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-insert",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-delete",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-delete",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-delete",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G0",
+              "thesum": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G1",
+              "thesum": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G2",
+              "thesum": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G3",
+              "thesum": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G4",
+              "thesum": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G5",
+              "thesum": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G6",
+              "thesum": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G7",
+              "thesum": 7
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G8",
+              "thesum": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G9",
+              "thesum": 9
+            }
+          }
+        ],
+        "count": 10
+      },
+      {
+        "case": "faf-delete",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "snapshot",
+        "statement": "TheTable",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "ABC"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": "ABC"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-select",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-select",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-select",
+        "operation": "snapshot",
+        "statement": "FafSelect",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-table-faf-execute-query",
+    "records": [
+      {
+        "case": "faf-insert",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-insert",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "a",
+              "p1": 1
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-delete",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-delete",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-delete",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G0",
+              "thesum": 0
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G1",
+              "thesum": 1
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G2",
+              "thesum": 2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G3",
+              "thesum": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G4",
+              "thesum": 4
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G5",
+              "thesum": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G6",
+              "thesum": 6
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G7",
+              "thesum": 7
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G8",
+              "thesum": 8
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "G9",
+              "thesum": 9
+            }
+          }
+        ],
+        "count": 10
+      },
+      {
+        "case": "faf-delete",
+        "operation": "snapshot",
+        "statement": "create",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "count": 0
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-update",
+        "operation": "snapshot",
+        "statement": "TheTable",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1",
+              "p1": "ABC"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2",
+              "p1": "ABC"
+            }
+          }
+        ]
+      },
+      {
+        "case": "faf-select",
+        "operation": "deployed",
+        "statement": "create",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-select",
+        "operation": "deployed",
+        "statement": "into",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "faf-select",
+        "operation": "snapshot",
+        "statement": "FafSelect",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E1"
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "p0": "E2"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}
