@@ -464,6 +464,17 @@ func validateContextPartitionSelector(definition ContextDefinition, selector Con
 	if selector == nil {
 		return nil
 	}
+	if definition.parent != nil {
+		// Esper's nested-context selector contract accepts only
+		// ContextPartitionSelectorAll, ContextPartitionSelectorById and
+		// ContextPartitionSelectorNested; every other selector reports
+		// InvalidContextPartitionSelector.
+		switch selector.(type) {
+		case ContextPartitionSelectorAll, ContextPartitionSelectorIDs, ContextPartitionSelectorNested:
+			return nil
+		}
+		return NewError(ErrorInvalidRule, fmt.Sprintf("Invalid context partition selector: selector %T is incompatible with nested context %q", selector, definition.name))
+	}
 	switch selector.(type) {
 	case ContextPartitionSelectorAll, ContextPartitionSelectorIDs, ContextPartitionSelectorFunc, ContextPartitionSelectorDescriptorFunc:
 		return nil

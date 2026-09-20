@@ -4371,8 +4371,9 @@ func NewNamedWindowDefinition(name string, schema Schema, options ...NamedWindow
 // NewNestedContext composes a child context under an existing parent. The
 // resulting runtime partition key contains both levels and keeps the child
 // state isolated inside its parent partition. Keyed initiated children are
-// supported below non-initiated parents; pattern children and initiated
-// parents remain explicit follow-up capabilities.
+// supported below non-initiated parents, and category children are supported
+// below initiated parents (the parent lifecycle drives eager leaf
+// instantiation); pattern children remain an explicit follow-up capability.
 func NewNestedContext(name string, parent ContextDefinition, child ContextDefinition) (ContextDefinition, error) {
 	return internalengine.NewNestedContext(name, parent, child)
 }

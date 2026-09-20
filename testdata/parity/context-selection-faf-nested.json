@@ -1,0 +1,50 @@
+{
+  "version": "esper-parity/v1",
+  "id": "context-selection-faf-nested",
+  "description": "ContextSelectionAndFireAndForget ord 3 (ContextSelectionFAFNestedNamedWindowQuery): a nested context whose ACtx parent is an overlapping initiated-terminated context (SupportBean_S0 starts a partition, SupportBean_S1(id=s0.id) ends it) over a three-category BCtx child (grp1 intPrimitive < 0, grp2 = 0, grp3 > 0) on SupportBean. Each S0 activation eagerly instantiates all three category leaves in declaration order with globally allocated leaf ids — S0(1) materializes leaves 0-2, S0(2) materializes leaves 3-5. SupportBean events broadcast to every live parent partition and land in one leaf per parent by category; the triggering S0 never enters MyWindow. The context-bound keepall window fed by insert-into answers the group-by merge fire-and-forget query across all leaves ({E1,5},{E2,-2},{E3,10}), the same query under a by-id {2} selector ({E1,3},{E3,5}), and the per-partition context-clause query projecting context.ACtx.s0.p00 and context.BCtx.label under by-id {2} ({S0_1,grp3,E1,3},{S0_1,grp3,E3,5}). A context-level snapshot-selector step pins the six leaf descriptors (id, composite key, startTime/endTime, initiating S0 p00, category label), and a segmented selector over the nested context is rejected as an invalid context partition selector.",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaSource": "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextSelectionAndFireAndForget.java",
+  "javaRuntimes": [
+    "java-runtime-f51a1493ad61c1f0d0d1"
+  ],
+  "javaNames": [
+    "ContextSelectionFAFNestedNamedWindowQuery"
+  ],
+  "javaStaticIds": [
+    "java-1c493e94eff9beb161b3"
+  ],
+  "javaFlags": [
+    "FIREANDFORGET"
+  ],
+  "cases": [
+    {
+      "case": "nested-named-window-query",
+      "ordinal": 3,
+      "runtimeId": "java-runtime-f51a1493ad61c1f0d0d1",
+      "executionName": "ContextSelectionFAFNestedNamedWindowQuery",
+      "observation": "deploy+send+snapshot-selector+faf+selector-error; the nested context deploys an overlapping initiated ACtx parent (S0 starts, S1(id=s0.id) ends) over a three-category BCtx child; S0(1) and S0(2) eagerly materialize leaves 0-2 and 3-5; SupportBean events broadcast to all live parents and route by category so leaf2={E1(1),E3(5),E1(2)} and leaf5={E3(5),E1(2)}; the all-selector group-by merge pins {E1,5},{E2,-2},{E3,10}, by-id {2} pins {E1,3},{E3,5}, the context-clause per-partition query pins {S0_1,grp3,E1,3},{S0_1,grp3,E3,5}, and a segmented selector is rejected as an invalid context partition selector",
+      "epl": "context NestedContext select context.ACtx.s0.p00 as c1, context.BCtx.label as c2, theString as c3, sum(intPrimitive) as c4 from MyWindow group by theString"
+    }
+  ],
+  "steps": [
+    {"op": "case", "case": "nested-named-window-query"},
+    {"op": "deploy", "case": "nested-named-window-query", "statement": "ctx", "epl": "@public create context NestedContext context ACtx initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id), context BCtx group by intPrimitive < 0 as grp1, group by intPrimitive = 0 as grp2, group by intPrimitive > 0 as grp3 from SupportBean"},
+    {"op": "deployed", "case": "nested-named-window-query", "statement": "ctx"},
+    {"op": "deploy", "case": "nested-named-window-query", "statement": "win", "epl": "@public context NestedContext create window MyWindow#keepall as SupportBean"},
+    {"op": "deployed", "case": "nested-named-window-query", "statement": "win"},
+    {"op": "deploy", "case": "nested-named-window-query", "statement": "insert", "epl": "insert into MyWindow select * from SupportBean"},
+    {"op": "deployed", "case": "nested-named-window-query", "statement": "insert"},
+    {"op": "send", "case": "nested-named-window-query", "eventType": "SupportBean_S0", "payload": {"id": 1, "p00": "S0_1"}},
+    {"op": "send", "case": "nested-named-window-query", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 1}},
+    {"op": "send", "case": "nested-named-window-query", "eventType": "SupportBean_S0", "payload": {"id": 2, "p00": "S0_2"}},
+    {"op": "send", "case": "nested-named-window-query", "eventType": "SupportBean", "payload": {"theString": "E2", "intPrimitive": -1}},
+    {"op": "send", "case": "nested-named-window-query", "eventType": "SupportBean", "payload": {"theString": "E3", "intPrimitive": 5}},
+    {"op": "send", "case": "nested-named-window-query", "eventType": "SupportBean", "payload": {"theString": "E1", "intPrimitive": 2}},
+    {"op": "snapshot-selector", "case": "nested-named-window-query", "statement": "ctx", "name": "NestedContext", "selector": "all"},
+    {"op": "faf", "case": "nested-named-window-query", "statement": "sum-all", "epl": "select theString as c1, sum(intPrimitive) as c2 from MyWindow group by theString", "selector": "all"},
+    {"op": "faf", "case": "nested-named-window-query", "statement": "sum-byid", "epl": "select theString as c1, sum(intPrimitive) as c2 from MyWindow group by theString", "selector": "ids", "ids": [2]},
+    {"op": "faf", "case": "nested-named-window-query", "statement": "context-byid", "epl": "context NestedContext select context.ACtx.s0.p00 as c1, context.BCtx.label as c2, theString as c3, sum(intPrimitive) as c4 from MyWindow group by theString", "selector": "ids", "ids": [2]},
+    {"op": "faf", "case": "nested-named-window-query", "statement": "invalid-selector", "epl": "context NestedContext select * from MyWindow", "selector": "segmented", "expectError": "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorById, ContextPartitionSelectorNested] interfaces but received com"},
+    {"op": "undeploy-all", "case": "nested-named-window-query"}
+  ]
+}

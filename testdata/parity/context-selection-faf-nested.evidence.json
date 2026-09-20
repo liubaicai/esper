@@ -1,0 +1,528 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-f51a1493ad61c1f0d0d1"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/context/ContextSelectionAndFireAndForget.java"
+  ],
+  "javaExecutions": [
+    "ContextSelectionFAFNestedNamedWindowQuery"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "context-selection-faf-nested",
+    "steps": [
+      {
+        "op": "case",
+        "case": "nested-named-window-query"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-named-window-query",
+        "statement": "ctx",
+        "epl": "@public create context NestedContext context ACtx initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id), context BCtx group by intPrimitive \u003c 0 as grp1, group by intPrimitive = 0 as grp2, group by intPrimitive \u003e 0 as grp3 from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "nested-named-window-query",
+        "statement": "ctx"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-named-window-query",
+        "statement": "win",
+        "epl": "@public context NestedContext create window MyWindow#keepall as SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "nested-named-window-query",
+        "statement": "win"
+      },
+      {
+        "op": "deploy",
+        "case": "nested-named-window-query",
+        "statement": "insert",
+        "epl": "insert into MyWindow select * from SupportBean"
+      },
+      {
+        "op": "deployed",
+        "case": "nested-named-window-query",
+        "statement": "insert"
+      },
+      {
+        "op": "send",
+        "case": "nested-named-window-query",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 1,
+          "p00": "S0_1"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-named-window-query",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 1
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-named-window-query",
+        "eventType": "SupportBean_S0",
+        "payload": {
+          "id": 2,
+          "p00": "S0_2"
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-named-window-query",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E2",
+          "intPrimitive": -1
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-named-window-query",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E3",
+          "intPrimitive": 5
+        }
+      },
+      {
+        "op": "send",
+        "case": "nested-named-window-query",
+        "eventType": "SupportBean",
+        "payload": {
+          "theString": "E1",
+          "intPrimitive": 2
+        }
+      },
+      {
+        "op": "snapshot-selector",
+        "case": "nested-named-window-query",
+        "statement": "ctx",
+        "selector": "all",
+        "name": "NestedContext"
+      },
+      {
+        "op": "faf",
+        "case": "nested-named-window-query",
+        "statement": "sum-all",
+        "selector": "all",
+        "epl": "select theString as c1, sum(intPrimitive) as c2 from MyWindow group by theString"
+      },
+      {
+        "op": "faf",
+        "case": "nested-named-window-query",
+        "statement": "sum-byid",
+        "selector": "ids",
+        "ids": [
+          2
+        ],
+        "epl": "select theString as c1, sum(intPrimitive) as c2 from MyWindow group by theString"
+      },
+      {
+        "op": "faf",
+        "case": "nested-named-window-query",
+        "statement": "context-byid",
+        "selector": "ids",
+        "ids": [
+          2
+        ],
+        "epl": "context NestedContext select context.ACtx.s0.p00 as c1, context.BCtx.label as c2, theString as c3, sum(intPrimitive) as c4 from MyWindow group by theString"
+      },
+      {
+        "op": "faf",
+        "case": "nested-named-window-query",
+        "statement": "invalid-selector",
+        "selector": "segmented",
+        "expectError": "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorById, ContextPartitionSelectorNested] interfaces but received com",
+        "epl": "context NestedContext select * from MyWindow"
+      },
+      {
+        "op": "undeploy-all",
+        "case": "nested-named-window-query"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-selection-faf-nested",
+    "records": [
+      {
+        "case": "nested-named-window-query",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "deployed",
+        "statement": "win",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "snapshot-selector",
+        "statement": "ctx",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "nested:start:0/category:grp1",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_1",
+              "label": "grp1",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 1,
+            "key": "nested:start:0/category:grp2",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_1",
+              "label": "grp2",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 2,
+            "key": "nested:start:0/category:grp3",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_1",
+              "label": "grp3",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 3,
+            "key": "nested:start:0/category:grp1",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_2",
+              "label": "grp1",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 4,
+            "key": "nested:start:0/category:grp2",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_2",
+              "label": "grp2",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 5,
+            "key": "nested:start:0/category:grp3",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_2",
+              "label": "grp3",
+              "startTime": 0
+            }
+          }
+        ],
+        "name": "NestedContext"
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "faf",
+        "statement": "sum-all",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E2",
+              "c2": -2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E3",
+              "c2": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "faf",
+        "statement": "sum-byid",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E3",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "faf",
+        "statement": "context-byid",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "S0_1",
+              "c2": "grp3",
+              "c3": "E1",
+              "c4": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "S0_1",
+              "c2": "grp3",
+              "c3": "E3",
+              "c4": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "selector-error",
+        "statement": "invalid-selector",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorById, ContextPartitionSelectorNested] interfaces but received com"
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "context-selection-faf-nested",
+    "records": [
+      {
+        "case": "nested-named-window-query",
+        "operation": "deployed",
+        "statement": "ctx",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "deployed",
+        "statement": "win",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "snapshot-selector",
+        "statement": "ctx",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "partitions": [
+          {
+            "id": 0,
+            "key": "nested:start:0/category:grp1",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_1",
+              "label": "grp1",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 1,
+            "key": "nested:start:0/category:grp2",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_1",
+              "label": "grp2",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 2,
+            "key": "nested:start:0/category:grp3",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_1",
+              "label": "grp3",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 3,
+            "key": "nested:start:0/category:grp1",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_2",
+              "label": "grp1",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 4,
+            "key": "nested:start:0/category:grp2",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_2",
+              "label": "grp2",
+              "startTime": 0
+            }
+          },
+          {
+            "id": 5,
+            "key": "nested:start:0/category:grp3",
+            "properties": {
+              "endTime": null,
+              "initiating.p00": "S0_2",
+              "label": "grp3",
+              "startTime": 0
+            }
+          }
+        ],
+        "name": "NestedContext"
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "faf",
+        "statement": "sum-all",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": 5
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E2",
+              "c2": -2
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E3",
+              "c2": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "faf",
+        "statement": "sum-byid",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E1",
+              "c2": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "E3",
+              "c2": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "faf",
+        "statement": "context-byid",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "S0_1",
+              "c2": "grp3",
+              "c3": "E1",
+              "c4": 3
+            }
+          },
+          {
+            "kind": "row",
+            "fields": {
+              "c1": "S0_1",
+              "c2": "grp3",
+              "c3": "E3",
+              "c4": 5
+            }
+          }
+        ]
+      },
+      {
+        "case": "nested-named-window-query",
+        "operation": "selector-error",
+        "statement": "invalid-selector",
+        "sequence": 0,
+        "time": "1970-01-01T00:00:00Z",
+        "value": "Invalid context partition selector, expected an implementation class of any of [ContextPartitionSelectorAll, ContextPartitionSelectorById, ContextPartitionSelectorNested] interfaces but received com"
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

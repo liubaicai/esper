@@ -731,6 +731,19 @@ func (e *Environment) Build(query Query, options ...CompileOption) (Plan, error)
 	if query.join == nil && (query.aggregate == nil || query.aggregate.join == nil) && streamHasMethodDependencies(query.input) {
 		return Plan{}, WrapError(ErrorInvalidRule, "stream", NewError(ErrorInvalidRule, "method dependencies require a join"))
 	}
+	// Esper associates an insert-into statement with the target named
+	// window's context: the statement runs inside each context partition and
+	// its routed rows land in the matching window partition. Inherit the
+	// window's context when the statement does not declare one.
+	if query.contextName == "" && query.routeTarget != "" {
+		if _, named, ok := e.routeTargetSchema(query.moduleName, query.routeTarget); ok && named {
+			if window, found := e.NamedWindowInModule(query.moduleName, query.routeTarget); found {
+				if contextName := strings.TrimSpace(window.Context()); contextName != "" {
+					query.contextName = contextName
+				}
+			}
+		}
+	}
 	if query.contextName != "" {
 		definition, ok := e.Context(query.contextName)
 		if !ok {
@@ -2013,9 +2026,6 @@ func (e *Environment) validateContext(definition ContextDefinition, node *stream
 		return fmt.Errorf("context requires a source stream")
 	}
 	if definition.parent != nil {
-		if definition.parent.kind == ContextInitiatedTerminated {
-			return fmt.Errorf("initiated-terminated parent contexts cannot be nested")
-		}
 		if definition.kind == ContextInitiatedTerminated && definition.startPattern != nil {
 			return fmt.Errorf("pattern initiated children are not supported in nested contexts")
 		}

@@ -1312,7 +1312,9 @@ func TestRouteFireAndForgetRejectsContextBoundNamedWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := NewEngine(env).RouteFireAndForget(context.Background(), plan, QueryResult{Batch: ResultBatch{New: []Result{resultRow(newRow(plan.resultSchema, []Value{Present("A")}))}}}); err == nil || !strings.Contains(err.Error(), "context-bound named-window") {
+	// The insert-into inherits the window's context at build time, so the
+	// rejection surfaces as the context-bound plan error.
+	if err := NewEngine(env).RouteFireAndForget(context.Background(), plan, QueryResult{Batch: ResultBatch{New: []Result{resultRow(newRow(plan.resultSchema, []Value{Present("A")}))}}}); err == nil || !strings.Contains(err.Error(), "context-bound") {
 		t.Fatalf("context-bound target error = %v", err)
 	}
 }

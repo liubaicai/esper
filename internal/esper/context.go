@@ -807,8 +807,9 @@ func resolveStaticContextCron(schedule CronSchedule, label string) (resolvedCron
 // NewNestedContext composes a child context under an existing parent. The
 // resulting runtime partition key contains both levels and keeps the child
 // state isolated inside its parent partition. Keyed initiated children are
-// supported below non-initiated parents; pattern children and initiated
-// parents remain explicit follow-up capabilities.
+// supported below non-initiated parents, and category children are supported
+// below initiated parents (the parent lifecycle drives eager leaf
+// instantiation); pattern children remain an explicit follow-up capability.
 func NewNestedContext(name string, parent ContextDefinition, child ContextDefinition) (ContextDefinition, error) {
 	if strings.TrimSpace(name) == "" {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "nested context name is required")
@@ -816,11 +817,36 @@ func NewNestedContext(name string, parent ContextDefinition, child ContextDefini
 	if parent.name == "" {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "nested context parent is required")
 	}
-	if parent.kind == ContextInitiatedTerminated {
-		return ContextDefinition{}, NewError(ErrorInvalidRule, "initiated-terminated parent contexts cannot be nested")
-	}
 	if parent.isTemporal() || child.isTemporal() {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "temporal contexts cannot be nested")
+	}
+	// Initiated parents are supported only in the shapes the runtime
+	// dispatch implements: a plain (non-pattern, non-timed) initiated level
+	// directly above the leaf. Pattern-start parents, timed termination,
+	// initiated ancestors above a non-initiated direct parent, and an
+	// initiated leaf under a terminating initiated parent are rejected
+	// rather than silently mis-dispatched.
+	initiatedAncestor := false
+	for ancestor := &parent; ancestor != nil; ancestor = ancestor.parent {
+		if ancestor.kind == ContextInitiatedTerminated {
+			initiatedAncestor = true
+			break
+		}
+	}
+	if initiatedAncestor {
+		if parent.kind != ContextInitiatedTerminated {
+			return ContextDefinition{}, NewError(ErrorInvalidRule, "nested initiated parent contexts support at most one initiated level directly above the leaf")
+		}
+		if parent.startPattern != nil || parent.endPattern != nil || parent.terminatedAfter > 0 {
+			return ContextDefinition{}, NewError(ErrorInvalidRule, "pattern or timed initiated parent contexts cannot be nested")
+		}
+		if child.kind == ContextInitiatedTerminated && parent.end != nil {
+			// An initiated leaf under a terminating initiated parent would
+			// outlive its parent: the leaf-initiated dispatch does not
+			// cascade parent termination. Never-ending parents (start @now)
+			// are safe.
+			return ContextDefinition{}, NewError(ErrorInvalidRule, "initiated children under a terminating initiated parent are not supported")
+		}
 	}
 	if child.name == "" {
 		return ContextDefinition{}, NewError(ErrorInvalidRule, "nested context child is required")
@@ -1595,6 +1621,33 @@ func (d ContextDefinition) hasCategoryLevel() bool {
 		}
 	}
 	return false
+}
+
+// hasLifecycleLevel reports whether any level of the context chain is
+// lifecycle-managed (initiated-terminated or temporal). Nested leaves under
+// an initiated parent die with the parent, so release gates must walk the
+// chain rather than checking only the leaf kind.
+func (d ContextDefinition) hasLifecycleLevel() bool {
+	for current := &d; current != nil; current = current.parent {
+		if current.kind == ContextInitiatedTerminated || current.isTemporal() {
+			return true
+		}
+	}
+	return false
+}
+
+// hasInitiatedParent reports whether the leaf sits directly below an
+// initiated-terminated parent level that the runtime supports: a plain
+// (non-pattern, non-temporal) initiated parent. Such contexts dispatch
+// through the parent-lifecycle path: parent events drive eager leaf
+// instantiation and leaf-typed events broadcast to every live parent
+// partition. Pattern-start parents and deeper initiated ancestors are
+// rejected at NewNestedContext time.
+func (d ContextDefinition) hasInitiatedParent() bool {
+	if d.parent == nil || d.parent.kind != ContextInitiatedTerminated {
+		return false
+	}
+	return d.parent.startPattern == nil && d.parent.endPattern == nil && d.parent.terminatedAfter <= 0
 }
 
 func (d ContextDefinition) partitionsForEvent(event Event, now time.Time, variables map[string]Value) ([]string, bool, error) {

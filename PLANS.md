@@ -49,6 +49,45 @@ activity or a single coverage percentage.
 - Shipped: Draft 4.405 ('event-json-adapter') committed; Git owns identity. EventJsonAdapter observable slice differential-verified; invalid execution split to its own intentionally-different case (652 cases, 278 DV cases, 1023 DV runtime IDs).
 - Shipped by commit 24a2631ec: Draft 4.394 ('infra-named-window-insert-shape'); Git owns identity. Thirteenth InfraNamedWindowViews slice (ords 28/36/54/56) differential-verified, 8/8 records, 0 differences; engine fix captures one namedWindowInsertBoundary per direct insert trigger. InfraNamedWindowViews 53/58 executions differential (649 cases, 272 DV cases, 1016 DV runtime IDs).
 ## Current work unit
+Active: Draft 4.476 ('context-selection-faf-nested').
+
+- [x] Contract frozen (.omp/contract-476.md): ContextSelectionAndFireAndForget ord 3
+  ContextSelectionFAFNestedNamedWindowQuery (java-runtime-f51a1493ad61c1f0d0d1, FIREANDFORGET).
+  Nested context `ACtx initiated by SupportBean_S0 as s0 terminated by SupportBean_S1(id=s0.id),
+  BCtx group by intPrimitive<0/=0/>0 as grp1/grp2/grp3 from SupportBean` + keepall window +
+  insert-into. Overlapping parent; eager leaf instantiation per activation; leaf IDs global
+  0..5 = (s0=1,grp1),(s0=1,grp2),(s0=1,grp3),(s0=2,grp1),(s0=2,grp2),(s0=2,grp3). FAF Q1/Q2
+  merge all leaves; Q3 context-clause per-partition with context.ACtx.s0.p00 + context.BCtx.label.
+  Nested selectors restricted to All/ById/Nested.
+- [x] Scouts: NextJavaContract9-2 (Java contract) + NextGoSurface9-2 (Go surface) — both
+  read-only, parallel batch.
+- [x] Shared core (primary agent): removed NewNestedContext initiated-parent rejection +
+  validateContext gate + test pin; new processNestedInitiatedParent dispatch (parent-lifecycle
+  driven, eager category-leaf instantiation, broadcast routing, cascade termination);
+  newNestedLeafRuntime with parent.initiating_event/parent.startTime props; release gates
+  walk the chain via hasLifecycleLevel; validateContextPartitionSelector restricts nested to
+  All/IDs/Nested; executeNestedInitiatedParentFireAndForget descriptor-driven path.
+- [x] Assets (NestedFafAssets agent): ContextSelectionFAFNestedScenarioOracle.java +
+  run-context-selection-faf-nested.sh + context-selection-faf-nested.json (1 case / 18 steps) +
+  context_selection_faf_nested.go + run.go wiring.
+- [x] Additional shared-core fix discovered during integration: insert-into must INHERIT the
+  target window's context (Esper auto-associates insert-into with context-bound windows);
+  Build now sets query.contextName from the window when unset, per-leaf routing uses
+  partition-scoped variables, and queueStatementRoutesLocked skips initiated-parent contexts.
+- [x] Java trace generated (8 records); `-mode context-selection-faf-nested-diff` reports
+  status passing / 0 differences; evidence at
+  testdata/parity/context-selection-faf-nested.evidence.json.
+- [x] Manifest/roadmap/CHANGELOG updated: case.context-selection-faf extended to ord 3
+  (717 cases / 341 DV / 1298 DV runtime IDs / 3848 associations); context.partition
+  `remaining` loses the nested initiated-parent item.
+- [x] One regression fixed: TestRouteFireAndForgetRejectsContextBoundNamedWindow now expects
+  the context-bound plan error (insert-into inherits context at build time).
+- [x] make check exit 0 (check-layout incl. facade regen, go vet, full go test; parity 79s,
+  internal/esper 69s).
+- [ ] Independent parity review (ParityReview476) + commit/push.
+
+
+## Current work unit
 Active: Draft 4.473 ('context-nested-initterm').
 
 - [x] Contract frozen from prefetched read-only scouts (agents NextJavaContract6 + NextGoSurface6):

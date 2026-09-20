@@ -2738,13 +2738,6 @@ func TestNestedInitiatedTerminatedChildUsesParentPartition(t *testing.T) {
 	if _, err := NewNestedContext("nested-temporal-parent", temporal, parent); err == nil {
 		t.Fatal("temporal parent was accepted in nested context")
 	}
-	initiatedParent, err := NewInitiatedTerminatedContext("initiated-parent", Literal("key"), Literal(true), Literal(false))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := NewNestedContext("nested-initiated-parent", initiatedParent, parent); err == nil {
-		t.Fatal("initiated parent was accepted in nested context")
-	}
 }
 
 func TestContextSelectorFiltersFireAndForgetNamedWindowRows(t *testing.T) {

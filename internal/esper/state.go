@@ -2690,7 +2690,10 @@ func (w *NamedWindow) releaseContextPartition(contextName, partitionKey string) 
 		return
 	}
 	definition, ok := w.engine.env.Context(contextName)
-	if !ok || (!definition.isTemporal() && definition.kind != ContextInitiatedTerminated) {
+	// Lifecycle-managed levels anywhere in the chain (the leaf itself or an
+	// initiated/temporal ancestor) make the window partition context-owned:
+	// a nested leaf under an initiated parent dies with the parent.
+	if !ok || (!definition.isTemporal() && !definition.hasLifecycleLevel()) {
 		return
 	}
 	w.state.mu.Lock()

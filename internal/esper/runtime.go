@@ -976,7 +976,7 @@ func (e *Engine) releaseContextPartitionKindLocked(contextName, partitionKey str
 		}
 	}
 	definition, definitionOK := e.env.Context(contextName)
-	lifecycleManaged := definitionOK && (definition.isTemporal() || definition.kind == ContextInitiatedTerminated || definition.terminatedAfter > 0)
+	lifecycleManaged := definitionOK && (definition.isTemporal() || definition.hasLifecycleLevel() || definition.terminatedAfter > 0)
 	if lifecycleManaged {
 		for _, table := range e.tables {
 			if table != nil {
@@ -5632,6 +5632,14 @@ func (e *Engine) queueStatementRoutesLocked(statement *Statement, batch ResultBa
 	if e == nil || statement == nil || statement.plan.query.routeTarget == "" {
 		return nil
 	}
+	if statement.plan.query.contextName != "" {
+		if definition, ok := e.env.Context(statement.plan.query.contextName); ok && definition.hasInitiatedParent() {
+			// Initiated-parent contexts route per leaf inside
+			// processNestedInitiatedParent with partition-scoped variables;
+			// the generic queue would re-derive a bogus single-parent key.
+			return nil
+		}
+	}
 	results := routeResults(statement.plan.query.routeSelector, batch)
 	precedenceExpr := statement.plan.query.eventPrecedence
 	for _, result := range results {
@@ -6597,6 +6605,10 @@ type statementRuntime struct {
 	// values stay dense from zero.
 	nestedParentIDs    map[string]int
 	nestedParentNextID int
+	// nestedParentTimes records each parent partition's activation time so
+	// leaf context properties report the parent's startTime (the moment the
+	// parent partition materialized), not the leaf's own creation time.
+	nestedParentTimes map[string]time.Time
 	// nestedParentKey records, on a leaf partition runtime, the parent
 	// segment of its nested partition key. The encoded key cannot be split
 	// back reliably (encoded parent keys themselves contain \x1f), so the
@@ -8127,10 +8139,15 @@ func (s *Statement) process(ctx context.Context, now time.Time, event Event, var
 			}
 			return s.processInitiatedTerminated(definition, event, now, variables)
 		}
+		if definitionOK && definition.hasInitiatedParent() {
+			// Nested initiated-parent contexts evaluate the parent lifecycle
+			// on every event, not only leaf-typed ones, so this branch must
+			// precede the statementAcceptsEvent gate.
+			return s.processNestedInitiatedParent(definition, event, now, variables)
+		}
 		if !statementAcceptsEvent(s.plan.query, event) {
 			// A context-typed event still allocates partitions for
 			// statements whose pattern has no event inputs (timer-only
-			// patterns and on-pattern triggers): Esper allocates the
 			// partition for every statement bound to the context, and a
 			// due timer fires at allocation.
 			if definitionOK && statementHasInputlessPattern(s.plan.query) && len(definition.contextKeysForEvent(event)) > 0 {
@@ -9530,6 +9547,263 @@ func (s *Statement) processPatternContextTime(definition ContextDefinition, now 
 	}
 	return result, changed
 }
+
+// processNestedInitiatedParent drives a nested context whose PARENT level is
+// initiated-terminated (for example `context ACtx initiated by S0 terminated
+// by S1, context BCtx group by ... from SupportBean`). The model inverts the
+// leaf-initiated path: the parent's start condition allocates a parent
+// partition and eagerly instantiates every child leaf (category children in
+// declaration order), leaf-typed events broadcast to all live parent
+// partitions and route by the child's own partition rule, and the parent's
+// end condition destroys the parent and cascades to its leaves. Leaf
+// partition IDs come from the engine-global allocation sequence, matching
+// Esper's ContextPartitionIdServiceImpl counter.
+func (s *Statement) processNestedInitiatedParent(definition ContextDefinition, event Event, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
+	if s == nil || s.engine == nil {
+		return ResultBatch{}, false, NewError(ErrorDependency, "nested initiated-parent context has no engine")
+	}
+	if s.runtime.partitions == nil {
+		s.runtime.partitions = make(map[string]*statementRuntime)
+	}
+	if s.runtime.nestedParents == nil {
+		s.runtime.nestedParents = make(map[string]Event)
+	}
+	if s.runtime.nestedParentIDs == nil {
+		s.runtime.nestedParentIDs = make(map[string]int)
+	}
+	parent := definition.parent
+
+	// Parent lifecycle: the start condition allocates a new parent partition
+	// (overlapping parents accept every matching start) and eagerly
+	// instantiates the child leaves in declaration order.
+	startValue := parent.start.eval(EvalContext{Event: event, Now: now, Variables: variables})
+	start, startOK := boolValue(startValue)
+	var initiationBatch ResultBatch
+	initiationChanged := false
+	if startOK && start {
+		parentKey, _, err := parent.partitionLocal(event, now, variables)
+		if err != nil {
+			return ResultBatch{}, false, err
+		}
+		if parentKey == "" {
+			parentKey = encodeKey([]any{"initiated", event.Underlying()})
+		}
+		if parent.initiatedOverlapping {
+			// Every start event is a fresh concurrent parent partition.
+			base := parentKey
+			for ordinal := 1; ; ordinal++ {
+				if _, exists := s.runtime.nestedParents[parentKey]; !exists {
+					break
+				}
+				parentKey = fmt.Sprintf("%s#%d", base, ordinal)
+			}
+		} else if _, exists := s.runtime.nestedParents[parentKey]; exists {
+			parentKey = ""
+		}
+		if parentKey != "" {
+			s.runtime.nestedParents[parentKey] = event
+			s.runtime.nestedParentIDs[parentKey] = s.runtime.nestedParentNextID
+			s.runtime.nestedParentNextID++
+			if s.runtime.nestedParentTimes == nil {
+				s.runtime.nestedParentTimes = make(map[string]time.Time)
+			}
+			s.runtime.nestedParentTimes[parentKey] = now
+			// Eager leaf instantiation: Esper's category controller creates
+			// every item's leaf when the parent activates; keyed children
+			// materialize lazily on first routed event.
+			if definition.kind == ContextCategorySegmented {
+				for _, category := range definition.categories {
+					childKey := "category:" + category.name
+					allocationKey := encodeKey([]any{"nested", parentKey, childKey})
+					if _, exists := s.runtime.partitions[allocationKey]; exists {
+						continue
+					}
+					partitionRuntime, err := s.newNestedLeafRuntime(definition, event, event, parentKey, allocationKey, now, variables)
+					if err != nil {
+						return ResultBatch{}, false, err
+					}
+					s.runtime.partitions[allocationKey] = partitionRuntime
+					s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partitionRuntime)
+					if s.plan.query.sourceLess && s.plan.query.output.Termination != OutputOnlyOnTermination {
+						partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
+						if partitionRuntime.sourceLessRowMatches(s.plan.query, now) {
+							row := partitionRuntime.batch(eventDelta{newEvents: []Event{{}}}, s.plan, now)
+							row = partitionRuntime.applyOutput(s.plan.query.output, row, false, now, s.plan)
+							initiationBatch.New = append(initiationBatch.New, row.New...)
+							initiationBatch.Old = append(initiationBatch.Old, row.Old...)
+							initiationChanged = initiationChanged || !row.empty() || row.forced
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Leaf routing: leaf-typed events broadcast to every live parent
+	// partition and land in the leaf resolved by the child's own partition
+	// rule. Other events only drive the parent's lifecycle below.
+	accepts := statementAcceptsEvent(s.plan.query, event)
+	var result ResultBatch
+	changed := false
+	if accepts {
+		parentKeys := make([]string, 0, len(s.runtime.nestedParents))
+		for parentKey := range s.runtime.nestedParents {
+			parentKeys = append(parentKeys, parentKey)
+		}
+		sort.Slice(parentKeys, func(i, j int) bool {
+			return s.runtime.nestedParentIDs[parentKeys[i]] < s.runtime.nestedParentIDs[parentKeys[j]]
+		})
+		for _, parentKey := range parentKeys {
+			childKeys, childActive, err := definition.partitionsForEventLocal(event, now, variables)
+			if err != nil {
+				return ResultBatch{}, false, err
+			}
+			if !childActive {
+				continue
+			}
+			for _, childKey := range childKeys {
+				allocationKey := encodeKey([]any{"nested", parentKey, childKey})
+				partition := s.runtime.partitions[allocationKey]
+				if partition == nil {
+					var err error
+					partition, err = s.newNestedLeafRuntime(definition, event, s.runtime.nestedParents[parentKey], parentKey, allocationKey, now, variables)
+					if err != nil {
+						return ResultBatch{}, false, err
+					}
+					s.runtime.partitions[allocationKey] = partition
+					s.engine.retainContextPartitionLocked(s.plan.query.contextName, allocationKey, partition)
+				}
+				var batch ResultBatch
+				var partitionChanged bool
+				if s.plan.query.trigger != nil {
+					batch, err = s.processTriggerRuntime(s.runtime.ctx, partition, now, event, s.contextPartitionVariables(partition, variables))
+					partitionChanged = !batch.empty() || batch.forced
+				} else {
+					batch, partitionChanged, err = partition.process(s.plan, event, now, s.contextPartitionVariables(partition, variables), streamFilterVerdict{})
+				}
+				if err != nil {
+					return ResultBatch{}, false, err
+				}
+				result.New = append(result.New, batch.New...)
+				result.Old = append(result.Old, batch.Old...)
+				changed = changed || partitionChanged
+				if s.plan.query.routeTarget != "" {
+					// Esper routes insert-into rows from inside the leaf
+					// partition: the partition-scoped variables carry the
+					// leaf key so the context-bound window insert lands in
+					// this leaf. The generic post-dispatch route queue is
+					// skipped for initiated-parent contexts (it would
+					// re-derive a bogus single-parent key).
+					partitionVariables := s.contextPartitionVariables(partition, variables)
+					for _, routed := range routeResults(s.plan.query.routeSelector, batch) {
+						re, routeErr := s.engine.routeResultToTargetLocked(s, routed, s.plan.query.routeTarget, now)
+						if routeErr != nil {
+							return ResultBatch{}, false, routeErr
+						}
+						re.owner = s
+						re.front = re.namedWindow != nil
+						if re.namedWindow != nil {
+							insertUnderlying := namedWindowInsertUnderlying(re.namedWindow, re.event)
+							delta, insertErr := re.namedWindow.insertWithVariables(s.runtime.ctx, now, insertUnderlying, partitionVariables)
+							if insertErr != nil {
+								return ResultBatch{}, false, insertErr
+							}
+							if err := s.engine.queueNamedWindowDeltaLocked(s.runtime.ctx, now, re.namedWindow, delta, &partitionVariables, s); err != nil {
+								return ResultBatch{}, false, err
+							}
+							continue
+						}
+						s.engine.insertRoutedEventLocked(re)
+					}
+				}
+			}
+		}
+	}
+
+	// Parent termination: the end condition evaluates per live parent with
+	// the parent's initiating event bound for correlated predicates; a
+	// terminating parent destroys all its leaves.
+	if parent.end != nil {
+		terminating := make([]string, 0)
+		parentKeys := make([]string, 0, len(s.runtime.nestedParents))
+		for parentKey := range s.runtime.nestedParents {
+			parentKeys = append(parentKeys, parentKey)
+		}
+		sort.Strings(parentKeys)
+		for _, parentKey := range parentKeys {
+			parentEvent := s.runtime.nestedParents[parentKey]
+			endVariables := cloneValues(variables)
+			if endVariables == nil {
+				endVariables = make(map[string]Value)
+			}
+			endVariables[contextVariableName("initiating_event")] = Present(parentEvent)
+			endValue := parent.end.eval(EvalContext{Event: event, Now: now, Variables: endVariables})
+			if end, ok := boolValue(endValue); ok && end {
+				terminating = append(terminating, parentKey)
+			}
+		}
+		for _, parentKey := range terminating {
+			delete(s.runtime.nestedParents, parentKey)
+			delete(s.runtime.nestedParentIDs, parentKey)
+			delete(s.runtime.nestedParentTimes, parentKey)
+			for partitionKey, partition := range s.runtime.partitions {
+				if partition == nil || partition.nestedParentKey != parentKey {
+					continue
+				}
+				if s.plan.query.output.Termination != OutputNoTermination {
+					terminationBatch := partition.outputAtTermination(s.plan, now)
+					result.New = append(result.New, terminationBatch.New...)
+					result.Old = append(result.Old, terminationBatch.Old...)
+					changed = changed || !terminationBatch.empty() || terminationBatch.forced
+				}
+				s.runtime.pendingOutputAssignments = append(s.runtime.pendingOutputAssignments, partition.drainOutputAssignments()...)
+				delete(s.runtime.partitions, partitionKey)
+				s.engine.releaseContextPartitionKindLocked(s.plan.query.contextName, partitionKey, true, partition)
+			}
+		}
+	}
+	if initiationChanged {
+		result.New = append(initiationBatch.New, result.New...)
+		result.Old = append(initiationBatch.Old, result.Old...)
+		changed = true
+	}
+	result.Time = now
+	if changed {
+		result.Sequence = s.runtime.seq.Add(1)
+	}
+	return result, changed, nil
+}
+
+// newNestedLeafRuntime materializes one leaf partition under a nested
+// initiated parent: engine-global partition ID, parent linkage, and context
+// properties carrying the parent's initiating event and the leaf's own
+// category label.
+func (s *Statement) newNestedLeafRuntime(definition ContextDefinition, leafEvent, parentEvent Event, parentKey, allocationKey string, now time.Time, variables map[string]Value) (*statementRuntime, error) {
+	query := s.runtime.query
+	query.contextName = ""
+	partitionRuntime := newStatementRuntime(query)
+	partitionRuntime.engine = s.engine
+	partitionRuntime.rowRecogOwner = s.runtime.rowRecogOwner
+	partitionRuntime.partitionContextName = s.plan.query.contextName
+	partitionRuntime.partitionKey = allocationKey
+	partitionRuntime.partitionID = s.allocateContextPartitionID(allocationKey)
+	partitionRuntime.nestedParentKey = parentKey
+	partitionRuntime.contextProperties = definition.contextPropertyValuesForNestedKey(leafEvent, parentEvent, now, variables, partitionRuntime.partitionID, allocationKey, s.runtime.nestedParentIDs[parentKey])
+	if partitionRuntime.contextProperties == nil {
+		partitionRuntime.contextProperties = make(map[string]Value)
+	}
+	partitionRuntime.contextProperties["parent.initiating_event"] = Present(parentEvent)
+	// The parent's startTime is its activation instant, not the leaf's
+	// creation time (leaves under keyed children materialize lazily).
+	parentStart := now
+	if activated, ok := s.runtime.nestedParentTimes[parentKey]; ok {
+		parentStart = activated
+	}
+	partitionRuntime.contextProperties["parent.startTime"] = Present(parentStart)
+	partitionRuntime.variables = partitionRuntime.withContextProperties(variables)
+	partitionRuntime.initializeAt(now)
+	return ptrStatementRuntime(partitionRuntime), nil
+}
 func (s *Statement) processInitiatedTerminated(definition ContextDefinition, event Event, now time.Time, variables map[string]Value) (ResultBatch, bool, error) {
 	if definition.parent != nil {
 		return s.processNestedInitiatedTerminated(definition, event, now, variables)
@@ -9809,6 +10083,10 @@ func (s *Statement) processNestedInitiatedTerminated(definition ContextDefinitio
 			s.runtime.nestedParents[parentKey] = event
 			s.runtime.nestedParentIDs[parentKey] = s.runtime.nestedParentNextID
 			s.runtime.nestedParentNextID++
+			if s.runtime.nestedParentTimes == nil {
+				s.runtime.nestedParentTimes = make(map[string]time.Time)
+			}
+			s.runtime.nestedParentTimes[parentKey] = now
 		}
 	}
 	parentKeySet := make(map[string]struct{}, len(routedParents))
@@ -9997,6 +10275,34 @@ func (s *Statement) processNestedInitiatedTerminated(definition ContextDefinitio
 			result.New = append(result.New, batch.New...)
 			result.Old = append(result.Old, batch.Old...)
 			changed = changed || partitionChanged
+			if s.plan.query.routeTarget != "" {
+				// Esper routes insert-into rows from inside the leaf
+				// partition: the partition-scoped variables carry the leaf
+				// key so the context-bound window insert lands in this
+				// leaf. The generic post-dispatch route queue is skipped
+				// for initiated-parent contexts.
+				partitionVariables := s.contextPartitionVariables(partition, variables)
+				for _, routed := range routeResults(s.plan.query.routeSelector, batch) {
+					re, routeErr := s.engine.routeResultToTargetLocked(s, routed, s.plan.query.routeTarget, now)
+					if routeErr != nil {
+						return ResultBatch{}, false, routeErr
+					}
+					re.owner = s
+					re.front = re.namedWindow != nil
+					if re.namedWindow != nil {
+						insertUnderlying := namedWindowInsertUnderlying(re.namedWindow, re.event)
+						delta, insertErr := re.namedWindow.insertWithVariables(s.runtime.ctx, now, insertUnderlying, partitionVariables)
+						if insertErr != nil {
+							return ResultBatch{}, false, insertErr
+						}
+						if err := s.engine.queueNamedWindowDeltaLocked(s.runtime.ctx, now, re.namedWindow, delta, &partitionVariables, s); err != nil {
+							return ResultBatch{}, false, err
+						}
+						continue
+					}
+					s.engine.insertRoutedEventLocked(re)
+				}
+			}
 		}
 	}
 	for _, partitionKey := range keys {

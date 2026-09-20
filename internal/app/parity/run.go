@@ -70,6 +70,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "runner modes include context-nested-initterm and context-nested-initterm-diff")
 		fmt.Fprintln(stderr, "runner modes include context-lifecycle and context-lifecycle-diff")
 		fmt.Fprintln(stderr, "runner modes include context-selection-faf and context-selection-faf-diff")
+		fmt.Fprintln(stderr, "runner modes include context-selection-faf-nested and context-selection-faf-nested-diff")
 		flags.PrintDefaults()
 	}
 	path := flags.String("scenario", "testdata/parity/stage1-length-window.json", "scenario JSON file")
@@ -161,6 +162,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadContextLifecycleScenario(file)
 	} else if *mode == "context-selection-faf" || *mode == "context-selection-faf-diff" {
 		scenario, err = loadContextSelectionFAFScenario(file)
+	} else if *mode == "context-selection-faf-nested" || *mode == "context-selection-faf-nested-diff" {
+		scenario, err = loadContextSelectionFAFNestedScenario(file)
 	} else if *mode == "epl-variables-event-typed" || *mode == "epl-variables-event-typed-diff" {
 		scenario, err = loadEplVariablesEventTypedScenario(file)
 	} else if *mode == "epl-as-keyword-backtick" || *mode == "epl-as-keyword-backtick-diff" {
@@ -5075,6 +5078,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, contextSelectionFAFJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, contextSelectionFAFSources),
 				splitMetadata(*javaExecutions, contextSelectionFAFJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "context-selection-faf-nested" || *mode == "context-selection-faf-nested-diff" {
+		trace, err := runContextSelectionFAFNestedScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "context-selection-faf-nested-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, contextSelectionFAFNestedJavaCommit,
+				splitMetadata(*javaRuntimeIDs, contextSelectionFAFNestedJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, contextSelectionFAFNestedSources),
+				splitMetadata(*javaExecutions, contextSelectionFAFNestedJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
