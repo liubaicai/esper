@@ -133,6 +133,27 @@ Active: Draft 4.479 ('infra-nwtable-on-merge-basic').
 - [x] make check GREEN (parity 80s, internal/esper 70s); independent parity review
   (ParityReview479): PASS all nine areas; two P3 non-defects (unreachable null-theString
   payload path; mode=any table snapshots match on-update convention).
+  Committed and pushed as 74892b30e.
+
+## Current work unit
+Active: Draft 4.480 ('infra-nwtable-on-merge-nested-insertstream').
+
+- [x] Contract frozen (.omp/contract-480.md) by NextJavaContract480 + NextGoSurface480:
+  InfraNWTableOnMerge ords 4-7 (nested-event merge assignment map+objectarray over
+  nw+table, FAF-asserted; insert-stream merge with five ordered not-matched insert
+  actions). Runtime IDs java-runtime-065003de88aca37795b8 / -2e8d691b5e2c927038d7 /
+  -2c687a68317caea3c148 / -081455731ccafbf6847c. Asset-only; new sibling runner.
+- [x] Assets (OnMergeNestedAssets agent): oracle + scenario (6 cases / 74 steps) +
+  runner + run.go wiring. Zero shared-core changes confirmed.
+- [x] Java trace regenerated (58 records); `-mode infra-nwtable-on-merge-nested-diff`
+  reports status passing / 0 differences; Go trace checked in.
+- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
+  case.infra-nwtable-on-merge-nested-insertstream (719 cases / 343 DV / 1307 DV runtime
+  IDs / 3857 associations); capability trigger.table-named-window DV list extended.
+- [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace mutations,
+  checked-in evidence, 6 raw-scenario mutations, runtime-ID mapping) all green.
+- [x] make check GREEN (parity 81s, internal/esper 71s); independent parity review
+  (ParityReview480): PASS all nine areas, one P3 non-defect. Committed and pushed.
 
 
 ## Current work unit

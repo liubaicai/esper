@@ -1520,7 +1520,11 @@
     "java-runtime-dbf13fb6d1ca3a37275a",
     "java-runtime-df3d7a21bdd769f1acce",
     "java-runtime-240cb61eabb22eb2a215",
-    "java-runtime-aaa45c95e95a919bd0c0"
+    "java-runtime-aaa45c95e95a919bd0c0",
+    "java-runtime-065003de88aca37795b8",
+    "java-runtime-2e8d691b5e2c927038d7",
+    "java-runtime-2c687a68317caea3c148",
+    "java-runtime-081455731ccafbf6847c"
    ],
    "representativeScenarioIds": [
     "named-window-mutation",
@@ -46023,6 +46027,79 @@
    "notes": [
     "InfraNWTableOnMerge ords 0-3 born-differential: insert-only merge into keepall named window and primary-key table, plus match-no-match (matched-delete / not-matched-insert / matched-update) over both targets. Merge listener IR pairs, named-window consumer sees mutations before the merge listener (applyDelta order), silent not-matched send, iterator snapshots. Zero shared-core changes; MergeIntoNamedWindowWhen/MergeIntoTableWhen + WhenMatchedDelete/WhenNotMatched(Any)/WhenMatched + CopyMatchingFields cover the surface."
    ]
+  },
+  {
+   "id": "case.infra-nwtable-on-merge-nested-insertstream",
+   "javaRuntimeIds": [
+    "java-runtime-065003de88aca37795b8",
+    "java-runtime-2e8d691b5e2c927038d7",
+    "java-runtime-2c687a68317caea3c148",
+    "java-runtime-081455731ccafbf6847c"
+   ],
+   "javaStaticIds": [
+    "java-712b26dbe20bbda50f37",
+    "java-712b26dbe20bbda50f37",
+    "java-9bcebf3cac321ec7aee2",
+    "java-9bcebf3cac321ec7aee2"
+   ],
+   "javaNames": [
+    "InfraUpdateNestedEvent{namedWindow=true}",
+    "InfraUpdateNestedEvent{namedWindow=false}",
+    "InfraOnMergeInsertStream{namedWindow=true}",
+    "InfraOnMergeInsertStream{namedWindow=false}"
+   ],
+   "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+   ],
+   "goTests": [
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeNestedDirectReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeNestedDiffWritesPassingEvidence",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeNestedDiffRejectsTraceMutations",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeNestedCheckedInEvidenceMatchesTraceAndReplay",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeNestedRejectsMalformedRawScenario",
+    "internal/app/parity/run_test.go:TestRunInfraNWTableOnMergeNestedRuntimeIDMappingMatchesScenario"
+   ],
+   "tags": [
+    "correctness",
+    "infra",
+    "table",
+    "named-window",
+    "merge",
+    "nested",
+    "insert-stream",
+    "java-oracle-trace",
+    "differential"
+   ],
+   "status": "differential-verified",
+   "evidence": [
+    "testdata/parity/infra-nwtable-on-merge-nested.json",
+    "testdata/parity/infra-nwtable-on-merge-nested.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-nested.go.trace.json",
+    "testdata/parity/infra-nwtable-on-merge-nested.evidence.json",
+    "tools/java-oracle/InfraNWTableOnMergeNestedScenarioOracle.java",
+    "tools/java-oracle/run-infra-nwtable-on-merge-nested.sh",
+    "java-runtime-inventory",
+    "java-source",
+    "java-oracle",
+    "go-unit",
+    "differential-evidence",
+    "mutation"
+   ],
+   "difference": null,
+   "verification": [
+    "inventoried",
+    "implemented",
+    "differential-verified"
+   ],
+   "differentialVerifiedRuntimeIds": [
+    "java-runtime-065003de88aca37795b8",
+    "java-runtime-2e8d691b5e2c927038d7",
+    "java-runtime-2c687a68317caea3c148",
+    "java-runtime-081455731ccafbf6847c"
+   ],
+   "notes": [
+    "InfraNWTableOnMerge ords 4-7 born-differential: nested-event merge assignment (map + objectarray sub-scenarios over lastevent named window and unkeyed table, FAF-asserted cflat.c0/carr[0].c0/carr[1].c0) and insert-stream merge (five ordered not-matched insert actions: wildcard StreamOne, aliased StreamTwo, column-list StreamThree, key0=K2-filtered StreamFour, WinOMIS target). Zero shared-core changes."
+   ]
   }
  ],
  "mappings": [
@@ -49237,13 +49314,17 @@
   {
    "capabilityId": "trigger.table-named-window",
    "caseId": "case.infra-nwtable-on-merge-basic"
+  },
+  {
+   "capabilityId": "trigger.table-named-window",
+   "caseId": "case.infra-nwtable-on-merge-nested-insertstream"
   }
  ],
  "summary": {
-  "inventoriedCases": 718,
-  "implementedCases": 716,
-  "differentialVerifiedCases": 342,
-  "differentialVerifiedRuntimeIds": 1303,
+  "inventoriedCases": 719,
+  "implementedCases": 717,
+  "differentialVerifiedCases": 343,
+  "differentialVerifiedRuntimeIds": 1307,
   "intentionallyDifferentCases": 33,
   "representativeVerifiedCases": 120,
   "nfrVerifiedCases": 0,
@@ -49253,13 +49334,13 @@
   "intentionallyDifferentCapabilities": 11,
   "representativeVerifiedCapabilities": 11,
   "nfrVerifiedCapabilities": 0,
-  "runtimeAssociationCount": 3853,
+  "runtimeAssociationCount": 3857,
   "referencedJavaRuntimeIds": 3475,
   "totalJavaRuntimeIds": 4136,
   "unreferencedJavaRuntimeIds": 661,
   "representativeScenarioTotal": 122,
   "representativeScenarioPassing": 122,
-  "totalCases": 718,
+  "totalCases": 719,
   "totalCapabilities": 122
  }
 }
