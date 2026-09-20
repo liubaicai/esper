@@ -133,7 +133,29 @@ Active: Draft 4.479 ('infra-nwtable-on-merge-basic').
 - [x] make check GREEN (parity 80s, internal/esper 70s); independent parity review
   (ParityReview479): PASS all nine areas; two P3 non-defects (unreachable null-theString
   payload path; mode=any table snapshots match on-update convention).
-  Committed and pushed as 74892b30e.
+  Committed and pushed as 74892b30e. Draft 4.480 committed and pushed as 934302f31.
+
+## Current work unit
+Active: Draft 4.481 ('infra-nwtable-on-merge-insert-other-stream').
+
+- [x] Contract frozen (.omp/contract-481.md) by NextJavaContract481 + NextGoSurface481:
+  InfraNWTableOnMerge ords 8-19 (InfraInsertOtherStream, the 12-execution representation
+  matrix: OBJECTARRAY/MAP/AVRO/JSON/JSONCLASSPROVIDED/DEFAULT x nw/table). Merge into
+  side stream OtherStreamOne; nw first event not-matched (status=0d) then matches
+  previous value, table first event matched (status=10d). Asset-only; new sibling runner.
+- [x] Assets (OnMergeInsertStreamAssets agent): oracle + scenario (12 cases / 132
+  steps) + runner + run.go wiring. Zero shared-core changes confirmed.
+- [x] Java trace regenerated (96 records); `-mode infra-nwtable-on-merge-insertstream-diff`
+  reports status passing / 0 differences; Go trace checked in.
+- [x] Manifest/roadmap/CHANGELOG updated: new born-DV
+  case.infra-nwtable-on-merge-insert-other-stream (720 cases / 344 DV / 1319 DV runtime
+  IDs / 3869 associations); capability trigger.table-named-window DV list extended.
+- [x] run_test.go: six pinned tests (direct replay, diff evidence, 4 trace mutations,
+  checked-in evidence, 6 raw-scenario mutations, runtime-ID mapping) all green.
+- [x] make check GREEN (parity 79s, internal/esper 70s); independent parity review
+  (ParityReview481): PASS all nine areas; one P3 latent note (composite-PK lookup vs
+  name-only predicate — forced by MergeIntoTableWhen's one-key-per-PK-column API,
+  observably identical for the pinned single-send scenario).
 
 ## Current work unit
 Active: Draft 4.480 ('infra-nwtable-on-merge-nested-insertstream').

@@ -1,0 +1,2647 @@
+{
+  "version": "esper-differential/v1",
+  "javaCommit": "9e1b9f1cc9117fea4bf33ab043762c045d73839c",
+  "javaRuntimeIds": [
+    "java-runtime-c91b3df37512cfac454f",
+    "java-runtime-b54b14998ff59e65f2fc",
+    "java-runtime-945ba0790a1cfa2b1033",
+    "java-runtime-fef4b3a46f9b7da65a72",
+    "java-runtime-d8cb24fc9e29421236e2",
+    "java-runtime-e22957dc02c3ac4b8bb7",
+    "java-runtime-284497e8a9729bb76ac2",
+    "java-runtime-f6718d2a96a3e3668239",
+    "java-runtime-51773f11823a58156447",
+    "java-runtime-b891f1f54423ccb8a628",
+    "java-runtime-dd95faed8e31c95bec9f",
+    "java-runtime-6e68e972f23cef8dde85"
+  ],
+  "javaSourceFiles": [
+    "regression-lib/src/main/java/com/espertech/esper/regressionlib/suite/infra/nwtable/InfraNWTableOnMerge.java"
+  ],
+  "javaExecutions": [
+    "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=OBJECTARRAY}",
+    "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=OBJECTARRAY}",
+    "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=MAP}",
+    "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=MAP}",
+    "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=AVRO}",
+    "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=AVRO}",
+    "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=JSON}",
+    "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=JSON}",
+    "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=JSONCLASSPROVIDED}",
+    "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=JSONCLASSPROVIDED}",
+    "InfraInsertOtherStream{namedWindow=true, eventRepresentationEnum=DEFAULT}",
+    "InfraInsertOtherStream{namedWindow=false, eventRepresentationEnum=DEFAULT}"
+  ],
+  "scenario": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-insertstream",
+    "steps": [
+      {
+        "op": "case",
+        "case": "insertstream-nw-objectarray"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-nw-objectarray",
+        "statement": "module",
+        "epl": "@EventRepresentation('objectarray') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@EventRepresentation('objectarray') @public create window MyInfraIOS#unique(name) as MyEvent;\ninsert into MyInfraIOS select * from MyEvent;\n@EventRepresentation('objectarray') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-objectarray",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-objectarray",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-objectarray",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-objectarray",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-objectarray",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-objectarray",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-objectarray",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "objectarray",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-objectarray",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "objectarray",
+          "fields": {
+            "name": "name1",
+            "value": 11
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-objectarray",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "objectarray",
+          "fields": {
+            "name": "name1",
+            "value": 12
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-nw-objectarray"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-table-objectarray"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-table-objectarray",
+        "statement": "module",
+        "epl": "@EventRepresentation('objectarray') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@public create table MyInfraIOS (name string primary key, value double primary key);\ninsert into MyInfraIOS select * from MyEvent;\n@EventRepresentation('objectarray') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-objectarray",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-objectarray",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-objectarray",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-objectarray",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-objectarray",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-objectarray",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-table-objectarray",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "objectarray",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-table-objectarray"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-nw-map"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-nw-map",
+        "statement": "module",
+        "epl": "@EventRepresentation('map') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@EventRepresentation('map') @public create window MyInfraIOS#unique(name) as MyEvent;\ninsert into MyInfraIOS select * from MyEvent;\n@EventRepresentation('map') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-map",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-map",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-map",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-map",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-map",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-map",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-map",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "map",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-map",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "map",
+          "fields": {
+            "name": "name1",
+            "value": 11
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-map",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "map",
+          "fields": {
+            "name": "name1",
+            "value": 12
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-nw-map"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-table-map"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-table-map",
+        "statement": "module",
+        "epl": "@EventRepresentation('map') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@public create table MyInfraIOS (name string primary key, value double primary key);\ninsert into MyInfraIOS select * from MyEvent;\n@EventRepresentation('map') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-map",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-map",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-map",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-map",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-map",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-map",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-table-map",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "map",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-table-map"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-nw-avro"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-nw-avro",
+        "statement": "module",
+        "epl": "@EventRepresentation('avro') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@EventRepresentation('avro') @public create window MyInfraIOS#unique(name) as MyEvent;\ninsert into MyInfraIOS select * from MyEvent;\n@EventRepresentation('avro') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-avro",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-avro",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-avro",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-avro",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-avro",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-avro",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-avro",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "avro",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-avro",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "avro",
+          "fields": {
+            "name": "name1",
+            "value": 11
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-avro",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "avro",
+          "fields": {
+            "name": "name1",
+            "value": 12
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-nw-avro"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-table-avro"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-table-avro",
+        "statement": "module",
+        "epl": "@EventRepresentation('avro') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@public create table MyInfraIOS (name string primary key, value double primary key);\ninsert into MyInfraIOS select * from MyEvent;\n@EventRepresentation('avro') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-avro",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-avro",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-avro",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-avro",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-avro",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-avro",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-table-avro",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "avro",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-table-avro"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-nw-json"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-nw-json",
+        "statement": "module",
+        "epl": "@EventRepresentation('json') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@EventRepresentation('json') @public create window MyInfraIOS#unique(name) as MyEvent;\ninsert into MyInfraIOS select * from MyEvent;\n@EventRepresentation('json') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-json",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-json",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-json",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-json",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-json",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-json",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-json",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "json",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-json",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "json",
+          "fields": {
+            "name": "name1",
+            "value": 11
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-json",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "json",
+          "fields": {
+            "name": "name1",
+            "value": 12
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-nw-json"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-table-json"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-table-json",
+        "statement": "module",
+        "epl": "@EventRepresentation('json') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@public create table MyInfraIOS (name string primary key, value double primary key);\ninsert into MyInfraIOS select * from MyEvent;\n@EventRepresentation('json') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-json",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-json",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-json",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-json",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-json",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-json",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-table-json",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "json",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-table-json"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-nw-jsonclassprovided"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-nw-jsonclassprovided",
+        "statement": "module",
+        "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.nwtable.InfraNWTableOnMerge$MyLocalJsonProvidedMyEvent') @EventRepresentation('json') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.nwtable.InfraNWTableOnMerge$MyLocalJsonProvidedMyEvent') @EventRepresentation('json') @public create window MyInfraIOS#unique(name) as MyEvent;\ninsert into MyInfraIOS select * from MyEvent;\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.nwtable.InfraNWTableOnMerge$MyLocalJsonProvidedInputEvent') @EventRepresentation('json') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-jsonclassprovided",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-jsonclassprovided",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-jsonclassprovided",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-jsonclassprovided",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-jsonclassprovided",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-jsonclassprovided",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-jsonclassprovided",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "jsonclassprovided",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-jsonclassprovided",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "jsonclassprovided",
+          "fields": {
+            "name": "name1",
+            "value": 11
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-jsonclassprovided",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "jsonclassprovided",
+          "fields": {
+            "name": "name1",
+            "value": 12
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-nw-jsonclassprovided"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-table-jsonclassprovided"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-table-jsonclassprovided",
+        "statement": "module",
+        "epl": "@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.nwtable.InfraNWTableOnMerge$MyLocalJsonProvidedMyEvent') @EventRepresentation('json') @public @buseventtype @public create schema MyEvent as (name string, value double);\n@public create table MyInfraIOS (name string primary key, value double primary key);\ninsert into MyInfraIOS select * from MyEvent;\n@JsonSchema(className='com.espertech.esper.regressionlib.suite.infra.nwtable.InfraNWTableOnMerge$MyLocalJsonProvidedInputEvent') @EventRepresentation('json') create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-jsonclassprovided",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-jsonclassprovided",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-jsonclassprovided",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-jsonclassprovided",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-jsonclassprovided",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-jsonclassprovided",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-table-jsonclassprovided",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "jsonclassprovided",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-table-jsonclassprovided"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-nw-default"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-nw-default",
+        "statement": "module",
+        "epl": " @public @buseventtype @public create schema MyEvent as (name string, value double);\n @public create window MyInfraIOS#unique(name) as MyEvent;\ninsert into MyInfraIOS select * from MyEvent;\n create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-default",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-default",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-default",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-default",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-default",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-nw-default",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-default",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "default",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-default",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "default",
+          "fields": {
+            "name": "name1",
+            "value": 11
+          }
+        }
+      },
+      {
+        "op": "send",
+        "case": "insertstream-nw-default",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "default",
+          "fields": {
+            "name": "name1",
+            "value": 12
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-nw-default"
+      },
+      {
+        "op": "case",
+        "case": "insertstream-table-default"
+      },
+      {
+        "op": "deploy",
+        "case": "insertstream-table-default",
+        "statement": "module",
+        "epl": " @public @buseventtype @public create schema MyEvent as (name string, value double);\n@public create table MyInfraIOS (name string primary key, value double primary key);\ninsert into MyInfraIOS select * from MyEvent;\n create schema InputEvent as (col1 string, col2 double);\n\non MyEvent as eme\n  merge MyInfraIOS as MyInfraIOS where MyInfraIOS.name = eme.name\n   when matched then\n      insert into OtherStreamOne select eme.name as event_name, MyInfraIOS.value as status\n   when not matched then\n      insert into OtherStreamOne select eme.name as event_name, 0d as status;\n@name('s0') select * from OtherStreamOne;\n"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-default",
+        "statement": "schema-myevent"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-default",
+        "statement": "infra"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-default",
+        "statement": "insert"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-default",
+        "statement": "schema-input"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-default",
+        "statement": "merge"
+      },
+      {
+        "op": "deployed",
+        "case": "insertstream-table-default",
+        "statement": "s0"
+      },
+      {
+        "op": "send",
+        "case": "insertstream-table-default",
+        "eventType": "MyEvent",
+        "payload": {
+          "repr": "default",
+          "fields": {
+            "name": "name1",
+            "value": 10
+          }
+        }
+      },
+      {
+        "op": "undeploy-all",
+        "case": "insertstream-table-default"
+      }
+    ]
+  },
+  "javaTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-insertstream",
+    "records": [
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "goTrace": {
+    "version": "esper-parity/v1",
+    "id": "infra-nwtable-on-merge-insertstream",
+    "records": [
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-objectarray",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-map",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-avro",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-json",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-jsonclassprovided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-jsonclassprovided",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 0
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 2,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-nw-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 3,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 11
+            }
+          }
+        ]
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "schema-myevent",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "infra",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "insert",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "schema-input",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "merge",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "deployed",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z"
+      },
+      {
+        "case": "insertstream-table-default",
+        "operation": "listener",
+        "statement": "s0",
+        "sequence": 1,
+        "time": "1970-01-01T00:00:00Z",
+        "new": [
+          {
+            "kind": "row",
+            "fields": {
+              "event_name": "name1",
+              "status": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "status": "passing",
+  "differences": []
+}

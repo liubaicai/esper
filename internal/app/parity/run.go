@@ -136,6 +136,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		scenario, err = loadInfraNWTableOnMergeScenario(file)
 	} else if *mode == "infra-nwtable-on-merge-nested" || *mode == "infra-nwtable-on-merge-nested-diff" {
 		scenario, err = loadInfraNWTableOnMergeNestedScenario(file)
+	} else if *mode == "infra-nwtable-on-merge-insertstream" || *mode == "infra-nwtable-on-merge-insertstream-diff" {
+		scenario, err = loadInfraNWTableOnMergeInsertStreamScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-silent" || *mode == "infra-namedwindow-on-delete-silent-diff" {
 		scenario, err = loadInfraNWOnDeleteSilentScenario(file)
 	} else if *mode == "infra-namedwindow-on-delete-indexes" || *mode == "infra-namedwindow-on-delete-indexes-diff" {
@@ -500,6 +502,22 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergeNestedJavaRuntimeIDs),
 				splitMetadata(*javaSourceFiles, infraNWTableOnMergeNestedJavaSources),
 				splitMetadata(*javaExecutions, infraNWTableOnMergeNestedJavaExecutions), scenario, trace)
+		}
+		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
+			return fail(stderr, err)
+		}
+		return 0
+	}
+	if *mode == "infra-nwtable-on-merge-insertstream" || *mode == "infra-nwtable-on-merge-insertstream-diff" {
+		trace, err := runInfraNWTableOnMergeInsertStreamScenario(context.Background(), scenario)
+		if err != nil {
+			return fail(stderr, err)
+		}
+		if *mode == "infra-nwtable-on-merge-insertstream-diff" {
+			return runDifferentialMode(stdout, stderr, *javaTracePath, *evidencePath, infraNWTableOnMergeInsertStreamJavaCommit,
+				splitMetadata(*javaRuntimeIDs, infraNWTableOnMergeInsertStreamJavaRuntimeIDs),
+				splitMetadata(*javaSourceFiles, infraNWTableOnMergeInsertStreamJavaSources),
+				splitMetadata(*javaExecutions, infraNWTableOnMergeInsertStreamJavaExecutions), scenario, trace)
 		}
 		if err := json.NewEncoder(stdout).Encode(trace); err != nil {
 			return fail(stderr, err)
